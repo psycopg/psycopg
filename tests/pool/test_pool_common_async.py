@@ -364,11 +364,12 @@ async def test_putconn_wrong_pool(pool_cls, dsn):
 
 @skip_async
 @pytest.mark.slow
-async def test_del_stops_threads(pool_cls, dsn):
+async def test_del_stops_threads(pool_cls, dsn, gc):
     p = pool_cls(dsn)
     assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
+    gc.collect()
     await asleep(0.1)
     for t in ts:
         assert not is_alive(t), t

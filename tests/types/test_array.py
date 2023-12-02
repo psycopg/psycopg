@@ -13,8 +13,6 @@ from psycopg.types import TypeInfo
 from psycopg.postgres import types as builtins
 from psycopg.types.array import register_array
 
-from ..utils import gc_collect
-
 
 tests_str = [
     ([[[[[["a"]]]]]], "{{{{{{a}}}}}}"),
@@ -342,7 +340,7 @@ def test_all_chars_with_bounds(conn, fmt_out):
 
 
 @pytest.mark.slow
-def test_register_array_leak(conn):
+def test_register_array_leak(conn, gc_collect):
     info = TypeInfo.fetch(conn, "date")
     ntypes = []
     for i in range(2):

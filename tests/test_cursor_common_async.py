@@ -14,7 +14,7 @@ from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
-from .utils import gc_collect, raiseif
+from .utils import raiseif
 from .acompat import aclosing, alist, anext
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
@@ -121,7 +121,7 @@ async def test_context(aconn):
 
 
 @pytest.mark.slow
-async def test_weakref(aconn):
+async def test_weakref(aconn, gc_collect):
     cur = aconn.cursor()
     w = weakref.ref(cur)
     await cur.close()

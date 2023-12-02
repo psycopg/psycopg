@@ -20,7 +20,7 @@ from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import eur, gc_collect, gc_count
+from .utils import eur
 from ._test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from ._test_copy import sample_values, sample_records, sample_tabledef
 from ._test_copy import ensure_table, py_to_raw, special_chars, FileWriter
@@ -677,7 +677,7 @@ def test_connection_writer(conn, format, buffer):
     "fmt, set_types", [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)]
 )
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
+def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method, gc):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -717,12 +717,12 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
                     elif method == "rows":
                         list(copy.rows())
 
-    gc_collect()
+    gc.collect()
     n = []
     for i in range(3):
         work()
-        gc_collect()
-        n.append(gc_count())
+        gc.collect()
+        n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
@@ -731,7 +731,7 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
 @pytest.mark.parametrize(
     "fmt, set_types", [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)]
 )
-def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types):
+def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types, gc):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -759,12 +759,12 @@ def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types):
                 for got, want in zip(recs, faker.records):
                     faker.assert_record(got, want)
 
-    gc_collect()
+    gc.collect()
     n = []
     for i in range(3):
         work()
-        gc_collect()
-        n.append(gc_count())
+        gc.collect()
+        n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 

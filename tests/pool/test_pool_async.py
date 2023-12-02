@@ -362,7 +362,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
     assert "BAD" in caplog.records[2].message
 
 
-async def test_del_no_warning(dsn, recwarn):
+async def test_del_no_warning(dsn, recwarn, gc_collect):
     p = pool.AsyncConnectionPool(dsn, min_size=2, open=False)
     await p.open()
     async with p.connection() as conn:
@@ -371,6 +371,7 @@ async def test_del_no_warning(dsn, recwarn):
     await p.wait()
     ref = weakref.ref(p)
     del p
+    gc_collect()
     assert not ref()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 

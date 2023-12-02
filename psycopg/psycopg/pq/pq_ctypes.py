@@ -47,7 +47,10 @@ def version() -> int:
 
 @impl.PQnoticeReceiver  # type: ignore
 def notice_receiver(arg: c_void_p, result_ptr: impl.PGresult_struct) -> None:
-    pgconn = cast(arg, POINTER(py_object)).contents.value()
+    pgconn = cast(arg, POINTER(py_object)).contents.value
+    if callable(pgconn):  # Not a weak reference on PyPy.
+        pgconn = pgconn()
+
     if not (pgconn and pgconn.notice_handler):
         return
 
