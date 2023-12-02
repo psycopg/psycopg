@@ -30,17 +30,17 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.14 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.14
+^^^^^^^^^^^^^^
 
 - Fix :ref:`interaction with gevent <gevent>` (:ticket:`#527`).
 - Add support for PyPy (:ticket:`#686`).
 
 .. _gevent: https://www.gevent.org/
 
-
-Current release
----------------
 
 Psycopg 3.1.13
 ^^^^^^^^^^^^^^
