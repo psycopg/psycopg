@@ -1,3 +1,4 @@
+import sys
 import time
 import pytest
 import logging
@@ -17,6 +18,11 @@ from .test_adapt import make_bin_dumper, make_dumper
 from .test_conninfo import fake_resolve  # noqa: F401
 
 pytestmark = pytest.mark.anyio
+
+anyio_3_runtime_error = pytest.mark.skipif(
+    sys.version_info < (3, 10) and sys.implementation.name == "pypy",
+    reason="anyio 3 runtime error",
+)
 
 
 async def test_connect(aconn_cls, dsn):
@@ -125,6 +131,7 @@ async def test_cursor_closed(aconn):
         aconn.cursor()
 
 
+@anyio_3_runtime_error
 async def test_connection_warn_close(aconn_cls, dsn, recwarn, gc_collect):
     conn = await aconn_cls.connect(dsn)
     await conn.close()
@@ -233,6 +240,7 @@ async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
 
 
 @pytest.mark.slow
+@anyio_3_runtime_error
 async def test_weakref(aconn_cls, dsn, gc_collect):
     conn = await aconn_cls.connect(dsn)
     w = weakref.ref(conn)
