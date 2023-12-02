@@ -251,11 +251,12 @@ def test_close_no_clobber(conn):
             cur.fetchall()
 
 
-def test_warn_close(conn, recwarn):
+def test_warn_close(conn, recwarn, gc_collect):
     recwarn.clear()
     cur = conn.cursor("foo")
     cur.execute("select generate_series(1, 10) as bar")
     del cur
+    gc_collect()
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 

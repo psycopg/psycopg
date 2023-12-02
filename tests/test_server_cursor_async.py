@@ -4,9 +4,7 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-pytestmark = [
-    pytest.mark.crdb_skip("server-side cursor"),
-]
+pytestmark = pytest.mark.crdb_skip("server-side cursor")
 
 
 async def test_init_row_factory(aconn):
@@ -261,11 +259,12 @@ async def test_close_no_clobber(aconn):
             await cur.fetchall()
 
 
-async def test_warn_close(aconn, recwarn):
+async def test_warn_close(aconn, recwarn, gc_collect):
     recwarn.clear()
     cur = aconn.cursor("foo")
     await cur.execute("select generate_series(1, 10) as bar")
     del cur
+    gc_collect()
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
