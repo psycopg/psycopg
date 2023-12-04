@@ -147,7 +147,7 @@ Gevent support
 --------------
 
 Psycopg 3 supports `gevent <https://www.gevent.org/>`__ out of the box. If the
-`socket` module is found patched by functions such as
+`select` module is found patched by functions such as
 `gevent.monkey.patch_select()`__ or `patch_all()`__, psycopg will behave in a
 collaborative way.
 
