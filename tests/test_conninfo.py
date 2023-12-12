@@ -436,6 +436,11 @@ async def test_conninfo_attempts_async_no_resolve(
             "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2",
             {},
         ),
+        (
+            "host=dup.com",
+            "host=dup.com,dup.com hostaddr=3.3.3.3,3.3.3.4",
+            None,
+        ),
     ],
 )
 @pytest.mark.anyio
@@ -499,19 +504,26 @@ def test_conninfo_random(dsn, conn_cls):
 @pytest.fixture
 async def fake_resolve(monkeypatch):
     fake_hosts = {
-        "localhost": "127.0.0.1",
-        "foo.com": "1.1.1.1",
-        "qux.com": "2.2.2.2",
+        "localhost": ["127.0.0.1"],
+        "foo.com": ["1.1.1.1"],
+        "qux.com": ["2.2.2.2"],
+        "dup.com": ["3.3.3.3", "3.3.3.4"],
     }
+
+    def family(host):
+        return socket.AF_INET6 if ":" in host else socket.AF_INET
 
     async def fake_getaddrinfo(host, port, **kwargs):
         assert isinstance(port, int) or (isinstance(port, str) and port.isdigit())
         try:
-            addr = fake_hosts[host]
+            addrs = fake_hosts[host]
         except KeyError:
             raise OSError(f"unknown test host: {host}")
         else:
-            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
+            return [
+                (family(addr), socket.SOCK_STREAM, 6, "", (addr, port))
+                for addr in addrs
+            ]
 
     monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
 

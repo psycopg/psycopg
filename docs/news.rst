@@ -30,6 +30,13 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.15 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix async connection to hosts resolving to  multiple IP addresses
+  (:ticket:`#695`).
+
+
 Current release
 ---------------
 
