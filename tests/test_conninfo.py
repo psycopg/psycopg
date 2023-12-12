@@ -1,7 +1,6 @@
 import socket
 import asyncio
 import datetime as dt
-from functools import reduce
 
 import pytest
 
@@ -13,7 +12,6 @@ from psycopg._encodings import pg2pyenc
 
 from .acompat import alist
 from .fix_crdb import crdb_encoding
-from ._test_connection import drop_default_args_from_conninfo
 
 snowman = "\u2603"
 
@@ -322,26 +320,27 @@ class TestConnectionInfo:
 @pytest.mark.parametrize(
     "conninfo, want, env",
     [
-        ("", "", None),
-        ("host='' user=bar", "host='' user=bar", None),
+        ("", [""], None),
+        ("service=foo", ["service=foo"], None),
+        ("host='' user=bar", ["host='' user=bar"], None),
         (
             "host=127.0.0.1 user=bar",
-            "host=127.0.0.1 user=bar",
+            ["host=127.0.0.1 user=bar"],
             None,
         ),
         (
             "host=1.1.1.1,2.2.2.2 user=bar",
-            "host=1.1.1.1,2.2.2.2 user=bar",
+            ["host=1.1.1.1 user=bar", "host=2.2.2.2 user=bar"],
             None,
         ),
         (
             "host=1.1.1.1,2.2.2.2 port=5432",
-            "host=1.1.1.1,2.2.2.2 port=5432,5432",
+            ["host=1.1.1.1 port=5432", "host=2.2.2.2 port=5432"],
             None,
         ),
         (
             "host=foo.com port=5432",
-            "host=foo.com port=5432 hostaddr=1.2.3.4",
+            ["host=foo.com port=5432"],
             {"PGHOSTADDR": "1.2.3.4"},
         ),
     ],
@@ -351,38 +350,47 @@ def test_conninfo_attempts(setpgenv, conninfo, want, env):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     attempts = list(conninfo_attempts(params))
-    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
-    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
+    want = list(map(conninfo_to_dict, want))
+    assert want == attempts
 
 
 @pytest.mark.parametrize(
     "conninfo, want, env",
     [
-        ("", "", None),
-        ("host='' user=bar", "host='' user=bar", None),
+        ("", [""], None),
+        ("host='' user=bar", ["host='' user=bar"], None),
         (
             "host=127.0.0.1 user=bar",
-            "host=127.0.0.1 user=bar hostaddr=127.0.0.1",
+            ["host=127.0.0.1 user=bar hostaddr=127.0.0.1"],
             None,
         ),
         (
             "host=1.1.1.1,2.2.2.2 user=bar",
-            "host=1.1.1.1,2.2.2.2 user=bar hostaddr=1.1.1.1,2.2.2.2",
+            [
+                "host=1.1.1.1 user=bar hostaddr=1.1.1.1",
+                "host=2.2.2.2 user=bar hostaddr=2.2.2.2",
+            ],
             None,
         ),
         (
             "host=1.1.1.1,2.2.2.2 port=5432",
-            "host=1.1.1.1,2.2.2.2 port=5432,5432 hostaddr=1.1.1.1,2.2.2.2",
+            [
+                "host=1.1.1.1 port=5432 hostaddr=1.1.1.1",
+                "host=2.2.2.2 port=5432 hostaddr=2.2.2.2",
+            ],
             None,
         ),
         (
             "port=5432",
-            "host=1.1.1.1,2.2.2.2 port=5432,5432 hostaddr=1.1.1.1,2.2.2.2",
+            [
+                "host=1.1.1.1 port=5432 hostaddr=1.1.1.1",
+                "host=2.2.2.2 port=5432 hostaddr=2.2.2.2",
+            ],
             {"PGHOST": "1.1.1.1,2.2.2.2"},
         ),
         (
             "host=foo.com port=5432",
-            "host=foo.com port=5432 hostaddr=1.2.3.4",
+            ["host=foo.com port=5432"],
             {"PGHOSTADDR": "1.2.3.4"},
         ),
     ],
@@ -394,8 +402,8 @@ async def test_conninfo_attempts_async_no_resolve(
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     attempts = await alist(conninfo_attempts_async(params))
-    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
-    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
+    want = list(map(conninfo_to_dict, want))
+    assert want == attempts
 
 
 @pytest.mark.parametrize(
@@ -403,42 +411,48 @@ async def test_conninfo_attempts_async_no_resolve(
     [
         (
             "host=foo.com,qux.com",
-            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2",
+            ["host=foo.com hostaddr=1.1.1.1", "host=qux.com hostaddr=2.2.2.2"],
             None,
         ),
         (
             "host=foo.com,qux.com port=5433",
-            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5433,5433",
+            [
+                "host=foo.com hostaddr=1.1.1.1 port=5433",
+                "host=qux.com hostaddr=2.2.2.2 port=5433",
+            ],
             None,
         ),
         (
             "host=foo.com,qux.com port=5432,5433",
-            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5432,5433",
+            [
+                "host=foo.com hostaddr=1.1.1.1 port=5432",
+                "host=qux.com hostaddr=2.2.2.2 port=5433",
+            ],
             None,
         ),
         (
             "host=foo.com,nosuchhost.com",
-            "host=foo.com hostaddr=1.1.1.1",
+            ["host=foo.com hostaddr=1.1.1.1"],
             None,
         ),
         (
             "host=foo.com, port=5432,5433",
-            "host=foo.com, hostaddr=1.1.1.1, port=5432,5433",
+            ["host=foo.com hostaddr=1.1.1.1 port=5432", "host='' port=5433"],
             None,
         ),
         (
             "host=nosuchhost.com,foo.com",
-            "host=foo.com hostaddr=1.1.1.1",
+            ["host=foo.com hostaddr=1.1.1.1"],
             None,
         ),
         (
             "host=foo.com,qux.com",
-            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2",
+            ["host=foo.com hostaddr=1.1.1.1", "host=qux.com hostaddr=2.2.2.2"],
             {},
         ),
         (
             "host=dup.com",
-            "host=dup.com,dup.com hostaddr=3.3.3.3,3.3.3.4",
+            ["host=dup.com hostaddr=3.3.3.3", "host=dup.com hostaddr=3.3.3.4"],
             None,
         ),
     ],
@@ -447,8 +461,8 @@ async def test_conninfo_attempts_async_no_resolve(
 async def test_conninfo_attempts_async(conninfo, want, env, fake_resolve):
     params = conninfo_to_dict(conninfo)
     attempts = await alist(conninfo_attempts_async(params))
-    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
-    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
+    want = list(map(conninfo_to_dict, want))
+    assert want == attempts
 
 
 @pytest.mark.parametrize(
@@ -534,18 +548,3 @@ async def fail_resolve(monkeypatch):
         pytest.fail(f"shouldn't try to resolve {host}")
 
     monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fail_getaddrinfo)
-
-
-def merge_conninfos(a1, a2):
-    """
-    merge conninfo attempts into a multi-host conninfo.
-    """
-    assert set(a1) == set(a2)
-    rv = {}
-    for k in a1:
-        if k in ("host", "hostaddr", "port"):
-            rv[k] = f"{a1[k]},{a2[k]}"
-        else:
-            assert a1[k] == a2[k]
-            rv[k] = a1[k]
-    return rv

@@ -33,8 +33,10 @@ Psycopg 3.2 (unreleased)
 Psycopg 3.1.15 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fix async connection to hosts resolving to  multiple IP addresses
-  (:ticket:`#695`).
+- Fix use of ``service`` in connection string (regression in 3.1.13,
+  :ticket:`#694`).
+- Fix async connection to hosts resolving to multiple IP addresses (regression
+  in 3.1.13, :ticket:`#695`).
 
 
 Current release
