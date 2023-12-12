@@ -876,13 +876,6 @@ def drop_default_args_from_conninfo(conninfo):
         if params.get(key) == value:
             params.pop(key)
 
-    removeif("host", "")
-    removeif("hostaddr", "")
-    removeif("port", "5432")
-    if "," in params.get("host", ""):
-        nhosts = len(params["host"].split(","))
-        removeif("port", ",".join(["5432"] * nhosts))
-        removeif("hostaddr", "," * (nhosts - 1))
     removeif("connect_timeout", str(DEFAULT_TIMEOUT))
 
     return params
