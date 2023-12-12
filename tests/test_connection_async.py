@@ -131,6 +131,7 @@ async def test_cursor_closed(aconn):
         aconn.cursor()
 
 
+@pytest.mark.slow
 @anyio_3_runtime_error
 async def test_connection_warn_close(aconn_cls, dsn, recwarn, gc_collect):
     conn = await aconn_cls.connect(dsn)
