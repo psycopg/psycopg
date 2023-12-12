@@ -448,10 +448,8 @@ async def _split_attempts_and_resolve(params: ConnDict) -> AsyncIterator[ConnDic
         host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
     )
 
-    attempt = params.copy()
     for item in ans:
-        attempt["hostaddr"] = item[4][0]
-    yield attempt
+        yield {**params, "hostaddr": item[4][0]}
 
 
 @cache

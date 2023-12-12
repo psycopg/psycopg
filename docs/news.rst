@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.15 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix async connection to hosts resolving to  multiple IP addresses
+  (:ticket:`#695`).
+
+
 Current release
 ---------------
 
