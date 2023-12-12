@@ -130,6 +130,7 @@ def test_cursor_closed(conn):
 # compiled with Cython-3.0.0b3, not before.
 
 
+@pytest.mark.slow
 @pytest.mark.xfail(
     pq.__impl__ in ("c", "binary")
     and sys.version_info[:2] == (3, 12)

@@ -127,6 +127,7 @@ async def test_cursor_closed(aconn):
 
 # TODO: the INERROR started failing in the C implementation in Python 3.12a7
 # compiled with Cython-3.0.0b3, not before.
+@pytest.mark.slow
 @pytest.mark.xfail(
     pq.__impl__ in ("c", "binary")
     and sys.version_info[:2] == (3, 12)
