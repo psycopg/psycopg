@@ -9,11 +9,13 @@ import pytest
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
-# Don't import this to allow tests to import (not necessarily to pass all)
-# if the psycopg module imported is not the one expected (e.g. running
-# psycopg pool tests on the master branch with psycopg 3.1.x imported).
-# psycopg._connection_base.BaseConnection._DEFAULT_CONNECT_TIMEOUT
-DEFAULT_TIMEOUT = 130
+try:
+    from psycopg.conninfo import _DEFAULT_CONNECT_TIMEOUT as DEFAULT_TIMEOUT
+except ImportError:
+    # Allow tests to import (not necessarily to pass all) if the psycopg module
+    # imported is not the one expected (e.g. running psycopg pool tests on the
+    # master branch with psycopg 3.1.x imported).
+    DEFAULT_TIMEOUT = 130
 
 
 @pytest.fixture
@@ -87,7 +89,7 @@ conninfo_params_timeout = [
     (
         "",
         {"dbname": "mydb", "connect_timeout": 1},
-        ({"dbname": "mydb", "connect_timeout": "1"}, 1),
+        ({"dbname": "mydb", "connect_timeout": 1}, 2),
     ),
     (
         "dbname=postgres",
@@ -102,7 +104,7 @@ conninfo_params_timeout = [
     (
         "postgresql:///postgres?connect_timeout=2",
         {"connect_timeout": 10},
-        ({"dbname": "postgres", "connect_timeout": "10"}, 10),
+        ({"dbname": "postgres", "connect_timeout": 10}, 10),
     ),
 ]
 

@@ -3,8 +3,6 @@ import pytest
 from psycopg._cmodule import _psycopg
 from psycopg.conninfo import conninfo_to_dict
 
-from ._test_connection import drop_default_args_from_conninfo
-
 
 @pytest.mark.parametrize(
     "args, kwargs, want",
@@ -22,7 +20,7 @@ def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
 
     orig_connect = psycopg.generators.connect
 
-    got_conninfo = None
+    got_conninfo: str
 
     def mock_connect(conninfo):
         nonlocal got_conninfo
@@ -33,7 +31,7 @@ def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
     monkeypatch.setattr(psycopg.generators, "connect", mock_connect)
 
     conn = psycopg.connect(*args, **kwargs)
-    assert drop_default_args_from_conninfo(got_conninfo) == conninfo_to_dict(want)
+    assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     conn.close()
 
 
