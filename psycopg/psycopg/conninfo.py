@@ -304,7 +304,7 @@ def conninfo_attempts(params: ConnDict) -> list[ConnDict]:
     # one attempt and wouldn't get to try the following ones, as before
     # fixing #674.
     attempts = _split_attempts(params)
-    if params.get("load_balance_hosts", "disable") == "random":
+    if _get_param(params, "load_balance_hosts") == "random":
         shuffle(attempts)
     return attempts
 
@@ -337,7 +337,7 @@ async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
         # We couldn't resolve anything
         raise e.OperationalError(str(last_exc))
 
-    if params.get("load_balance_hosts", "disable") == "random":
+    if _get_param(params, "load_balance_hosts") == "random":
         shuffle(attempts)
 
     return attempts
