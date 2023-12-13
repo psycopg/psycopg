@@ -446,7 +446,9 @@ def timeout_from_conninfo(params: ConnDict) -> int:
     # - at least 2 seconds.
     #
     # See connectDBComplete in fe-connect.c
-    value = params.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
+    value: str | int | None = _get_param(params, "connect_timeout")
+    if value is None:
+        value = _DEFAULT_CONNECT_TIMEOUT
     try:
         timeout = int(value)
     except ValueError:
