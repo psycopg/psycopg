@@ -136,7 +136,7 @@ class AsyncConnection(BaseConnection[Row]):
         params = await cls._get_connection_params(conninfo, **kwargs)
         timeout = int(params["connect_timeout"])
         rv = None
-        async for attempt in conninfo_attempts_async(params):
+        for attempt in await conninfo_attempts_async(params):
             try:
                 conninfo = make_conninfo(**attempt)
                 rv = await cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)

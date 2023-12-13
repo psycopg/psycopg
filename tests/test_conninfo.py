@@ -10,7 +10,6 @@ from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from psycopg.conninfo import conninfo_attempts, conninfo_attempts_async
 from psycopg._encodings import pg2pyenc
 
-from .acompat import alist
 from .fix_crdb import crdb_encoding
 
 snowman = "\u2603"
@@ -349,7 +348,7 @@ class TestConnectionInfo:
 def test_conninfo_attempts(setpgenv, conninfo, want, env):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    attempts = list(conninfo_attempts(params))
+    attempts = conninfo_attempts(params)
     want = list(map(conninfo_to_dict, want))
     assert want == attempts
 
@@ -401,7 +400,7 @@ async def test_conninfo_attempts_async_no_resolve(
 ):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    attempts = await alist(conninfo_attempts_async(params))
+    attempts = await conninfo_attempts_async(params)
     want = list(map(conninfo_to_dict, want))
     assert want == attempts
 
@@ -460,7 +459,7 @@ async def test_conninfo_attempts_async_no_resolve(
 @pytest.mark.anyio
 async def test_conninfo_attempts_async(conninfo, want, env, fake_resolve):
     params = conninfo_to_dict(conninfo)
-    attempts = await alist(conninfo_attempts_async(params))
+    attempts = await conninfo_attempts_async(params)
     want = list(map(conninfo_to_dict, want))
     assert want == attempts
 
@@ -479,7 +478,7 @@ async def test_conninfo_attempts_async_bad(setpgenv, conninfo, env, fake_resolve
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
-        await alist(conninfo_attempts_async(params))
+        await conninfo_attempts_async(params)
 
 
 @pytest.mark.parametrize(
@@ -495,7 +494,7 @@ def test_conninfo_attempts_bad(setpgenv, conninfo, env):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
-        list(conninfo_attempts(params))
+        conninfo_attempts(params)
 
 
 def test_conninfo_random():
@@ -518,16 +517,16 @@ def test_conninfo_random():
 @pytest.mark.anyio
 async def test_conninfo_random_async(fake_resolve):
     args = {"host": "alot.com"}
-    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    hostaddrs = [att["hostaddr"] for att in await conninfo_attempts_async(args)]
     assert len(hostaddrs) == 20
     assert hostaddrs == sorted(hostaddrs)
 
     args["load_balance_hosts"] = "disable"
-    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    hostaddrs = [att["hostaddr"] for att in await conninfo_attempts_async(args)]
     assert hostaddrs == sorted(hostaddrs)
 
     args["load_balance_hosts"] = "random"
-    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    hostaddrs = [att["hostaddr"] for att in await conninfo_attempts_async(args)]
     assert hostaddrs != sorted(hostaddrs)
 
 

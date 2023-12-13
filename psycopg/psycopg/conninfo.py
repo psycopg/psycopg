@@ -10,7 +10,7 @@ import os
 import re
 import socket
 import asyncio
-from typing import Any, Iterator, AsyncIterator
+from typing import Any
 from random import shuffle
 from pathlib import Path
 from datetime import tzinfo
@@ -282,7 +282,7 @@ class ConnectionInfo:
         return value.decode(self.encoding)
 
 
-def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
+def conninfo_attempts(params: ConnDict) -> list[ConnDict]:
     """Split a set of connection params on the single attempts to perform.
 
     A connection param can perform more than one attempt more than one ``host``
@@ -298,10 +298,10 @@ def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
     attempts = _split_attempts(params)
     if params.get("load_balance_hosts", "disable") == "random":
         shuffle(attempts)
-    yield from attempts
+    return attempts
 
 
-async def conninfo_attempts_async(params: ConnDict) -> AsyncIterator[ConnDict]:
+async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
     """Split a set of connection params on the single attempts to perform.
 
     A connection param can perform more than one attempt more than one ``host``
@@ -331,8 +331,7 @@ async def conninfo_attempts_async(params: ConnDict) -> AsyncIterator[ConnDict]:
     if params.get("load_balance_hosts", "disable") == "random":
         shuffle(attempts)
 
-    for attempt in attempts:
-        yield attempt
+    return attempts
 
 
 def _split_attempts(params: ConnDict) -> list[ConnDict]:

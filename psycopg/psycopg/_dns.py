@@ -52,7 +52,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     hostaddrs: list[str] = []
     ports: list[str] = []
 
-    async for attempt in conninfo.conninfo_attempts_async(params):
+    for attempt in await conninfo.conninfo_attempts_async(params):
         if attempt.get("host") is not None:
             hosts.append(attempt["host"])
         if attempt.get("hostaddr") is not None:
