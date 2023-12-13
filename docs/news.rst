@@ -17,6 +17,8 @@ Psycopg 3.1.15 (unreleased)
   :ticket:`#694`).
 - Fix async connection to hosts resolving to multiple IP addresses (regression
   in 3.1.13, :ticket:`#695`).
+- Respect the :envvar:`PGCONNECT_TIMEOUT` environment variable to determine
+  the connection timeout.
 
 
 Current release

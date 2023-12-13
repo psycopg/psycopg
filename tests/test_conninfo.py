@@ -8,6 +8,7 @@ import psycopg
 from psycopg import ProgrammingError
 from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from psycopg.conninfo import conninfo_attempts, conninfo_attempts_async
+from psycopg.conninfo import timeout_from_conninfo, _DEFAULT_CONNECT_TIMEOUT
 from psycopg._encodings import pg2pyenc
 
 from .fix_crdb import crdb_encoding
@@ -528,6 +529,25 @@ async def test_conninfo_random_async(fake_resolve):
     args["load_balance_hosts"] = "random"
     hostaddrs = [att["hostaddr"] for att in await conninfo_attempts_async(args)]
     assert hostaddrs != sorted(hostaddrs)
+
+
+@pytest.mark.parametrize(
+    "conninfo, want, env",
+    [
+        ("", _DEFAULT_CONNECT_TIMEOUT, None),
+        ("host=foo", _DEFAULT_CONNECT_TIMEOUT, None),
+        ("connect_timeout=-1", _DEFAULT_CONNECT_TIMEOUT, None),
+        ("connect_timeout=0", _DEFAULT_CONNECT_TIMEOUT, None),
+        ("connect_timeout=1", 2, None),
+        ("connect_timeout=10", 10, None),
+        ("", 15, {"PGCONNECT_TIMEOUT": "15"}),
+    ],
+)
+def test_timeout(setpgenv, conninfo, want, env):
+    setpgenv(env)
+    params = conninfo_to_dict(conninfo)
+    timeout = timeout_from_conninfo(params)
+    assert timeout == want
 
 
 @pytest.fixture
