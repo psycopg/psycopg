@@ -498,7 +498,7 @@ def test_conninfo_attempts_bad(setpgenv, conninfo, env):
         list(conninfo_attempts(params))
 
 
-def test_conninfo_random(dsn, conn_cls):
+def test_conninfo_random():
     hosts = [f"host{n:02d}" for n in range(50)]
     args = {"host": ",".join(hosts)}
     ahosts = [att["host"] for att in conninfo_attempts(args)]
@@ -515,6 +515,22 @@ def test_conninfo_random(dsn, conn_cls):
     assert ahosts == hosts
 
 
+@pytest.mark.anyio
+async def test_conninfo_random_async(fake_resolve):
+    args = {"host": "alot.com"}
+    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    assert len(hostaddrs) == 20
+    assert hostaddrs == sorted(hostaddrs)
+
+    args["load_balance_hosts"] = "disable"
+    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    assert hostaddrs == sorted(hostaddrs)
+
+    args["load_balance_hosts"] = "random"
+    hostaddrs = [att["hostaddr"] async for att in conninfo_attempts_async(args)]
+    assert hostaddrs != sorted(hostaddrs)
+
+
 @pytest.fixture
 async def fake_resolve(monkeypatch):
     fake_hosts = {
@@ -522,6 +538,7 @@ async def fake_resolve(monkeypatch):
         "foo.com": ["1.1.1.1"],
         "qux.com": ["2.2.2.2"],
         "dup.com": ["3.3.3.3", "3.3.3.4"],
+        "alot.com": [f"4.4.4.{n}" for n in range(10, 30)],
     }
 
     def family(host):
