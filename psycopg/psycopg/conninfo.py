@@ -27,6 +27,11 @@ from ._encodings import pgconn_encoding
 
 ConnDict: TypeAlias = "dict[str, Any]"
 
+# Default timeout for connection a attempt.
+# Arbitrary timeout, what applied by the libpq on my computer.
+# Your mileage won't vary.
+_DEFAULT_CONNECT_TIMEOUT = 130
+
 logger = logging.getLogger("psycopg")
 
 
@@ -428,6 +433,35 @@ async def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
         host, int(port), proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
     )
     return [{**params, "hostaddr": item[4][0]} for item in ans]
+
+
+def timeout_from_conninfo(params: ConnDict) -> int:
+    """
+    Return the timeout in seconds from the connection parameters.
+    """
+    # Follow the libpq convention:
+    #
+    # - 0 or less means no timeout (but we will use a default to simulate
+    #   the socket timeout)
+    # - at least 2 seconds.
+    #
+    # See connectDBComplete in fe-connect.c
+    value = params.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
+    try:
+        timeout = int(value)
+    except ValueError:
+        raise e.ProgrammingError(f"bad value for connect_timeout: {value!r}")
+
+    if timeout <= 0:
+        # The sync connect function will stop on the default socket timeout
+        # Because in async connection mode we need to enforce the timeout
+        # ourselves, we need a finite value.
+        timeout = _DEFAULT_CONNECT_TIMEOUT
+    elif timeout < 2:
+        # Enforce a 2s min
+        timeout = 2
+
+    return timeout
 
 
 def _get_param(params: ConnDict, name: str) -> str | None:

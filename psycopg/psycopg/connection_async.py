@@ -20,7 +20,8 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .conninfo import ConnDict, make_conninfo, conninfo_to_dict, conninfo_attempts_async
+from .conninfo import ConnDict, make_conninfo, conninfo_to_dict
+from .conninfo import conninfo_attempts_async, timeout_from_conninfo
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
@@ -118,7 +119,7 @@ class AsyncConnection(BaseConnection[Row]):
                 )
 
         params = await cls._get_connection_params(conninfo, **kwargs)
-        timeout = int(params["connect_timeout"])
+        timeout = timeout_from_conninfo(params)
         rv = None
         attempts = await conninfo_attempts_async(params)
         for attempt in attempts:
@@ -185,18 +186,7 @@ class AsyncConnection(BaseConnection[Row]):
     @classmethod
     async def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> ConnDict:
         """Manipulate connection parameters before connecting."""
-        params = conninfo_to_dict(conninfo, **kwargs)
-
-        # Make sure there is an usable connect_timeout
-        if "connect_timeout" in params:
-            params["connect_timeout"] = int(params["connect_timeout"])
-        else:
-            # The sync connect function will stop on the default socket timeout
-            # Because in async connection mode we need to enforce the timeout
-            # ourselves, we need a finite value.
-            params["connect_timeout"] = cls._DEFAULT_CONNECT_TIMEOUT
-
-        return params
+        return conninfo_to_dict(conninfo, **kwargs)
 
     async def close(self) -> None:
         if self.closed:
