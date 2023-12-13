@@ -10,6 +10,7 @@ import os
 import re
 import socket
 import asyncio
+import logging
 from typing import Any
 from random import shuffle
 from pathlib import Path
@@ -25,6 +26,8 @@ from ._tz import get_tzinfo
 from ._encodings import pgconn_encoding
 
 ConnDict: TypeAlias = "dict[str, Any]"
+
+logger = logging.getLogger("psycopg")
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -321,6 +324,7 @@ async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
         try:
             attempts.extend(await _resolve_hostnames(attempt))
         except OSError as ex:
+            logger.debug("failed to resolve host %r: %s", attempt.get("host"), str(ex))
             last_exc = ex
 
     if not attempts:

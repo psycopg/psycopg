@@ -732,12 +732,22 @@ class Connection(BaseConnection[Row]):
         params = cls._get_connection_params(conninfo, **kwargs)
         timeout = int(params["connect_timeout"])
         rv = None
-        for attempt in conninfo_attempts(params):
+        attempts = conninfo_attempts(params)
+        for attempt in attempts:
             try:
                 conninfo = make_conninfo(**attempt)
                 rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
                 break
             except e._NO_TRACEBACK as ex:
+                if len(attempts) > 1:
+                    logger.debug(
+                        "connection attempt failed on host: %r, port: %r,"
+                        " hostaddr: %r: %s",
+                        attempt.get("host"),
+                        attempt.get("port"),
+                        attempt.get("hostaddr"),
+                        str(ex),
+                    )
                 last_ex = ex
 
         if not rv:
