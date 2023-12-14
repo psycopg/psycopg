@@ -52,19 +52,13 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     hostaddrs: list[str] = []
     ports: list[str] = []
 
-    for attempt in conninfo._split_attempts(conninfo._inject_defaults(params)):
-        try:
-            async for a2 in conninfo._split_attempts_and_resolve(attempt):
-                hosts.append(a2["host"])
-                hostaddrs.append(a2["hostaddr"])
-                if "port" in params:
-                    ports.append(a2["port"])
-        except OSError as ex:
-            last_exc = ex
-
-    if params.get("host") and not hosts:
-        # We couldn't resolve anything
-        raise e.OperationalError(str(last_exc))
+    for attempt in await conninfo.conninfo_attempts_async(params):
+        if attempt.get("host") is not None:
+            hosts.append(attempt["host"])
+        if attempt.get("hostaddr") is not None:
+            hostaddrs.append(attempt["hostaddr"])
+        if attempt.get("port") is not None:
+            ports.append(str(attempt["port"]))
 
     out = params.copy()
     shosts = ",".join(hosts)

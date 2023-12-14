@@ -97,11 +97,6 @@ class BaseConnection(Generic[Row]):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    # Default timeout for connection a attempt.
-    # Arbitrary timeout, what applied by the libpq on my computer.
-    # Your mileage won't vary.
-    _DEFAULT_CONNECT_TIMEOUT = 130
-
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
         self._autocommit = False

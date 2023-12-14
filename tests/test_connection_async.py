@@ -8,12 +8,12 @@ from typing import Any, List
 import psycopg
 from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
 from .acompat import is_async, skip_sync, skip_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
-from ._test_connection import conninfo_params_timeout, drop_default_args_from_conninfo
+from ._test_connection import conninfo_params_timeout
 from ._test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
 
@@ -45,9 +45,9 @@ async def test_connect_str_subclass(aconn_cls, dsn):
 async def test_connect_timeout(aconn_cls, deaf_port):
     t0 = time.time()
     with pytest.raises(psycopg.OperationalError, match="timeout expired"):
-        await aconn_cls.connect(host="localhost", port=deaf_port, connect_timeout=1)
+        await aconn_cls.connect(host="localhost", port=deaf_port, connect_timeout=2)
     elapsed = time.time() - t0
-    assert elapsed == pytest.approx(1.0, abs=0.05)
+    assert elapsed == pytest.approx(2.0, abs=0.05)
 
 
 @pytest.mark.slow
@@ -57,7 +57,7 @@ async def test_multi_hosts(aconn_cls, proxy, dsn, deaf_port, monkeypatch):
     args["host"] = f"{proxy.client_host},{proxy.server_host}"
     args["port"] = f"{deaf_port},{proxy.server_port}"
     args.pop("hostaddr", None)
-    monkeypatch.setattr(aconn_cls, "_DEFAULT_CONNECT_TIMEOUT", 2)
+    monkeypatch.setattr(psycopg.conninfo, "_DEFAULT_CONNECT_TIMEOUT", 2)
     t0 = time.time()
     async with await aconn_cls.connect(**args) as conn:
         elapsed = time.time() - t0
@@ -73,11 +73,11 @@ async def test_multi_hosts_timeout(aconn_cls, proxy, dsn, deaf_port):
     args["host"] = f"{proxy.client_host},{proxy.server_host}"
     args["port"] = f"{deaf_port},{proxy.server_port}"
     args.pop("hostaddr", None)
-    args["connect_timeout"] = "1"
+    args["connect_timeout"] = "2"
     t0 = time.time()
     async with await aconn_cls.connect(**args) as conn:
         elapsed = time.time() - t0
-        assert 1.0 < elapsed < 1.5
+        assert 2.0 < elapsed < 2.5
         assert conn.info.port == int(proxy.server_port)
         assert conn.info.host == proxy.server_host
 
@@ -452,8 +452,7 @@ async def test_connect_args(
     setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = await aconn_cls.connect(*args, **kwargs)
-    got_params = drop_default_args_from_conninfo(got_conninfo)
-    assert got_params == conninfo_to_dict(want)
+    assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     await conn.close()
 
 
@@ -832,9 +831,8 @@ def test_set_transaction_param_strange_property(conn):
 async def test_get_connection_params(aconn_cls, dsn, kwargs, exp, setpgenv):
     setpgenv({})
     params = await aconn_cls._get_connection_params(dsn, **kwargs)
-    conninfo = make_conninfo(**params)
-    assert drop_default_args_from_conninfo(conninfo) == exp[0]
-    assert params["connect_timeout"] == exp[1]
+    assert params == exp[0]
+    assert timeout_from_conninfo(params) == exp[1]
 
 
 async def test_connect_context_adapters(aconn_cls, dsn):
