@@ -31,7 +31,7 @@ from .cursor import Cursor
 from ._compat import LiteralString
 from .pq.misc import connection_summary
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
-from .conninfo import conninfo_attempts, ConnDict
+from .conninfo import conninfo_attempts, ConnDict, timeout_from_conninfo
 from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies, connect, execute
 from ._encodings import pgconn_encoding
@@ -106,11 +106,6 @@ class BaseConnection(Generic[Row]):
     # Enums useful for the connection
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
-
-    # Default timeout for connection a attempt.
-    # Arbitrary timeout, what applied by the libpq on my computer.
-    # Your mileage won't vary.
-    _DEFAULT_CONNECT_TIMEOUT = 130
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
@@ -730,14 +725,24 @@ class Connection(BaseConnection[Row]):
         Connect to a database server and return a new `Connection` instance.
         """
         params = cls._get_connection_params(conninfo, **kwargs)
-        timeout = int(params["connect_timeout"])
+        timeout = timeout_from_conninfo(params)
         rv = None
-        for attempt in conninfo_attempts(params):
+        attempts = conninfo_attempts(params)
+        for attempt in attempts:
             try:
                 conninfo = make_conninfo(**attempt)
                 rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
                 break
             except e._NO_TRACEBACK as ex:
+                if len(attempts) > 1:
+                    logger.debug(
+                        "connection attempt failed on host: %r, port: %r,"
+                        " hostaddr: %r: %s",
+                        attempt.get("host"),
+                        attempt.get("port"),
+                        attempt.get("hostaddr"),
+                        str(ex),
+                    )
                 last_ex = ex
 
         if not rv:
@@ -793,18 +798,7 @@ class Connection(BaseConnection[Row]):
         :return: Connection arguments merged and eventually modified, in a
             format similar to `~conninfo.conninfo_to_dict()`.
         """
-        params = conninfo_to_dict(conninfo, **kwargs)
-
-        # Make sure there is an usable connect_timeout
-        if "connect_timeout" in params:
-            params["connect_timeout"] = int(params["connect_timeout"])
-        else:
-            # The sync connect function will stop on the default socket timeout
-            # Because in async connection mode we need to enforce the timeout
-            # ourselves, we need a finite value.
-            params["connect_timeout"] = cls._DEFAULT_CONNECT_TIMEOUT
-
-        return params
+        return conninfo_to_dict(conninfo, **kwargs)
 
     def close(self) -> None:
         """Close the database connection."""

@@ -4,7 +4,6 @@ import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
 from .test_conninfo import fake_resolve  # noqa: F401  # fixture
-from .test_connection import drop_default_args_from_conninfo
 
 
 @pytest.mark.usefixtures("fake_resolve")
@@ -22,7 +21,7 @@ async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch):
 
     assert len(got) == 1
     want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
-    assert drop_default_args_from_conninfo(got[0]) == want
+    assert conninfo_to_dict(got[0]) == want
 
 
 @pytest.mark.dns
