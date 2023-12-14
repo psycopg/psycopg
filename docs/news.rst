@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.15 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.15
+^^^^^^^^^^^^^^
 
 - Fix use of ``service`` in connection string (regression in 3.1.13,
   :ticket:`#694`).
@@ -20,9 +20,6 @@ Psycopg 3.1.15 (unreleased)
 - Respect the :envvar:`PGCONNECT_TIMEOUT` environment variable to determine
   the connection timeout.
 
-
-Current release
----------------
 
 Psycopg 3.1.14
 ^^^^^^^^^^^^^^
