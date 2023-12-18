@@ -2,6 +2,11 @@
 """Convert async code in the project to sync code.
 
 Note: the version of Python used to run this script affects the output.
+
+Hint: in order to explore the AST of a module you can run:
+
+    python -m ast path/to/module.py
+
 """
 
 from __future__ import annotations
@@ -14,21 +19,9 @@ from copy import deepcopy
 from typing import Any, Literal
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from importlib.metadata import version
 
 import ast_comments as ast
-
-# ast_comment versions 1.1.0, 1.1.1 have an import:
-#
-#   from typing import Dict, List, Tuple, Union
-#
-# which shadows some of the types defined in ast.
-#
-# Reported in https://github.com/t3rn0/ast-comments/issues/22
-import ast as ast_orig
-
-ast.Dict = ast_orig.Dict
-ast.List = ast_orig.List
-ast.Tuple = ast_orig.Tuple
 
 # The version of Python officially used for the conversion.
 # Output may differ in other versions.
@@ -79,7 +72,12 @@ def main() -> int:
             current_ver,
         )
         logger.warning(
-            " You might get spurious changes that will be rejected by the CI linter."
+            "You might get spurious changes that will be rejected by the CI linter."
+        )
+        logger.warning(
+            "(use %s {--docker | --podman} to run it with Python %s in a container)",
+            sys.argv[0],
+            PYVER,
         )
 
     outputs = []
@@ -136,7 +134,7 @@ def run_in_container(engine: Literal["docker", "podman"]) -> int:
     """
     Build an image and run the script in a container.
     """
-    tag = f"async-to-sync:{PYVER}"
+    tag = f"async-to-sync:{version('ast_comments')}-{PYVER}"
 
     # Check if the image we want is present.
     cmdline = [engine, "inspect", tag, "-f", "{{ .Id }}"]
@@ -180,10 +178,6 @@ def tree_to_str(tree: ast.AST, filepath: Path) -> str:
 """
     rv += unparse(tree)
     return rv
-
-
-# Hint: in order to explore the AST of a module you can run:
-# python -m ast path/tp/module.py
 
 
 class AsyncToSync(ast.NodeTransformer):
