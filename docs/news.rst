@@ -30,6 +30,13 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.16 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix empty ports handling in async multiple connection attempts
+  (:ticket:`#703`).
+
+
 Current release
 ---------------
 
