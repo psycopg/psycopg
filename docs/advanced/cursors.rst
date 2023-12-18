@@ -8,9 +8,45 @@
 Cursor types
 ============
 
-Psycopg can manage kinds of "cursors" which differ in where the state of a
-query being processed is stored: :ref:`client-side-cursors` and
-:ref:`server-side-cursors`.
+Cursors are objects used to send commands to a PostgreSQL connection and to
+manage the results returned by it. They are normally created by the
+connection's `~Connection.cursor()` method.
+
+Psycopg can manage different kinds of "cursors", the objects used to send
+queries and retrieve results from the server. They differ from each other in
+aspects such as:
+
+- Are the parameters bound on the client or on the server?
+  :ref:`server-side-binding` can offer better performance (for instance
+  allowing to use prepared statements) and reduced memory footprint, but may
+  require stricter query definition and certain queries that work in
+  `!psycopg2` might need to be adapted.
+
+- Is the query result stored on the client or on the server? Server-side
+  cursors allow partial retrieval of large datasets, but they might offer less
+  performance in everyday usage.
+
+- Are queries manipulated by Python (to handle placeholders in ``%s`` and
+  ``%(name)s`` Python-style) or sent as they are to the PostgreSQL server
+  (which only supports ``$1``, ``$2`` parameters)?
+
+Psycopg exposes the following classes to implement the different strategies.
+All the classes are exposed by the main `!psycopg` package. Every class has
+also an `!Async`\ -prefixed counterparts, designed to be used in conjunction
+with `AsyncConnection` in `asyncio` programs.
+
+================= =========== =========== ==================== ==================================
+Class             Binding     Storage     Placeholders         See also
+================= =========== =========== ==================== ==================================
+`Cursor`          server-side client-side ``%s``, ``%(name)s`` :ref:`client-side-cursors`
+`ClientCursor`    cient-side  client-side ``%s``, ``%(name)s`` :ref:`client-side-binding-cursors`
+`ServerCursor`    server-side server-side ``%s``, ``%(name)s`` :ref:`server-side-cursors`
+`RawCursor`       server-side client-side ``$1``               :ref:`raw-query-cursors`
+================= =========== =========== ==================== ==================================
+
+If not specified by a `~Connection.cursor_factory`, `~Connection.cursor()`
+will usually produce `Cursor` objects.
+
 
 .. index::
     double: Cursor; Client-side
@@ -194,8 +230,8 @@ directly call the fetch methods, skipping the `~ServerCursor.execute()` call:
 
 .. _raw-query-cursors:
 
-Raw Query Cursors
-------------------
+Raw query cursors
+-----------------
 
 .. versionadded:: 3.2
 

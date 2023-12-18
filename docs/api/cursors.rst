@@ -11,11 +11,12 @@ Using the `!name` parameter on `!cursor()` will create a `ServerCursor` or
 `AsyncServerCursor`, which can be used to retrieve partial results from a
 database.
 
-A `Connection` can create several cursors, but only one at time can perform
-operations, so they are not the best way to achieve parallelism (you may want
-to operate with several connections instead). All the cursors on the same
-connection have a view of the same session, so they can see each other's
-uncommitted data.
+Other cursor classes can be created by directly instantiating them, or can be
+set as `Connection.cursor_factory` to require them on `!cursor()` call.
+
+This page describe the details of the `!Cursor` class interface. Please refer
+to :ref:`cursor-types` for general information about the different types of
+cursors available in Psycopg.
 
 
 The `!Cursor` class
