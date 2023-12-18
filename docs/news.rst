@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.16 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix empty ports handling in async multiple connection attempts
+  (:ticket:`#703`).
+
+
 Current release
 ---------------
 

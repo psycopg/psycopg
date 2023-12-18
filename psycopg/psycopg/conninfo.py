@@ -422,8 +422,11 @@ async def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
 
     loop = asyncio.get_running_loop()
 
-    port = _get_param(params, "port", compiled_default=True)
-    assert port and "," not in port  # assume a libpq default and no multi
+    port = _get_param(params, "port")
+    if not port:
+        port_def = _get_param_def("port")
+        port = port_def and port_def.compiled or "5432"
+
     ans = await loop.getaddrinfo(
         host, int(port), proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
     )
@@ -461,9 +464,7 @@ def timeout_from_conninfo(params: ConnDict) -> int:
     return timeout
 
 
-def _get_param(
-    params: ConnDict, name: str, compiled_default: bool = False
-) -> str | None:
+def _get_param(params: ConnDict, name: str) -> str | None:
     """
     Return a value from a connection string.
 
@@ -482,7 +483,7 @@ def _get_param(
     if env is not None:
         return env
 
-    return paramdef.compiled if compiled_default else None
+    return None
 
 
 @dataclass

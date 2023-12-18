@@ -339,6 +339,11 @@ class TestConnectionInfo:
             None,
         ),
         (
+            "host=1.1.1.1,1.1.1.1 port=5432,",
+            ["host=1.1.1.1 port=5432", "host=1.1.1.1 port=''"],
+            None,
+        ),
+        (
             "host=foo.com port=5432",
             ["host=foo.com port=5432"],
             {"PGHOSTADDR": "1.2.3.4"},
@@ -360,6 +365,11 @@ def test_conninfo_attempts(setpgenv, conninfo, want, env):
         ("", [""], None),
         ("host='' user=bar", ["host='' user=bar"], None),
         (
+            "host=127.0.0.1 user=bar port=''",
+            ["host=127.0.0.1 user=bar port='' hostaddr=127.0.0.1"],
+            None,
+        ),
+        (
             "host=127.0.0.1 user=bar",
             ["host=127.0.0.1 user=bar hostaddr=127.0.0.1"],
             None,
@@ -377,6 +387,14 @@ def test_conninfo_attempts(setpgenv, conninfo, want, env):
             [
                 "host=1.1.1.1 port=5432 hostaddr=1.1.1.1",
                 "host=2.2.2.2 port=5432 hostaddr=2.2.2.2",
+            ],
+            None,
+        ),
+        (
+            "host=1.1.1.1,2.2.2.2 port=5432,",
+            [
+                "host=1.1.1.1 port=5432 hostaddr=1.1.1.1",
+                "host=2.2.2.2 port='' hostaddr=2.2.2.2",
             ],
             None,
         ),
@@ -427,6 +445,14 @@ async def test_conninfo_attempts_async_no_resolve(
             [
                 "host=foo.com hostaddr=1.1.1.1 port=5432",
                 "host=qux.com hostaddr=2.2.2.2 port=5433",
+            ],
+            None,
+        ),
+        (
+            "host=foo.com,foo.com port=5432,",
+            [
+                "host=foo.com hostaddr=1.1.1.1 port=5432",
+                "host=foo.com hostaddr=1.1.1.1 port=''",
             ],
             None,
         ),
