@@ -25,6 +25,7 @@ from ._capabilities import Capabilities, capabilities
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
 from .raw_cursor import AsyncRawCursor, RawCursor
+from .raw_cursor import AsyncRawServerCursor, RawServerCursor
 from ._connection_base import BaseConnection, Notify
 from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
@@ -68,6 +69,7 @@ __all__ = [
     "AsyncCursor",
     "AsyncPipeline",
     "AsyncRawCursor",
+    "AsyncRawServerCursor",
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
@@ -83,6 +85,7 @@ __all__ = [
     "Notify",
     "Pipeline",
     "RawCursor",
+    "RawServerCursor",
     "Rollback",
     "ServerCursor",
     "Transaction",

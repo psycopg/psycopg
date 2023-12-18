@@ -31,7 +31,9 @@ def execmany(svcconn, _execmany):
 
 def ph(cur: Any, query: str) -> str:
     """Change placeholders in a query from %s to $n if testing  a raw cursor"""
-    if not isinstance(cur, (psycopg.RawCursor, psycopg.AsyncRawCursor)):
+    from psycopg.raw_cursor import RawCursorMixin
+
+    if not isinstance(cur, RawCursorMixin):
         return query
 
     if "%(" in query:
