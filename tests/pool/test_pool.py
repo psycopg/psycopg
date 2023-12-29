@@ -475,10 +475,10 @@ def test_shrink(dsn, monkeypatch):
 def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
-    assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
-    assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
-    monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
-    monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
+    assert pool.base.AttemptWithBackoff.INITIAL_DELAY == 1.0
+    assert pool.base.AttemptWithBackoff.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.base.AttemptWithBackoff, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.base.AttemptWithBackoff, "DELAY_JITTER", 0.0)
 
     caplog.clear()
     proxy.start()
@@ -986,10 +986,10 @@ def test_cancellation_in_queue(dsn):
 def test_check_backoff(dsn, caplog, monkeypatch):
     caplog.set_level(logging.INFO, logger="psycopg.pool")
 
-    assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
-    assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
-    monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
-    monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
+    assert pool.base.AttemptWithBackoff.INITIAL_DELAY == 1.0
+    assert pool.base.AttemptWithBackoff.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.base.AttemptWithBackoff, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.base.AttemptWithBackoff, "DELAY_JITTER", 0.0)
 
     def check(conn):
         raise Exception()

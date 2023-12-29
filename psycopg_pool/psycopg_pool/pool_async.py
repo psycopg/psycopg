@@ -21,7 +21,7 @@ from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
-from .base import ConnectionAttempt, BasePool
+from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque, Self
 from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
@@ -227,7 +227,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             ) from None
 
     async def _getconn_with_check_loop(self, deadline: float) -> ACT:
-        attempt: ConnectionAttempt | None = None
+        attempt: AttemptWithBackoff | None = None
 
         while True:
             conn = await self._getconn_unchecked(deadline - monotonic())
@@ -243,7 +243,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # backoff policy used in reconnection attempts.
             now = monotonic()
             if not attempt:
-                attempt = ConnectionAttempt(reconnect_timeout=deadline - now)
+                attempt = AttemptWithBackoff(timeout=deadline - now)
             else:
                 attempt.update_delay(now)
 
@@ -666,7 +666,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return conn
 
     async def _add_connection(
-        self, attempt: Optional[ConnectionAttempt], growing: bool = False
+        self, attempt: Optional[AttemptWithBackoff], growing: bool = False
     ) -> None:
         """Try to connect and add the connection to the pool.
 
@@ -677,7 +677,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         """
         now = monotonic()
         if not attempt:
-            attempt = ConnectionAttempt(reconnect_timeout=self.reconnect_timeout)
+            attempt = AttemptWithBackoff(timeout=self.reconnect_timeout)
 
         try:
             conn = await self._connect()
@@ -977,7 +977,7 @@ class AddConnection(MaintenanceTask):
     def __init__(
         self,
         pool: AsyncConnectionPool[Any],
-        attempt: Optional[ConnectionAttempt] = None,
+        attempt: Optional[AttemptWithBackoff] = None,
         growing: bool = False,
     ):
         super().__init__(pool)
