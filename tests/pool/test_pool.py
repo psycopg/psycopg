@@ -979,3 +979,34 @@ def test_cancellation_in_queue(dsn):
         with p.connection() as conn:
             cur = conn.execute("select 1")
             assert cur.fetchone() == (1,)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_check_backoff(dsn, caplog, monkeypatch):
+    caplog.set_level(logging.INFO, logger="psycopg.pool")
+
+    assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
+    assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
+
+    def check(conn):
+        raise Exception()
+
+    caplog.clear()
+    with pool.ConnectionPool(dsn, min_size=1, check=check) as p:
+        p.wait(2.0)
+
+        with pytest.raises(pool.PoolTimeout):
+            with p.connection(timeout=1.0):
+                assert False
+
+    times = [rec.created for rec in caplog.records if "failed check" in rec.message]
+    assert times[1] - times[0] < 0.05
+    deltas = [times[i + 1] - times[i] for i in range(1, len(times) - 1)]
+    assert len(deltas) == 3
+    want = 0.1
+    for delta in deltas:
+        assert delta == pytest.approx(want, 0.05), deltas
+        want *= 2
