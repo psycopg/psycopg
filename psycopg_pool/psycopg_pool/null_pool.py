@@ -96,6 +96,9 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         logger.info("pool %r is ready to use", self.name)
 
     def _get_ready_connection(self, timeout: Optional[float]) -> Optional[CT]:
+        if timeout is not None and timeout <= 0.0:
+            raise PoolTimeout()
+
         conn: Optional[CT] = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client
