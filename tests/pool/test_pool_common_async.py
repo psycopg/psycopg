@@ -630,6 +630,20 @@ async def test_check_init(pool_cls, dsn):
     assert checked
 
 
+@pytest.mark.slow
+async def test_check_timeout(pool_cls, dsn):
+    async def check(conn):
+        raise Exception()
+
+    t0 = time()
+    with pytest.raises(pool.PoolTimeout):
+        async with pool_cls(dsn, check=check, timeout=1.0) as p:
+            async with p.connection():
+                assert False
+
+    assert time() - t0 <= 1.5
+
+
 @skip_sync
 async def test_cancellation_in_queue(pool_cls, dsn):
     # https://github.com/psycopg/psycopg/issues/509

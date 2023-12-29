@@ -207,10 +207,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
-        t0 = monotonic()
         if timeout is None:
             timeout = self.timeout
-        deadline = t0 + timeout
+        deadline = monotonic() + timeout
 
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
@@ -270,6 +269,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
         """Return a connection, if the client deserves one."""
+        if timeout is not None and timeout <= 0.0:
+            raise PoolTimeout()
+
         conn: Optional[ACT] = None
         if self._pool:
             # Take a connection ready out of the pool
