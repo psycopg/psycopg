@@ -28,7 +28,7 @@ from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque, Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
-from ._acompat import current_thread_name
+from ._acompat import sleep, current_thread_name
 from .sched import Scheduler
 
 
@@ -197,21 +197,39 @@ class ConnectionPool(Generic[CT], BasePool):
         self._check_open_getconn()
 
         try:
-            while True:
-                conn = self._getconn_unchecked(deadline - monotonic())
-                try:
-                    self._check_connection(conn)
-                except Exception:
-                    self._putconn(conn, from_getconn=True)
-                else:
-                    logger.info("connection given by %r", self.name)
-                    return conn
+            return self._getconn_with_check_loop(deadline)
         # Re-raise the timeout exception presenting the user the global
         # timeout, not the per-attempt one.
         except PoolTimeout:
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    def _getconn_with_check_loop(self, deadline: float) -> CT:
+        attempt: ConnectionAttempt | None = None
+
+        while True:
+            conn = self._getconn_unchecked(deadline - monotonic())
+            try:
+                self._check_connection(conn)
+            except Exception:
+                self._putconn(conn, from_getconn=True)
+            else:
+                logger.info("connection given by %r", self.name)
+                return conn
+
+            # Delay further checks to avoid a busy loop, using the same
+            # backoff policy used in reconnection attempts.
+            now = monotonic()
+            if not attempt:
+                attempt = ConnectionAttempt(reconnect_timeout=deadline - now)
+            else:
+                attempt.update_delay(now)
+
+            if attempt.time_to_give_up(now):
+                raise PoolTimeout()
+            else:
+                sleep(attempt.delay)
 
     def _getconn_unchecked(self, timeout: float) -> CT:
         # Critical section: decide here if there's a connection ready
