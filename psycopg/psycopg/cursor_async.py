@@ -7,7 +7,7 @@ Psycopg AsyncCursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List, Optional, Type, TypeVar
+from typing import Any, AsyncIterator, Iterable, List, Optional, Type
 from typing import TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
@@ -16,6 +16,7 @@ from . import errors as e
 from .abc import Query, Params
 from .copy import AsyncCopy, AsyncWriter
 from .rows import Row, RowMaker, AsyncRowFactory
+from ._compat import Self
 from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
 
@@ -28,7 +29,6 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="AsyncCursor[Any]")
 
     @overload
     def __init__(self: AsyncCursor[Row], connection: AsyncConnection[Row]):
@@ -52,7 +52,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    async def __aenter__(self: _Self) -> _Self:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -84,13 +84,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _Self:
+    ) -> Self:
         """
         Execute a query or command to the database.
         """

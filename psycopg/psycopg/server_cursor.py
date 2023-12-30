@@ -5,7 +5,7 @@ psycopg server-side cursor objects.
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, AsyncIterator, List, Iterable, Iterator
-from typing import Optional, TypeVar, TYPE_CHECKING, overload
+from typing import Optional, TYPE_CHECKING, overload
 from warnings import warn
 
 from . import pq
@@ -14,6 +14,7 @@ from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
 from .cursor import Cursor
+from ._compat import Self
 from .generators import execute
 from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
@@ -212,7 +213,6 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
 class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="ServerCursor[Any]")
 
     @overload
     def __init__(
@@ -271,13 +271,13 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
             super().close()
 
     def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> _Self:
+    ) -> Self:
         """
         Open a cursor to execute a query to the database.
         """
@@ -354,7 +354,6 @@ class AsyncServerCursor(
 ):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="AsyncServerCursor[Any]")
 
     @overload
     def __init__(
@@ -410,13 +409,13 @@ class AsyncServerCursor(
             await super().close()
 
     async def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> _Self:
+    ) -> Self:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         if self._pgconn.pipeline_status:

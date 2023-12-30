@@ -10,7 +10,7 @@ Psycopg Cursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Iterator, Iterable, List, Optional, Type, TypeVar
+from typing import Any, Iterator, Iterable, List, Optional, Type
 from typing import TYPE_CHECKING, overload
 from contextlib import contextmanager
 
@@ -19,6 +19,7 @@ from . import errors as e
 from .abc import Query, Params
 from .copy import Copy, Writer
 from .rows import Row, RowMaker, RowFactory
+from ._compat import Self
 from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
 
@@ -31,7 +32,6 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="Cursor[Any]")
 
     @overload
     def __init__(self: Cursor[Row], connection: Connection[Row]):
@@ -52,7 +52,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -84,13 +84,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _Self:
+    ) -> Self:
         """
         Execute a query or command to the database.
         """

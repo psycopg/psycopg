@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, cast, Dict, Generic, List
-from typing import Optional, overload, Sequence, Type, TypeVar
+from typing import Optional, overload, Sequence, Type
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -24,7 +24,7 @@ from psycopg.rows import TupleRow
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Deque
+from ._compat import Deque, Self
 from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
 from ._acompat import current_task_name
 from .sched_async import AsyncScheduler
@@ -36,7 +36,6 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncConnectionPool(Generic[ACT], BasePool):
-    _Self = TypeVar("_Self", bound="AsyncConnectionPool[ACT]")
     _pool: Deque[ACT]
 
     @overload
@@ -519,7 +518,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         sched_runner, self._sched_runner = self._sched_runner, None
         await agather(sched_runner, *workers, timeout=timeout)
 
-    async def __aenter__(self: _Self) -> _Self:
+    async def __aenter__(self) -> Self:
         self._open_implicit = False
         await self.open()
         return self
