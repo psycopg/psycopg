@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
-from typing import Dict, List, Optional, Sequence, Type, TypeVar
+from typing import Dict, List, Optional, Sequence, Type
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -21,14 +21,12 @@ from psycopg.pq import TransactionStatus
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Task, create_task, Deque
+from ._compat import Task, create_task, Deque, Self
 
 logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
-    _Self = TypeVar("_Self", bound="AsyncConnectionPool")
-
     def __init__(
         self,
         conninfo: str = "",
@@ -333,7 +331,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                 timeout,
             )
 
-    async def __aenter__(self: _Self) -> _Self:
+    async def __aenter__(self) -> Self:
         await self.open()
         return self
 

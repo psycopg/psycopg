@@ -6,7 +6,7 @@ psycopg async cursor objects
 
 from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List
-from typing import Optional, Type, TypeVar, TYPE_CHECKING, overload
+from typing import Optional, Type, TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -15,6 +15,7 @@ from .abc import Query, Params
 from .copy import AsyncCopy, AsyncWriter as AsyncCopyWriter
 from .rows import Row, RowMaker, AsyncRowFactory
 from .cursor import BaseCursor
+from ._compat import Self
 from ._pipeline import Pipeline
 
 if TYPE_CHECKING:
@@ -26,7 +27,6 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="AsyncCursor[Any]")
 
     @overload
     def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):
@@ -50,7 +50,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    async def __aenter__(self: _Self) -> _Self:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -78,13 +78,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _Self:
+    ) -> Self:
         try:
             async with self._conn.lock:
                 await self._conn.wait(

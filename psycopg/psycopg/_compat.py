@@ -55,15 +55,16 @@ else:
     from typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 11):
-    from typing import LiteralString
+    from typing import LiteralString, Self
 else:
-    from typing_extensions import LiteralString
+    from typing_extensions import LiteralString, Self
 
 __all__ = [
     "Counter",
     "Deque",
     "LiteralString",
     "Protocol",
+    "Self",
     "TypeGuard",
     "ZoneInfo",
     "cache",

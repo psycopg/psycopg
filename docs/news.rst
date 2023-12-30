@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.17 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Use `typing.Self` as a more correct return value annotation of context
+  managers and other self-returning methods (see :ticket:`708`).
+
+
 Current release
 ---------------
 

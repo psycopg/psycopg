@@ -11,7 +11,7 @@ from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, Callable, Dict, Iterator, List
-from typing import Optional, Sequence, Type, TypeVar
+from typing import Optional, Sequence, Type
 from weakref import ref
 from contextlib import contextmanager
 
@@ -22,14 +22,12 @@ from psycopg.pq import TransactionStatus
 from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Deque
+from ._compat import Deque, Self
 
 logger = logging.getLogger("psycopg.pool")
 
 
 class ConnectionPool(BasePool[Connection[Any]]):
-    _Self = TypeVar("_Self", bound="ConnectionPool")
-
     def __init__(
         self,
         conninfo: str = "",
@@ -385,7 +383,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                         timeout,
                     )
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         self.open()
         return self
 

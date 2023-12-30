@@ -10,6 +10,7 @@ from typing import Any, Optional, Type, Union, overload, TYPE_CHECKING
 from .. import errors as e
 from ..abc import AdaptContext
 from ..rows import Row, RowFactory, AsyncRowFactory, TupleRow
+from .._compat import Self
 from ..conninfo import ConnectionInfo
 from ..connection import Connection
 from .._adapters_map import AdaptersMap
@@ -95,7 +96,7 @@ class CrdbConnection(_CrdbConnectionMixin, Connection[Row]):
         ...
 
     @classmethod
-    def connect(cls, conninfo: str = "", **kwargs: Any) -> "CrdbConnection[Any]":
+    def connect(cls, conninfo: str = "", **kwargs: Any) -> Self:
         """
         Connect to a database server and return a new `CrdbConnection` instance.
         """
@@ -142,10 +143,8 @@ class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
         ...
 
     @classmethod
-    async def connect(
-        cls, conninfo: str = "", **kwargs: Any
-    ) -> "AsyncCrdbConnection[Any]":
-        return await super().connect(conninfo, **kwargs)  # type: ignore [no-any-return]
+    async def connect(cls, conninfo: str = "", **kwargs: Any) -> Self:
+        return await super().connect(conninfo, **kwargs)  # type: ignore[no-any-return]
 
 
 class CrdbConnectionInfo(ConnectionInfo):

@@ -7,7 +7,7 @@ psycopg cursor objects
 from functools import partial
 from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
-from typing import Optional, NoReturn, Sequence, Tuple, Type, TypeVar
+from typing import Optional, NoReturn, Sequence, Tuple, Type
 from typing import overload, TYPE_CHECKING
 from warnings import warn
 from contextlib import contextmanager
@@ -19,6 +19,7 @@ from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
+from ._compat import Self
 from .pq.misc import connection_summary
 from ._queries import PostgresQuery, PostgresClientQuery
 from ._pipeline import Pipeline
@@ -662,7 +663,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="Cursor[Any]")
 
     @overload
     def __init__(self: "Cursor[Row]", connection: "Connection[Row]"):
@@ -686,7 +686,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -718,13 +718,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: _Self,
+        self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _Self:
+    ) -> Self:
         """
         Execute a query or command to the database.
         """

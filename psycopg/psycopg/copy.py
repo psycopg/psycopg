@@ -12,13 +12,13 @@ import threading
 from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import Any, AsyncIterator, Dict, Generic, Iterator, List, Match, IO
-from typing import Optional, Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
 
 from . import pq
 from . import adapt
 from . import errors as e
 from .abc import Buffer, ConnectionType, PQGen, Transformer
-from ._compat import create_task
+from ._compat import create_task, Self
 from .pq.misc import connection_summary
 from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding
@@ -74,8 +74,6 @@ class BaseCopy(Generic[ConnectionType]):
     database, but a different writer might be chosen, e.g. to stream data into
     a file for later use.
     """
-
-    _Self = TypeVar("_Self", bound="BaseCopy[Any]")
 
     formatter: "Formatter"
 
@@ -237,7 +235,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         self.writer = writer
         self._write = writer.write
 
-    def __enter__(self: BaseCopy._Self) -> BaseCopy._Self:
+    def __enter__(self) -> Self:
         self._enter()
         return self
 
@@ -495,7 +493,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         self.writer = writer
         self._write = writer.write
 
-    async def __aenter__(self: BaseCopy._Self) -> BaseCopy._Self:
+    async def __aenter__(self) -> Self:
         self._enter()
         return self
 
