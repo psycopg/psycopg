@@ -14,9 +14,15 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Counter, Deque
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 __all__ = [
     "Counter",
     "Deque",
+    "Self",
 ]
 
 # Workaround for psycopg < 3.0.8.

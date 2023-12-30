@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, Iterator, cast, Dict, Generic, List
-from typing import Optional, overload, Sequence, Type, TypeVar
+from typing import Optional, overload, Sequence, Type
 from weakref import ref
 from contextlib import contextmanager
 
@@ -27,7 +27,7 @@ from psycopg.rows import TupleRow
 from .abc import CT, ConnectionCB, ConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Deque
+from ._compat import Deque, Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
 from ._acompat import current_thread_name
 from .sched import Scheduler
@@ -37,7 +37,6 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class ConnectionPool(Generic[CT], BasePool):
-    _Self = TypeVar("_Self", bound="ConnectionPool[CT]")
     _pool: Deque[CT]
 
     @overload
@@ -491,7 +490,7 @@ class ConnectionPool(Generic[CT], BasePool):
         sched_runner, self._sched_runner = (self._sched_runner, None)
         gather(sched_runner, *workers, timeout=timeout)
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         self._open_implicit = False
         self.open()
         return self

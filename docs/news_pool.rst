@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.1 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Use `typing.Self` as a more correct return value annotation of context
+  managers and other self-returning methods (see :ticket:`708`).
+
+
 Current release
 ---------------
 
@@ -25,8 +35,8 @@ psycopg_pool 3.2.0
   it will become an error. (:ticket:`#659`).
 
 
-psycopg_pool 3.1.9 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.9
+^^^^^^^^^^^^^^^^^^
 
 - Fix the return type annotation of `!NullConnectionPool.__enter__()`
   (:ticket:`#540`).
