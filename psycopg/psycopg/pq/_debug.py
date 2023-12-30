@@ -30,9 +30,9 @@ Suggested usage::
 
 import inspect
 import logging
-from typing import Any, Callable, Type, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 from functools import wraps
-from .._compat import TypeVar
+from .._compat import Self, TypeVar
 
 from . import PGconn
 from .misc import connection_summary
@@ -48,7 +48,6 @@ logger = logging.getLogger("psycopg.debug")
 class PGconnDebug:
     """Wrapper for a PQconn logging all its access."""
 
-    _Self = TypeVar("_Self", bound="PGconnDebug")
     _pgconn: "abc.PGconn"
 
     def __init__(self, pgconn: "abc.PGconn"):
@@ -72,11 +71,11 @@ class PGconnDebug:
         logger.info("PGconn.%s <- %s", attr, value)
 
     @classmethod
-    def connect(cls: Type[_Self], conninfo: bytes) -> _Self:
+    def connect(cls, conninfo: bytes) -> Self:
         return cls(debugging(PGconn.connect)(conninfo))
 
     @classmethod
-    def connect_start(cls: Type[_Self], conninfo: bytes) -> _Self:
+    def connect_start(cls, conninfo: bytes) -> Self:
         return cls(debugging(PGconn.connect_start)(conninfo))
 
     @classmethod

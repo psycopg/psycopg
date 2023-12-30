@@ -7,12 +7,13 @@ Transaction context managers returned by Connection.transaction()
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, Optional, Type, Union, TypeVar, TYPE_CHECKING
+from typing import Generic, Iterator, Optional, Type, Union, TYPE_CHECKING
 
 from . import pq
 from . import sql
 from . import errors as e
 from .abc import ConnectionType, PQGen
+from ._compat import Self
 from .pq.misc import connection_summary
 
 if TYPE_CHECKING:
@@ -235,14 +236,12 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     __module__ = "psycopg"
 
-    _Self = TypeVar("_Self", bound="Transaction")
-
     @property
     def connection(self) -> "Connection[Any]":
         """The connection the object is managing."""
         return self._conn
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         with self._conn.lock:
             self._conn.wait(self._enter_gen())
         return self
@@ -267,13 +266,11 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     __module__ = "psycopg"
 
-    _Self = TypeVar("_Self", bound="AsyncTransaction")
-
     @property
     def connection(self) -> "AsyncConnection[Any]":
         return self._conn
 
-    async def __aenter__(self: _Self) -> _Self:
+    async def __aenter__(self) -> Self:
         async with self._conn.lock:
             await self._conn.wait(self._enter_gen())
         return self

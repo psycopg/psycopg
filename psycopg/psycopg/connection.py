@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from types import TracebackType
 from typing import Any, Generator, Iterator, Dict, List, Optional
-from typing import Type, TypeVar, Union, cast, overload, TYPE_CHECKING
+from typing import Type, Union, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -23,6 +23,7 @@ from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
+from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from ._pipeline import Pipeline
 from ._encodings import pgconn_encoding
@@ -59,7 +60,6 @@ class Connection(BaseConnection[Row]):
     server_cursor_factory: Type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
     _pipeline: Optional[Pipeline]
-    _Self = TypeVar("_Self", bound="Connection[Any]")
 
     def __init__(
         self,
@@ -85,7 +85,9 @@ class Connection(BaseConnection[Row]):
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> Connection[Row]:
-        # TODO: returned type should be _Self. See #308.
+        # TODO: returned type should be Self. See #308.
+        # Unfortunately we cannot use Self[Row] as Self is not parametric.
+        # https://peps.python.org/pep-0673/#use-in-generic-classes
         ...
 
     @overload
@@ -113,7 +115,7 @@ class Connection(BaseConnection[Row]):
         row_factory: Optional[RowFactory[Row]] = None,
         cursor_factory: Optional[Type[Cursor[Row]]] = None,
         **kwargs: Any,
-    ) -> Connection[Any]:
+    ) -> Self:
         """
         Connect to a database server and return a new `Connection` instance.
         """
@@ -138,7 +140,7 @@ class Connection(BaseConnection[Row]):
         rv.prepare_threshold = prepare_threshold
         return rv
 
-    def __enter__(self: _Self) -> _Self:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

@@ -10,7 +10,7 @@ import re
 import struct
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Match
-from typing import Optional, Sequence, Tuple, TypeVar, Union, TYPE_CHECKING
+from typing import Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 from . import pq
 from . import adapt
@@ -70,8 +70,6 @@ class BaseCopy(Generic[ConnectionType]):
     database, but a different writer might be chosen, e.g. to stream data into
     a file for later use.
     """
-
-    _Self = TypeVar("_Self", bound="BaseCopy[Any]")
 
     formatter: Formatter
 

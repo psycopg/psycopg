@@ -12,6 +12,7 @@ from typing import Any, AsyncIterator, Type, Tuple, Sequence, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
+from ._compat import Self
 from ._copy_base import BaseCopy, MAX_BUFFER_SIZE, QUEUE_SIZE
 from .generators import copy_to, copy_end
 from ._encodings import pgconn_encoding
@@ -59,7 +60,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         self.writer = writer
         self._write = writer.write
 
-    async def __aenter__(self: BaseCopy._Self) -> BaseCopy._Self:
+    async def __aenter__(self) -> Self:
         self._enter()
         return self
 
