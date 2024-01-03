@@ -5,12 +5,12 @@
 
 # From install_requires
 backports.zoneinfo == 0.2.0
-typing-extensions == 4.2.0
+typing-extensions == 4.4.0
 importlib-metadata == 1.4
 
 # From the 'test' extra
 anyio == 4.0
-mypy == 1.4.1
+mypy == 1.6.0
 pproxy == 2.7.0
 pytest == 6.2.5
 pytest-cov == 3.0.0

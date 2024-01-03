@@ -27,12 +27,18 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import LiteralString, Self
 
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
+
 __all__ = [
     "Counter",
     "Deque",
     "LiteralString",
     "Self",
     "TypeGuard",
+    "TypeVar",
     "ZoneInfo",
     "cache",
 ]

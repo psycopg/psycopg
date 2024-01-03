@@ -3,7 +3,7 @@ Adapters for the enum type.
 """
 from enum import Enum
 from typing import Any, Dict, Generic, Optional, Mapping, Sequence
-from typing import Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING
+from typing import Tuple, Type, Union, cast, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
 from .. import sql
@@ -12,7 +12,7 @@ from .. import errors as e
 from ..pq import Format
 from ..abc import AdaptContext, Query
 from ..adapt import Buffer, Dumper, Loader
-from .._compat import cache
+from .._compat import cache, TypeVar
 from .._encodings import conn_encoding
 from .._typeinfo import TypeInfo
 
