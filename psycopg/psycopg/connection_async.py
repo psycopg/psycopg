@@ -78,36 +78,7 @@ class AsyncConnection(BaseConnection[Row]):
         self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
 
-    @overload
     @classmethod
-    async def connect(
-        cls,
-        conninfo: str = "",
-        *,
-        autocommit: bool = False,
-        prepare_threshold: Optional[int] = 5,
-        row_factory: AsyncRowFactory[Row],
-        cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
-        context: Optional[AdaptContext] = None,
-        **kwargs: Union[None, int, str],
-    ) -> Self:
-        ...
-
-    @overload
-    @classmethod
-    async def connect(
-        cls,
-        conninfo: str = "",
-        *,
-        autocommit: bool = False,
-        prepare_threshold: Optional[int] = 5,
-        cursor_factory: Optional[Type[AsyncCursor[Any]]] = None,
-        context: Optional[AdaptContext] = None,
-        **kwargs: Union[None, int, str],
-    ) -> Self:
-        ...
-
-    @classmethod  # type: ignore[misc] # https://github.com/python/mypy/issues/11004
     async def connect(
         cls,
         conninfo: str = "",
