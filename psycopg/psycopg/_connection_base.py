@@ -6,7 +6,7 @@ psycopg connection objects
 
 import logging
 from typing import Callable, Generic
-from typing import List, NamedTuple, Optional, Type, Tuple, Union
+from typing import List, NamedTuple, Optional, Tuple, Union
 from typing import TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
@@ -17,13 +17,13 @@ from . import pq
 from . import errors as e
 from . import postgres
 from . import generators
-from .abc import ConnectionType, PQGen, PQGenConn, Query
+from .abc import PQGen, PQGenConn, Query
 from .sql import Composable, SQL
 from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import LiteralString, TypeVar
+from ._compat import LiteralString, Self, TypeVar
 from .pq.misc import connection_summary
 from .conninfo import ConnectionInfo
 from ._pipeline import BasePipeline
@@ -421,11 +421,8 @@ class BaseConnection(Generic[Row]):
 
     @classmethod
     def _connect_gen(
-        cls: Type[ConnectionType],
-        conninfo: str = "",
-        *,
-        autocommit: bool = False,
-    ) -> PQGenConn[ConnectionType]:
+        cls, conninfo: str = "", *, autocommit: bool = False
+    ) -> PQGenConn[Self]:
         """Generator to connect to the database and create a new instance."""
         pgconn = yield from generators.connect(conninfo)
         conn = cls(pgconn)
