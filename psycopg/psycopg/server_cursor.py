@@ -215,7 +215,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
     @overload
     def __init__(
-        self: "ServerCursor[Row]",
+        self,
         connection: "Connection[Row]",
         name: str,
         *,
@@ -226,7 +226,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
     @overload
     def __init__(
-        self: "ServerCursor[Row]",
+        self,
         connection: "Connection[Any]",
         name: str,
         *,
@@ -356,7 +356,7 @@ class AsyncServerCursor(
 
     @overload
     def __init__(
-        self: "AsyncServerCursor[Row]",
+        self,
         connection: "AsyncConnection[Row]",
         name: str,
         *,
@@ -367,7 +367,7 @@ class AsyncServerCursor(
 
     @overload
     def __init__(
-        self: "AsyncServerCursor[Row]",
+        self,
         connection: "AsyncConnection[Any]",
         name: str,
         *,
