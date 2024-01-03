@@ -669,9 +669,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn: ACT = cast(
-                ACT, await self.connection_class.connect(self.conninfo, **kwargs)
-            )
+            conn = await self.connection_class.connect(self.conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

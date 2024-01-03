@@ -29,7 +29,7 @@ T = TypeVar("T", covariant=True)
 
 # Row factories
 
-Row = TypeVar("Row", covariant=True)
+Row = TypeVar("Row", covariant=True, default="TupleRow")
 
 
 class RowMaker(Protocol[Row]):

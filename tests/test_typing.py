@@ -409,7 +409,6 @@ reveal_type(ref)
     assert got == want
 
 
-@pytest.mark.xfail(reason="https://github.com/psycopg/psycopg/issues/308")
 @pytest.mark.parametrize(
     "conn, type",
     [
