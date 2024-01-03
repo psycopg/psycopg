@@ -31,15 +31,12 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __slots__ = ()
 
     @overload
-    def __init__(self: AsyncCursor[Row], connection: AsyncConnection[Row]):
+    def __init__(self, connection: AsyncConnection[Row]):
         ...
 
     @overload
     def __init__(
-        self: AsyncCursor[Row],
-        connection: AsyncConnection[Any],
-        *,
-        row_factory: AsyncRowFactory[Row],
+        self, connection: AsyncConnection[Any], *, row_factory: AsyncRowFactory[Row]
     ):
         ...
 
