@@ -8,13 +8,14 @@ information to the adapters if needed.
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, Iterator, Optional, overload
-from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
 from . import sql
 from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
+from ._compat import TypeVar
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:

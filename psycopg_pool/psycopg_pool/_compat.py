@@ -19,10 +19,16 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
+
 __all__ = [
     "Counter",
     "Deque",
     "Self",
+    "TypeVar",
 ]
 
 # Workaround for psycopg < 3.0.8.
