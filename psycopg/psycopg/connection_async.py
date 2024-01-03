@@ -17,7 +17,7 @@ from . import errors as e
 from . import waiting
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
-from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
+from .rows import Row, AsyncRowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self
@@ -90,10 +90,7 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> AsyncConnection[Row]:
-        # TODO: returned type should be Self. See #308.
-        # Unfortunately we cannot use Self[Row] as Self is not parametric.
-        # https://peps.python.org/pep-0673/#use-in-generic-classes
+    ) -> Self:
         ...
 
     @overload
@@ -107,7 +104,7 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Any]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> AsyncConnection[TupleRow]:
+    ) -> Self:
         ...
 
     @classmethod  # type: ignore[misc] # https://github.com/python/mypy/issues/11004
