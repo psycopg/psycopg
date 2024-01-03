@@ -16,10 +16,11 @@ if TYPE_CHECKING:
     from .pool import ConnectionPool
     from .pool_async import AsyncConnectionPool
     from psycopg import Connection, AsyncConnection  # noqa: F401
+    from psycopg.rows import TupleRow  # noqa: F401
 
 # Connection types to make the pool generic
-CT = TypeVar("CT", bound="Connection[Any]")
-ACT = TypeVar("ACT", bound="AsyncConnection[Any]")
+CT = TypeVar("CT", bound="Connection[Any]", default="Connection[TupleRow]")
+ACT = TypeVar("ACT", bound="AsyncConnection[Any]", default="AsyncConnection[TupleRow]")
 
 # Callbacks taking a connection from the pool
 ConnectionCB: TypeAlias = Callable[[CT], None]

@@ -7,11 +7,10 @@ Psycopg null connection pool module (async version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Optional, overload, Type
+from typing import Any, cast, Dict, Optional, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
-from psycopg.rows import TupleRow
 
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
@@ -24,53 +23,6 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT]):
-    @overload
-    def __init__(
-        self: AsyncNullConnectionPool[AsyncConnection[TupleRow]],
-        conninfo: str = "",
-        *,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[AsyncConnectionCB[ACT]] = ...,
-        check: Optional[AsyncConnectionCB[ACT]] = ...,
-        reset: Optional[AsyncConnectionCB[ACT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
-    @overload
-    def __init__(
-        self: AsyncNullConnectionPool[ACT],
-        conninfo: str = "",
-        *,
-        connection_class: Type[ACT] = ...,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[AsyncConnectionCB[ACT]] = ...,
-        check: Optional[AsyncConnectionCB[ACT]] = ...,
-        reset: Optional[AsyncConnectionCB[ACT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
     def __init__(
         self,
         conninfo: str = "",
