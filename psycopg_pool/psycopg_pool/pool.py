@@ -15,14 +15,13 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, Iterator, cast, Dict, Generic, List
-from typing import Optional, overload, Sequence, Type
+from typing import Optional, Sequence, Type
 from weakref import ref
 from contextlib import contextmanager
 
 from psycopg import errors as e
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
-from psycopg.rows import TupleRow
 
 from .abc import CT, ConnectionCB, ConnectFailedCB
 from .base import ConnectionAttempt, BasePool
@@ -38,53 +37,6 @@ logger = logging.getLogger("psycopg.pool")
 
 class ConnectionPool(Generic[CT], BasePool):
     _pool: Deque[CT]
-
-    @overload
-    def __init__(
-        self: ConnectionPool[Connection[TupleRow]],
-        conninfo: str = "",
-        *,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[ConnectionCB[CT]] = ...,
-        check: Optional[ConnectionCB[CT]] = ...,
-        reset: Optional[ConnectionCB[CT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[ConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
-    @overload
-    def __init__(
-        self: ConnectionPool[CT],
-        conninfo: str = "",
-        *,
-        connection_class: Type[CT] = ...,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[ConnectionCB[CT]] = ...,
-        check: Optional[ConnectionCB[CT]] = ...,
-        reset: Optional[ConnectionCB[CT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[ConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
 
     def __init__(
         self,
