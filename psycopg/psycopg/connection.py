@@ -20,7 +20,7 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
-from .abc import AdaptContext, ConnectionType, Params, Query, RV
+from .abc import AdaptContext, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
 from ._tpc import Xid
@@ -430,10 +430,7 @@ class BaseConnection(Generic[Row]):
     # should have a lock and hold it before calling and consuming them.
 
     @classmethod
-    def _connect_gen(
-        cls: Type[ConnectionType],
-        conninfo: str = "",
-    ) -> PQGenConn[ConnectionType]:
+    def _connect_gen(cls, conninfo: str = "") -> PQGenConn[Self]:
         """Generator to connect to the database and create a new instance."""
         pgconn = yield from connect(conninfo)
         conn = cls(pgconn)
