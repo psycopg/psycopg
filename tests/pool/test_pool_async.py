@@ -181,18 +181,18 @@ async def test_configure(dsn):
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone())[0] == "on"
 
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone())[0] == "on"
             await conn.close()
 
         async with p.connection() as conn:
             assert inits == 2
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone())[0] == "on"
 
 
 async def test_reset(dsn):

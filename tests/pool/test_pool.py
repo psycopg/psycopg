@@ -177,18 +177,18 @@ def test_configure(dsn):
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"  # type: ignore[index]
+            assert res.fetchone()[0] == "on"
 
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"  # type: ignore[index]
+            assert res.fetchone()[0] == "on"
             conn.close()
 
         with p.connection() as conn:
             assert inits == 2
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"  # type: ignore[index]
+            assert res.fetchone()[0] == "on"
 
 
 def test_reset(dsn):
