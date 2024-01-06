@@ -69,9 +69,21 @@ When a new PostgreSQL major version is released
 - Run the script ``tools/update_oids.py`` to add new oids. Use ``-h`` to get
   an example docker command line to run a server locally.
 
+- Check if there are new enum values to include in:
+
+  - ``psycopg_c/psycopg_c/pq/libpq.pxd``;
+  - ``psycopg/psycopg/pq/_enums.py``.
+
+- Include the new version in GitHub Actions test and package grids.
+
 - Bump ``PG_VERSION`` in the ``macos`` job of
   ``.github/workflows/packages-bin.yml``.
 
 - Bump ``pg_version`` in ``tools/build/build_macos_arm64.sh``.
 
 - Bump the version in ``tools/build/wheel_win32_before_build.bat``.
+
+- Update the documented versions in:
+
+  - ``docs/basic/install.rst``;
+  - ``content/features/contents.lr`` in the psycopg-website repository.
