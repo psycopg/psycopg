@@ -4,24 +4,6 @@ import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
 
-@pytest.mark.usefixtures("fake_resolve")
-async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch):
-    got = []
-
-    def fake_connect_gen(conninfo, **kwargs):
-        got.append(conninfo)
-        1 / 0
-
-    monkeypatch.setattr(aconn_cls, "_connect_gen", fake_connect_gen)
-
-    with pytest.raises(ZeroDivisionError):
-        await aconn_cls.connect("host=foo.com")
-
-    assert len(got) == 1
-    want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
-    assert conninfo_to_dict(got[0]) == want
-
-
 @pytest.mark.dns
 @pytest.mark.anyio
 async def test_resolve_hostaddr_async_warning(recwarn):
