@@ -24,11 +24,11 @@ from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
 from .abc import CT, ConnectionCB, ConnectFailedCB
-from .base import ConnectionAttempt, BasePool
+from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque, Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
-from ._acompat import current_thread_name
+from ._acompat import sleep, current_thread_name
 from .sched import Scheduler
 
 
@@ -187,10 +187,9 @@ class ConnectionPool(Generic[CT], BasePool):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
-        t0 = monotonic()
         if timeout is None:
             timeout = self.timeout
-        deadline = t0 + timeout
+        deadline = monotonic() + timeout
 
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
@@ -198,21 +197,39 @@ class ConnectionPool(Generic[CT], BasePool):
         self._check_open_getconn()
 
         try:
-            while True:
-                conn = self._getconn_unchecked(deadline - monotonic())
-                try:
-                    self._check_connection(conn)
-                except Exception:
-                    self._putconn(conn, from_getconn=True)
-                else:
-                    logger.info("connection given by %r", self.name)
-                    return conn
+            return self._getconn_with_check_loop(deadline)
         # Re-raise the timeout exception presenting the user the global
         # timeout, not the per-attempt one.
         except PoolTimeout:
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    def _getconn_with_check_loop(self, deadline: float) -> CT:
+        attempt: AttemptWithBackoff | None = None
+
+        while True:
+            conn = self._getconn_unchecked(deadline - monotonic())
+            try:
+                self._check_connection(conn)
+            except Exception:
+                self._putconn(conn, from_getconn=True)
+            else:
+                logger.info("connection given by %r", self.name)
+                return conn
+
+            # Delay further checks to avoid a busy loop, using the same
+            # backoff policy used in reconnection attempts.
+            now = monotonic()
+            if not attempt:
+                attempt = AttemptWithBackoff(timeout=deadline - now)
+            else:
+                attempt.update_delay(now)
+
+            if attempt.time_to_give_up(now):
+                raise PoolTimeout()
+            else:
+                sleep(attempt.delay)
 
     def _getconn_unchecked(self, timeout: float) -> CT:
         # Critical section: decide here if there's a connection ready
@@ -249,6 +266,9 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def _get_ready_connection(self, timeout: Optional[float]) -> Optional[CT]:
         """Return a connection, if the client deserves one."""
+        if timeout is not None and timeout <= 0.0:
+            raise PoolTimeout()
+
         conn: Optional[CT] = None
         if self._pool:
             # Take a connection ready out of the pool
@@ -602,7 +622,7 @@ class ConnectionPool(Generic[CT], BasePool):
         return conn
 
     def _add_connection(
-        self, attempt: Optional[ConnectionAttempt], growing: bool = False
+        self, attempt: Optional[AttemptWithBackoff], growing: bool = False
     ) -> None:
         """Try to connect and add the connection to the pool.
 
@@ -613,7 +633,7 @@ class ConnectionPool(Generic[CT], BasePool):
         """
         now = monotonic()
         if not attempt:
-            attempt = ConnectionAttempt(reconnect_timeout=self.reconnect_timeout)
+            attempt = AttemptWithBackoff(timeout=self.reconnect_timeout)
 
         try:
             conn = self._connect()
@@ -908,7 +928,7 @@ class AddConnection(MaintenanceTask):
     def __init__(
         self,
         pool: ConnectionPool[Any],
-        attempt: Optional[ConnectionAttempt] = None,
+        attempt: Optional[AttemptWithBackoff] = None,
         growing: bool = False,
     ):
         super().__init__(pool)

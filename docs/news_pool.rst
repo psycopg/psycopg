@@ -13,6 +13,9 @@ Future releases
 psycopg_pool 3.2.1 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Respect the `!timeout` parameter on `~ConnectionPool.connection()` when
+  `!check` fails. Also avoid a busy-loop of checking; separate check attempts
+  using an exponential backoff (:ticket:`#709`).
 - Use `typing.Self` as a more correct return value annotation of context
   managers and other self-returning methods (see :ticket:`708`).
 

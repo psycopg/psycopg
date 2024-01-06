@@ -200,22 +200,24 @@ class BasePool:
         conn._expire_at = monotonic() + self._jitter(self.max_lifetime, -0.05, 0.0)
 
 
-class ConnectionAttempt:
-    """Keep the state of a connection attempt."""
+class AttemptWithBackoff:
+    """
+    Keep the state of a repeated operation attempt with exponential backoff.
+    """
 
     INITIAL_DELAY = 1.0
     DELAY_JITTER = 0.1
     DELAY_BACKOFF = 2.0
 
-    def __init__(self, *, reconnect_timeout: float):
-        self.reconnect_timeout = reconnect_timeout
+    def __init__(self, *, timeout: float):
+        self.timeout = timeout
         self.delay = 0.0
         self.give_up_at = 0.0
 
     def update_delay(self, now: float) -> None:
         """Calculate how long to wait for a new connection attempt"""
         if self.delay == 0.0:
-            self.give_up_at = now + self.reconnect_timeout
+            self.give_up_at = now + self.timeout
             self.delay = BasePool._jitter(
                 self.INITIAL_DELAY, -self.DELAY_JITTER, self.DELAY_JITTER
             )
@@ -226,5 +228,5 @@ class ConnectionAttempt:
             self.delay = max(0.0, self.give_up_at - now)
 
     def time_to_give_up(self, now: float) -> bool:
-        """Return True if we are tired of trying to connect. Meh."""
+        """Return True if we are tired of trying this attempt. Meh."""
         return self.give_up_at > 0.0 and now >= self.give_up_at
