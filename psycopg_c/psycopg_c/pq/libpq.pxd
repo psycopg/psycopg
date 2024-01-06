@@ -79,8 +79,10 @@ cdef extern from "libpq-fe.h":
         CONNECTION_SSL_STARTUP
         CONNECTION_NEEDED
         CONNECTION_CHECK_WRITABLE
+        CONNECTION_CONSUME
         CONNECTION_GSS_STARTUP
-        # CONNECTION_CHECK_TARGET PG 12
+        CONNECTION_CHECK_TARGET
+        CONNECTION_CHECK_STANDBY
 
     ctypedef enum PGTransactionStatusType:
         PQTRANS_IDLE
