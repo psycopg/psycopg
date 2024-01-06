@@ -93,6 +93,9 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         logger.info("pool %r is ready to use", self.name)
 
     async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
+        if timeout is not None and timeout <= 0.0:
+            raise PoolTimeout()
+
         conn: Optional[ACT] = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client

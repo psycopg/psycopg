@@ -10,6 +10,7 @@ when generating the sync version.
 
 from __future__ import annotations
 
+import time
 import queue
 import asyncio
 import logging
@@ -28,6 +29,7 @@ Event = threading.Event
 Condition = threading.Condition
 Lock = threading.RLock
 ALock = asyncio.Lock
+sleep = time.sleep
 
 Worker: TypeAlias = threading.Thread
 AWorker: TypeAlias = "asyncio.Task[None]"
@@ -162,3 +164,10 @@ def gather(*tasks: threading.Thread, timeout: float | None = None) -> None:
         if not t.is_alive():
             continue
         logger.warning("couldn't stop thread %r within %s seconds", t.name, timeout)
+
+
+def asleep(seconds: float) -> Coroutine[Any, Any, None]:
+    """
+    Equivalent to asyncio.sleep(), converted to time.sleep() by async_to_sync.
+    """
+    return asyncio.sleep(seconds)
