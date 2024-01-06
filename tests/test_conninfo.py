@@ -349,39 +349,3 @@ def test_timeout(setpgenv, conninfo, want, env):
     params = conninfo_to_dict(conninfo)
     timeout = timeout_from_conninfo(params)
     assert timeout == want
-
-
-@pytest.fixture
-async def fake_resolve(monkeypatch):
-    fake_hosts = {
-        "localhost": ["127.0.0.1"],
-        "foo.com": ["1.1.1.1"],
-        "qux.com": ["2.2.2.2"],
-        "dup.com": ["3.3.3.3", "3.3.3.4"],
-        "alot.com": [f"4.4.4.{n}" for n in range(10, 30)],
-    }
-
-    def family(host):
-        return socket.AF_INET6 if ":" in host else socket.AF_INET
-
-    async def fake_getaddrinfo(host, port, **kwargs):
-        assert isinstance(port, int) or (isinstance(port, str) and port.isdigit())
-        try:
-            addrs = fake_hosts[host]
-        except KeyError:
-            raise OSError(f"unknown test host: {host}")
-        else:
-            return [
-                (family(addr), socket.SOCK_STREAM, 6, "", (addr, port))
-                for addr in addrs
-            ]
-
-    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
-
-
-@pytest.fixture
-async def fail_resolve(monkeypatch):
-    async def fail_getaddrinfo(host, port, **kwargs):
-        pytest.fail(f"shouldn't try to resolve {host}")
-
-    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fail_getaddrinfo)

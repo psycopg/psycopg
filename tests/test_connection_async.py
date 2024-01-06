@@ -15,7 +15,6 @@ from .test_connection import tx_params, tx_params_isolation, tx_values_map
 from .test_connection import conninfo_params_timeout
 from .test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
-from .test_conninfo import fake_resolve  # noqa: F401
 
 pytestmark = pytest.mark.anyio
 
@@ -804,7 +803,7 @@ async def test_cancel_closed(aconn):
     aconn.cancel()
 
 
-async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
+async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
     got = []
 
     def fake_connect_gen(conninfo, **kwargs):
