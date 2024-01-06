@@ -9,9 +9,9 @@ from typing import Any, Optional, Union, TYPE_CHECKING
 
 from .. import errors as e
 from ..rows import Row
-from ..conninfo import ConnectionInfo
 from ..connection import Connection
 from .._adapters_map import AdaptersMap
+from .._connection_info import ConnectionInfo
 from ..connection_async import AsyncConnection
 from ._types import adapters
 
