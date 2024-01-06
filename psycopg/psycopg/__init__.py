@@ -17,13 +17,13 @@ from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
 from ._column import Column
-from .conninfo import ConnectionInfo
 from ._pipeline import Pipeline, AsyncPipeline
 from .connection import BaseConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
+from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
 
 from . import dbapi20

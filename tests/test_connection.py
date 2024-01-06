@@ -393,17 +393,19 @@ def test_autocommit_unknown(conn):
     [
         ((), {}, ""),
         (("",), {}, ""),
-        (("host=foo user=bar",), {}, "host=foo user=bar"),
-        (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
+        (("host=foo.com user=bar",), {}, "host=foo.com user=bar hostaddr=1.1.1.1"),
+        (("host=foo.com",), {"user": "baz"}, "host=foo.com user=baz hostaddr=1.1.1.1"),
         (
             ("dbname=foo port=5433",),
             {"dbname": "qux", "user": "joe"},
             "dbname=qux user=joe port=5433",
         ),
-        (("host=foo",), {"user": None}, "host=foo"),
+        (("host=foo.com",), {"user": None}, "host=foo.com hostaddr=1.1.1.1"),
     ],
 )
-def test_connect_args(conn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want):
+def test_connect_args(
+    conn_cls, monkeypatch, setpgenv, pgconn, fake_resolve, args, kwargs, want
+):
     got_conninfo: str
 
     def fake_connect(conninfo):
@@ -861,3 +863,20 @@ def test_connect_context_copy(conn_cls, dsn, conn):
 def test_cancel_closed(conn):
     conn.close()
     conn.cancel()
+
+
+def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
+    got = []
+
+    def fake_connect_gen(conninfo, **kwargs):
+        got.append(conninfo)
+        1 / 0
+
+    monkeypatch.setattr(conn_cls, "_connect_gen", fake_connect_gen)
+
+    with pytest.raises(ZeroDivisionError):
+        conn_cls.connect("host=foo.com")
+
+    assert len(got) == 1
+    want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
+    assert conninfo_to_dict(got[0]) == want

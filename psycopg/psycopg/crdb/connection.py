@@ -11,9 +11,9 @@ from .. import errors as e
 from ..abc import AdaptContext
 from ..rows import Row, RowFactory, AsyncRowFactory, TupleRow
 from .._compat import Self
-from ..conninfo import ConnectionInfo
 from ..connection import Connection
 from .._adapters_map import AdaptersMap
+from .._connection_info import ConnectionInfo
 from ..connection_async import AsyncConnection
 from ._types import adapters
 
