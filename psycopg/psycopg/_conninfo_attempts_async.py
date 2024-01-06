@@ -7,13 +7,15 @@ Separate connection attempts from a connection string.
 from __future__ import annotations
 
 import socket
-import asyncio
 import logging
 from random import shuffle
 
 from . import errors as e
 from ._conninfo_utils import ConnDict, get_param, is_ip_address, get_param_def
 from ._conninfo_utils import split_attempts
+
+if True:  # ASYNC:
+    import asyncio
 
 logger = logging.getLogger("psycopg")
 
@@ -35,7 +37,7 @@ async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
     attempts = []
     for attempt in split_attempts(params):
         try:
-            attempts.extend(await _resolve_hostnames_async(attempt))
+            attempts.extend(await _resolve_hostnames(attempt))
         except OSError as ex:
             logger.debug("failed to resolve host %r: %s", attempt.get("host"), str(ex))
             last_exc = ex
@@ -51,7 +53,7 @@ async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
     return attempts
 
 
-async def _resolve_hostnames_async(params: ConnDict) -> list[ConnDict]:
+async def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
     """
     Perform async DNS lookup of the hosts and return a list of connection attempts.
 
@@ -85,8 +87,14 @@ async def _resolve_hostnames_async(params: ConnDict) -> list[ConnDict]:
         port_def = get_param_def("port")
         port = port_def and port_def.compiled or "5432"
 
-    loop = asyncio.get_running_loop()
-    ans = await loop.getaddrinfo(
-        host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
-    )
+    if True:  # ASYNC:
+        loop = asyncio.get_running_loop()
+        ans = await loop.getaddrinfo(
+            host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
+        )
+    else:
+        ans = socket.getaddrinfo(
+            host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
+        )
+
     return [{**params, "hostaddr": item[4][0]} for item in ans]
