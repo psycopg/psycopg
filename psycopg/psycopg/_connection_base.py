@@ -25,10 +25,10 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import LiteralString, Self, TypeVar
 from .pq.misc import connection_summary
-from .conninfo import ConnectionInfo
 from ._pipeline import BasePipeline
 from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
+from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn, PGresult
