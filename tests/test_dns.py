@@ -3,11 +3,8 @@ import pytest
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
-from .test_conninfo import fake_resolve  # noqa: F401  # fixture
 
-
-@pytest.mark.usefixtures("fake_resolve")
-async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch):
+async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
     got = []
 
     def fake_connect_gen(conninfo, **kwargs):
