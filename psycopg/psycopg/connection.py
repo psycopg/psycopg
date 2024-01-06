@@ -30,7 +30,7 @@ from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._compat import LiteralString, Self
 from .pq.misc import connection_summary
-from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
+from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, ConnDict, timeout_from_conninfo
 from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies, connect, execute
@@ -38,6 +38,7 @@ from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from .transaction import Transaction
 from .server_cursor import ServerCursor
+from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn, PGresult
