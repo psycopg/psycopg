@@ -428,18 +428,18 @@ async def test_autocommit_unknown(aconn):
     [
         ((), {}, ""),
         (("",), {}, ""),
-        (("dbname=foo user=bar",), {}, "dbname=foo user=bar"),
-        (("dbname=foo",), {"user": "baz"}, "dbname=foo user=baz"),
+        (("host=foo.com user=bar",), {}, "host=foo.com user=bar hostaddr=1.1.1.1"),
+        (("host=foo.com",), {"user": "baz"}, "host=foo.com user=baz hostaddr=1.1.1.1"),
         (
             ("dbname=foo port=5433",),
             {"dbname": "qux", "user": "joe"},
             "dbname=qux user=joe port=5433",
         ),
-        (("dbname=foo",), {"user": None}, "dbname=foo"),
+        (("host=foo.com",), {"user": None}, "host=foo.com hostaddr=1.1.1.1"),
     ],
 )
 async def test_connect_args(
-    aconn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want
+    aconn_cls, monkeypatch, setpgenv, pgconn, fake_resolve, args, kwargs, want
 ):
     got_conninfo: str
 
@@ -865,3 +865,19 @@ async def test_connect_context_copy(aconn_cls, dsn, aconn):
 async def test_cancel_closed(aconn):
     await aconn.close()
     aconn.cancel()
+
+
+async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
+    got = ""
+
+    def fake_connect_gen(conninfo, **kwargs):
+        nonlocal got
+        got = conninfo
+        1 / 0
+
+    monkeypatch.setattr(aconn_cls, "_connect_gen", fake_connect_gen)
+
+    with pytest.raises(ZeroDivisionError):
+        await aconn_cls.connect("host=foo.com")
+
+    assert conninfo_to_dict(got) == {"host": "foo.com", "hostaddr": "1.1.1.1"}

@@ -122,17 +122,17 @@ def test_time_from_ticks(ticks, want):
     [
         ((), {}, ""),
         (("",), {}, ""),
-        (("host=foo user=bar",), {}, "host=foo user=bar"),
-        (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
+        (("host=foo.com user=bar",), {}, "host=foo.com user=bar hostaddr=1.1.1.1"),
+        (("host=foo.com",), {"user": "baz"}, "host=foo.com user=baz hostaddr=1.1.1.1"),
         (
-            ("host=foo port=5433",),
-            {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5433",
+            ("host=foo.com port=5433",),
+            {"host": "qux.com", "user": "joe"},
+            "host=qux.com user=joe port=5433 hostaddr=2.2.2.2",
         ),
-        (("host=foo",), {"user": None}, "host=foo"),
+        (("host=foo.com",), {"user": None}, "host=foo.com hostaddr=1.1.1.1"),
     ],
 )
-def test_connect_args(monkeypatch, pgconn, args, kwargs, want, setpgenv):
+def test_connect_args(monkeypatch, pgconn, args, kwargs, want, setpgenv, fake_resolve):
     got_conninfo: str
 
     def fake_connect(conninfo):

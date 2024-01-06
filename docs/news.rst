@@ -33,6 +33,8 @@ Psycopg 3.2 (unreleased)
 Psycopg 3.1.17 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix multiple connection attempts when a host name resolve to multiple
+  IP addresses (:ticket:`699`).
 - Use `typing.Self` as a more correct return value annotation of context
   managers and other self-returning methods (see :ticket:`708`).
 
