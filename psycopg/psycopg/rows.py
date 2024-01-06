@@ -6,12 +6,13 @@ psycopg row factories
 
 import functools
 from typing import Any, Callable, Dict, List, Optional, NamedTuple, NoReturn
-from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
 from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
+from ._compat import TypeVar
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
@@ -28,7 +29,7 @@ T = TypeVar("T", covariant=True)
 
 # Row factories
 
-Row = TypeVar("Row", covariant=True)
+Row = TypeVar("Row", covariant=True, default="TupleRow")
 
 
 class RowMaker(Protocol[Row]):

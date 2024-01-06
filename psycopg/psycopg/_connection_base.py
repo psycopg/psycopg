@@ -6,7 +6,7 @@ psycopg connection objects
 
 import logging
 from typing import Callable, Generic
-from typing import List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import List, NamedTuple, Optional, Tuple, Union
 from typing import TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
@@ -23,7 +23,7 @@ from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import LiteralString, Self
+from ._compat import LiteralString, Self, TypeVar
 from .pq.misc import connection_summary
 from .conninfo import ConnectionInfo
 from ._pipeline import BasePipeline

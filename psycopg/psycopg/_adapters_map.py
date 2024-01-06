@@ -4,13 +4,14 @@ Mapping from types/oids to Dumpers/Loaders
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Type, Union
 from typing import cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
 from .abc import Dumper, Loader
 from ._enums import PyFormat as PyFormat
+from ._compat import TypeVar
 from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 

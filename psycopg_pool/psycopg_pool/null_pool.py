@@ -10,11 +10,10 @@ Psycopg null connection pool module (sync version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Optional, overload, Type
+from typing import Any, cast, Dict, Optional, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
-from psycopg.rows import TupleRow
 
 from .abc import CT, ConnectionCB, ConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
@@ -27,53 +26,6 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
-    @overload
-    def __init__(
-        self: NullConnectionPool[Connection[TupleRow]],
-        conninfo: str = "",
-        *,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[ConnectionCB[CT]] = ...,
-        check: Optional[ConnectionCB[CT]] = ...,
-        reset: Optional[ConnectionCB[CT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[ConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
-    @overload
-    def __init__(
-        self: NullConnectionPool[CT],
-        conninfo: str = "",
-        *,
-        connection_class: Type[CT] = ...,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[ConnectionCB[CT]] = ...,
-        check: Optional[ConnectionCB[CT]] = ...,
-        reset: Optional[ConnectionCB[CT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[ConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
     def __init__(
         self,
         conninfo: str = "",

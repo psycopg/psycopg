@@ -5,7 +5,7 @@ Support for range types adaptation.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Type, Tuple
+from typing import Any, Callable, Dict, Generic, List, Optional, Type, Tuple
 from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
@@ -18,7 +18,7 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
-from .._compat import cache
+from .._compat import cache, TypeVar
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 

@@ -12,14 +12,13 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, cast, Dict, Generic, List
-from typing import Optional, overload, Sequence, Type
+from typing import Optional, Sequence, Type
 from weakref import ref
 from contextlib import asynccontextmanager
 
 from psycopg import errors as e
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
-from psycopg.rows import TupleRow
 
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
@@ -37,53 +36,6 @@ logger = logging.getLogger("psycopg.pool")
 
 class AsyncConnectionPool(Generic[ACT], BasePool):
     _pool: Deque[ACT]
-
-    @overload
-    def __init__(
-        self: AsyncConnectionPool[AsyncConnection[TupleRow]],
-        conninfo: str = "",
-        *,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[AsyncConnectionCB[ACT]] = ...,
-        check: Optional[AsyncConnectionCB[ACT]] = ...,
-        reset: Optional[AsyncConnectionCB[ACT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
-
-    @overload
-    def __init__(
-        self: AsyncConnectionPool[ACT],
-        conninfo: str = "",
-        *,
-        connection_class: Type[ACT] = ...,
-        kwargs: Optional[Dict[str, Any]] = ...,
-        min_size: int = ...,
-        max_size: Optional[int] = ...,
-        open: bool | None = ...,
-        configure: Optional[AsyncConnectionCB[ACT]] = ...,
-        check: Optional[AsyncConnectionCB[ACT]] = ...,
-        reset: Optional[AsyncConnectionCB[ACT]] = ...,
-        name: Optional[str] = ...,
-        timeout: float = ...,
-        max_waiting: int = ...,
-        max_lifetime: float = ...,
-        max_idle: float = ...,
-        reconnect_timeout: float = ...,
-        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
-        num_workers: int = ...,
-    ):
-        ...
 
     def __init__(
         self,
@@ -669,9 +621,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn: ACT = cast(
-                ACT, await self.connection_class.connect(self.conninfo, **kwargs)
-            )
+            conn = await self.connection_class.connect(self.conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
