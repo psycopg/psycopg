@@ -7,20 +7,17 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.17 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.17
+^^^^^^^^^^^^^^
 
 - Fix multiple connection attempts when a host name resolve to multiple
   IP addresses (:ticket:`699`).
 - Use `typing.Self` as a more correct return value annotation of context
   managers and other self-returning methods (see :ticket:`708`).
 
-
-Current release
----------------
 
 Psycopg 3.1.16
 ^^^^^^^^^^^^^^
