@@ -71,7 +71,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -128,7 +128,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= $PG_VERSION"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= $PG_VERSION"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -179,7 +179,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
