@@ -7,11 +7,11 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.2.1 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.2.1
+^^^^^^^^^^^^^^^^^^
 
 - Respect the `!timeout` parameter on `~ConnectionPool.connection()` when
   `!check` fails. Also avoid a busy-loop of checking; separate check attempts
@@ -19,9 +19,6 @@ psycopg_pool 3.2.1 (unreleased)
 - Use `typing.Self` as a more correct return value annotation of context
   managers and other self-returning methods (see :ticket:`708`).
 
-
-Current release
----------------
 
 psycopg_pool 3.2.0
 ^^^^^^^^^^^^^^^^^^
