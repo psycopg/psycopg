@@ -6,10 +6,10 @@ Utility functions to deal with binary structs.
 
 import struct
 from typing import Callable, cast, Optional, Protocol, Tuple
-from typing_extensions import TypeAlias
 
-from .abc import Buffer
 from . import errors as e
+from .abc import Buffer
+from ._compat import TypeAlias
 
 PackInt: TypeAlias = Callable[[int], bytes]
 UnpackInt: TypeAlias = Callable[[Buffer], Tuple[int]]

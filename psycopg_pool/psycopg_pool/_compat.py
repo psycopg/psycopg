@@ -14,6 +14,11 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Counter, Deque
 
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -28,6 +33,7 @@ __all__ = [
     "Counter",
     "Deque",
     "Self",
+    "TypeAlias",
     "TypeVar",
 ]
 

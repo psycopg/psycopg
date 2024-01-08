@@ -6,14 +6,13 @@ Dict to hstore adaptation
 
 import re
 from typing import Dict, List, Optional, Type
-from typing_extensions import TypeAlias
 
 from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
 from .._oids import TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from .._compat import cache
+from .._compat import cache, TypeAlias
 from .._typeinfo import TypeInfo
 
 _re_escape = re.compile(r'(["\\])')

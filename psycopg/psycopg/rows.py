@@ -8,11 +8,10 @@ import functools
 from typing import Any, Callable, Dict, List, Optional, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
-from ._compat import TypeVar
+from ._compat import TypeAlias, TypeVar
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:

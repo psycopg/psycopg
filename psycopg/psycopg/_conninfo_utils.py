@@ -7,14 +7,17 @@ Internal utilities to manipulate connection strings
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING
 from functools import lru_cache
 from ipaddress import ip_address
 from dataclasses import dataclass
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
+from ._compat import TypeAlias
+
+if TYPE_CHECKING:
+    from typing import Any  # noqa: F401
 
 ConnDict: TypeAlias = "dict[str, Any]"
 

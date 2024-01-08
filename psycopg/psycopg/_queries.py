@@ -8,14 +8,13 @@ import re
 from typing import Any, Callable, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
 from functools import lru_cache
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
 from .sql import Composable
 from .abc import Buffer, Query, Params
 from ._enums import PyFormat
-from ._compat import TypeGuard
+from ._compat import TypeAlias, TypeGuard
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:

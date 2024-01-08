@@ -7,12 +7,11 @@ commands pipeline management
 import logging
 from types import TracebackType
 from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
 from .abc import PipelineCommand, PQGen
-from ._compat import Deque, Self
+from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare

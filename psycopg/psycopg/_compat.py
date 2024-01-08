@@ -18,9 +18,9 @@ else:
     cache = lru_cache(maxsize=None)
 
 if sys.version_info >= (3, 10):
-    from typing import TypeGuard
+    from typing import TypeGuard, TypeAlias
 else:
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeGuard, TypeAlias
 
 if sys.version_info >= (3, 11):
     from typing import LiteralString, Self
@@ -37,6 +37,7 @@ __all__ = [
     "Deque",
     "LiteralString",
     "Self",
+    "TypeAlias",
     "TypeGuard",
     "TypeVar",
     "ZoneInfo",
