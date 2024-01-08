@@ -11,7 +11,8 @@ import logging
 from random import shuffle
 
 from . import errors as e
-from ._conninfo_utils import ConnDict, get_param, is_ip_address, get_param_def
+from .abc import ConnDict, ConnMapping
+from ._conninfo_utils import get_param, is_ip_address, get_param_def
 from ._conninfo_utils import split_attempts
 
 if True:  # ASYNC:
@@ -20,7 +21,7 @@ if True:  # ASYNC:
 logger = logging.getLogger("psycopg")
 
 
-async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
+async def conninfo_attempts_async(params: ConnMapping) -> list[ConnDict]:
     """Split a set of connection params on the single attempts to perform.
 
     A connection param can perform more than one attempt more than one ``host``

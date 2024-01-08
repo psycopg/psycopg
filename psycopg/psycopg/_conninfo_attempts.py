@@ -14,14 +14,15 @@ import logging
 from random import shuffle
 
 from . import errors as e
-from ._conninfo_utils import ConnDict, get_param, is_ip_address, get_param_def
+from .abc import ConnDict, ConnMapping
+from ._conninfo_utils import get_param, is_ip_address, get_param_def
 from ._conninfo_utils import split_attempts
 
 
 logger = logging.getLogger("psycopg")
 
 
-def conninfo_attempts(params: ConnDict) -> list[ConnDict]:
+def conninfo_attempts(params: ConnMapping) -> list[ConnDict]:
     """Split a set of connection params on the single attempts to perform.
 
     A connection param can perform more than one attempt more than one ``host``

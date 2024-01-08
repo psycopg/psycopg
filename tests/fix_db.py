@@ -119,7 +119,7 @@ def dsn_env(dsn):
             continue
         args[opt.keyword.decode()] = os.environ[opt.envvar.decode()]
 
-    return make_conninfo(**args)
+    return make_conninfo("", **args)
 
 
 @pytest.fixture(scope="session")

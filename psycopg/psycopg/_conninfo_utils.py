@@ -13,16 +13,14 @@ from ipaddress import ip_address
 from dataclasses import dataclass
 
 from . import pq
+from .abc import ConnDict, ConnMapping
 from . import errors as e
-from ._compat import TypeAlias
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
 
-ConnDict: TypeAlias = "dict[str, Any]"
 
-
-def split_attempts(params: ConnDict) -> list[ConnDict]:
+def split_attempts(params: ConnMapping) -> list[ConnDict]:
     """
     Split connection parameters with a sequence of hosts into separate attempts.
     """
@@ -50,7 +48,7 @@ def split_attempts(params: ConnDict) -> list[ConnDict]:
 
     # A single attempt to make. Don't mangle the conninfo string.
     if nhosts <= 1:
-        return [params]
+        return [{**params}]
 
     if len(ports) == 1:
         ports *= nhosts
@@ -58,7 +56,7 @@ def split_attempts(params: ConnDict) -> list[ConnDict]:
     # Now all lists are either empty or have the same length
     rv = []
     for i in range(nhosts):
-        attempt = params.copy()
+        attempt = {**params}
         if hosts:
             attempt["host"] = hosts[i]
         if hostaddrs:
@@ -70,7 +68,7 @@ def split_attempts(params: ConnDict) -> list[ConnDict]:
     return rv
 
 
-def get_param(params: ConnDict, name: str) -> str | None:
+def get_param(params: ConnMapping, name: str) -> str | None:
     """
     Return a value from a connection string.
 

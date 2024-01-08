@@ -4,7 +4,7 @@ Protocol objects representing different implementations of the same classes.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Generator, Mapping
+from typing import Any, Dict, Callable, Generator, Mapping
 from typing import List, Optional, Protocol, Sequence, Tuple, Union
 from typing import TYPE_CHECKING
 
@@ -30,6 +30,10 @@ Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
 DumperKey: TypeAlias = Union[type, Tuple["DumperKey", ...]]
+ConnParam: TypeAlias = Union[str, int, None]
+ConnDict: TypeAlias = Dict[str, ConnParam]
+ConnMapping: TypeAlias = Mapping[str, ConnParam]
+
 
 # Waiting protocol types
 

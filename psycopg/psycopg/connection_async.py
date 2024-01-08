@@ -15,13 +15,13 @@ from contextlib import asynccontextmanager
 from . import pq
 from . import errors as e
 from . import waiting
-from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
+from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self
-from .conninfo import ConnDict, make_conninfo, conninfo_to_dict
+from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts_async, timeout_from_conninfo
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
@@ -88,7 +88,7 @@ class AsyncConnection(BaseConnection[Row]):
         context: Optional[AdaptContext] = None,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
-        **kwargs: Any,
+        **kwargs: ConnParam,
     ) -> Self:
         """
         Connect to a database server and return a new `AsyncConnection` instance.
@@ -110,7 +110,7 @@ class AsyncConnection(BaseConnection[Row]):
         attempts = await conninfo_attempts_async(params)
         for attempt in attempts:
             try:
-                conninfo = make_conninfo(**attempt)
+                conninfo = make_conninfo("", **attempt)
                 rv = await cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
                 break
             except e._NO_TRACEBACK as ex:
