@@ -364,12 +364,19 @@ class Identifier(Composable):
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         conn = context.connection if context else None
-        if not conn:
-            raise ValueError("a connection is necessary for Identifier")
-        esc = Escaping(conn.pgconn)
-        enc = conn_encoding(conn)
-        escs = [esc.escape_identifier(s.encode(enc)) for s in self._obj]
+        if conn:
+            esc = Escaping(conn.pgconn)
+            enc = conn_encoding(conn)
+            escs = [esc.escape_identifier(s.encode(enc)) for s in self._obj]
+        else:
+            escs = [self._escape_identifier(s.encode()) for s in self._obj]
         return b".".join(escs)
+
+    def _escape_identifier(self, s: bytes) -> bytes:
+        """
+        Approximation of PQescapeIdentifier taking no connection.
+        """
+        return b'"' + s.replace(b'"', b'""') + b'"'
 
 
 class Literal(Composable):
