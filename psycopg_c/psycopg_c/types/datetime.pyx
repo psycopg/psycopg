@@ -391,7 +391,7 @@ cdef class DateLoader(CLoader):
         if length != 10:
             self._error_date(data, "unexpected length")
 
-        cdef int vals[3]
+        cdef long vals[3]
         memset(vals, 0, sizeof(vals))
 
         cdef const char *ptr
@@ -437,7 +437,7 @@ cdef class TimeLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
 
-        cdef int vals[3]
+        cdef long vals[3]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
         cdef const char *end = data + length
@@ -494,7 +494,7 @@ cdef class TimetzLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
 
-        cdef int vals[3]
+        cdef long vals[3]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
         cdef const char *end = data + length
@@ -581,7 +581,7 @@ cdef class TimestampLoader(CLoader):
         if self._order == ORDER_PGDM or self._order == ORDER_PGMD:
             return self._cload_pg(data, end)
 
-        cdef int vals[6]
+        cdef long vals[6]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
 
@@ -611,7 +611,7 @@ cdef class TimestampLoader(CLoader):
             raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
     cdef object _cload_pg(self, const char *data, const char *end):
-        cdef int vals[4]
+        cdef long vals[4]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
 
@@ -721,7 +721,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         if end[-1] == b'C':  # ends with BC
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
-        cdef int vals[6]
+        cdef long vals[6]
         memset(vals, 0, sizeof(vals))
 
         # Parse the first 6 groups of digits (date and time)
@@ -862,9 +862,10 @@ cdef class IntervalLoader(CLoader):
         if self._style == INTERVALSTYLE_OTHERS:
             return self._cload_notimpl(data, length)
 
-        cdef int days = 0, secs = 0, us = 0
+        cdef int days = 0, us = 0
+        cdef long secs = 0
         cdef char sign
-        cdef int val
+        cdef long val
         cdef const char *ptr = data
         cdef const char *sep
         cdef const char *end = ptr + length
@@ -908,7 +909,7 @@ cdef class IntervalLoader(CLoader):
                 break
 
         # Parse the time part. An eventual sign was already consumed in the loop
-        cdef int vals[3]
+        cdef long vals[3]
         memset(vals, 0, sizeof(vals))
         if ptr != NULL:
             ptr = _parse_date_values(ptr, end, vals, ARRAYSIZE(vals))
@@ -917,6 +918,10 @@ cdef class IntervalLoader(CLoader):
                 raise e.DataError(f"can't parse interval {s!r}")
 
             secs = vals[2] + 60 * (vals[1] + 60 * vals[0])
+
+            if secs > 86_400:
+                days += secs // 86_400
+                secs %= 86_400
 
             if ptr[0] == b'.':
                 ptr = _parse_micros(ptr + 1, &us)
@@ -966,11 +971,11 @@ cdef class IntervalBinaryLoader(CLoader):
         # Work only with positive values as the cdivision behaves differently
         # with negative values, and cdivision=False adds overhead.
         cdef int64_t aval = val if val >= 0 else -val
-        cdef int us, ussecs, usdays
+        cdef long us, ussecs, usdays
 
         # Group the micros in biggers stuff or timedelta_new might overflow
         with cython.cdivision(True):
-            ussecs = <int>(aval // 1_000_000)
+            ussecs = <long>(aval // 1_000_000)
             us = aval % 1_000_000
 
             usdays = ussecs // 86_400
@@ -988,7 +993,7 @@ cdef class IntervalBinaryLoader(CLoader):
 
 
 cdef const char *_parse_date_values(
-    const char *ptr, const char *end, int *vals, int nvals
+    const char *ptr, const char *end, long *vals, int nvals
 ):
     """
     Parse *nvals* numeric values separated by non-numeric chars.
@@ -1046,7 +1051,7 @@ cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     cdef char sgn = ptr[0]
 
     # Parse at most three groups of digits
-    cdef int vals[3]
+    cdef long vals[3]
     memset(vals, 0, sizeof(vals))
 
     ptr = _parse_date_values(ptr + 1, end, vals, ARRAYSIZE(vals))
