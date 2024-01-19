@@ -280,6 +280,7 @@ class TestIdentifier:
     @pytest.mark.parametrize("args, want", _as_string_params)
     def test_as_string_no_conn(self, args, want):
         assert sql.Identifier(*args).as_string(None) == want
+        assert sql.Identifier(*args).as_string() == want
 
     _as_bytes_params = [
         crdb_encoding(("foo",), '"foo"', "ascii"),
@@ -296,9 +297,10 @@ class TestIdentifier:
         assert sql.Identifier(*args).as_bytes(conn) == want
 
     @pytest.mark.parametrize("args, want, enc", _as_bytes_params)
-    def test_as_bytes_params(self, conn, args, want, enc):
+    def test_as_bytes_no_conn(self, conn, args, want, enc):
         want = want.encode()
         assert sql.Identifier(*args).as_bytes(None) == want
+        assert sql.Identifier(*args).as_bytes() == want
 
     def test_join(self):
         assert not hasattr(sql.Identifier("foo"), "join")
@@ -326,17 +328,40 @@ class TestLiteral:
         assert repr(sql.Literal("foo")) == "Literal('foo')"
         assert str(sql.Literal("foo")) == "Literal('foo')"
 
-    def test_as_string(self, conn):
-        assert sql.Literal(None).as_string(conn) == "NULL"
-        assert no_e(sql.Literal("foo").as_string(conn)) == "'foo'"
-        assert sql.Literal(42).as_string(conn) == "42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'::date"
+    _params = [
+        (None, "NULL"),
+        ("foo", "'foo'"),
+        (42, "42"),
+        (dt.date(2017, 1, 1), "'2017-01-01'::date"),
+    ]
 
-    def test_as_bytes(self, conn):
-        assert sql.Literal(None).as_bytes(conn) == b"NULL"
-        assert no_e(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
-        assert sql.Literal(42).as_bytes(conn) == b"42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'::date"
+    @pytest.mark.parametrize("obj, want", _params)
+    def test_as_string(self, conn, obj, want):
+        got = sql.Literal(obj).as_string(conn)
+        if isinstance(obj, str):
+            got = no_e(got)
+        assert got == want
+
+    @pytest.mark.parametrize("obj, want", _params)
+    def test_as_bytes(self, conn, obj, want):
+        got = sql.Literal(obj).as_bytes(conn)
+        if isinstance(obj, str):
+            got = no_e(got)
+        assert got == want.encode()
+
+    @pytest.mark.parametrize("obj, want", _params)
+    def test_as_string_no_conn(self, obj, want):
+        got = sql.Literal(obj).as_string()
+        if isinstance(obj, str):
+            got = no_e(got)
+        assert got == want
+
+    @pytest.mark.parametrize("obj, want", _params)
+    def test_as_bytes_no_conn(self, obj, want):
+        got = sql.Literal(obj).as_bytes()
+        if isinstance(obj, str):
+            got = no_e(got)
+        assert got == want.encode()
 
     @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
     def test_as_bytes_encoding(self, conn, encoding):
@@ -473,6 +498,7 @@ class TestSQL:
 
     def test_as_string(self, conn):
         assert sql.SQL("foo").as_string(conn) == "foo"
+        assert sql.SQL("foo").as_string() == "foo"
 
     @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
     def test_as_bytes(self, conn, encoding):
@@ -480,6 +506,10 @@ class TestSQL:
             conn.execute(f"set client_encoding to {encoding}")
 
         assert sql.SQL(eur).as_bytes(conn) == eur.encode(encoding)
+
+    def test_no_conn(self):
+        assert sql.SQL(eur).as_string() == eur
+        assert sql.SQL(eur).as_bytes() == eur.encode()
 
 
 class TestComposed:
@@ -540,10 +570,12 @@ class TestComposed:
     def test_as_string(self, conn):
         obj = sql.Composed([sql.SQL("foo"), sql.SQL("bar")])
         assert obj.as_string(conn) == "foobar"
+        assert obj.as_string() == "foobar"
 
     def test_as_bytes(self, conn):
         obj = sql.Composed([sql.SQL("foo"), sql.SQL("bar")])
         assert obj.as_bytes(conn) == b"foobar"
+        assert obj.as_bytes() == b"foobar"
 
     @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
     def test_as_bytes_encoding(self, conn, encoding):
@@ -584,17 +616,21 @@ class TestPlaceholder:
     def test_as_string(self, conn, format):
         ph = sql.Placeholder(format=format)
         assert ph.as_string(conn) == f"%{format.value}"
+        assert ph.as_string() == f"%{format.value}"
 
         ph = sql.Placeholder(name="foo", format=format)
         assert ph.as_string(conn) == f"%(foo){format.value}"
+        assert ph.as_string() == f"%(foo){format.value}"
 
     @pytest.mark.parametrize("format", PyFormat)
     def test_as_bytes(self, conn, format):
         ph = sql.Placeholder(format=format)
-        assert ph.as_bytes(conn) == f"%{format.value}".encode("ascii")
+        assert ph.as_bytes(conn) == f"%{format.value}".encode()
+        assert ph.as_bytes() == f"%{format.value}".encode()
 
         ph = sql.Placeholder(name="foo", format=format)
-        assert ph.as_bytes(conn) == f"%(foo){format.value}".encode("ascii")
+        assert ph.as_bytes(conn) == f"%(foo){format.value}".encode()
+        assert ph.as_bytes() == f"%(foo){format.value}".encode()
 
 
 class TestValues:
@@ -609,7 +645,7 @@ class TestValues:
 
 def no_e(s):
     """Drop an eventual E from E'' quotes"""
-    if isinstance(s, memoryview):
+    if isinstance(s, (memoryview, bytearray)):
         s = bytes(s)
 
     if isinstance(s, str):

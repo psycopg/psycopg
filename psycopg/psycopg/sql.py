@@ -55,7 +55,7 @@ class Composable(ABC):
         return f"{self.__class__.__name__}({self._obj!r})"
 
     @abstractmethod
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         """
         Return the value of the object as bytes.
 
@@ -69,7 +69,7 @@ class Composable(ABC):
         """
         raise NotImplementedError
 
-    def as_string(self, context: Optional[AdaptContext]) -> str:
+    def as_string(self, context: Optional[AdaptContext] = None) -> str:
         """
         Return the value of the object as string.
 
@@ -130,7 +130,7 @@ class Composed(Composable):
         seq = [obj if isinstance(obj, Composable) else Literal(obj) for obj in seq]
         super().__init__(seq)
 
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         return b"".join(obj.as_bytes(context) for obj in self._obj)
 
     def __iter__(self) -> Iterator[Composable]:
@@ -200,10 +200,10 @@ class SQL(Composable):
         if not isinstance(obj, str):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
 
-    def as_string(self, context: Optional[AdaptContext]) -> str:
+    def as_string(self, context: Optional[AdaptContext] = None) -> str:
         return self._obj
 
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self._obj.encode(enc)
@@ -362,7 +362,7 @@ class Identifier(Composable):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
 
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         if conn:
             esc = Escaping(conn.pgconn)
@@ -400,7 +400,7 @@ class Literal(Composable):
 
     """
 
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         tx = Transformer.from_context(context)
         return tx.as_literal(self._obj)
 
@@ -459,11 +459,11 @@ class Placeholder(Composable):
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
-    def as_string(self, context: Optional[AdaptContext]) -> str:
+    def as_string(self, context: Optional[AdaptContext] = None) -> str:
         code = self._format.value
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
-    def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
+    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self.as_string(context).encode(enc)
