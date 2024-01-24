@@ -20,6 +20,7 @@ class Wait(IntEnum):
 
 
 class Ready(IntEnum):
+    NONE = 0
     R = EVENT_READ
     W = EVENT_WRITE
     RW = EVENT_READ | EVENT_WRITE

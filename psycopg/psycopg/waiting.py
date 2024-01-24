@@ -26,6 +26,7 @@ from ._cmodule import _psycopg
 WAIT_R = Wait.R
 WAIT_W = Wait.W
 WAIT_RW = Wait.RW
+READY_NONE = Ready.NONE
 READY_R = Ready.R
 READY_W = Ready.W
 READY_RW = Ready.RW
@@ -51,16 +52,17 @@ def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) 
     try:
         s = next(gen)
         with DefaultSelector() as sel:
+            sel.register(fileno, s)
             while True:
-                sel.register(fileno, s)
-                rlist = None
-                while not rlist:
-                    rlist = sel.select(timeout=timeout)
+                rlist = sel.select(timeout=timeout)
+                if not rlist:
+                    gen.send(READY_NONE)
+                    continue
+
                 sel.unregister(fileno)
-                # note: this line should require a cast, but mypy doesn't complain
-                ready: Ready = rlist[0][1]
-                assert s & ready
+                ready = rlist[0][1]
                 s = gen.send(ready)
+                sel.register(fileno, s)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -92,7 +94,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
                 sel.unregister(fileno)
                 if not rlist:
                     raise e.ConnectionTimeout("connection timeout expired")
-                ready: Ready = rlist[0][1]  # type: ignore[assignment]
+                ready = rlist[0][1]
                 fileno, s = gen.send(ready)
 
     except StopIteration as ex:
@@ -119,12 +121,12 @@ async def wait_async(
     # Not sure this is the best implementation but it's a start.
     ev = Event()
     loop = get_event_loop()
-    ready: Ready
+    ready: int
     s: Wait
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
-        ready |= state  # type: ignore[assignment]
+        ready |= state
         ev.set()
 
     try:
@@ -135,19 +137,19 @@ async def wait_async(
             if not reader and not writer:
                 raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
-            ready = 0  # type: ignore[assignment]
+            ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if timeout is None:
-                    await ev.wait()
-                else:
+                if timeout:
                     try:
                         await wait_for(ev.wait(), timeout)
                     except TimeoutError:
                         pass
+                else:
+                    await ev.wait()
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -155,6 +157,9 @@ async def wait_async(
                     loop.remove_writer(fileno)
             s = gen.send(ready)
 
+    except OSError as ex:
+        # Assume the connection was closed
+        raise e.OperationalError(str(ex))
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
         return rv
@@ -245,9 +250,10 @@ def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) ->
             if wl:
                 ready |= READY_W
             if not ready:
+                gen.send(READY_NONE)
                 continue
-            # assert s & ready
-            s = gen.send(ready)  # type: ignore
+
+            s = gen.send(ready)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -285,24 +291,22 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
         s = next(gen)
 
         if timeout is None or timeout < 0:
-            timeout = 0
-        else:
-            timeout = int(timeout * 1000.0)
+            timeout = 0.0
 
         with select.epoll() as epoll:
             evmask = _epoll_evmasks[s]
             epoll.register(fileno, evmask)
             while True:
-                fileevs = None
-                while not fileevs:
-                    fileevs = epoll.poll(timeout)
+                fileevs = epoll.poll(timeout)
+                if not fileevs:
+                    gen.send(READY_NONE)
+                    continue
                 ev = fileevs[0][1]
                 ready = 0
                 if ev & ~select.EPOLLOUT:
                     ready = READY_R
                 if ev & ~select.EPOLLIN:
                     ready |= READY_W
-                # assert s & ready
                 s = gen.send(ready)
                 evmask = _epoll_evmasks[s]
                 epoll.modify(fileno, evmask)
@@ -340,16 +344,17 @@ def wait_poll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> R
         evmask = _poll_evmasks[s]
         poll.register(fileno, evmask)
         while True:
-            fileevs = None
-            while not fileevs:
-                fileevs = poll.poll(timeout)
+            fileevs = poll.poll(timeout)
+            if not fileevs:
+                gen.send(READY_NONE)
+                continue
+
             ev = fileevs[0][1]
             ready = 0
             if ev & ~select.POLLOUT:
                 ready = READY_R
             if ev & ~select.POLLIN:
                 ready |= READY_W
-            # assert s & ready
             s = gen.send(ready)
             evmask = _poll_evmasks[s]
             poll.modify(fileno, evmask)
