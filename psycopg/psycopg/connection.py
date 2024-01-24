@@ -43,6 +43,7 @@ TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
 IDLE = pq.TransactionStatus.IDLE
+ACTIVE = pq.TransactionStatus.ACTIVE
 INTRANS = pq.TransactionStatus.INTRANS
 
 _INTERRUPTED = KeyboardInterrupt
@@ -321,13 +322,14 @@ class Connection(BaseConnection[Row]):
         try:
             return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
         except _INTERRUPTED:
-            # On Ctrl-C, try to cancel the query in the server, otherwise
-            # the connection will remain stuck in ACTIVE state.
-            self._try_cancel(self.pgconn)
-            try:
-                waiting.wait(gen, self.pgconn.socket, timeout=timeout)
-            except e.QueryCanceled:
-                pass  # as expected
+            if self.pgconn.transaction_status == ACTIVE:
+                # On Ctrl-C, try to cancel the query in the server, otherwise
+                # the connection will remain stuck in ACTIVE state.
+                self._try_cancel(self.pgconn)
+                try:
+                    waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+                except e.QueryCanceled:
+                    pass  # as expected
             raise
 
     @classmethod
