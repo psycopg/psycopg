@@ -39,13 +39,13 @@ ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 RV = TypeVar("RV")
 
-PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], "Ready", RV]
+PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], Union["Ready", int], RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen: TypeAlias = Generator["Wait", "Ready", RV]
+PQGen: TypeAlias = Generator["Wait", Union["Ready", int], RV]
 """Generator for processes where the connection file number won't change.
 """
 

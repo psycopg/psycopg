@@ -7,10 +7,15 @@ the operations, yielding a polling state whenever there is to wait. The
 functions in the `waiting` module are the ones who wait more or less
 cooperatively for the socket to be ready and make these generators continue.
 
-All these generators yield pairs (fileno, `Wait`) whenever an operation would
-block. The generator can be restarted sending the appropriate `Ready` state
-when the file descriptor is ready.
+These generators yield `Wait` objects whenever an operation would block. These
+generators assume the connection fileno will not change. In case of the
+connection function, where the fileno may change, the generators yield pairs
+(fileno, `Wait`).
 
+The generator can be restarted sending the appropriate `Ready` state when the
+file descriptor is ready. If a None value is sent, it means that the wait
+function timed out without any file descriptor becoming ready; in this case the
+generator should probably yield the same value again in order to wait more.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -119,7 +124,11 @@ def _send(pgconn: PGconn) -> PQGen[None]:
         if f == 0:
             break
 
-        ready = yield WAIT_RW
+        while True:
+            ready = yield WAIT_RW
+            if ready:
+                break
+
         if ready & READY_R:
             # This call may read notifies: they will be saved in the
             # PGconn buffer and passed to Python later, in `fetch()`.
@@ -168,12 +177,19 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     if pgconn.is_busy():
-        yield WAIT_R
+        while True:
+            ready = yield WAIT_R
+            if ready:
+                break
+
         while True:
             pgconn.consume_input()
             if not pgconn.is_busy():
                 break
-            yield WAIT_R
+            while True:
+                ready = yield WAIT_R
+                if ready:
+                    break
 
     _consume_notifies(pgconn)
 
@@ -191,7 +207,10 @@ def _pipeline_communicate(
     results = []
 
     while True:
-        ready = yield WAIT_RW
+        while True:
+            ready = yield WAIT_RW
+            if ready:
+                break
 
         if ready & READY_R:
             pgconn.consume_input()
@@ -263,7 +282,10 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
             break
 
         # would block
-        yield WAIT_R
+        while True:
+            ready = yield WAIT_R
+            if ready:
+                break
         pgconn.consume_input()
 
     if nbytes > 0:
@@ -291,17 +313,26 @@ def copy_to(pgconn: PGconn, buffer: Buffer) -> PQGen[None]:
     # into smaller ones. We prefer to do it there instead of here in order to
     # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
-        yield WAIT_W
+        while True:
+            ready = yield WAIT_W
+            if ready:
+                break
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
-        yield WAIT_W
+        while True:
+            ready = yield WAIT_W
+            if ready:
+                break
 
     # Repeat until it the message is flushed to the server
     while True:
-        yield WAIT_W
+        while True:
+            ready = yield WAIT_W
+            if ready:
+                break
         f = pgconn.flush()
         if f == 0:
             break

@@ -18,9 +18,11 @@ from psycopg._encodings import conninfo_encoding
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
+cdef object PY_READY_NONE = Ready.NONE
 cdef object PY_READY_R = Ready.R
 cdef object PY_READY_W = Ready.W
 cdef object PY_READY_RW = Ready.RW
+cdef int READY_NONE = Ready.NONE
 cdef int READY_R = Ready.R
 cdef int READY_W = Ready.W
 cdef int READY_RW = Ready.RW
@@ -96,15 +98,19 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     to retrieve the results available.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef int status
+    cdef int ready
     cdef int cires
 
     while True:
         if pgconn.flush() == 0:
             break
 
-        status = yield WAIT_RW
-        if status & READY_R:
+        while True:
+            ready = yield WAIT_RW
+            if ready:
+                break
+
+        if ready & READY_R:
             with nogil:
                 # This call may read notifies which will be saved in the
                 # PGconn buffer and passed to Python later.
@@ -166,11 +172,16 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef int cires, ibres
     cdef libpq.PGresult *pgres
+    cdef object ready
 
     with nogil:
         ibres = libpq.PQisBusy(pgconn_ptr)
     if ibres:
-        yield WAIT_R
+        while True:
+            ready = yield WAIT_R
+            if ready:
+                break
+
         while True:
             with nogil:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
@@ -182,7 +193,10 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
                     f"consuming input failed: {error_message(pgconn)}")
             if not ibres:
                 break
-            yield WAIT_R
+            while True:
+                ready = yield WAIT_R
+                if ready:
+                    break
 
     _consume_notifies(pgconn)
 
@@ -211,7 +225,10 @@ def pipeline_communicate(
     cdef pq.PGresult r
 
     while True:
-        ready = yield WAIT_RW
+        while True:
+            ready = yield WAIT_RW
+            if ready:
+                break
 
         if ready & READY_R:
             with nogil:
