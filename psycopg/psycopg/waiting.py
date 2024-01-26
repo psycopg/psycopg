@@ -88,14 +88,17 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
         if not timeout:
             timeout = None
         with DefaultSelector() as sel:
+            sel.register(fileno, s)
             while True:
-                sel.register(fileno, s)
                 rlist = sel.select(timeout=timeout)
-                sel.unregister(fileno)
                 if not rlist:
-                    raise e.ConnectionTimeout("connection timeout expired")
+                    gen.send(READY_NONE)
+                    continue
+
+                sel.unregister(fileno)
                 ready = rlist[0][1]
                 fileno, s = gen.send(ready)
+                sel.register(fileno, s)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -205,7 +208,10 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
                 if timeout:
-                    await wait_for(ev.wait(), timeout)
+                    try:
+                        await wait_for(ev.wait(), timeout)
+                    except TimeoutError:
+                        pass
                 else:
                     await ev.wait()
             finally:
@@ -214,9 +220,6 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
                 if writer:
                     loop.remove_writer(fileno)
             fileno, s = gen.send(ready)
-
-    except TimeoutError:
-        raise e.ConnectionTimeout("connection timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None

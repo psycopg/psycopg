@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from . import pq
 from . import errors as e
 from . import waiting
-from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, PQGenConn, Query, RV
+from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
@@ -115,8 +115,8 @@ class AsyncConnection(BaseConnection[Row]):
         for attempt in attempts:
             try:
                 conninfo = make_conninfo("", **attempt)
-                rv = await cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
-                break
+                gen = cls._connect_gen(conninfo, timeout=timeout)
+                rv = await waiting.wait_conn_async(gen, timeout=_WAIT_INTERVAL)
             except e._NO_TRACEBACK as ex:
                 if len(attempts) > 1:
                     logger.debug(
@@ -127,6 +127,8 @@ class AsyncConnection(BaseConnection[Row]):
                         str(ex),
                     )
                 last_ex = ex
+            else:
+                break
 
         if not rv:
             assert last_ex
@@ -388,11 +390,6 @@ class AsyncConnection(BaseConnection[Row]):
                 except e.QueryCanceled:
                     pass  # as expected
             raise
-
-    @classmethod
-    async def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
-        """Consume a connection generator."""
-        return await waiting.wait_conn_async(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
         if True:  # ASYNC
