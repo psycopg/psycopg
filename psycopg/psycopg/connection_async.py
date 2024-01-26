@@ -116,7 +116,7 @@ class AsyncConnection(BaseConnection[Row]):
             try:
                 conninfo = make_conninfo("", **attempt)
                 gen = cls._connect_gen(conninfo, timeout=timeout)
-                rv = await waiting.wait_conn_async(gen, timeout=_WAIT_INTERVAL)
+                rv = await waiting.wait_conn_async(gen, interval=_WAIT_INTERVAL)
             except e._NO_TRACEBACK as ex:
                 if len(attempts) > 1:
                     logger.debug(
@@ -314,10 +314,10 @@ class AsyncConnection(BaseConnection[Row]):
         # into shorter interval.
         if timeout is not None:
             deadline = monotonic() + timeout
-            timeout = min(timeout, _WAIT_INTERVAL)
+            interval = min(timeout, _WAIT_INTERVAL)
         else:
             deadline = None
-            timeout = _WAIT_INTERVAL
+            interval = _WAIT_INTERVAL
 
         nreceived = 0
 
@@ -326,7 +326,7 @@ class AsyncConnection(BaseConnection[Row]):
             # notification is received to makes sure that they are consistent.
             try:
                 async with self.lock:
-                    ns = await self.wait(notifies(self.pgconn), timeout=timeout)
+                    ns = await self.wait(notifies(self.pgconn), interval=interval)
                     if ns:
                         enc = pgconn_encoding(self.pgconn)
             except e._NO_TRACEBACK as ex:
@@ -345,8 +345,8 @@ class AsyncConnection(BaseConnection[Row]):
             # Check the deadline after the loop to ensure that timeout=0
             # polls at least once.
             if deadline:
-                timeout = min(_WAIT_INTERVAL, deadline - monotonic())
-                if timeout < 0.0:
+                interval = min(_WAIT_INTERVAL, deadline - monotonic())
+                if interval < 0.0:
                     break
 
     @asynccontextmanager
@@ -370,7 +370,7 @@ class AsyncConnection(BaseConnection[Row]):
                     self._pipeline = None
 
     async def wait(
-        self, gen: PQGen[RV], timeout: Optional[float] = _WAIT_INTERVAL
+        self, gen: PQGen[RV], interval: Optional[float] = _WAIT_INTERVAL
     ) -> RV:
         """
         Consume a generator operating on the connection.
@@ -379,14 +379,14 @@ class AsyncConnection(BaseConnection[Row]):
         fd (i.e. not on connect and reset).
         """
         try:
-            return await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
+            return await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
                 self._try_cancel(self.pgconn)
                 try:
-                    await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
+                    await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:
                     pass  # as expected
             raise
