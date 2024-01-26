@@ -402,9 +402,11 @@ def test_dump_numeric_binary(conn, expr):
 @pytest.mark.parametrize(
     "fmt_in",
     [
-        f
-        if f != PyFormat.BINARY
-        else pytest.param(f, marks=pytest.mark.crdb_skip("binary decimal"))
+        (
+            f
+            if f != PyFormat.BINARY
+            else pytest.param(f, marks=pytest.mark.crdb_skip("binary decimal"))
+        )
         for f in PyFormat
     ],
 )

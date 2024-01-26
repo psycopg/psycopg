@@ -221,8 +221,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         *,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ):
-        ...
+    ): ...
 
     @overload
     def __init__(
@@ -233,8 +232,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         row_factory: RowFactory[Row],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ):
-        ...
+    ): ...
 
     def __init__(
         self,
@@ -362,8 +360,7 @@ class AsyncServerCursor(
         *,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ):
-        ...
+    ): ...
 
     @overload
     def __init__(
@@ -374,8 +371,7 @@ class AsyncServerCursor(
         row_factory: AsyncRowFactory[Row],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ):
-        ...
+    ): ...
 
     def __init__(
         self,

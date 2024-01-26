@@ -43,8 +43,7 @@ class RowMaker(Protocol[Row]):
     Typically, `!RowMaker` functions are returned by `RowFactory`.
     """
 
-    def __call__(self, __values: Sequence[Any]) -> Row:
-        ...
+    def __call__(self, __values: Sequence[Any]) -> Row: ...
 
 
 class RowFactory(Protocol[Row]):
@@ -61,8 +60,7 @@ class RowFactory(Protocol[Row]):
     use the values to create a dictionary for each record.
     """
 
-    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]: ...
 
 
 class AsyncRowFactory(Protocol[Row]):
@@ -70,8 +68,7 @@ class AsyncRowFactory(Protocol[Row]):
     Like `RowFactory`, taking an async cursor as argument.
     """
 
-    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]: ...
 
 
 class BaseRowFactory(Protocol[Row]):
@@ -79,8 +76,7 @@ class BaseRowFactory(Protocol[Row]):
     Like `RowFactory`, taking either type of cursor as argument.
     """
 
-    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]: ...
 
 
 TupleRow: TypeAlias = Tuple[Any, ...]

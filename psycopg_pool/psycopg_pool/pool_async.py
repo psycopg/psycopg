@@ -756,8 +756,7 @@ class MaintenanceTask(ABC):
         pool.run_task(self)
 
     @abstractmethod
-    async def _run(self, pool: "AsyncConnectionPool") -> None:
-        ...
+    async def _run(self, pool: "AsyncConnectionPool") -> None: ...
 
 
 class StopWorker(MaintenanceTask):

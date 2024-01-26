@@ -46,12 +46,10 @@ class Multirange(MutableSequence[Range[T]]):
         return f"{{{', '.join(map(str, self._ranges))}}}"
 
     @overload
-    def __getitem__(self, index: int) -> Range[T]:
-        ...
+    def __getitem__(self, index: int) -> Range[T]: ...
 
     @overload
-    def __getitem__(self, index: slice) -> "Multirange[T]":
-        ...
+    def __getitem__(self, index: slice) -> "Multirange[T]": ...
 
     def __getitem__(self, index: Union[int, slice]) -> "Union[Range[T],Multirange[T]]":
         if isinstance(index, int):
@@ -63,12 +61,10 @@ class Multirange(MutableSequence[Range[T]]):
         return len(self._ranges)
 
     @overload
-    def __setitem__(self, index: int, value: Range[T]) -> None:
-        ...
+    def __setitem__(self, index: int, value: Range[T]) -> None: ...
 
     @overload
-    def __setitem__(self, index: slice, value: Iterable[Range[T]]) -> None:
-        ...
+    def __setitem__(self, index: slice, value: Iterable[Range[T]]) -> None: ...
 
     def __setitem__(
         self,

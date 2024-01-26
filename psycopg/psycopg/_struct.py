@@ -19,8 +19,7 @@ UnpackFloat: TypeAlias = Callable[[Buffer], Tuple[float]]
 
 
 class UnpackLen(Protocol):
-    def __call__(self, data: Buffer, start: Optional[int]) -> Tuple[int]:
-        ...
+    def __call__(self, data: Buffer, start: Optional[int]) -> Tuple[int]: ...
 
 
 pack_int2 = cast(PackInt, struct.Struct("!h").pack)

@@ -78,8 +78,7 @@ class CrdbConnection(_CrdbConnectionMixin, Connection[Row]):
         cursor_factory: "Optional[Type[Cursor[Row]]]" = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "CrdbConnection[Row]":
-        ...
+    ) -> "CrdbConnection[Row]": ...
 
     @overload
     @classmethod
@@ -92,8 +91,7 @@ class CrdbConnection(_CrdbConnectionMixin, Connection[Row]):
         cursor_factory: "Optional[Type[Cursor[Any]]]" = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "CrdbConnection[TupleRow]":
-        ...
+    ) -> "CrdbConnection[TupleRow]": ...
 
     @classmethod
     def connect(cls, conninfo: str = "", **kwargs: Any) -> Self:
@@ -125,8 +123,7 @@ class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
         cursor_factory: "Optional[Type[AsyncCursor[Row]]]" = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "AsyncCrdbConnection[Row]":
-        ...
+    ) -> "AsyncCrdbConnection[Row]": ...
 
     @overload
     @classmethod
@@ -139,8 +136,7 @@ class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
         cursor_factory: "Optional[Type[AsyncCursor[Any]]]" = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "AsyncCrdbConnection[TupleRow]":
-        ...
+    ) -> "AsyncCrdbConnection[TupleRow]": ...
 
     @classmethod
     async def connect(cls, conninfo: str = "", **kwargs: Any) -> Self:

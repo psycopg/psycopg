@@ -606,7 +606,7 @@ async def test_cursor_factory(aconn):
     async with aconn.cursor() as cur:
         assert isinstance(cur, MyCursor)
 
-    async with (await aconn.execute("select 1")) as cur:
+    async with await aconn.execute("select 1") as cur:
         assert isinstance(cur, MyCursor)
 
 
