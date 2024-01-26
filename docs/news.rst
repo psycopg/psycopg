@@ -30,6 +30,12 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.18 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix possible deadlock on pipeline exit (:ticket:`685`).
+
+
 Current release
 ---------------
 
