@@ -132,8 +132,7 @@ class BasePipeline:
             self._enqueue_sync()
             yield from self._communicate_gen()
         finally:
-            # No need to force flush since we emitted a sync just before.
-            yield from self._fetch_gen(flush=False)
+            yield from self._fetch_gen(flush=True)
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch
