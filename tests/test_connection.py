@@ -34,6 +34,7 @@ def test_connect_bad(conn_cls):
 
 
 def test_connect_str_subclass(conn_cls, dsn):
+
     class MyString(str):
         pass
 
@@ -467,6 +468,7 @@ def test_connect_args(
     ],
 )
 def test_connect_badargs(conn_cls, monkeypatch, pgconn, args, kwargs, exctype):
+
     def fake_connect(conninfo):
         return pgconn
         yield
@@ -642,6 +644,7 @@ def test_cursor_factory(conn):
 
 
 def test_cursor_factory_connect(conn_cls, dsn):
+
     class MyCursor(psycopg.Cursor[psycopg.rows.Row]):
         pass
 

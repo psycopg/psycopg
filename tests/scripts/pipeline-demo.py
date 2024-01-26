@@ -7,6 +7,7 @@ We do not fetch results explicitly (using cursor.fetch*()), this is
 handled by execute() calls when pgconn socket is read-ready, which
 happens when the output buffer is full.
 """
+
 import argparse
 import asyncio
 import logging

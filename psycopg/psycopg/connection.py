@@ -165,14 +165,12 @@ class Connection(BaseConnection[Row]):
         self.pgconn.finish()
 
     @overload
-    def cursor(self, *, binary: bool = False) -> Cursor[Row]:
-        ...
+    def cursor(self, *, binary: bool = False) -> Cursor[Row]: ...
 
     @overload
     def cursor(
         self, *, binary: bool = False, row_factory: RowFactory[CursorRow]
-    ) -> Cursor[CursorRow]:
-        ...
+    ) -> Cursor[CursorRow]: ...
 
     @overload
     def cursor(
@@ -182,8 +180,7 @@ class Connection(BaseConnection[Row]):
         binary: bool = False,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ) -> ServerCursor[Row]:
-        ...
+    ) -> ServerCursor[Row]: ...
 
     @overload
     def cursor(
@@ -194,8 +191,7 @@ class Connection(BaseConnection[Row]):
         row_factory: RowFactory[CursorRow],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ) -> ServerCursor[CursorRow]:
-        ...
+    ) -> ServerCursor[CursorRow]: ...
 
     def cursor(
         self,

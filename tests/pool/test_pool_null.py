@@ -40,10 +40,11 @@ def test_bad_size(dsn, min_size, max_size):
 
 
 class MyRow(Dict[str, Any]):
-    ...
+    pass
 
 
 def test_generic_connection_type(dsn):
+
     def configure(conn: psycopg.Connection[Any]) -> None:
         set_autocommit(conn, True)
 
@@ -76,10 +77,12 @@ def test_generic_connection_type(dsn):
 
 
 def test_non_generic_connection_type(dsn):
+
     def configure(conn: psycopg.Connection[Any]) -> None:
         set_autocommit(conn, True)
 
     class MyConnection(psycopg.Connection[MyRow]):
+
         def __init__(self, *args: Any, **kwargs: Any):
             kwargs["row_factory"] = class_row(MyRow)
             super().__init__(*args, **kwargs)

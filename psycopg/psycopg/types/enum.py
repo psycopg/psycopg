@@ -1,6 +1,7 @@
 """
 Adapters for the enum type.
 """
+
 from enum import Enum
 from typing import Any, Dict, Generic, Optional, Mapping, Sequence
 from typing import Tuple, Type, Union, cast, TYPE_CHECKING

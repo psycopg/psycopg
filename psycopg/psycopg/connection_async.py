@@ -180,14 +180,12 @@ class AsyncConnection(BaseConnection[Row]):
         self.pgconn.finish()
 
     @overload
-    def cursor(self, *, binary: bool = False) -> AsyncCursor[Row]:
-        ...
+    def cursor(self, *, binary: bool = False) -> AsyncCursor[Row]: ...
 
     @overload
     def cursor(
         self, *, binary: bool = False, row_factory: AsyncRowFactory[CursorRow]
-    ) -> AsyncCursor[CursorRow]:
-        ...
+    ) -> AsyncCursor[CursorRow]: ...
 
     @overload
     def cursor(
@@ -197,8 +195,7 @@ class AsyncConnection(BaseConnection[Row]):
         binary: bool = False,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ) -> AsyncServerCursor[Row]:
-        ...
+    ) -> AsyncServerCursor[Row]: ...
 
     @overload
     def cursor(
@@ -209,8 +206,7 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: AsyncRowFactory[CursorRow],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
-    ) -> AsyncServerCursor[CursorRow]:
-        ...
+    ) -> AsyncServerCursor[CursorRow]: ...
 
     def cursor(
         self,

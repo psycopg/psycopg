@@ -58,15 +58,13 @@ class TypeInfo:
     @classmethod
     def fetch(
         cls: Type[T], conn: "Connection[Any]", name: Union[str, sql.Identifier]
-    ) -> Optional[T]:
-        ...
+    ) -> Optional[T]: ...
 
     @overload
     @classmethod
     async def fetch(
         cls: Type[T], conn: "AsyncConnection[Any]", name: Union[str, sql.Identifier]
-    ) -> Optional[T]:
-        ...
+    ) -> Optional[T]: ...
 
     @classmethod
     def fetch(
@@ -238,12 +236,10 @@ class TypesRegistry:
                 yield t
 
     @overload
-    def __getitem__(self, key: Union[str, int]) -> TypeInfo:
-        ...
+    def __getitem__(self, key: Union[str, int]) -> TypeInfo: ...
 
     @overload
-    def __getitem__(self, key: Tuple[Type[T], int]) -> T:
-        ...
+    def __getitem__(self, key: Tuple[Type[T], int]) -> T: ...
 
     def __getitem__(self, key: RegistryKey) -> TypeInfo:
         """
@@ -264,12 +260,10 @@ class TypesRegistry:
             raise KeyError(f"couldn't find the type {key!r} in the types registry")
 
     @overload
-    def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
-        ...
+    def get(self, key: Union[str, int]) -> Optional[TypeInfo]: ...
 
     @overload
-    def get(self, key: Tuple[Type[T], int]) -> Optional[T]:
-        ...
+    def get(self, key: Tuple[Type[T], int]) -> Optional[T]: ...
 
     def get(self, key: RegistryKey) -> Optional[TypeInfo]:
         """

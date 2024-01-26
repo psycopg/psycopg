@@ -913,8 +913,7 @@ class MaintenanceTask(ABC):
         pool.run_task(self)
 
     @abstractmethod
-    def _run(self, pool: ConnectionPool[Any]) -> None:
-        ...
+    def _run(self, pool: ConnectionPool[Any]) -> None: ...
 
 
 class StopWorker(MaintenanceTask):
@@ -925,6 +924,7 @@ class StopWorker(MaintenanceTask):
 
 
 class AddConnection(MaintenanceTask):
+
     def __init__(
         self,
         pool: ConnectionPool[Any],

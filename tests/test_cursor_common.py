@@ -576,6 +576,7 @@ def test_row_factory_none(conn):
 
 
 def test_bad_row_factory(conn):
+
     def broken_factory(cur):
         1 / 0
 
@@ -584,6 +585,7 @@ def test_bad_row_factory(conn):
         cur.execute("select 1")
 
     def broken_maker(cur):
+
         def make_row(seq):
             1 / 0
 
