@@ -207,6 +207,28 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
     return kwargs_row_
 
 
+def scalar_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[Any]":
+    """
+    Generate a row factory returning the first column
+    as a scalar value.
+    """
+    res = cursor.pgresult
+    if not res:
+        return no_result
+
+    nfields = _get_nfields(res)
+    if nfields is None:
+        return no_result
+
+    if nfields < 1:
+        raise e.ProgrammingError("at least one column expected")
+
+    def scalar_row_(values: Sequence[Any]) -> Any:
+        return values[0]
+
+    return scalar_row_
+
+
 def no_result(values: Sequence[Any]) -> NoReturn:
     """A `RowMaker` that always fail.
 
