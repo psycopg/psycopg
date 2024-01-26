@@ -446,7 +446,7 @@ def test_connect_args(
 ):
     got_conninfo: str
 
-    def fake_connect(conninfo):
+    def fake_connect(conninfo, *, timeout=0.0):
         nonlocal got_conninfo
         got_conninfo = conninfo
         return pgconn
@@ -468,12 +468,6 @@ def test_connect_args(
     ],
 )
 def test_connect_badargs(conn_cls, monkeypatch, pgconn, args, kwargs, exctype):
-
-    def fake_connect(conninfo):
-        return pgconn
-        yield
-
-    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     with pytest.raises(exctype):
         conn_cls.connect(*args, **kwargs)
 

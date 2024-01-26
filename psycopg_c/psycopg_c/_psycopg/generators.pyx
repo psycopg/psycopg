@@ -7,6 +7,7 @@ C implementation of generators for the communication protocols with the libpq
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
 from typing import List
+from time import monotonic
 
 from psycopg import errors as e
 from psycopg.pq import abc, error_message
@@ -27,15 +28,17 @@ cdef int READY_R = Ready.R
 cdef int READY_W = Ready.W
 cdef int READY_RW = Ready.RW
 
-def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
+def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     """
     Generator to create a database connection without blocking.
-
     """
+    cdef int deadline = monotonic() + timeout if timeout else 0.0
+
     cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode())
     cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
+    cdef object wait, ready
 
     while True:
         if conn_status == libpq.CONNECTION_BAD:
@@ -48,12 +51,18 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
         with nogil:
             poll_status = libpq.PQconnectPoll(pgconn_ptr)
 
-        if poll_status == libpq.PGRES_POLLING_OK:
+        if poll_status == libpq.PGRES_POLLING_READING \
+        or poll_status == libpq.PGRES_POLLING_WRITING:
+            wait = WAIT_R if poll_status == libpq.PGRES_POLLING_READING else WAIT_W
+            while True:
+                ready = yield (libpq.PQsocket(pgconn_ptr), wait)
+                if deadline and monotonic() > deadline:
+                    raise e.ConnectionTimeout("connection timeout expired")
+                if ready:
+                    break
+
+        elif poll_status == libpq.PGRES_POLLING_OK:
             break
-        elif poll_status == libpq.PGRES_POLLING_READING:
-            yield (libpq.PQsocket(pgconn_ptr), WAIT_R)
-        elif poll_status == libpq.PGRES_POLLING_WRITING:
-            yield (libpq.PQsocket(pgconn_ptr), WAIT_W)
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
