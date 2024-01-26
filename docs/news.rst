@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.18 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix possible deadlock on pipeline exit (:ticket:`685`).
+
+
 Current release
 ---------------
 
