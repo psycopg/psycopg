@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from . import pq
 from . import errors as e
 from . import waiting
-from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, PQGenConn, Query, RV
+from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, Query, RV
 from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
@@ -100,8 +100,8 @@ class Connection(BaseConnection[Row]):
         for attempt in attempts:
             try:
                 conninfo = make_conninfo("", **attempt)
-                rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
-                break
+                gen = cls._connect_gen(conninfo, timeout=timeout)
+                rv = waiting.wait_conn(gen, timeout=_WAIT_INTERVAL)
             except e._NO_TRACEBACK as ex:
                 if len(attempts) > 1:
                     logger.debug(
@@ -112,6 +112,8 @@ class Connection(BaseConnection[Row]):
                         str(ex),
                     )
                 last_ex = ex
+            else:
+                break
 
         if not rv:
             assert last_ex
@@ -370,11 +372,6 @@ class Connection(BaseConnection[Row]):
                 except e.QueryCanceled:
                     pass  # as expected
             raise
-
-    @classmethod
-    def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
-        """Consume a connection generator."""
-        return waiting.wait_conn(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
         self.set_autocommit(value)
