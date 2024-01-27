@@ -286,6 +286,10 @@ The `!Connection` class
         any sessions in the database generates a :sql:`NOTIFY` on one of the
         listened channels.
 
+        .. versionchanged:: 3.2
+
+            Added `!timeout` and `!stop_after` parameters.
+
     .. automethod:: add_notify_handler
 
         See :ref:`async-notify` for details.
@@ -494,6 +498,11 @@ The `!AsyncConnection` class
                     ...
 
     .. automethod:: notifies
+
+        .. versionchanged:: 3.2
+
+            Added `!timeout` and `!stop_after` parameters.
+
     .. automethod:: set_autocommit
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
