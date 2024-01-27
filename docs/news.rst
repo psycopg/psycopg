@@ -34,6 +34,7 @@ Psycopg 3.1.18 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix possible deadlock on pipeline exit (:ticket:`685`).
+- Fix overflow loading large intervals in C module (:ticket:`719`).
 
 
 Current release
