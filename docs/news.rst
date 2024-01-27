@@ -15,6 +15,8 @@ Psycopg 3.2 (unreleased)
 
 - Add support for integer, floating point, boolean `NumPy scalar types`__
   (:ticket:`#332`).
+- Add `!timeout` and `!stop_after` parameters to `Connection.notifies()`
+  (:ticket:`340`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
 - Add `~Connection.set_autocommit()` on sync connections, and similar
