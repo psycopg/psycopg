@@ -37,6 +37,10 @@ Psycopg 3.1.18 (unreleased)
 
 - Fix possible deadlock on pipeline exit (:ticket:`685`).
 - Fix overflow loading large intervals in C module (:ticket:`719`).
+- Fix compatibility with musl libc distributions affected by `CPython issue
+  #65821`__ (:ticket:`#725`).
+
+.. __: https://github.com/python/cpython/issues/65821
 
 
 Current release
