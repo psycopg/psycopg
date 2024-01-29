@@ -35,8 +35,8 @@ Psycopg 3.2 (unreleased)
 Psycopg 3.1.18 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fix possible deadlock on pipeline exit (:ticket:`685`).
-- Fix overflow loading large intervals in C module (:ticket:`719`).
+- Fix possible deadlock on pipeline exit (:ticket:`#685`).
+- Fix overflow loading large intervals in C module (:ticket:`#719`).
 - Fix compatibility with musl libc distributions affected by `CPython issue
   #65821`__ (:ticket:`#725`).
 
@@ -50,9 +50,9 @@ Psycopg 3.1.17
 ^^^^^^^^^^^^^^
 
 - Fix multiple connection attempts when a host name resolve to multiple
-  IP addresses (:ticket:`699`).
+  IP addresses (:ticket:`#699`).
 - Use `typing.Self` as a more correct return value annotation of context
-  managers and other self-returning methods (see :ticket:`708`).
+  managers and other self-returning methods (see :ticket:`#708`).
 
 
 Psycopg 3.1.16
