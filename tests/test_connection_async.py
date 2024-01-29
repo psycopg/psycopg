@@ -443,7 +443,7 @@ async def test_connect_args(
 ):
     got_conninfo: str
 
-    def fake_connect(conninfo, *, timeout=0.0):
+    def fake_connect(conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
         return pgconn
@@ -465,6 +465,11 @@ async def test_connect_args(
     ],
 )
 async def test_connect_badargs(aconn_cls, monkeypatch, pgconn, args, kwargs, exctype):
+    def fake_connect(conninfo):
+        return pgconn
+        yield
+
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     with pytest.raises(exctype):
         await aconn_cls.connect(*args, **kwargs)
 

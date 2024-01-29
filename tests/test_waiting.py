@@ -28,11 +28,11 @@ waitfns = [
 ]
 
 events = ["R", "W", "RW"]
-intervals = [pytest.param({}, id="blank")]
-intervals += [pytest.param({"interval": x}, id=str(x)) for x in [None, 0, 0.2, 10]]
+timeouts = [pytest.param({}, id="blank")]
+timeouts += [pytest.param({"timeout": x}, id=str(x)) for x in [None, 0, 0.2, 10]]
 
 
-@pytest.mark.parametrize("timeout", intervals)
+@pytest.mark.parametrize("timeout", timeouts)
 def test_wait_conn(dsn, timeout):
     gen = generators.connect(dsn)
     conn = waiting.wait_conn(gen, **timeout)
@@ -63,7 +63,7 @@ def test_wait_ready(waitfn, event):
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
-@pytest.mark.parametrize("timeout", intervals)
+@pytest.mark.parametrize("timeout", timeouts)
 def test_wait(pgconn, waitfn, timeout):
     waitfn = getattr(waiting, waitfn)
 
@@ -104,7 +104,7 @@ def test_wait_timeout(pgconn, waitfn):
         except StopIteration as ex:
             return ex.value
 
-    (res,) = waitfn(gen_wrapper(), pgconn.socket, interval=0.1)
+    (res,) = waitfn(gen_wrapper(), pgconn.socket, timeout=0.1)
     assert res.status == ExecStatus.TUPLES_OK
     ds = [t1 - t0 for t0, t1 in zip(ts[:-1], ts[1:])]
     assert len(ds) >= 5
@@ -146,7 +146,7 @@ def test_wait_large_fd(dsn, fname):
             f.close()
 
 
-@pytest.mark.parametrize("timeout", intervals)
+@pytest.mark.parametrize("timeout", timeouts)
 @pytest.mark.anyio
 async def test_wait_conn_async(dsn, timeout):
     gen = generators.connect(dsn)

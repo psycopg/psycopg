@@ -56,7 +56,7 @@ class WaitFunc(Protocol):
     """
 
     def __call__(
-        self, gen: PQGen[RV], fileno: int, interval: Optional[float] = None
+        self, gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
     ) -> RV: ...
 
 

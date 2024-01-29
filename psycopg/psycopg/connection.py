@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from . import pq
 from . import errors as e
 from . import waiting
-from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, Query, RV
+from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
@@ -100,8 +100,8 @@ class Connection(BaseConnection[Row]):
         for attempt in attempts:
             try:
                 conninfo = make_conninfo("", **attempt)
-                gen = cls._connect_gen(conninfo, timeout=timeout)
-                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL)
+                rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
+                break
             except e._NO_TRACEBACK as ex:
                 if len(attempts) > 1:
                     logger.debug(
@@ -112,8 +112,6 @@ class Connection(BaseConnection[Row]):
                         str(ex),
                     )
                 last_ex = ex
-            else:
-                break
 
         if not rv:
             assert last_ex
@@ -298,10 +296,10 @@ class Connection(BaseConnection[Row]):
         # into shorter interval.
         if timeout is not None:
             deadline = monotonic() + timeout
-            interval = min(timeout, _WAIT_INTERVAL)
+            timeout = min(timeout, _WAIT_INTERVAL)
         else:
             deadline = None
-            interval = _WAIT_INTERVAL
+            timeout = _WAIT_INTERVAL
 
         nreceived = 0
 
@@ -310,7 +308,7 @@ class Connection(BaseConnection[Row]):
             # notification is received to makes sure that they are consistent.
             try:
                 with self.lock:
-                    ns = self.wait(notifies(self.pgconn), interval=interval)
+                    ns = self.wait(notifies(self.pgconn), timeout=timeout)
                     if ns:
                         enc = pgconn_encoding(self.pgconn)
             except e._NO_TRACEBACK as ex:
@@ -329,8 +327,8 @@ class Connection(BaseConnection[Row]):
             # Check the deadline after the loop to ensure that timeout=0
             # polls at least once.
             if deadline:
-                interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                if interval < 0.0:
+                timeout = min(_WAIT_INTERVAL, deadline - monotonic())
+                if timeout < 0.0:
                     break
 
     @contextmanager
@@ -353,7 +351,7 @@ class Connection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
-    def wait(self, gen: PQGen[RV], interval: Optional[float] = _WAIT_INTERVAL) -> RV:
+    def wait(self, gen: PQGen[RV], timeout: Optional[float] = _WAIT_INTERVAL) -> RV:
         """
         Consume a generator operating on the connection.
 
@@ -361,17 +359,22 @@ class Connection(BaseConnection[Row]):
         fd (i.e. not on connect and reset).
         """
         try:
-            return waiting.wait(gen, self.pgconn.socket, interval=interval)
+            return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
                 self._try_cancel(self.pgconn)
                 try:
-                    waiting.wait(gen, self.pgconn.socket, interval=interval)
+                    waiting.wait(gen, self.pgconn.socket, timeout=timeout)
                 except e.QueryCanceled:
                     pass  # as expected
             raise
+
+    @classmethod
+    def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
+        """Consume a connection generator."""
+        return waiting.wait_conn(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
         self.set_autocommit(value)
