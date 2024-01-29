@@ -51,7 +51,7 @@ static int
 wait_c_impl(int fileno, int wait, float timeout)
 {
     int select_rv;
-    int rv = 0;
+    int rv = -1;
 
 #if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
 
@@ -83,11 +83,14 @@ retry_eintr:
         goto retry_eintr;
     }
 
-    if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
+    if (select_rv < 0) { goto finally; }  /* poll error */
 
-    if (input_fd.events & POLLIN) { rv |= SELECT_EV_READ; }
-    if (input_fd.events & POLLOUT) { rv |= SELECT_EV_WRITE; }
+    rv = 0;  /* success, maybe with timeout */
+    if (select_rv >= 0) {
+        if (input_fd.events & POLLIN) { rv |= SELECT_EV_READ; }
+        if (input_fd.events & POLLOUT) { rv |= SELECT_EV_WRITE; }
+    }
 
 #else
 
@@ -135,17 +138,22 @@ retry_eintr:
         goto retry_eintr;
     }
 
-    if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
+    if (select_rv < 0) { goto error; }  /* select error */
 
-    if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
-    if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
+    rv = 0;
+    if (select_rv > 0) {
+        if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
+        if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
+    }
 
 #endif  /* HAVE_POLL */
 
     return rv;
 
 error:
+
+    rv = -1;
 
 #ifdef MS_WINDOWS
     if (select_rv == SOCKET_ERROR) {
@@ -162,7 +170,7 @@ error:
 
 finally:
 
-    return -1;
+    return rv;
 
 }
     """
@@ -191,8 +199,8 @@ def wait_c(gen: PQGen[RV], int fileno, timeout = None) -> RV:
 
         while True:
             ready = wait_c_impl(fileno, wait, ctimeout)
-            if ready == 0:
-                continue
+            if ready == READY_NONE:
+                pyready = <PyObject *>PY_READY_NONE
             elif ready == READY_R:
                 pyready = <PyObject *>PY_READY_R
             elif ready == READY_RW:

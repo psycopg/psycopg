@@ -48,6 +48,7 @@ ALL_INPUTS = """
     tests/test_cursor_common_async.py
     tests/test_cursor_raw_async.py
     tests/test_cursor_server_async.py
+    tests/test_notify_async.py
     tests/test_pipeline_async.py
     tests/test_prepared_async.py
     tests/test_tpc_async.py

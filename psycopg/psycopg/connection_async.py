@@ -7,6 +7,7 @@ Psycopg connection object (async version)
 from __future__ import annotations
 
 import logging
+from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
@@ -41,10 +42,13 @@ else:
 if TYPE_CHECKING:
     from .pq.abc import PGconn
 
+_WAIT_INTERVAL = 0.1
+
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
 IDLE = pq.TransactionStatus.IDLE
+ACTIVE = pq.TransactionStatus.ACTIVE
 INTRANS = pq.TransactionStatus.INTRANS
 
 if True:  # ASYNC
@@ -292,20 +296,56 @@ class AsyncConnection(BaseConnection[Row]):
             async with tx:
                 yield tx
 
-    async def notifies(self) -> AsyncGenerator[Notify, None]:
+    async def notifies(
+        self, *, timeout: Optional[float] = None, stop_after: Optional[int] = None
+    ) -> AsyncGenerator[Notify, None]:
         """
         Yield `Notify` objects as soon as they are received from the database.
+
+        :param timeout: maximum amount of time to wait for notifications.
+            `!None` means no timeout.
+        :param stop_after: stop after receiving this number of notifications.
+            You might actually receive more than this number if more than one
+            notifications arrives in the same packet.
         """
+        # Allow interrupting the wait with a signal by reducing a long timeout
+        # into shorter interval.
+        if timeout is not None:
+            deadline = monotonic() + timeout
+            timeout = min(timeout, _WAIT_INTERVAL)
+        else:
+            deadline = None
+            timeout = _WAIT_INTERVAL
+
+        nreceived = 0
+
         while True:
-            async with self.lock:
-                try:
-                    ns = await self.wait(notifies(self.pgconn))
-                except e._NO_TRACEBACK as ex:
-                    raise ex.with_traceback(None)
-            enc = pgconn_encoding(self.pgconn)
+            # Collect notifications. Also get the connection encoding if any
+            # notification is received to makes sure that they are consistent.
+            try:
+                async with self.lock:
+                    ns = await self.wait(notifies(self.pgconn), timeout=timeout)
+                    if ns:
+                        enc = pgconn_encoding(self.pgconn)
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+
+            # Emit the notifications received.
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
+                nreceived += 1
+
+            # Stop if we have received enough notifications.
+            if stop_after is not None and nreceived >= stop_after:
+                break
+
+            # Check the deadline after the loop to ensure that timeout=0
+            # polls at least once.
+            if deadline:
+                timeout = min(_WAIT_INTERVAL, deadline - monotonic())
+                if timeout < 0.0:
+                    break
 
     @asynccontextmanager
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
@@ -327,7 +367,9 @@ class AsyncConnection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
-    async def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
+    async def wait(
+        self, gen: PQGen[RV], timeout: Optional[float] = _WAIT_INTERVAL
+    ) -> RV:
         """
         Consume a generator operating on the connection.
 
@@ -337,13 +379,14 @@ class AsyncConnection(BaseConnection[Row]):
         try:
             return await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
         except _INTERRUPTED:
-            # On Ctrl-C, try to cancel the query in the server, otherwise
-            # the connection will remain stuck in ACTIVE state.
-            self._try_cancel(self.pgconn)
-            try:
-                await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
-            except e.QueryCanceled:
-                pass  # as expected
+            if self.pgconn.transaction_status == ACTIVE:
+                # On Ctrl-C, try to cancel the query in the server, otherwise
+                # the connection will remain stuck in ACTIVE state.
+                self._try_cancel(self.pgconn)
+                try:
+                    await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
+                except e.QueryCanceled:
+                    pass  # as expected
             raise
 
     @classmethod
