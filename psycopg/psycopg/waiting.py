@@ -112,7 +112,7 @@ async def wait_async(
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If zero or None, wait indefinitely.
+        to allow Ctrl-C. If zero, wait indefinitely.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
@@ -143,7 +143,7 @@ async def wait_async(
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if timeout:
+                if timeout is not None:
                     try:
                         await wait_for(ev.wait(), timeout)
                     except TimeoutError:
