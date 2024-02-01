@@ -14,6 +14,10 @@ Check out :ref:`row-factory-create` for information about how to use these objec
 .. autofunction:: tuple_row
 .. autofunction:: dict_row
 .. autofunction:: namedtuple_row
+.. autofunction:: scalar_row
+
+        .. versionadded:: 3.2
+
 .. autofunction:: class_row
 
     This is not a row factory, but rather a factory of row factories.

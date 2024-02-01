@@ -102,6 +102,16 @@ def test_kwargs_row(conn):
     assert p.age == 42
 
 
+def test_scalar_row(conn):
+    cur = conn.cursor(row_factory=rows.scalar_row)
+    cur.execute("select 1")
+    assert cur.fetchone() == 1
+    cur.execute("select 1, 2")
+    assert cur.fetchone() == 1
+    with pytest.raises(psycopg.ProgrammingError):
+        cur.execute("select")
+
+
 @pytest.mark.parametrize(
     "factory",
     "tuple_row dict_row namedtuple_row class_row args_row kwargs_row".split(),

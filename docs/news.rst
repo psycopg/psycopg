@@ -19,6 +19,7 @@ Psycopg 3.2 (unreleased)
   (:ticket:`340`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
+- Add `~rows.scalar_row` to return scalar values from a query (:ticket:`#723`).
 - Add `~Connection.set_autocommit()` on sync connections, and similar
   transaction control methods available on the async connections.
 - Add support for libpq functions to close prepared statements and portals
