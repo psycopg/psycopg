@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.18 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.18
+^^^^^^^^^^^^^^
 
 - Fix possible deadlock on pipeline exit (:ticket:`#685`).
 - Fix overflow loading large intervals in C module (:ticket:`#719`).
@@ -20,9 +20,6 @@ Psycopg 3.1.18 (unreleased)
 
 .. __: https://github.com/python/cpython/issues/65821
 
-
-Current release
----------------
 
 Psycopg 3.1.17
 ^^^^^^^^^^^^^^
