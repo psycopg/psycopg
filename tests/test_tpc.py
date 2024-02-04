@@ -22,6 +22,7 @@ def test_tpc_disabled(conn, pipeline):
 
 
 class TestTPC:
+
     def test_tpc_commit(self, conn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
         assert conn.info.transaction_status == TransactionStatus.IDLE

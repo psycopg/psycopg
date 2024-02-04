@@ -13,6 +13,8 @@
     -- Ian Bicking
 '''
 
+from __future__ import annotations
+
 __rcs_id__  = '$Id: dbapi20.py,v 1.11 2005/01/02 02:41:01 zenzen Exp $'
 __version__ = '$Revision: 1.12 $'[11:-2]
 __author__ = 'Stuart Bishop <stuart@stuartbishop.net>'
@@ -101,7 +103,7 @@ class DatabaseAPI20Test(unittest.TestCase):
     # method is to be found
     driver: Any = None
     connect_args = () # List of arguments to pass to connect
-    connect_kw_args: Dict[str, Any] = {} # Keyword arguments for connect
+    connect_kw_args: Dict[Any, Any] = {} # Keyword arguments for connect
     table_prefix = 'dbapi20test_' # If you need to specify a prefix for tables
 
     ddl1 = 'create table %sbooze (name varchar(20))' % table_prefix

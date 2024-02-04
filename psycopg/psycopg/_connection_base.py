@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
@@ -23,7 +22,7 @@ from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import LiteralString, Self, TypeVar
+from ._compat import LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
 from ._encodings import pgconn_encoding

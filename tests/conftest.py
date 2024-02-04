@@ -73,9 +73,9 @@ def pytest_sessionstart(session):
 
 asyncio_options: Dict[str, Any] = {}
 if sys.platform == "win32":
-    asyncio_options[
-        "loop_factory"
-    ] = asyncio.WindowsSelectorEventLoopPolicy().new_event_loop
+    asyncio_options["loop_factory"] = (
+        asyncio.WindowsSelectorEventLoopPolicy().new_event_loop
+    )
 
 
 @pytest.fixture(

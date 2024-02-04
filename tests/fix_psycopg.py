@@ -24,7 +24,6 @@ def global_adapters():
 
 
 @pytest.fixture
-@pytest.mark.crdb_skip("2-phase commit")
 def tpc(svcconn):
     tpc = Tpc(svcconn)
     tpc.check_tpc()

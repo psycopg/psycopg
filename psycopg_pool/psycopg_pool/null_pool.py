@@ -26,6 +26,7 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
+
     def __init__(
         self,
         conninfo: str = "",
@@ -47,6 +48,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         reconnect_failed: Optional[ConnectFailedCB] = None,
         num_workers: int = 3,
     ):  # Note: min_size default value changed to 0.
+
         super().__init__(
             conninfo,
             open=open,

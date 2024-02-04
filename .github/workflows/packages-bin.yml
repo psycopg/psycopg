@@ -23,7 +23,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -43,7 +43,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           package-dir: psycopg_binary
         env:
@@ -104,13 +104,13 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           package-dir: psycopg_binary
         env:
@@ -147,7 +147,7 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Start PostgreSQL service for test
         run: |
@@ -159,7 +159,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           package-dir: psycopg_binary
         env:

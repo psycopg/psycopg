@@ -1,6 +1,7 @@
+import sys
+import time
 import select  # noqa: used in pytest.mark.skipif
 import socket
-import sys
 
 import pytest
 
@@ -26,6 +27,7 @@ waitfns = [
     pytest.param("wait_c", marks=pytest.mark.skipif("not psycopg._cmodule._psycopg")),
 ]
 
+events = ["R", "W", "RW"]
 timeouts = [pytest.param({}, id="blank")]
 timeouts += [pytest.param({"timeout": x}, id=str(x)) for x in [None, 0, 0.2, 10]]
 
@@ -44,9 +46,11 @@ def test_wait_conn_bad(dsn):
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
-@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
+@pytest.mark.parametrize("event", events)
 @skip_if_not_linux
-def test_wait_ready(waitfn, wait, ready):
+def test_wait_ready(waitfn, event):
+    wait = getattr(waiting.Wait, event)
+    ready = getattr(waiting.Ready, event)
     waitfn = getattr(waiting, waitfn)
 
     def gen():
@@ -78,6 +82,34 @@ def test_wait_bad(pgconn, waitfn):
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         waitfn(gen, pgconn.socket)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.parametrize("waitfn", waitfns)
+def test_wait_timeout(pgconn, waitfn):
+    waitfn = getattr(waiting, waitfn)
+
+    pgconn.send_query(b"select pg_sleep(0.5)")
+    gen = generators.execute(pgconn)
+
+    ts = [time.time()]
+
+    def gen_wrapper():
+        try:
+            for x in gen:
+                res = yield x
+                ts.append(time.time())
+                gen.send(res)
+        except StopIteration as ex:
+            return ex.value
+
+    (res,) = waitfn(gen_wrapper(), pgconn.socket, timeout=0.1)
+    assert res.status == ExecStatus.TUPLES_OK
+    ds = [t1 - t0 for t0, t1 in zip(ts[:-1], ts[1:])]
+    assert len(ds) >= 5
+    for d in ds[:5]:
+        assert d == pytest.approx(0.1, 0.05)
 
 
 @pytest.mark.slow
@@ -130,9 +162,12 @@ async def test_wait_conn_async_bad(dsn):
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
+@pytest.mark.parametrize("event", events)
 @skip_if_not_linux
-async def test_wait_ready_async(wait, ready):
+async def test_wait_ready_async(event):
+    wait = getattr(waiting.Wait, event)
+    ready = getattr(waiting.Ready, event)
+
     def gen():
         r = yield wait
         return r

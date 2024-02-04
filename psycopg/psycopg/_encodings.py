@@ -116,7 +116,7 @@ def conninfo_encoding(conninfo: str) -> str:
     pgenc = params.get("client_encoding")
     if pgenc:
         try:
-            return pg2pyenc(pgenc.encode())
+            return pg2pyenc(str(pgenc).encode())
         except NotSupportedError:
             pass
 

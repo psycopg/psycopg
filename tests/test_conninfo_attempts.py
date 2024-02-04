@@ -165,14 +165,14 @@ def test_conninfo_random_multi_host():
 
 def test_conninfo_random_multi_ips(fake_resolve):
     args = {"host": "alot.com"}
-    hostaddrs = [att["hostaddr"] for att in conninfo_attempts(args)]
+    hostaddrs = [str(att["hostaddr"]) for att in conninfo_attempts(args)]
     assert len(hostaddrs) == 20
     assert hostaddrs == sorted(hostaddrs)
 
     args["load_balance_hosts"] = "disable"
-    hostaddrs = [att["hostaddr"] for att in conninfo_attempts(args)]
+    hostaddrs = [str(att["hostaddr"]) for att in conninfo_attempts(args)]
     assert hostaddrs == sorted(hostaddrs)
 
     args["load_balance_hosts"] = "random"
-    hostaddrs = [att["hostaddr"] for att in conninfo_attempts(args)]
+    hostaddrs = [str(att["hostaddr"]) for att in conninfo_attempts(args)]
     assert hostaddrs != sorted(hostaddrs)

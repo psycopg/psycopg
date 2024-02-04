@@ -108,8 +108,24 @@ The `!sql` objects are in the following inheritance hierarchy:
 
 .. autoclass:: Composable()
 
-    .. automethod:: as_bytes
     .. automethod:: as_string
+
+    .. versionchanged:: 3.2
+
+        The `!context` parameter is optional.
+
+        .. warning::
+
+            If a context is not specified, the results are "generic" and not
+            tailored for a specific target connection. Details such as the
+            connection encoding and escaping style will not be taken into
+            account.
+
+    .. automethod:: as_bytes
+
+    .. versionchanged:: 3.2
+
+        The `!context` parameter is optional. See `as_string` for details.
 
 
 .. autoclass:: SQL

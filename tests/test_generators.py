@@ -25,7 +25,7 @@ def test_connect_operationalerror_pgconn(generators, dsn, monkeypatch):
         except KeyError:
             info = conninfo_to_dict(dsn)
             del info["password"]  # should not raise per check above.
-            dsn = make_conninfo(**info)
+            dsn = make_conninfo("", **info)
 
         gen = generators.connect(dsn)
         with pytest.raises(

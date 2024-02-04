@@ -42,7 +42,7 @@ async def test_bad_size(dsn, min_size, max_size):
 
 
 class MyRow(Dict[str, Any]):
-    ...
+    pass
 
 
 async def test_generic_connection_type(dsn):

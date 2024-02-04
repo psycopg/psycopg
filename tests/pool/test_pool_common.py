@@ -35,6 +35,7 @@ def test_defaults(pool_cls, dsn):
 
 
 def test_connection_class(pool_cls, dsn):
+
     class MyConn(psycopg.Connection[Any]):
         pass
 
@@ -158,6 +159,7 @@ def test_configure_broken(pool_cls, dsn, caplog):
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
 def test_queue(pool_cls, dsn):
+
     def worker(n):
         t0 = time()
         with p.connection() as conn:
@@ -182,6 +184,7 @@ def test_queue(pool_cls, dsn):
 
 @pytest.mark.slow
 def test_queue_size(pool_cls, dsn):
+
     def worker(t, ev=None):
         try:
             with p.connection():
@@ -217,6 +220,7 @@ def test_queue_size(pool_cls, dsn):
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
 def test_queue_timeout(pool_cls, dsn):
+
     def worker(n):
         t0 = time()
         try:
@@ -246,6 +250,7 @@ def test_queue_timeout(pool_cls, dsn):
 @pytest.mark.slow
 @pytest.mark.timing
 def test_dead_client(pool_cls, dsn):
+
     def worker(i, timeout):
         try:
             with p.connection(timeout=timeout) as conn:
@@ -273,6 +278,7 @@ def test_dead_client(pool_cls, dsn):
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
 def test_queue_timeout_override(pool_cls, dsn):
+
     def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
@@ -382,6 +388,7 @@ def test_close_connection_on_pool_close(pool_cls, dsn):
 
 
 def test_closed_queue(pool_cls, dsn):
+
     def w1():
         with p.connection() as conn:
             e1.set()  # Tell w0 that w1 got a connection
@@ -493,6 +500,7 @@ def test_jitter(pool_cls):
 @pytest.mark.slow
 @pytest.mark.timing
 def test_stats_measures(pool_cls, dsn):
+
     def worker(n):
         with p.connection() as conn:
             conn.execute("select pg_sleep(0.2)")
@@ -532,6 +540,7 @@ def test_stats_measures(pool_cls, dsn):
 @pytest.mark.slow
 @pytest.mark.timing
 def test_stats_usage(pool_cls, dsn):
+
     def worker(n):
         try:
             with p.connection(timeout=0.3) as conn:
@@ -613,6 +622,7 @@ def test_check_init(pool_cls, dsn):
 
 @pytest.mark.slow
 def test_check_timeout(pool_cls, dsn):
+
     def check(conn):
         raise Exception()
 

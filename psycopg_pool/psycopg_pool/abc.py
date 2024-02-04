@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable, Union, TYPE_CHECKING
 
-from typing_extensions import TypeAlias
-
-from ._compat import TypeVar
+from ._compat import TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from .pool import ConnectionPool

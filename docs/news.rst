@@ -15,12 +15,17 @@ Psycopg 3.2 (unreleased)
 
 - Add support for integer, floating point, boolean `NumPy scalar types`__
   (:ticket:`#332`).
+- Add `!timeout` and `!stop_after` parameters to `Connection.notifies()`
+  (:ticket:`340`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
+- Add `~rows.scalar_row` to return scalar values from a query (:ticket:`#723`).
 - Add `~Connection.set_autocommit()` on sync connections, and similar
   transaction control methods available on the async connections.
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
+- The `!context` parameter of `sql` objects `~sql.Composable.as_string()` and
+  `~sql.Composable.as_bytes()` methods is not optional (:ticket:`#716`).
 - Disable receiving more than one result on the same cursor in pipeline mode,
   to iterate through `~Cursor.nextset()`. The behaviour was different than
   in non-pipeline mode and not totally reliable (:ticket:`#604`).
@@ -30,17 +35,28 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.17 (unreleased)
+Psycopg 3.1.18 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fix multiple connection attempts when a host name resolve to multiple
-  IP addresses (:ticket:`699`).
-- Use `typing.Self` as a more correct return value annotation of context
-  managers and other self-returning methods (see :ticket:`708`).
+- Fix possible deadlock on pipeline exit (:ticket:`#685`).
+- Fix overflow loading large intervals in C module (:ticket:`#719`).
+- Fix compatibility with musl libc distributions affected by `CPython issue
+  #65821`__ (:ticket:`#725`).
+
+.. __: https://github.com/python/cpython/issues/65821
 
 
 Current release
 ---------------
+
+Psycopg 3.1.17
+^^^^^^^^^^^^^^
+
+- Fix multiple connection attempts when a host name resolve to multiple
+  IP addresses (:ticket:`#699`).
+- Use `typing.Self` as a more correct return value annotation of context
+  managers and other self-returning methods (see :ticket:`#708`).
+
 
 Psycopg 3.1.16
 ^^^^^^^^^^^^^^

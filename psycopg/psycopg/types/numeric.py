@@ -379,8 +379,7 @@ class _MixedNumericDumper(Dumper, ABC):
                 _MixedNumericDumper.int_classes = int
 
     @abstractmethod
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
-        ...
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer: ...
 
 
 class NumericDumper(_MixedNumericDumper):

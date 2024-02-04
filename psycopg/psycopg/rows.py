@@ -8,11 +8,10 @@ import functools
 from typing import Any, Callable, Dict, List, Optional, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
-from ._compat import TypeVar
+from ._compat import TypeAlias, TypeVar
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
@@ -44,8 +43,7 @@ class RowMaker(Protocol[Row]):
     Typically, `!RowMaker` functions are returned by `RowFactory`.
     """
 
-    def __call__(self, __values: Sequence[Any]) -> Row:
-        ...
+    def __call__(self, __values: Sequence[Any]) -> Row: ...
 
 
 class RowFactory(Protocol[Row]):
@@ -62,8 +60,7 @@ class RowFactory(Protocol[Row]):
     use the values to create a dictionary for each record.
     """
 
-    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]: ...
 
 
 class AsyncRowFactory(Protocol[Row]):
@@ -71,8 +68,7 @@ class AsyncRowFactory(Protocol[Row]):
     Like `RowFactory`, taking an async cursor as argument.
     """
 
-    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]: ...
 
 
 class BaseRowFactory(Protocol[Row]):
@@ -80,8 +76,7 @@ class BaseRowFactory(Protocol[Row]):
     Like `RowFactory`, taking either type of cursor as argument.
     """
 
-    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]:
-        ...
+    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]: ...
 
 
 TupleRow: TypeAlias = Tuple[Any, ...]
@@ -210,6 +205,28 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
         return kwargs_row__
 
     return kwargs_row_
+
+
+def scalar_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[Any]":
+    """
+    Generate a row factory returning the first column
+    as a scalar value.
+    """
+    res = cursor.pgresult
+    if not res:
+        return no_result
+
+    nfields = _get_nfields(res)
+    if nfields is None:
+        return no_result
+
+    if nfields < 1:
+        raise e.ProgrammingError("at least one column expected")
+
+    def scalar_row_(values: Sequence[Any]) -> Any:
+        return values[0]
+
+    return scalar_row_
 
 
 def no_result(values: Sequence[Any]) -> NoReturn:

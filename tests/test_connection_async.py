@@ -6,7 +6,7 @@ import weakref
 from typing import Any, List
 
 import psycopg
-from psycopg import Notify, pq, errors as e
+from psycopg import pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
@@ -526,47 +526,6 @@ async def test_notice_handlers(aconn, caplog):
         aconn.remove_notice_handler(cb1)
 
 
-@pytest.mark.crdb_skip("notify")
-async def test_notify_handlers(aconn):
-    nots1 = []
-    nots2 = []
-
-    def cb1(n):
-        nots1.append(n)
-
-    aconn.add_notify_handler(cb1)
-    aconn.add_notify_handler(lambda n: nots2.append(n))
-
-    await aconn.set_autocommit(True)
-    cur = aconn.cursor()
-    await cur.execute("listen foo")
-    await cur.execute("notify foo, 'n1'")
-
-    assert len(nots1) == 1
-    n = nots1[0]
-    assert n.channel == "foo"
-    assert n.payload == "n1"
-    assert n.pid == aconn.pgconn.backend_pid
-
-    assert len(nots2) == 1
-    assert nots2[0] == nots1[0]
-
-    aconn.remove_notify_handler(cb1)
-    await cur.execute("notify foo, 'n2'")
-
-    assert len(nots1) == 1
-    assert len(nots2) == 2
-    n = nots2[1]
-    assert isinstance(n, Notify)
-    assert n.channel == "foo"
-    assert n.payload == "n2"
-    assert n.pid == aconn.pgconn.backend_pid
-    assert hash(n)
-
-    with pytest.raises(ValueError):
-        aconn.remove_notify_handler(cb1)
-
-
 async def test_execute(aconn):
     cur = await aconn.execute("select %s, %s", [10, 20])
     assert await cur.fetchone() == (10, 20)
@@ -637,7 +596,7 @@ async def test_cursor_factory(aconn):
     async with aconn.cursor() as cur:
         assert isinstance(cur, MyCursor)
 
-    async with (await aconn.execute("select 1")) as cur:
+    async with await aconn.execute("select 1") as cur:
         assert isinstance(cur, MyCursor)
 
 

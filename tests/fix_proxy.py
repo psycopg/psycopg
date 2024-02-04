@@ -58,7 +58,8 @@ class Proxy:
         cdict = conninfo.conninfo_to_dict(server_dsn)
 
         # Get server params
-        host = cdict.get("host") or os.environ.get("PGHOST")
+        host = cdict.get("host") or os.environ.get("PGHOST", "")
+        assert isinstance(host, str)
         self.server_host = host if host and not host.startswith("/") else "localhost"
         self.server_port = cdict.get("port") or os.environ.get("PGPORT", "5432")
 
@@ -70,7 +71,7 @@ class Proxy:
         cdict["host"] = self.client_host
         cdict["port"] = self.client_port
         cdict["sslmode"] = "disable"  # not supported by the proxy
-        self.client_dsn = conninfo.make_conninfo(**cdict)
+        self.client_dsn = conninfo.make_conninfo("", **cdict)
 
         # The running proxy process
         self.proc = None

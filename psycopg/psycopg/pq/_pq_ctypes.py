@@ -29,7 +29,10 @@ FILE_ptr = POINTER(FILE)
 
 if sys.platform == "linux":
     libcname = ctypes.util.find_library("c")
-    assert libcname
+    if not libcname:
+        # Likely this is a system using musl libc, see the following bug:
+        # https://github.com/python/cpython/issues/65821
+        libcname = "libc.so"
     libc = ctypes.cdll.LoadLibrary(libcname)
 
     fdopen = libc.fdopen

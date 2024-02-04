@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class Scheduler:
+
     def __init__(self) -> None:
         self._queue: List[Task] = []
         self._lock = Lock()

@@ -306,6 +306,7 @@ def test_subclass_adapter(conn, format):
         BaseDumper = StrBinaryDumper  # type: ignore
 
     class MyStrDumper(BaseDumper):
+
         def dump(self, obj):
             return super().dump(obj) * 2
 
@@ -641,6 +642,7 @@ def test_worker_life(conn, format, buffer):
 
 
 def test_worker_error_propagated(conn, monkeypatch):
+
     def copy_to_broken(pgconn, buffer):
         raise ZeroDivisionError
         yield
@@ -803,6 +805,7 @@ def test_copy_table_across(conn_cls, dsn, faker, mode):
 
 
 class DataGenerator:
+
     def __init__(self, conn, nrecs, srec, offset=0, block_size=8192):
         self.conn = conn
         self.nrecs = nrecs

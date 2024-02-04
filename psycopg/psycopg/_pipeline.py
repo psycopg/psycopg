@@ -7,12 +7,11 @@ commands pipeline management
 import logging
 from types import TracebackType
 from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
-from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
 from .abc import PipelineCommand, PQGen
-from ._compat import Deque, Self
+from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
@@ -133,8 +132,7 @@ class BasePipeline:
             self._enqueue_sync()
             yield from self._communicate_gen()
         finally:
-            # No need to force flush since we emitted a sync just before.
-            yield from self._fetch_gen(flush=False)
+            yield from self._fetch_gen(flush=True)
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch

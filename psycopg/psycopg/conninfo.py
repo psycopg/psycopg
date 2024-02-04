@@ -7,17 +7,15 @@ Functions to manipulate conninfo strings
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from . import pq
 from . import errors as e
-
 from . import _conninfo_utils
 from . import _conninfo_attempts
 from . import _conninfo_attempts_async
+from .abc import ConnParam, ConnDict
 
 # re-exoprts
-ConnDict = _conninfo_utils.ConnDict
 conninfo_attempts = _conninfo_attempts.conninfo_attempts
 conninfo_attempts_async = _conninfo_attempts_async.conninfo_attempts_async
 
@@ -27,7 +25,7 @@ conninfo_attempts_async = _conninfo_attempts_async.conninfo_attempts_async
 _DEFAULT_CONNECT_TIMEOUT = 130
 
 
-def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
+def make_conninfo(conninfo: str = "", **kwargs: ConnParam) -> str:
     """
     Merge a string and keyword params into a single conninfo string.
 
@@ -68,7 +66,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     return conninfo
 
 
-def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> ConnDict:
+def conninfo_to_dict(conninfo: str = "", **kwargs: ConnParam) -> ConnDict:
     """
     Convert the `!conninfo` string into a dictionary of parameters.
 
@@ -84,7 +82,9 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> ConnDict:
            #LIBPQ-CONNSTRING
     """
     opts = _parse_conninfo(conninfo)
-    rv = {opt.keyword.decode(): opt.val.decode() for opt in opts if opt.val is not None}
+    rv: ConnDict = {
+        opt.keyword.decode(): opt.val.decode() for opt in opts if opt.val is not None
+    }
     for k, v in kwargs.items():
         if v is not None:
             rv[k] = v

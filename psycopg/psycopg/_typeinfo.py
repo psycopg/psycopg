@@ -9,13 +9,12 @@ information to the adapters if needed.
 
 from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
-from typing_extensions import TypeAlias
 
 from . import sql
 from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
-from ._compat import TypeVar
+from ._compat import TypeAlias, TypeVar
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -59,15 +58,13 @@ class TypeInfo:
     @classmethod
     def fetch(
         cls: Type[T], conn: "Connection[Any]", name: Union[str, sql.Identifier]
-    ) -> Optional[T]:
-        ...
+    ) -> Optional[T]: ...
 
     @overload
     @classmethod
     async def fetch(
         cls: Type[T], conn: "AsyncConnection[Any]", name: Union[str, sql.Identifier]
-    ) -> Optional[T]:
-        ...
+    ) -> Optional[T]: ...
 
     @classmethod
     def fetch(
@@ -239,12 +236,10 @@ class TypesRegistry:
                 yield t
 
     @overload
-    def __getitem__(self, key: Union[str, int]) -> TypeInfo:
-        ...
+    def __getitem__(self, key: Union[str, int]) -> TypeInfo: ...
 
     @overload
-    def __getitem__(self, key: Tuple[Type[T], int]) -> T:
-        ...
+    def __getitem__(self, key: Tuple[Type[T], int]) -> T: ...
 
     def __getitem__(self, key: RegistryKey) -> TypeInfo:
         """
@@ -265,12 +260,10 @@ class TypesRegistry:
             raise KeyError(f"couldn't find the type {key!r} in the types registry")
 
     @overload
-    def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
-        ...
+    def get(self, key: Union[str, int]) -> Optional[TypeInfo]: ...
 
     @overload
-    def get(self, key: Tuple[Type[T], int]) -> Optional[T]:
-        ...
+    def get(self, key: Tuple[Type[T], int]) -> Optional[T]: ...
 
     def get(self, key: RegistryKey) -> Optional[TypeInfo]:
         """

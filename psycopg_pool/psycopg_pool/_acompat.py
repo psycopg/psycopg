@@ -17,9 +17,7 @@ import logging
 import threading
 from typing import Any, Callable, Coroutine, TYPE_CHECKING
 
-from typing_extensions import TypeAlias
-
-from ._compat import TypeVar
+from ._compat import TypeAlias, TypeVar
 
 logger = logging.getLogger("psycopg.pool")
 T = TypeVar("T")

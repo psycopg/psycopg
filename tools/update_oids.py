@@ -19,11 +19,11 @@ import argparse
 import subprocess as sp
 from typing import List
 from pathlib import Path
-from typing_extensions import TypeAlias
 
 import psycopg
 from psycopg.rows import TupleRow
 from psycopg.crdb import CrdbConnection
+from psycopg._compat import TypeAlias
 
 Connection: TypeAlias = psycopg.Connection[TupleRow]
 

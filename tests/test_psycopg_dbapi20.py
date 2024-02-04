@@ -18,7 +18,7 @@ def with_dsn(request, session_dsn):
 class PsycopgTests(dbapi20.DatabaseAPI20Test):
     driver = psycopg
     # connect_args = () # set by the fixture
-    connect_kw_args: Dict[str, Any] = {}
+    connect_kw_args: Dict[Any, Any] = {}
 
     def test_nextset(self):
         # tested elsewhere

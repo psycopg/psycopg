@@ -334,7 +334,8 @@ mode if you wish to receive or send notifications in a timely manner.
 Notifications are received as instances of `Notify`. If you are reserving a
 connection only to receive notifications, the simplest way is to consume the
 `Connection.notifies` generator. The generator can be stopped using
-`!close()`.
+`!close()`. Starting from Psycopg 3.2, the method supports options to receive
+notifications only for a certain time or up to a certain number.
 
 .. note::
 
