@@ -23,7 +23,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -104,7 +104,7 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -147,7 +147,7 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Start PostgreSQL service for test
         run: |
