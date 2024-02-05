@@ -25,7 +25,7 @@ Psycopg 3.2 (unreleased)
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
 - The `!context` parameter of `sql` objects `~sql.Composable.as_string()` and
-  `~sql.Composable.as_bytes()` methods is not optional (:ticket:`#716`).
+  `~sql.Composable.as_bytes()` methods is now optional (:ticket:`#716`).
 - Disable receiving more than one result on the same cursor in pipeline mode,
   to iterate through `~Cursor.nextset()`. The behaviour was different than
   in non-pipeline mode and not totally reliable (:ticket:`#604`).
