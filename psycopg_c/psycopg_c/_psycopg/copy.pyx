@@ -191,7 +191,8 @@ def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
     _buffer_as_string_and_size(data, <char **>&ptr, &bufsize)
     cdef unsigned char *bufend = ptr + bufsize
 
-    cdef uint16_t benfields = (<uint16_t *>ptr)[0]
+    cdef uint16_t benfields
+    memcpy(&benfields, ptr, sizeof(benfields))
     cdef int nfields = endian.be16toh(benfields)
     ptr += sizeof(benfields)
     cdef list row = PyList_New(nfields)

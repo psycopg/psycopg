@@ -95,10 +95,10 @@ cdef class DateBinaryDumper(CDumper):
         cdef int32_t days = PyObject_CallFunctionObjArgs(
             date_toordinal, <PyObject *>obj, NULL)
         days -= PG_DATE_EPOCH_DAYS
-        cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
-            rv, offset, sizeof(int32_t))
-        buf[0] = endian.htobe32(days)
-        return sizeof(int32_t)
+        cdef uint32_t bedays = endian.htobe32(days)
+        cdef uint32_t *buf = <uint32_t *>CDumper.ensure_size(rv, offset, sizeof(bedays))
+        memcpy(buf, &bedays, sizeof(bedays))
+        return sizeof(bedays)
 
 
 cdef class _BaseTimeDumper(CDumper):
@@ -168,15 +168,15 @@ cdef class TimeBinaryDumper(_BaseTimeDumper):
     oid = oids.TIME_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int64_t micros = cdt.time_microsecond(obj) + 1000000 * (
+        cdef int64_t us = cdt.time_microsecond(obj) + 1000000 * (
             cdt.time_second(obj)
             + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
         )
+        cdef uint64_t beus = endian.htobe64(us)
 
-        cdef int64_t *buf = <int64_t *>CDumper.ensure_size(
-            rv, offset, sizeof(int64_t))
-        buf[0] = endian.htobe64(micros)
-        return sizeof(int64_t)
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus))
+        memcpy(buf, &beus, sizeof(beus))
+        return sizeof(beus)
 
     cpdef upgrade(self, obj, format):
         if not obj.tzinfo:
@@ -192,21 +192,21 @@ cdef class TimeTzBinaryDumper(_BaseTimeDumper):
     oid = oids.TIMETZ_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int64_t micros = cdt.time_microsecond(obj) + 1_000_000 * (
+        cdef int64_t us = cdt.time_microsecond(obj) + 1_000_000 * (
             cdt.time_second(obj)
             + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
         )
+        cdef uint64_t beus = endian.htobe64(us)
 
         off = self._get_offset(obj)
         cdef int32_t offsec = int(PyObject_CallFunctionObjArgs(
             timedelta_total_seconds, <PyObject *>off, NULL))
+        cdef uint32_t beoff = endian.htobe32(-offsec)
 
-        cdef char *buf = CDumper.ensure_size(
-            rv, offset, sizeof(int64_t) + sizeof(int32_t))
-        (<int64_t *>buf)[0] = endian.htobe64(micros)
-        (<int32_t *>(buf + sizeof(int64_t)))[0] = endian.htobe32(-offsec)
-
-        return sizeof(int64_t) + sizeof(int32_t)
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus) + sizeof(beoff))
+        memcpy(buf, &beus, sizeof(beus))
+        memcpy(buf + sizeof(beus), &beoff, sizeof(beoff))
+        return sizeof(beus) + sizeof(beoff)
 
 
 cdef class _BaseDatetimeDumper(CDumper):
@@ -268,13 +268,14 @@ cdef class DatetimeBinaryDumper(_BaseDatetimeDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         delta = obj - pg_datetimetz_epoch
 
-        cdef int64_t micros = cdt.timedelta_microseconds(delta) + 1_000_000 * (
+        cdef int64_t us = cdt.timedelta_microseconds(delta) + 1_000_000 * (
             86_400 * <int64_t>cdt.timedelta_days(delta)
                 + <int64_t>cdt.timedelta_seconds(delta))
+        cdef uint64_t beus = endian.htobe64(us)
 
-        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
-        (<int64_t *>buf)[0] = endian.htobe64(micros)
-        return sizeof(int64_t)
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus))
+        memcpy(buf, &beus, sizeof(beus))
+        return sizeof(beus)
 
     cpdef upgrade(self, obj, format):
         if obj.tzinfo:
@@ -292,13 +293,14 @@ cdef class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         delta = obj - pg_datetime_epoch
 
-        cdef int64_t micros = cdt.timedelta_microseconds(delta) + 1_000_000 * (
+        cdef int64_t us = cdt.timedelta_microseconds(delta) + 1_000_000 * (
             86_400 * <int64_t>cdt.timedelta_days(delta)
                 + <int64_t>cdt.timedelta_seconds(delta))
+        cdef uint64_t beus = endian.htobe64(us)
 
-        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
-        (<int64_t *>buf)[0] = endian.htobe64(micros)
-        return sizeof(int64_t)
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus))
+        memcpy(buf, &beus, sizeof(beus))
+        return sizeof(beus)
 
 
 @cython.final
@@ -345,18 +347,22 @@ cdef class TimedeltaBinaryDumper(CDumper):
     oid = oids.INTERVAL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int64_t micros = (
+        cdef int64_t us = (
             1_000_000 * <int64_t>cdt.timedelta_seconds(obj)
             + cdt.timedelta_microseconds(obj))
+        cdef uint64_t beus = endian.htobe64(us)
+
         cdef int32_t days = cdt.timedelta_days(obj)
+        cdef uint32_t bedays = endian.htobe32(days)
 
+        # The third item is months
         cdef char *buf = CDumper.ensure_size(
-            rv, offset, sizeof(int64_t) + sizeof(int32_t) + sizeof(int32_t))
-        (<int64_t *>buf)[0] = endian.htobe64(micros)
-        (<int32_t *>(buf + sizeof(int64_t)))[0] = endian.htobe32(days)
-        (<int32_t *>(buf + sizeof(int64_t) + sizeof(int32_t)))[0] = 0
+            rv, offset, sizeof(beus) + sizeof(bedays) + sizeof(int32_t))
+        memcpy(buf, &beus, sizeof(beus))
+        memcpy(buf + sizeof(beus), &bedays, sizeof(bedays))
+        memset(buf + sizeof(beus) + sizeof(bedays), 0, sizeof(int32_t))
 
-        return sizeof(int64_t) + sizeof(int32_t) + sizeof(int32_t)
+        return sizeof(beus) + sizeof(bedays) + sizeof(int32_t)
 
 
 @cython.final
@@ -419,7 +425,9 @@ cdef class DateBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int days = endian.be32toh((<uint32_t *>data)[0])
+        cdef uint32_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int days = endian.be32toh(bedata)
         cdef object pydays = days + PG_DATE_EPOCH_DAYS
         try:
             return PyObject_CallFunctionObjArgs(
@@ -467,7 +475,9 @@ cdef class TimeBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh(bedata)
         cdef int h, m, s, us
 
         with cython.cdivision(True):
@@ -531,8 +541,14 @@ cdef class TimetzBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef int32_t off = endian.be32toh((<uint32_t *>(data + sizeof(int64_t)))[0])
+        cdef uint64_t beval
+        memcpy(&beval, data, sizeof(beval))
+        cdef int64_t val = endian.be64toh(beval)
+
+        cdef uint32_t beoff
+        memcpy(&beoff, data + sizeof(beval), sizeof(beoff))
+        cdef int32_t off = endian.be32toh(beoff)
+
         cdef int h, m, s, us
 
         with cython.cdivision(True):
@@ -664,7 +680,9 @@ cdef class TimestampBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t beval
+        memcpy(&beval, data, sizeof(beval))
+        cdef int64_t val = endian.be64toh(beval)
         cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
@@ -791,7 +809,9 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh(bedata)
         cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
@@ -951,11 +971,11 @@ cdef class IntervalBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef int32_t days = endian.be32toh(
-            (<uint32_t *>(data + sizeof(int64_t)))[0])
-        cdef int32_t months = endian.be32toh(
-            (<uint32_t *>(data + sizeof(int64_t) + sizeof(int32_t)))[0])
+        cdef int32_t bedata[4]
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh((<uint64_t *>bedata)[0])
+        cdef int32_t days = endian.be32toh(bedata[2])
+        cdef int32_t months = endian.be32toh(bedata[3])
 
         cdef int years
         with cython.cdivision(True):
