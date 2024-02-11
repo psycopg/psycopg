@@ -259,7 +259,9 @@ cdef class Int2BinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        return PyLong_FromLong(<int16_t>endian.be16toh((<uint16_t *>data)[0]))
+        cdef int16_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        return PyLong_FromLong(<int16_t>endian.be16toh(bedata))
 
 
 @cython.final
@@ -268,7 +270,9 @@ cdef class Int4BinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        return PyLong_FromLong(<int32_t>endian.be32toh((<uint32_t *>data)[0]))
+        cdef int32_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        return PyLong_FromLong(<int32_t>endian.be32toh(bedata))
 
 
 @cython.final
@@ -277,7 +281,9 @@ cdef class Int8BinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        return PyLong_FromLongLong(<int64_t>endian.be64toh((<uint64_t *>data)[0]))
+        cdef int64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        return PyLong_FromLongLong(<int64_t>endian.be64toh(bedata))
 
 
 @cython.final
@@ -286,7 +292,9 @@ cdef class OidBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        return PyLong_FromUnsignedLong(endian.be32toh((<uint32_t *>data)[0]))
+        cdef uint32_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        return PyLong_FromUnsignedLong(endian.be32toh(bedata))
 
 
 cdef class _FloatDumper(CDumper):
@@ -378,7 +386,9 @@ cdef class Float4BinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef uint32_t asint = endian.be32toh((<uint32_t *>data)[0])
+        cdef uint32_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef uint32_t asint = endian.be32toh(bedata)
         # avoid warning:
         # dereferencing type-punned pointer will break strict-aliasing rules
         cdef char *swp = <char *>&asint
@@ -391,7 +401,9 @@ cdef class Float8BinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef uint64_t asint = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef uint64_t asint = endian.be64toh(bedata)
         cdef char *swp = <char *>&asint
         return PyFloat_FromDouble((<double *>swp)[0])
 
@@ -448,24 +460,31 @@ cdef class NumericBinaryLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
 
-        cdef uint16_t *data16 = <uint16_t *>data
-        cdef uint16_t ndigits = endian.be16toh(data16[0])
-        cdef int16_t weight = <int16_t>endian.be16toh(data16[1])
-        cdef uint16_t sign = endian.be16toh(data16[2])
-        cdef uint16_t dscale = endian.be16toh(data16[3])
+        cdef uint16_t behead[4]
+        memcpy(&behead, data, sizeof(behead))
+        cdef uint16_t ndigits = endian.be16toh(behead[0])
+        cdef int16_t weight = <int16_t>endian.be16toh(behead[1])
+        cdef uint16_t sign = endian.be16toh(behead[2])
+        cdef uint16_t dscale = endian.be16toh(behead[3])
+
         cdef int shift
         cdef int i
         cdef PyObject *pctx
         cdef object key
+        cdef char *digitptr
+        cdef uint16_t bedigit
 
         if sign == NUMERIC_POS or sign == NUMERIC_NEG:
             if length != (4 + ndigits) * sizeof(uint16_t):
                 raise e.DataError("bad ndigits in numeric binary representation")
 
             val = 0
+            digitptr = data + sizeof(behead)
             for i in range(ndigits):
+                memcpy(&bedigit, digitptr, sizeof(bedigit))
+                digitptr += sizeof(bedigit)
                 val *= 10_000
-                val += endian.be16toh(data16[i + 4])
+                val += endian.be16toh(bedigit)
 
             shift = dscale - (ndigits - weight - 1) * DEC_DIGITS
 

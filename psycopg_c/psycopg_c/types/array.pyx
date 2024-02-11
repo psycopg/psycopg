@@ -210,8 +210,9 @@ cdef object _array_load_binary(
     const char *buf, size_t length, Transformer tx, PyObject **row_loader_ptr
 ):
     # head is ndims, hasnull, elem oid
-    cdef uint32_t *buf32 = <uint32_t *>buf
-    cdef int ndims = endian.be32toh(buf32[0])
+    cdef uint32_t buf32
+    memcpy(&buf32, buf, sizeof(buf32))
+    cdef int ndims = endian.be32toh(buf32)
 
     if ndims <= 0:
         return []
@@ -222,17 +223,23 @@ cdef object _array_load_binary(
         )
 
     cdef object oid
+    cdef uint32_t beoid
     if row_loader_ptr[0] == NULL:
-        oid = <Oid>endian.be32toh(buf32[2])
+        memcpy(&beoid, buf + 2 * sizeof(uint32_t), sizeof(beoid))
+        oid = <Oid>endian.be32toh(beoid)
         row_loader_ptr[0] = tx._c_get_loader(<PyObject *>oid, <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t[MAXDIM] dims
     cdef int i
+    cdef uint32_t bedata
+    cdef char *dimptr = buf + 3 * sizeof(uint32_t)
     for i in range(ndims):
         # Every dimension is dim, lower bound
-        dims[i] = endian.be32toh(buf32[3 + 2 * i])
+        memcpy(&bedata, dimptr, sizeof(bedata))
+        dimptr += 2 * sizeof(uint32_t)
+        dims[i] = endian.be32toh(bedata)
 
-    buf += (3 + 2 * ndims) * sizeof(uint32_t)
+    buf += (3 + 2 * ndims) * sizeof(bedata)
     out = _array_load_binary_rec(ndims, dims, &buf, row_loader_ptr[0])
     return out
 
@@ -242,6 +249,7 @@ cdef object _array_load_binary_rec(
 ):
     cdef const char *buf
     cdef int i
+    cdef uint32_t besize
     cdef int32_t size
     cdef object val
 
@@ -251,8 +259,9 @@ cdef object _array_load_binary_rec(
     if ndims == 1:
         buf = bufptr[0]
         for i in range(nelems):
-            size = <int32_t>endian.be32toh((<uint32_t *>buf)[0])
-            buf += sizeof(uint32_t)
+            memcpy(&besize, buf, sizeof(besize))
+            size = <int32_t>endian.be32toh(besize)
+            buf += sizeof(besize)
             if size == -1:
                 val = None
             else:
