@@ -225,6 +225,15 @@ jobs:
           $PgSvc.Start()
         shell: pwsh
 
+      # Refcount tests are flakey on windows, often they fail with the likes of:
+      #
+      #   AssertionError: objects leaked: 0, -2
+      #
+      # Avoid the morning bother of a failed workflow.
+      - name: Exclude refcount tests in daily tests
+        if: ${{ github.event_name == 'schedule' }}
+        run: echo "NOT_MARKERS=$NOT_MARKERS refcount" >> $GITHUB_ENV
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
