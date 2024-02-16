@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.2 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Raise a `RuntimeWarning` instead of a `DeprecationWarning` if an async pool
+  is open in the constructor.
+
+
 Current release
 ---------------
 
