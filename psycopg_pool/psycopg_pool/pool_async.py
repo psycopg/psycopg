@@ -139,7 +139,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 " is deprecated and will not be supported anymore in a future"
                 " release. Please use `await pool.open()`, or use the pool as context"
                 f" manager using: `async with {type(self).__name__}(...) as pool: `...",
-                DeprecationWarning,
+                RuntimeWarning,
             )
 
     async def wait(self, timeout: float = 30.0) -> None:

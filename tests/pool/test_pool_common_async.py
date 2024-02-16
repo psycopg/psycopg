@@ -59,12 +59,14 @@ async def test_context(pool_cls, dsn):
 
 async def test_create_warning(pool_cls, dsn):
     if True:  # ASYNC
+        warning_cls = RuntimeWarning
         # warning on explicit open too on async
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(warning_cls):
             p = pool_cls(dsn, open=True)
             await p.close()
 
     else:
+        warning_cls = DeprecationWarning
         # No warning on explicit open for sync pool
         p = pool_cls(dsn, open=True)
         try:
@@ -88,7 +90,7 @@ async def test_create_warning(pool_cls, dsn):
             pass
 
     # Warning on open not specified
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(warning_cls):
         p = pool_cls(dsn)
         try:
             async with p.connection():
@@ -97,7 +99,7 @@ async def test_create_warning(pool_cls, dsn):
             await p.close()
 
     # Warning also if open is called explicitly on already implicitly open
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(warning_cls):
         p = pool_cls(dsn)
         await p.open()
         try:
