@@ -100,7 +100,8 @@ def _parse_conninfo(conninfo: str) -> list[pq.ConninfoOption]:
     Return the result of pq.Conninfo.parse() on success.
     """
     try:
-        return pq.Conninfo.parse(conninfo.encode())
+        # return pq.Conninfo.parse(conninfo.encode())
+        return conninfo.encode()
     except e.OperationalError as ex:
         raise e.ProgrammingError(str(ex)) from None
 

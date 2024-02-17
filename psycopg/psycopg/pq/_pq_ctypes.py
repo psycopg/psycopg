@@ -42,11 +42,11 @@ if sys.platform == "linux":
 
 # Get the libpq version to define what functions are available.
 
-PQlibVersion = pq.PQlibVersion
-PQlibVersion.argtypes = []
-PQlibVersion.restype = c_int
+# PQlibVersion = pq.PQlibVersion
+# PQlibVersion.argtypes = []
+# PQlibVersion.restype = c_int
 
-libpq_version = PQlibVersion()
+libpq_version = 11000 # PQlibVersion()
 
 
 # libpq data types
@@ -138,13 +138,13 @@ PQconninfoFree = pq.PQconninfoFree
 PQconninfoFree.argtypes = [PQconninfoOption_ptr]
 PQconninfoFree.restype = None
 
-PQconninfo = pq.PQconninfo
-PQconninfo.argtypes = [PGconn_ptr]
-PQconninfo.restype = PQconninfoOption_ptr
+# PQconninfo = pq.PQconninfo
+# PQconninfo.argtypes = [PGconn_ptr]
+# PQconninfo.restype = PQconninfoOption_ptr
 
-PQconninfoParse = pq.PQconninfoParse
-PQconninfoParse.argtypes = [c_char_p, POINTER(c_char_p)]
-PQconninfoParse.restype = PQconninfoOption_ptr
+# PQconninfoParse = pq.PQconninfoParse
+# PQconninfoParse.argtypes = [c_char_p, POINTER(c_char_p)]
+# PQconninfoParse.restype = PQconninfoOption_ptr
 
 PQfinish = pq.PQfinish
 PQfinish.argtypes = [PGconn_ptr]
@@ -162,9 +162,9 @@ PQresetPoll = pq.PQresetPoll
 PQresetPoll.argtypes = [PGconn_ptr]
 PQresetPoll.restype = c_int
 
-PQping = pq.PQping
-PQping.argtypes = [c_char_p]
-PQping.restype = c_int
+# PQping = pq.PQping
+# PQping.argtypes = [c_char_p]
+# PQping.restype = c_int
 
 
 # 33.2. Connection Status Functions
@@ -219,21 +219,21 @@ PQstatus = pq.PQstatus
 PQstatus.argtypes = [PGconn_ptr]
 PQstatus.restype = c_int
 
-PQtransactionStatus = pq.PQtransactionStatus
-PQtransactionStatus.argtypes = [PGconn_ptr]
-PQtransactionStatus.restype = c_int
+# PQtransactionStatus = pq.PQtransactionStatus
+# PQtransactionStatus.argtypes = [PGconn_ptr]
+# PQtransactionStatus.restype = c_int
 
-PQparameterStatus = pq.PQparameterStatus
-PQparameterStatus.argtypes = [PGconn_ptr, c_char_p]
-PQparameterStatus.restype = c_char_p
+# PQparameterStatus = pq.PQparameterStatus
+# PQparameterStatus.argtypes = [PGconn_ptr, c_char_p]
+# PQparameterStatus.restype = c_char_p
 
-PQprotocolVersion = pq.PQprotocolVersion
-PQprotocolVersion.argtypes = [PGconn_ptr]
-PQprotocolVersion.restype = c_int
+# PQprotocolVersion = pq.PQprotocolVersion
+# PQprotocolVersion.argtypes = [PGconn_ptr]
+# PQprotocolVersion.restype = c_int
 
-PQserverVersion = pq.PQserverVersion
-PQserverVersion.argtypes = [PGconn_ptr]
-PQserverVersion.restype = c_int
+# PQserverVersion = pq.PQserverVersion
+# PQserverVersion.argtypes = [PGconn_ptr]
+# PQserverVersion.restype = c_int
 
 PQerrorMessage = pq.PQerrorMessage
 PQerrorMessage.argtypes = [PGconn_ptr]
@@ -247,17 +247,17 @@ PQbackendPID = pq.PQbackendPID
 PQbackendPID.argtypes = [PGconn_ptr]
 PQbackendPID.restype = c_int
 
-PQconnectionNeedsPassword = pq.PQconnectionNeedsPassword
-PQconnectionNeedsPassword.argtypes = [PGconn_ptr]
-PQconnectionNeedsPassword.restype = c_int
+# PQconnectionNeedsPassword = pq.PQconnectionNeedsPassword
+# PQconnectionNeedsPassword.argtypes = [PGconn_ptr]
+# PQconnectionNeedsPassword.restype = c_int
 
-PQconnectionUsedPassword = pq.PQconnectionUsedPassword
-PQconnectionUsedPassword.argtypes = [PGconn_ptr]
-PQconnectionUsedPassword.restype = c_int
+# PQconnectionUsedPassword = pq.PQconnectionUsedPassword
+# PQconnectionUsedPassword.argtypes = [PGconn_ptr]
+# PQconnectionUsedPassword.restype = c_int
 
-PQsslInUse = pq.PQsslInUse
-PQsslInUse.argtypes = [PGconn_ptr]
-PQsslInUse.restype = c_int
+# PQsslInUse = pq.PQsslInUse
+# PQsslInUse.argtypes = [PGconn_ptr]
+# PQsslInUse.restype = c_int
 
 # TODO: PQsslAttribute, PQsslAttributeNames, PQsslStruct, PQgetssl
 
@@ -297,13 +297,13 @@ PQexecPrepared.argtypes = [
 ]
 PQexecPrepared.restype = PGresult_ptr
 
-PQdescribePrepared = pq.PQdescribePrepared
-PQdescribePrepared.argtypes = [PGconn_ptr, c_char_p]
-PQdescribePrepared.restype = PGresult_ptr
+# PQdescribePrepared = pq.PQdescribePrepared
+# PQdescribePrepared.argtypes = [PGconn_ptr, c_char_p]
+# PQdescribePrepared.restype = PGresult_ptr
 
-PQdescribePortal = pq.PQdescribePortal
-PQdescribePortal.argtypes = [PGconn_ptr, c_char_p]
-PQdescribePortal.restype = PGresult_ptr
+# PQdescribePortal = pq.PQdescribePortal
+# PQdescribePortal.argtypes = [PGconn_ptr, c_char_p]
+# PQdescribePortal.restype = PGresult_ptr
 
 _PQclosePrepared = None
 _PQclosePortal = None
@@ -348,9 +348,9 @@ PQresultErrorMessage.restype = c_char_p
 
 # TODO: PQresultVerboseErrorMessage
 
-PQresultErrorField = pq.PQresultErrorField
-PQresultErrorField.argtypes = [PGresult_ptr, c_int]
-PQresultErrorField.restype = c_char_p
+# PQresultErrorField = pq.PQresultErrorField
+# PQresultErrorField.argtypes = [PGresult_ptr, c_int]
+# PQresultErrorField.restype = c_char_p
 
 PQclear = pq.PQclear
 PQclear.argtypes = [PGresult_ptr]
@@ -373,15 +373,15 @@ PQfname.restype = c_char_p
 
 # PQfnumber: useless and hard to use
 
-PQftable = pq.PQftable
+PQftable = pq.PQoidValue
 PQftable.argtypes = [PGresult_ptr, c_int]
 PQftable.restype = Oid
 
-PQftablecol = pq.PQftablecol
-PQftablecol.argtypes = [PGresult_ptr, c_int]
-PQftablecol.restype = c_int
+# PQftablecol = pq.PQftablecol
+# PQftablecol.argtypes = [PGresult_ptr, c_int]
+# PQftablecol.restype = c_int
 
-PQfformat = pq.PQfformat
+PQfformat = pq.PQftype
 PQfformat.argtypes = [PGresult_ptr, c_int]
 PQfformat.restype = c_int
 
@@ -413,13 +413,13 @@ PQgetlength = pq.PQgetlength
 PQgetlength.argtypes = [PGresult_ptr, c_int, c_int]
 PQgetlength.restype = c_int
 
-PQnparams = pq.PQnparams
-PQnparams.argtypes = [PGresult_ptr]
-PQnparams.restype = c_int
+# PQnparams = pq.PQnparams
+# PQnparams.argtypes = [PGresult_ptr]
+# PQnparams.restype = c_int
 
-PQparamtype = pq.PQparamtype
-PQparamtype.argtypes = [PGresult_ptr, c_int]
-PQparamtype.restype = Oid
+# PQparamtype = pq.PQparamtype
+# PQparamtype.argtypes = [PGresult_ptr, c_int]
+# PQparamtype.restype = Oid
 
 # PQprint: pretty useless
 
@@ -440,34 +440,34 @@ PQoidValue.restype = Oid
 
 # 33.3.4. Escaping Strings for Inclusion in SQL Commands
 
-PQescapeLiteral = pq.PQescapeLiteral
-PQescapeLiteral.argtypes = [PGconn_ptr, c_char_p, c_size_t]
-PQescapeLiteral.restype = POINTER(c_char)
+# PQescapeLiteral = pq.PQescapeLiteral
+# PQescapeLiteral.argtypes = [PGconn_ptr, c_char_p, c_size_t]
+# PQescapeLiteral.restype = POINTER(c_char)
 
-PQescapeIdentifier = pq.PQescapeIdentifier
-PQescapeIdentifier.argtypes = [PGconn_ptr, c_char_p, c_size_t]
-PQescapeIdentifier.restype = POINTER(c_char)
+# PQescapeIdentifier = pq.PQescapeIdentifier
+# PQescapeIdentifier.argtypes = [PGconn_ptr, c_char_p, c_size_t]
+# PQescapeIdentifier.restype = POINTER(c_char)
 
-PQescapeStringConn = pq.PQescapeStringConn
+# PQescapeStringConn = pq.PQescapeStringConn
 # TODO: raises "wrong type" error
 # PQescapeStringConn.argtypes = [
 #     PGconn_ptr, c_char_p, c_char_p, c_size_t, POINTER(c_int)
 # ]
-PQescapeStringConn.restype = c_size_t
+# PQescapeStringConn.restype = c_size_t
 
 PQescapeString = pq.PQescapeString
 # TODO: raises "wrong type" error
 # PQescapeString.argtypes = [c_char_p, c_char_p, c_size_t]
 PQescapeString.restype = c_size_t
 
-PQescapeByteaConn = pq.PQescapeByteaConn
-PQescapeByteaConn.argtypes = [
-    PGconn_ptr,
-    POINTER(c_char),  # actually POINTER(c_ubyte) but this is easier
-    c_size_t,
-    POINTER(c_size_t),
-]
-PQescapeByteaConn.restype = POINTER(c_ubyte)
+# PQescapeByteaConn = pq.PQescapeByteaConn
+# PQescapeByteaConn.argtypes = [
+#     PGconn_ptr,
+#     POINTER(c_char),  # actually POINTER(c_ubyte) but this is easier
+#     c_size_t,
+#     POINTER(c_size_t),
+# ]
+# PQescapeByteaConn.restype = POINTER(c_ubyte)
 
 PQescapeBytea = pq.PQescapeBytea
 PQescapeBytea.argtypes = [
@@ -521,13 +521,13 @@ PQsendQueryPrepared.argtypes = [
 ]
 PQsendQueryPrepared.restype = c_int
 
-PQsendDescribePrepared = pq.PQsendDescribePrepared
-PQsendDescribePrepared.argtypes = [PGconn_ptr, c_char_p]
-PQsendDescribePrepared.restype = c_int
+# PQsendDescribePrepared = pq.PQsendDescribePrepared
+# PQsendDescribePrepared.argtypes = [PGconn_ptr, c_char_p]
+# PQsendDescribePrepared.restype = c_int
 
-PQsendDescribePortal = pq.PQsendDescribePortal
-PQsendDescribePortal.argtypes = [PGconn_ptr, c_char_p]
-PQsendDescribePortal.restype = c_int
+# PQsendDescribePortal = pq.PQsendDescribePortal
+# PQsendDescribePortal.argtypes = [PGconn_ptr, c_char_p]
+# PQsendDescribePortal.restype = c_int
 
 _PQsendClosePrepared = None
 _PQsendClosePortal = None
@@ -586,22 +586,22 @@ PQflush.restype = c_int
 
 
 # 33.5. Retrieving Query Results Row-by-Row
-PQsetSingleRowMode = pq.PQsetSingleRowMode
-PQsetSingleRowMode.argtypes = [PGconn_ptr]
-PQsetSingleRowMode.restype = c_int
+# PQsetSingleRowMode = pq.PQsetSingleRowMode
+# PQsetSingleRowMode.argtypes = [PGconn_ptr]
+# PQsetSingleRowMode.restype = c_int
 
 
 # 33.6. Canceling Queries in Progress
 
-PQgetCancel = pq.PQgetCancel
-PQgetCancel.argtypes = [PGconn_ptr]
-PQgetCancel.restype = PGcancel_ptr
+# PQgetCancel = pq.PQgetCancel
+# PQgetCancel.argtypes = [PGconn_ptr]
+# PQgetCancel.restype = PGcancel_ptr
 
-PQfreeCancel = pq.PQfreeCancel
-PQfreeCancel.argtypes = [PGcancel_ptr]
-PQfreeCancel.restype = None
+# PQfreeCancel = pq.PQfreeCancel
+# PQfreeCancel.argtypes = [PGcancel_ptr]
+# PQfreeCancel.restype = None
 
-PQcancel = pq.PQcancel
+PQcancel = pq.PQrequestCancel
 # TODO: raises "wrong type" error
 # PQcancel.argtypes = [PGcancel_ptr, POINTER(c_char), c_int]
 PQcancel.restype = c_int
@@ -616,17 +616,17 @@ PQnotifies.restype = PGnotify_ptr
 
 # 33.9. Functions Associated with the COPY Command
 
-PQputCopyData = pq.PQputCopyData
-PQputCopyData.argtypes = [PGconn_ptr, c_char_p, c_int]
-PQputCopyData.restype = c_int
+# PQputCopyData = pq.PQputCopyData
+# PQputCopyData.argtypes = [PGconn_ptr, c_char_p, c_int]
+# PQputCopyData.restype = c_int
 
-PQputCopyEnd = pq.PQputCopyEnd
+PQputCopyEnd = pq.PQendcopy
 PQputCopyEnd.argtypes = [PGconn_ptr, c_char_p]
 PQputCopyEnd.restype = c_int
 
-PQgetCopyData = pq.PQgetCopyData
-PQgetCopyData.argtypes = [PGconn_ptr, POINTER(c_char_p), c_int]
-PQgetCopyData.restype = c_int
+# PQgetCopyData = pq.PQgetCopyData
+# PQgetCopyData.argtypes = [PGconn_ptr, POINTER(c_char_p), c_int]
+# PQgetCopyData.restype = c_int
 
 
 # 33.10. Control Functions
@@ -659,7 +659,7 @@ PQuntrace.restype = None
 
 # 33.11. Miscellaneous Functions
 
-PQfreemem = pq.PQfreemem
+PQfreemem = pq.free
 PQfreemem.argtypes = [c_void_p]
 PQfreemem.restype = None
 
@@ -690,18 +690,18 @@ PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr
 
-PQsetResultAttrs = pq.PQsetResultAttrs
-PQsetResultAttrs.argtypes = [PGresult_ptr, c_int, PGresAttDesc_ptr]
-PQsetResultAttrs.restype = c_int
+# PQsetResultAttrs = pq.PQsetResultAttrs
+# PQsetResultAttrs.argtypes = [PGresult_ptr, c_int, PGresAttDesc_ptr]
+# PQsetResultAttrs.restype = c_int
 
 
 # 33.12. Notice Processing
 
 PQnoticeReceiver = CFUNCTYPE(None, c_void_p, PGresult_ptr)
 
-PQsetNoticeReceiver = pq.PQsetNoticeReceiver
-PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
-PQsetNoticeReceiver.restype = PQnoticeReceiver
+# PQsetNoticeReceiver = pq.PQsetNoticeReceiver
+# PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
+# PQsetNoticeReceiver.restype = PQnoticeReceiver
 
 # 34.5 Pipeline Mode
 
@@ -780,9 +780,9 @@ def PQsendFlushRequest(pgconn: PGconn_struct) -> int:
 
 # 33.18. SSL Support
 
-PQinitOpenSSL = pq.PQinitOpenSSL
-PQinitOpenSSL.argtypes = [c_int, c_int]
-PQinitOpenSSL.restype = None
+# PQinitOpenSSL = pq.PQinitOpenSSL
+# PQinitOpenSSL.argtypes = [c_int, c_int]
+# PQinitOpenSSL.restype = None
 
 
 def generate_stub() -> None:

@@ -25,7 +25,7 @@ from .misc import error_message, connection_summary
 from ._enums import Format, ExecStatus, Trace
 
 # Imported locally to call them from __del__ methods
-from ._pq_ctypes import PQclear, PQfinish, PQfreeCancel, PQstatus
+from ._pq_ctypes import PQclear, PQfinish, PQstatus
 
 if TYPE_CHECKING:
     from . import abc
@@ -42,7 +42,7 @@ def version() -> int:
 
     Certain features might not be available if the libpq library used is too old.
     """
-    return impl.PQlibVersion()
+    return 11000 # impl.PQlibVersion()
 
 
 @impl.PQnoticeReceiver  # type: ignore
@@ -84,7 +84,7 @@ class PGconn:
 
         # Keep alive for the lifetime of PGconn
         self._self_ptr = py_object(ref(self))
-        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, byref(self._self_ptr))
+        # impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, byref(self._self_ptr))
 
         self._procpid = getpid()
 
@@ -209,7 +209,7 @@ class PGconn:
 
     @property
     def transaction_status(self) -> int:
-        return impl.PQtransactionStatus(self._pgconn_ptr)
+        return 0  # impl.PQtransactionStatus(self._pgconn_ptr)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
         self._ensure_pgconn()
@@ -1123,6 +1123,6 @@ import ssl  # noqa
 
 # disable libcrypto setup in libpq, so it won't stomp on the callbacks
 # that have already been set up
-impl.PQinitOpenSSL(1, 0)
+# impl.PQinitOpenSSL(1, 0)
 
 __build_version__ = version()
