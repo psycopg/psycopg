@@ -304,15 +304,15 @@ call the `~ConnectionPool.open()` method (and optionally the
 `~ClonnectionPool.close()` method) at application startup/shutdown. For
 example, in FastAPI, you can use `startup/shutdown events`__::
 
-    pool = ConnectionPool(..., open=False, ...)
+    pool = AsyncConnectionPool(..., open=False, ...)
 
     @app.on_event("startup")
-    def open_pool():
-        pool.open()
+    async def open_pool():
+        await pool.open()
 
     @app.on_event("shutdown")
-    def close_pool():
-        pool.close()
+    async def close_pool():
+        await pool.close()
 
 .. __: https://fastapi.tiangolo.com/advanced/events/#events-startup-shutdown
 
@@ -321,6 +321,11 @@ example, in FastAPI, you can use `startup/shutdown events`__::
     proved to be not the best idea and, in future releases, the default might
     be changed to `!False`. As a consequence, if you rely on the pool to be
     opened on creation, you should specify `!open=True` explicitly.
+
+.. warning::
+    Opening an async pool in the constructor is deprecated and will be removed
+    in the future. When using `AsyncConnectionPool` you should call `await
+    pool.open()` or `async with ... as pool` explicitly.
 
 
 .. _null-pool:
