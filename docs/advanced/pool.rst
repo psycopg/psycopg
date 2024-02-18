@@ -131,148 +131,6 @@ context stared by `~ConnectionPool.connection()`):
   the queue, to the first client waiting.
 
 
-Debugging pool usage
---------------------
-
-The pool uses the `logging` module to log some key operations to the
-``psycopg.pool`` logger. If you are trying to debug the pool behaviour you may
-try to log at least the ``INFO`` operations on that logger.
-
-For example, the script:
-
-.. code:: python
-
-    import time
-    import logging
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    from psycopg_pool import ConnectionPool
-
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
-    logging.getLogger("psycopg.pool").setLevel(logging.INFO)
-
-    pool = ConnectionPool(min_size=2)
-    pool.wait()
-    logging.info("pool ready")
-
-    def square(n):
-        with pool.connection() as conn:
-            time.sleep(1)
-            rec = conn.execute("SELECT %s * %s", (n, n)).fetchone()
-            logging.info(f"The square of {n} is {rec[0]}.")
-
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(square, n) for n in range(4)]
-        for future in as_completed(futures):
-            future.result()
-
-might print something like:
-
-.. code:: text
-
-    2023-09-20 11:02:39,718 INFO psycopg.pool: waiting for pool 'pool-1' initialization
-    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
-    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
-    2023-09-20 11:02:39,720 INFO psycopg.pool: pool 'pool-1' is ready to use
-    2023-09-20 11:02:39,720 INFO root: pool ready
-    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
-    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
-    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
-    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
-    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
-    2023-09-20 11:02:39,722 INFO psycopg.pool: connection requested from 'pool-1'
-    2023-09-20 11:02:40,724 INFO root: The square of 0 is 0.
-    2023-09-20 11:02:40,724 INFO root: The square of 1 is 1.
-    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
-    2023-09-20 11:02:40,725 INFO psycopg.pool: connection given by 'pool-1'
-    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
-    2023-09-20 11:02:40,726 INFO psycopg.pool: connection given by 'pool-1'
-    2023-09-20 11:02:41,728 INFO root: The square of 3 is 9.
-    2023-09-20 11:02:41,729 INFO root: The square of 2 is 4.
-    2023-09-20 11:02:41,729 INFO psycopg.pool: returning connection to 'pool-1'
-    2023-09-20 11:02:41,730 INFO psycopg.pool: returning connection to 'pool-1'
-
-Please do not rely on the messages generated to remain unchanged across
-versions: they don't constitute a stable interface.
-
-
-Pool connection and sizing
---------------------------
-
-A pool can have a fixed size (specifying no `!max_size` or `!max_size` =
-`!min_size`) or a dynamic size (when `!max_size` > `!min_size`). In both
-cases, as soon as the pool is created, it will try to acquire `!min_size`
-connections in the background.
-
-If an attempt to create a connection fails, a new attempt will be made soon
-after, using an exponential backoff to increase the time between attempts,
-until a maximum of `!reconnect_timeout` is reached. When that happens, the pool
-will call the `!reconnect_failed()` function, if provided to the pool, and just
-start a new connection attempt. You can use this function either to send
-alerts or to interrupt the program and allow the rest of your infrastructure
-to restart it.
-
-If more than `!min_size` connections are requested concurrently, new ones are
-created, up to `!max_size`. Note that the connections are always created by the
-background workers, not by the thread asking for the connection: if a client
-requests a new connection, and a previous client terminates its job before the
-new connection is ready, the waiting client will be served the existing
-connection. This is especially useful in scenarios where the time to establish
-a connection dominates the time for which the connection is used (see `this
-analysis`__, for instance).
-
-.. __: https://github.com/brettwooldridge/HikariCP/blob/dev/documents/
-       Welcome-To-The-Jungle.md
-
-If a pool grows above `!min_size`, but its usage decreases afterwards, a number
-of connections are eventually closed: one every time a connection is unused
-after the `!max_idle` time specified in the pool constructor.
-
-
-What's the right size for the pool?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Big question. Who knows. However, probably not as large as you imagine. Please
-take a look at `this analysis`__ for some ideas.
-
-.. __: https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
-
-Something useful you can do is probably to use the
-`~ConnectionPool.get_stats()` method and monitor the behaviour of your program
-to tune the configuration parameters. The size of the pool can also be changed
-at runtime using the `~ConnectionPool.resize()` method.
-
-
-Connection quality
-------------------
-
-.. versionadded:: 3.2
-
-The pool doesn't actively check the state of the connections held in its
-state. This means that, if communication with the server is lost, or if a
-connection is closed for other reasons (such as a server configured with an
-`idle_session_timeout`__ killing connections that haven't been used for some
-time), the application might be served a connection in broken state.
-
-.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
-
-If you want to configure the pool to check the state of the connection, and
-make sure that the application always receives a working connection, you can
-configure a `!check` callback. The callback can perform some operation to
-verify the quality of the connection and, if it completes without raising
-exception, the connection is passed to the client. This, of course, will imply
-some network time that the pool client will have to pay.
-
-A simple implementation is available as the static method
-`ConnectionPool.check_connection`, which can be used as::
-
-    with ConnectionPool(
-        ..., check=ConnectionPool.check_connection, ...
-    ) as pool:
-        ...
-
-
 Other ways to create a pool
 ---------------------------
 
@@ -372,6 +230,150 @@ too.
 Because normally (i.e. unless queued) every client will be served a new
 connection, the time to obtain the connection is paid by the waiting client;
 background workers are not normally involved in obtaining new connections.
+
+
+Pool connection and sizing
+--------------------------
+
+A pool can have a fixed size (specifying no `!max_size` or `!max_size` =
+`!min_size`) or a dynamic size (when `!max_size` > `!min_size`). In both
+cases, as soon as the pool is created, it will try to acquire `!min_size`
+connections in the background.
+
+If an attempt to create a connection fails, a new attempt will be made soon
+after, using an exponential backoff to increase the time between attempts,
+until a maximum of `!reconnect_timeout` is reached. When that happens, the pool
+will call the `!reconnect_failed()` function, if provided to the pool, and just
+start a new connection attempt. You can use this function either to send
+alerts or to interrupt the program and allow the rest of your infrastructure
+to restart it.
+
+If more than `!min_size` connections are requested concurrently, new ones are
+created, up to `!max_size`. Note that the connections are always created by the
+background workers, not by the thread asking for the connection: if a client
+requests a new connection, and a previous client terminates its job before the
+new connection is ready, the waiting client will be served the existing
+connection. This is especially useful in scenarios where the time to establish
+a connection dominates the time for which the connection is used (see `this
+analysis`__, for instance).
+
+.. __: https://github.com/brettwooldridge/HikariCP/blob/dev/documents/
+       Welcome-To-The-Jungle.md
+
+If a pool grows above `!min_size`, but its usage decreases afterwards, a number
+of connections are eventually closed: one every time a connection is unused
+after the `!max_idle` time specified in the pool constructor.
+
+
+What's the right size for the pool?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Big question. Who knows. However, probably not as large as you imagine. Please
+take a look at `this analysis`__ for some ideas.
+
+.. __: https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+
+Something useful you can do is probably to use the
+`~ConnectionPool.get_stats()` method and monitor the behaviour of your program
+to tune the configuration parameters. The size of the pool can also be changed
+at runtime using the `~ConnectionPool.resize()` method.
+
+
+Connection quality
+------------------
+
+.. versionadded:: 3.2
+
+The pool doesn't actively check the state of the connections held in its
+state. This means that, if communication with the server is lost, or if a
+connection is closed for other reasons (such as a server configured with an
+`idle_session_timeout`__ killing connections that haven't been used for some
+time), the application might be served a connection in broken state.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
+
+If you want to configure the pool to check the state of the connection, and
+make sure that the application always receives a working connection, you can
+configure a `!check` callback. The callback can perform some operation to
+verify the quality of the connection and, if it completes without raising
+exception, the connection is passed to the client. This, of course, will imply
+some network time that the pool client will have to pay.
+
+A simple implementation is available as the static method
+`ConnectionPool.check_connection`, which can be used as::
+
+    with ConnectionPool(
+        ..., check=ConnectionPool.check_connection, ...
+    ) as pool:
+        ...
+
+
+.. _pool-logging:
+
+Pool operations logging
+-----------------------
+
+The pool uses the `logging` module to log some key operations to the
+``psycopg.pool`` logger. If you are trying to debug the pool behaviour you may
+try to log at least the ``INFO`` operations on that logger.
+
+For example, the script:
+
+.. code:: python
+
+    import time
+    import logging
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from psycopg_pool import ConnectionPool
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
+    logging.getLogger("psycopg.pool").setLevel(logging.INFO)
+
+    pool = ConnectionPool(min_size=2)
+    pool.wait()
+    logging.info("pool ready")
+
+    def square(n):
+        with pool.connection() as conn:
+            time.sleep(1)
+            rec = conn.execute("SELECT %s * %s", (n, n)).fetchone()
+            logging.info(f"The square of {n} is {rec[0]}.")
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(square, n) for n in range(4)]
+        for future in as_completed(futures):
+            future.result()
+
+might print something like:
+
+.. code:: text
+
+    2023-09-20 11:02:39,718 INFO psycopg.pool: waiting for pool 'pool-1' initialization
+    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
+    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
+    2023-09-20 11:02:39,720 INFO psycopg.pool: pool 'pool-1' is ready to use
+    2023-09-20 11:02:39,720 INFO root: pool ready
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,722 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:40,724 INFO root: The square of 0 is 0.
+    2023-09-20 11:02:40,724 INFO root: The square of 1 is 1.
+    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:40,725 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:40,726 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:41,728 INFO root: The square of 3 is 9.
+    2023-09-20 11:02:41,729 INFO root: The square of 2 is 4.
+    2023-09-20 11:02:41,729 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:41,730 INFO psycopg.pool: returning connection to 'pool-1'
+
+Please do not rely on the messages generated to remain unchanged across
+versions: they don't constitute a stable interface.
 
 
 .. _pool-stats:
