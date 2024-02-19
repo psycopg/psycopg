@@ -68,7 +68,8 @@ def find_libpq_full_path() -> Optional[str]:
                 logger.debug("couldn't use pg_config to find libpq: %s", ex)
 
     else:
-        libname = ctypes.util.find_library("pq")
+        print("exported LD_LIB_PATH => ", os.environ.get("LD_LIBRARY_PATH"))
+        libname = ctypes.util.find_library("adbc_driver_netezza")
 
     return libname
 
