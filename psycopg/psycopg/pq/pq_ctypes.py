@@ -211,9 +211,9 @@ class PGconn:
     def transaction_status(self) -> int:
         return 0  # impl.PQtransactionStatus(self._pgconn_ptr)
 
-    def parameter_status(self, name: bytes) -> Optional[bytes]:
-        self._ensure_pgconn()
-        return impl.PQparameterStatus(self._pgconn_ptr, name)
+   # def parameter_status(self, name: bytes) -> Optional[bytes]:
+     #   self._ensure_pgconn()
+      #  return impl.PQparameterStatus(self._pgconn_ptr, name)
 
     @property
     def error_message(self) -> bytes:
