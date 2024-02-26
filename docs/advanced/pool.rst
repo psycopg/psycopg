@@ -59,7 +59,7 @@ the methods requiring them::
         async with pool.connection() as conn:
             await conn.execute("SELECT something FROM somewhere ...")
 
-            with conn.cursor() as cur:
+            async with conn.cursor() as cur:
                 await cur.execute("SELECT something else...")
 
 
