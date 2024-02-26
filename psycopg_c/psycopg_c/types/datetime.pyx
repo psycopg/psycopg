@@ -419,7 +419,9 @@ cdef class DateBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int days = endian.be32toh((<uint32_t *>data)[0])
+        cdef uint32_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int days = endian.be32toh(bedata)
         cdef object pydays = days + PG_DATE_EPOCH_DAYS
         try:
             return PyObject_CallFunctionObjArgs(
@@ -467,7 +469,9 @@ cdef class TimeBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh(bedata)
         cdef int h, m, s, us
 
         with cython.cdivision(True):
@@ -531,8 +535,14 @@ cdef class TimetzBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef int32_t off = endian.be32toh((<uint32_t *>(data + sizeof(int64_t)))[0])
+        cdef uint64_t beval
+        memcpy(&beval, data, sizeof(beval))
+        cdef int64_t val = endian.be64toh(beval)
+
+        cdef uint32_t beoff
+        memcpy(&beoff, data + sizeof(beval), sizeof(beoff))
+        cdef int32_t off = endian.be32toh(beoff)
+
         cdef int h, m, s, us
 
         with cython.cdivision(True):
@@ -664,7 +674,9 @@ cdef class TimestampBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t beval
+        memcpy(&beval, data, sizeof(beval))
+        cdef int64_t val = endian.be64toh(beval)
         cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
@@ -791,7 +803,9 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh(bedata)
         cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
@@ -951,11 +965,11 @@ cdef class IntervalBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef int32_t days = endian.be32toh(
-            (<uint32_t *>(data + sizeof(int64_t)))[0])
-        cdef int32_t months = endian.be32toh(
-            (<uint32_t *>(data + sizeof(int64_t) + sizeof(int32_t)))[0])
+        cdef int32_t bedata[4]
+        memcpy(&bedata, data, sizeof(bedata))
+        cdef int64_t val = endian.be64toh((<uint64_t *>bedata)[0])
+        cdef int32_t days = endian.be32toh(bedata[2])
+        cdef int32_t months = endian.be32toh(bedata[3])
 
         cdef int years
         with cython.cdivision(True):
