@@ -12,6 +12,7 @@ Hint: in order to explore the AST of a module you can run:
 from __future__ import annotations
 
 import os
+from concurrent.futures import ProcessPoolExecutor
 import sys
 import logging
 import subprocess as sp
@@ -83,27 +84,36 @@ def main() -> int:
             PYVER,
         )
 
-    outputs = []
-    for fpin in opt.inputs:
-        fpout = fpin.parent / fpin.name.replace("_async", "")
-        outputs.append(str(fpout))
-        logger.info("converting %s", fpin)
-        with fpin.open() as f:
-            source = f.read()
-
-        tree = ast.parse(source, filename=str(fpin))
-        tree = async_to_sync(tree, filepath=fpin)
-        output = tree_to_str(tree, fpin)
-
-        with fpout.open("w") as f:
-            print(output, file=f)
-
-        sp.check_call(["black", "-q", str(fpout)])
+    if opt.jobs == 1:
+        logger.debug("multi-processing disabled")
+        for fpin in opt.inputs:
+            convert(fpin)
+    else:
+        with ProcessPoolExecutor(max_workers=opt.jobs) as executor:
+            outputs = executor.map(convert, opt.inputs)
 
     if opt.check:
-        return check(outputs)
+        return check([str(o) for o in outputs])
 
     return 0
+
+
+def convert(fpin: Path) -> Path:
+    fpout = fpin.parent / fpin.name.replace("_async", "")
+    logger.info("converting %s", fpin)
+    with fpin.open() as f:
+        source = f.read()
+
+    tree = ast.parse(source, filename=str(fpin))
+    tree = async_to_sync(tree, filepath=fpin)
+    output = tree_to_str(tree, fpin)
+
+    with fpout.open("w") as f:
+        print(output, file=f)
+
+    sp.check_call(["black", "-q", str(fpout)])
+
+    return fpout
 
 
 def check(outputs: list[str]) -> int:
@@ -566,6 +576,16 @@ def parse_cmdline() -> Namespace:
     )
     parser.add_argument(
         "--all", action="store_true", help="process all the files of the project"
+    )
+    parser.add_argument(
+        "-j",
+        "--jobs",
+        type=int,
+        metavar="N",
+        help=(
+            "process files concurrently using at most N workers; "
+            "if unspecified, the number of processors on the machine will be used"
+        ),
     )
     container = parser.add_mutually_exclusive_group()
     container.add_argument(
