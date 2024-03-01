@@ -17,6 +17,7 @@ the database <usage>` or :ref:`loading data using COPY <copy>`.
     :caption: Contents:
 
     install
+    concepts
     usage
     params
     adapt
