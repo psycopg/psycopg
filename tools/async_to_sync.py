@@ -85,13 +85,30 @@ def main() -> int:
             PYVER,
         )
 
+    if not opt.convert_all:
+        inputs, outputs = [], []
+        for fpin in opt.inputs:
+            fpout = fpin.parent / fpin.name.replace("_async", "")
+            if fpout.stat().st_mtime >= fpin.stat().st_mtime:
+                logger.debug("not converting %s as %s is up to date", fpin, fpout)
+                continue
+            inputs.append(fpin)
+            outputs.append(fpout)
+        if not outputs:
+            logger.warning("all output files are up to date, nothing to do")
+            return 0
+
+    else:
+        inputs = opt.inputs
+        outputs = [fpin.parent / fpin.name.replace("_async", "") for fpin in inputs]
+
     if opt.jobs == 1:
         logger.debug("multi-processing disabled")
-        for fpin in opt.inputs:
-            convert(fpin)
+        for fpin, fpout in zip(inputs, outputs):
+            convert(fpin, fpout)
     else:
         with ProcessPoolExecutor(max_workers=opt.jobs) as executor:
-            outputs = executor.map(convert, opt.inputs)
+            executor.map(convert, inputs, outputs)
 
     if opt.check:
         return check([str(o) for o in outputs])
@@ -99,8 +116,7 @@ def main() -> int:
     return 0
 
 
-def convert(fpin: Path) -> Path:
-    fpout = fpin.parent / fpin.name.replace("_async", "")
+def convert(fpin: Path, fpout: Path) -> None:
     logger.info("converting %s", fpin)
     with fpin.open() as f:
         source = f.read()
@@ -113,8 +129,6 @@ def convert(fpin: Path) -> Path:
         print(output, file=f)
 
     sp.check_call(["black", "-q", str(fpout)])
-
-    return fpout
 
 
 def check(outputs: list[str]) -> int:
@@ -577,6 +591,12 @@ def parse_cmdline() -> Namespace:
     )
     parser.add_argument(
         "--all", action="store_true", help="process all the files of the project"
+    )
+    parser.add_argument(
+        "-B",
+        "--convert-all",
+        action="store_true",
+        help="process specified files without checking last modification times",
     )
     parser.add_argument(
         "-j",
