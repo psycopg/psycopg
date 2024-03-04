@@ -346,6 +346,16 @@ def copy_to(pgconn: PGconn, buffer: Buffer) -> PQGen[None]:
             if ready:
                 break
 
+    # Repeat until it the message is flushed to the server
+    while True:
+        while True:
+            ready = yield WAIT_W
+            if ready:
+                break
+        f = pgconn.flush()
+        if f == 0:
+            break
+
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
