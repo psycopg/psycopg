@@ -60,13 +60,14 @@ PROJECT_DIR = Path(__file__).parent.parent
 SCRIPT_NAME = os.path.basename(sys.argv[0])
 
 logger = logging.getLogger()
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
 
 def main() -> int:
     opt = parse_cmdline()
     if opt.container:
         return run_in_container(opt.container)
+
+    logging.basicConfig(level=opt.log_level, format="%(levelname)s %(message)s")
 
     current_ver = ".".join(map(str, sys.version_info[:2]))
     if current_ver != PYVER:
@@ -586,6 +587,13 @@ def parse_cmdline() -> Namespace:
             "process files concurrently using at most N workers; "
             "if unspecified, the number of processors on the machine will be used"
         ),
+    )
+    parser.add_argument(
+        "-L",
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Logger level.",
     )
     container = parser.add_mutually_exclusive_group()
     container.add_argument(
