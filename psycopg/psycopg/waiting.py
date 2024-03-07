@@ -355,7 +355,7 @@ def wait_poll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> R
                 ready = READY_R
             if ev & ~select.POLLIN:
                 ready |= READY_W
-            s = gen.send(ready)
+            s = gen.send(ready)  ########error
             evmask = _poll_evmasks[s]
             poll.modify(fileno, evmask)
 

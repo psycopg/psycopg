@@ -13,7 +13,7 @@ from typing import cast, NamedTuple, Optional, Union
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
 from .._compat import cache
-from .._encodings import pgconn_encoding
+#from .._encodings import pgconn_encoding
 
 logger = logging.getLogger("psycopg.pq")
 
@@ -82,8 +82,8 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
     use the connection encoding if available, otherwise the `!encoding`
     parameter as a fallback for decoding. Don't raise exceptions on decoding
     errors.
-
     """
+    
     bmsg: bytes
 
     if hasattr(obj, "error_field"):
@@ -96,9 +96,11 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
             bmsg = bmsg.split(b":", 1)[-1].strip()
 
     elif hasattr(obj, "error_message"):
-        # obj is a PGconn
+        # obj is a PGconn 
+        """
         if obj.status == OK:
             encoding = pgconn_encoding(obj)
+        """
         bmsg = obj.error_message
 
         # strip severity and whitespaces

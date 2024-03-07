@@ -15,7 +15,7 @@ from .sql import Composable
 from .abc import Buffer, Query, Params
 from ._enums import PyFormat
 from ._compat import TypeAlias, TypeGuard
-from ._encodings import conn_encoding
+#from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .abc import Transformer
@@ -51,24 +51,28 @@ class PostgresQuery:
         self._want_formats: Optional[List[PyFormat]] = None
         self.formats: Optional[Sequence[pq.Format]] = None
 
-        self._encoding = conn_encoding(transformer.connection)
+        
+        #self._encoding = conn_encoding(transformer.connection)
         self._parts: List[QueryPart]
         self.query = b""
         self._order: Optional[List[str]] = None
-
+    
     def convert(self, query: Query, vars: Optional[Params]) -> None:
-        """
-        Set up the query and parameters to convert.
+        
+        #Set up the query and parameters to convert.
+        #The results of this function can be obtained accessing the object
+        #attributes (`query`, `params`, `types`, `formats`).
+        
 
-        The results of this function can be obtained accessing the object
-        attributes (`query`, `params`, `types`, `formats`).
-        """
-        if isinstance(query, str):
-            bquery = query.encode(self._encoding)
-        elif isinstance(query, Composable):
+      #  if isinstance(query, str):
+       #     bquery = query.encode(self._encoding)
+        
+        # changed below from elif to if 
+        if isinstance(query, Composable):
             bquery = query.as_bytes(self._tx)
         else:
             bquery = query
+           
 
         if vars is not None:
             # Avoid caching queries extremely long or with a huge number of
@@ -83,22 +87,24 @@ class PostgresQuery:
                 f: _Query2Pg = _query2pg
             else:
                 f = _query2pg_nocache
-
+         
+            
             (self.query, self._want_formats, self._order, self._parts) = f(
-                bquery, self._encoding
+                bquery,self._encoding
             )
+            
         else:
             self.query = bquery
             self._want_formats = self._order = None
 
         self.dump(vars)
-
+      
     def dump(self, vars: Optional[Params]) -> None:
-        """
-        Process a new set of variables on the query processed by `convert()`.
+        
+        #Process a new set of variables on the query processed by `convert()`.
 
-        This method updates `params` and `types`.
-        """
+        #This method updates `params` and `types`.
+        
         if vars is not None:
             params = self.validate_and_reorder_params(self._parts, vars, self._order)
             assert self._want_formats is not None

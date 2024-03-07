@@ -13,7 +13,8 @@ from .pq import Escaping
 from .abc import AdaptContext
 from ._enums import PyFormat
 from ._compat import LiteralString
-from ._encodings import conn_encoding
+# ~n
+#from ._encodings import conn_encoding
 from ._transformer import Transformer
 
 
@@ -68,15 +69,16 @@ class Composable(ABC):
 
         """
         raise NotImplementedError
-
+# ~n 
+    """
     def as_string(self, context: Optional[AdaptContext] = None) -> str:
-        """
+        
         Return the value of the object as string.
 
         :param context: the context to evaluate the string into.
         :type context: `connection` or `cursor`
 
-        """
+        
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         b = self.as_bytes(context)
@@ -85,7 +87,7 @@ class Composable(ABC):
         else:
             # buffer object
             return codecs.lookup(enc).decode(b)[0]
-
+    """
     def __add__(self, other: "Composable") -> "Composed":
         if isinstance(other, Composed):
             return Composed([self]) + other
@@ -202,12 +204,13 @@ class SQL(Composable):
 
     def as_string(self, context: Optional[AdaptContext] = None) -> str:
         return self._obj
-
+    # ~n 
+    """
     def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self._obj.encode(enc)
-
+    """
     def format(self, *args: Any, **kwargs: Any) -> Composed:
         """
         Merge `Composable` objects into a template.
@@ -361,7 +364,8 @@ class Identifier(Composable):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
-
+    # ~N
+    """
     def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         if conn:
@@ -371,7 +375,7 @@ class Identifier(Composable):
         else:
             escs = [self._escape_identifier(s.encode()) for s in self._obj]
         return b".".join(escs)
-
+    """
     def _escape_identifier(self, s: bytes) -> bytes:
         """
         Approximation of PQescapeIdentifier taking no connection.
@@ -462,13 +466,15 @@ class Placeholder(Composable):
     def as_string(self, context: Optional[AdaptContext] = None) -> str:
         code = self._format.value
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
-
+    """
     def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self.as_string(context).encode(enc)
-
+    """
 
 # Literals
+    """
 NULL = SQL("NULL")
 DEFAULT = SQL("DEFAULT")
+"""

@@ -11,12 +11,13 @@ from ..pq import Format, Escaping
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
-from .._encodings import conn_encoding
+# ~n
+#from .._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from ..pq.abc import Escaping as EscapingProto
-
-
+# ~N
+"""
 class _BaseStrDumper(Dumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -25,36 +26,36 @@ class _BaseStrDumper(Dumper):
 
 
 class _StrBinaryDumper(_BaseStrDumper):
-    """
+    
     Base class to dump a Python strings to a Postgres text type, in binary format.
 
     Subclasses shall specify the oids of real types (text, varchar, name...).
-    """
+    
 
     format = Format.BINARY
 
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
         return obj.encode(self._encoding)
-
-
+"""
+"""
 class _StrDumper(_BaseStrDumper):
-    """
+    
     Base class to dump a Python strings to a Postgres text type, in text format.
 
     Subclasses shall specify the oids of real types (text, varchar, name...).
-    """
+    
 
     def dump(self, obj: str) -> bytes:
         if "\x00" in obj:
             raise DataError("PostgreSQL text fields cannot contain NUL (0x00) bytes")
         else:
             return obj.encode(self._encoding)
-
+"""
 
 # The next are concrete dumpers, each one specifying the oid they dump to.
-
-
+# ~n
+"""
 class StrBinaryDumper(_StrBinaryDumper):
     oid = _oids.TEXT_OID
 
@@ -68,14 +69,14 @@ class StrBinaryDumperName(_StrBinaryDumper):
 
 
 class StrDumper(_StrDumper):
-    """
+    
     Dumper for strings in text format to the text oid.
 
     Note that this dumper is not used by default because the type is too strict
     and PostgreSQL would require an explicit casts to everything that is not a
     text field. However it is useful where the unknown oid is ambiguous and the
     text oid is required, for instance with variadic functions.
-    """
+    
 
     oid = _oids.TEXT_OID
 
@@ -89,7 +90,7 @@ class StrDumperName(_StrDumper):
 
 
 class StrDumperUnknown(_StrDumper):
-    """
+
     Dumper for strings in text format to the unknown oid.
 
     This dumper is the default dumper for strings and allows to use Python
@@ -97,17 +98,19 @@ class StrDumperUnknown(_StrDumper):
     unknown oid is not accepted (for instance in variadic functions such as
     'concat()'). In that case either a cast on the placeholder ('%s::text') or
     the StrTextDumper should be used.
-    """
+    
 
     pass
-
+"""
 
 class TextLoader(Loader):
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
+# ~n
+        """
         enc = conn_encoding(self.connection)
         self._encoding = enc if enc != "ascii" else ""
-
+        """
     def load(self, data: Buffer) -> Union[bytes, str]:
         if self._encoding:
             if isinstance(data, memoryview):
@@ -197,6 +200,9 @@ def register_default_adapters(context: AdaptContext) -> None:
     # plays the role of unknown, and it can be cast automatically to other
     # types. However, before that, we register dumper with 'text', 'varchar',
     # 'name' oids, which will be used when a text dumper is looked up by oid.
+
+    # ~n
+    """
     adapters.register_dumper(str, StrBinaryDumperName)
     adapters.register_dumper(str, StrBinaryDumperVarchar)
     adapters.register_dumper(str, StrBinaryDumper)
@@ -204,7 +210,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(str, StrDumperVarchar)
     adapters.register_dumper(str, StrDumper)
     adapters.register_dumper(str, StrDumperUnknown)
-
+    """
     adapters.register_loader(_oids.INVALID_OID, TextLoader)
     adapters.register_loader("bpchar", TextLoader)
     adapters.register_loader("name", TextLoader)

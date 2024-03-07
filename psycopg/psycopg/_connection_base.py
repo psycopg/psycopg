@@ -25,12 +25,12 @@ from ._enums import IsolationLevel
 from ._compat import LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
-from ._encodings import pgconn_encoding
+#from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:
-    from .pq.abc import PGconn, PGresult
+    from .pq.abc import PGconn, PGresult 
     from psycopg_pool.base import BasePool
 
 # Row Type variable for Cursor (when it needs to be distinguished from the
@@ -119,6 +119,8 @@ class BaseConnection(Generic[Row]):
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
+
+        
         self._pool: Optional["BasePool"]
 
         self._pipeline: Optional[BasePipeline] = None
@@ -338,13 +340,14 @@ class BaseConnection(Generic[Row]):
         self = wself()
         if not (self and self._notice_handlers):
             return
-
+        """
         diag = e.Diagnostic(res, pgconn_encoding(self.pgconn))
         for cb in self._notice_handlers:
             try:
                 cb(diag)
             except Exception as ex:
                 logger.exception("error processing notice callback '%s': %s", cb, ex)
+        """
 
     def add_notify_handler(self, callback: NotifyHandler) -> None:
         """
@@ -372,11 +375,12 @@ class BaseConnection(Generic[Row]):
         if not (self and self._notify_handlers):
             return
 
+        """
         enc = pgconn_encoding(self.pgconn)
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
-
+        """
     @property
     def prepare_threshold(self) -> Optional[int]:
         """
@@ -436,9 +440,12 @@ class BaseConnection(Generic[Row]):
         """
         self._check_connection_ok()
 
+        """
         if isinstance(command, str):
             command = command.encode(pgconn_encoding(self.pgconn))
-        elif isinstance(command, Composable):
+        """
+# changed elif to if
+        if isinstance(command, Composable):
             command = command.as_bytes(self)
 
         if self._pipeline:
@@ -455,6 +462,8 @@ class BaseConnection(Generic[Row]):
         self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from generators.execute(self.pgconn))[-1]
+
+        """
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
@@ -463,6 +472,7 @@ class BaseConnection(Generic[Row]):
                     f"unexpected result {pq.ExecStatus(result.status).name}"
                     f" from command {command.decode()!r}"
                 )
+        """
         return result
 
     def _check_connection_ok(self) -> None:

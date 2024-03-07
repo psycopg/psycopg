@@ -89,7 +89,7 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: ConnParam) -> ConnDict:
         if v is not None:
             rv[k] = v
     return rv
-
+    
 
 def _parse_conninfo(conninfo: str) -> list[pq.ConninfoOption]:
     """

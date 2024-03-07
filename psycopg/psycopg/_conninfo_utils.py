@@ -21,10 +21,10 @@ if TYPE_CHECKING:
 
 
 def split_attempts(params: ConnMapping) -> list[ConnDict]:
-    """
-    Split connection parameters with a sequence of hosts into separate attempts.
-    """
-
+    
+    #Split connection parameters with a sequence of hosts into separate attempts.
+    
+    
     def split_val(key: str) -> list[str]:
         val = get_param(params, key)
         return val.split(",") if val else []
@@ -32,7 +32,7 @@ def split_attempts(params: ConnMapping) -> list[ConnDict]:
     hosts = split_val("host")
     hostaddrs = split_val("hostaddr")
     ports = split_val("port")
-
+    
     if hosts and hostaddrs and len(hosts) != len(hostaddrs):
         raise e.OperationalError(
             f"could not match {len(hosts)} host names"
@@ -66,14 +66,13 @@ def split_attempts(params: ConnMapping) -> list[ConnDict]:
         rv.append(attempt)
 
     return rv
-
-
+     
 def get_param(params: ConnMapping, name: str) -> str | None:
-    """
-    Return a value from a connection string.
+    
+    #Return a value from a connection string.
 
-    The value may be also specified in a PG* env var.
-    """
+    #The value may be also specified in a PG* env var.
+    
     if name in params:
         return str(params[name])
 

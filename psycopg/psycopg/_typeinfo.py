@@ -15,7 +15,7 @@ from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
 from ._compat import TypeAlias, TypeVar
-from ._encodings import conn_encoding
+#from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -95,8 +95,11 @@ class TypeInfo:
             from psycopg import Cursor
 
             with conn.transaction(), Cursor(conn, row_factory=dict_row) as cur:
+
+                """
                 if conn_encoding(conn) == "ascii":
                     cur.execute("set local client_encoding to utf8")
+                """
                 cur.execute(cls._get_info_query(conn), {"name": name})
                 recs = cur.fetchall()
         except e.UndefinedObject:
@@ -113,8 +116,12 @@ class TypeInfo:
 
             async with conn.transaction():
                 async with AsyncCursor(conn, row_factory=dict_row) as cur:
+                  
+                    """
                     if conn_encoding(conn) == "ascii":
                         await cur.execute("set local client_encoding to utf8")
+                    """
+                    
                     await cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = await cur.fetchall()
         except e.UndefinedObject:

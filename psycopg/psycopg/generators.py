@@ -30,8 +30,10 @@ from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._cmodule import _psycopg
-from ._encodings import pgconn_encoding, conninfo_encoding
 
+#from ._encodings import pgconn_encoding
+#uncommeneted import statement of "conninfo_encoding" below
+from ._encodings import  conninfo_encoding
 OK = pq.ConnStatus.OK
 BAD = pq.ConnStatus.BAD
 
@@ -292,16 +294,19 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
         # some data
         return data
 
+    
     # Retrieve the final result of copy
     results = yield from _fetch_many(pgconn)
     if len(results) > 1:
         # TODO: too brutal? Copy worked.
         raise e.ProgrammingError("you cannot mix COPY with other operations")
     result = results[0]
+
+    """
     if result.status != COMMAND_OK:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
-
+    """
     return result
 
 
@@ -339,10 +344,12 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 
     # Retrieve the final result of copy
     (result,) = yield from _fetch_many(pgconn)
+
+    """
     if result.status != COMMAND_OK:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
-
+    """
     return result
 
 

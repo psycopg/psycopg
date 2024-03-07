@@ -28,7 +28,8 @@ from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
-from ._encodings import pgconn_encoding
+
+#from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import Transaction
 from .cursor import Cursor
@@ -115,7 +116,7 @@ class Connection(BaseConnection[Row]):
 
         if not rv:
             assert last_ex
-            raise last_ex.with_traceback(None)
+            raise last_ex.with_traceback(None) 
 
         rv._autocommit = bool(autocommit)
         if row_factory:
@@ -309,21 +310,26 @@ class Connection(BaseConnection[Row]):
             try:
                 with self.lock:
                     ns = self.wait(notifies(self.pgconn), timeout=timeout)
+
+                    """
                     if ns:
                         enc = pgconn_encoding(self.pgconn)
+                    """
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
 
+            """
             # Emit the notifications received.
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
-                nreceived += 1
+                nreceived += 1 
+            
 
             # Stop if we have received enough notifications.
             if stop_after is not None and nreceived >= stop_after:
                 break
-
+            """
             # Check the deadline after the loop to ensure that timeout=0
             # polls at least once.
             if deadline:
@@ -351,15 +357,16 @@ class Connection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
+    
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = _WAIT_INTERVAL) -> RV:
-        """
-        Consume a generator operating on the connection.
+        
+        #Consume a generator operating on the connection.
 
-        The function must be used on generators that don't change connection
-        fd (i.e. not on connect and reset).
-        """
+        #The function must be used on generators that don't change connection
+        #fd (i.e. not on connect and reset).
+        
         try:
-            return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+            return waiting.wait(gen, self.pgconn.socket, timeout=timeout) 
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
@@ -370,7 +377,7 @@ class Connection(BaseConnection[Row]):
                 except e.QueryCanceled:
                     pass  # as expected
             raise
-
+    
     @classmethod
     def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
         """Consume a connection generator."""

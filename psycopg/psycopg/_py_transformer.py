@@ -20,8 +20,8 @@ from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
 from ._compat import TypeAlias
-from ._encodings import conn_encoding
 
+#from ._encodings import conn_encoding
 if TYPE_CHECKING:
     from .adapt import AdaptersMap
     from .pq.abc import PGresult
@@ -113,12 +113,13 @@ class Transformer(AdaptContext):
     def connection(self) -> Optional["BaseConnection[Any]"]:
         return self._conn
 
+    """
     @property
     def encoding(self) -> str:
         if not self._encoding:
             self._encoding = conn_encoding(self.connection)
         return self._encoding
-
+    """
     @property
     def adapters(self) -> "AdaptersMap":
         return self._adapters

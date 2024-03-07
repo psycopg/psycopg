@@ -77,39 +77,39 @@ py_codecs.update(
 
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
-
+"""
 def conn_encoding(conn: "Optional[BaseConnection[Any]]") -> str:
-    """
-    Return the Python encoding name of a psycopg connection.
+    
+    #Return the Python encoding name of a psycopg connection.
 
-    Default to utf8 if the connection has no encoding info.
-    """
+    #Default to utf8 if the connection has no encoding info.
+    
     if conn:
         return pgconn_encoding(conn.pgconn)
     else:
         return "utf-8"
-
-
+"""
+"""
 def pgconn_encoding(pgconn: "PGconn") -> str:
-    """
-    Return the Python encoding name of a libpq connection.
+    
+    #Return the Python encoding name of a libpq connection.
 
-    Default to utf8 if the connection has no encoding info.
-    """
+   # Default to utf8 if the connection has no encoding info.
+    
     if pgconn.status == OK:
         pgenc = pgconn.parameter_status(b"client_encoding") or b"UTF8"
         return pg2pyenc(pgenc)
     else:
-        return "utf-8"
+        return "utf-8" 
 
-
+"""
 def conninfo_encoding(conninfo: str) -> str:
-    """
-    Return the Python encoding name passed in a conninfo string. Default to utf8.
+    
+    #Return the Python encoding name passed in a conninfo string. Default to utf8.
 
-    Because the input is likely to come from the user and not normalised by the
-    server, be somewhat lenient (non-case-sensitive lookup, ignore noise chars).
-    """
+    #Because the input is likely to come from the user and not normalised by the
+    #server, be somewhat lenient (non-case-sensitive lookup, ignore noise chars).
+    
     from .conninfo import conninfo_to_dict
 
     params = conninfo_to_dict(conninfo)
@@ -125,20 +125,20 @@ def conninfo_encoding(conninfo: str) -> str:
 
 @cache
 def py2pgenc(name: str) -> bytes:
-    """Convert a Python encoding name to PostgreSQL encoding name.
+    #Convert a Python encoding name to PostgreSQL encoding name.
 
-    Raise LookupError if the Python encoding is unknown.
-    """
+    #Raise LookupError if the Python encoding is unknown.
+    
     return pg_codecs[codecs.lookup(name).name]
 
 
 @cache
 def pg2pyenc(name: bytes) -> str:
-    """Convert a PostgreSQL encoding name to Python encoding name.
+    #Convert a PostgreSQL encoding name to Python encoding name.
 
-    Raise NotSupportedError if the PostgreSQL encoding is not supported by
-    Python.
-    """
+    #Raise NotSupportedError if the PostgreSQL encoding is not supported by
+    #Python.
+    
     try:
         return py_codecs[name.replace(b"-", b"").replace(b"_", b"").upper()]
     except KeyError:

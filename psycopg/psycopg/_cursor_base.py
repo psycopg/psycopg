@@ -17,7 +17,8 @@ from .rows import Row, RowMaker
 from ._column import Column
 from .pq.misc import connection_summary
 from ._queries import PostgresQuery, PostgresClientQuery
-from ._encodings import pgconn_encoding
+
+#from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 from .generators import execute, fetch, send
 
@@ -189,8 +190,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
-        pgq = self._convert_query(query, params)
+        pgq = self._convert_query(query, params)  
         yield from self._maybe_prepare_gen(pgq, prepare=prepare, binary=binary)
+    
         if self._conn._pipeline:
             yield from self._conn._pipeline._communicate_gen()
 
@@ -442,14 +444,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # If we can, let's use simple query protocol,
             # as it can execute more than one statement in a single query.
             self._pgconn.send_query(query.query)
-
+    
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
     ) -> PostgresQuery:
-        pgq = self._query_cls(self._tx)
+        pgq = self._query_cls(self._tx)  
         pgq.convert(query, params)
         return pgq
-
+    
     def _check_results(self, results: List["PGresult"]) -> None:
         """
         Verify that the results of a query are valid.
@@ -577,8 +579,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         status = res.status
         if status == TUPLES_OK:
             return
-        elif status == FATAL_ERROR:
-            raise e.error_from_result(res, encoding=self._encoding)
+
+       # elif status == FATAL_ERROR:
+           # raise e.error_from_result(res, encoding=self._encoding)
         elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
         else:
@@ -618,7 +621,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # an error.
         self._reset(reset_query=False)
         self._closed = True
-
+    """
     @property
     def _encoding(self) -> str:
         return pgconn_encoding(self._pgconn)
+    """

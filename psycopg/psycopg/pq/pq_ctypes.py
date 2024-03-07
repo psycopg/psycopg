@@ -210,11 +210,12 @@ class PGconn:
     @property
     def transaction_status(self) -> int:
         return 0  # impl.PQtransactionStatus(self._pgconn_ptr)
-
-   # def parameter_status(self, name: bytes) -> Optional[bytes]:
-     #   self._ensure_pgconn()
-      #  return impl.PQparameterStatus(self._pgconn_ptr, name)
-
+    
+    """
+    def parameter_status(self, name: bytes) -> Optional[bytes]:
+        self._ensure_pgconn()
+        return impl.PQparameterStatus(self._pgconn_ptr, name)
+    """
     @property
     def error_message(self) -> bytes:
         return impl.PQerrorMessage(self._pgconn_ptr)
@@ -909,19 +910,19 @@ class PGcancel:
 
     def __del__(self) -> None:
         self.free()
-
+    """
     def free(self) -> None:
-        """
+        
         Free the data structure created by :pq:`PQgetCancel()`.
 
         Automatically invoked by `!__del__()`.
 
         See :pq:`PQfreeCancel()` for details.
-        """
+        
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
         if p:
             PQfreeCancel(p)
-
+    """
     def cancel(self) -> None:
         """Requests that the server abandon processing of the current command.
 

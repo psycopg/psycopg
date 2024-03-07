@@ -60,13 +60,14 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         exc_tb: Optional[TracebackType],
     ) -> None:
         self.close()
-
+# ~n ----- uncommenetd close()
+    
     def close(self) -> None:
-        """
-        Close the current cursor and free associated resources.
-        """
+        
+        #Close the current cursor and free associated resources.
+        
         self._close()
-
+    
     @property
     def row_factory(self) -> RowFactory[Row]:
         """Writable attribute to control how result rows are formed."""
@@ -80,7 +81,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def _make_row_maker(self) -> RowMaker[Row]:
         return self._row_factory(self)
-
+# ~n
+    
     def execute(
         self,
         query: Query,
@@ -89,18 +91,20 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
     ) -> Self:
-        """
-        Execute a query or command to the database.
-        """
+        
+        #Execute a query or command to the database.
+        
         try:
             with self._conn.lock:
-                self._conn.wait(
+                self._conn.wait(  
                     self._execute_gen(query, params, prepare=prepare, binary=binary)
-                )
+                ) 
+        
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
         return self
 
+    
     def executemany(
         self, query: Query, params_seq: Iterable[Params], *, returning: bool = False
     ) -> None:

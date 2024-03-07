@@ -25,7 +25,8 @@ from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts_async, timeout_from_conninfo
 from ._pipeline import AsyncPipeline
-from ._encodings import pgconn_encoding
+
+#from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
@@ -325,12 +326,16 @@ class AsyncConnection(BaseConnection[Row]):
             try:
                 async with self.lock:
                     ns = await self.wait(notifies(self.pgconn), timeout=timeout)
+
+                    """
                     if ns:
                         enc = pgconn_encoding(self.pgconn)
+                    """
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
 
             # Emit the notifications received.
+            """
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
@@ -339,7 +344,7 @@ class AsyncConnection(BaseConnection[Row]):
             # Stop if we have received enough notifications.
             if stop_after is not None and nreceived >= stop_after:
                 break
-
+            """
             # Check the deadline after the loop to ensure that timeout=0
             # polls at least once.
             if deadline:

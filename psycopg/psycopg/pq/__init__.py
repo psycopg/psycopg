@@ -15,7 +15,7 @@ from typing import Callable, List, Type
 
 from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
-from .misc import error_message
+from .misc import error_message 
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Trace
 from ._enums import Ping, PipelineStatus, PollingStatus, TransactionStatus
 
@@ -83,6 +83,7 @@ def import_from_libpq() -> None:
         except Exception as e:
             handle_error("binary", e)
 
+ 
     # Pure Python implementation, slow and requires the system libpq installed.
     if not module and (not impl or impl == "python"):
         try:

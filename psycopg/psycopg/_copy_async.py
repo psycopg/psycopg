@@ -15,7 +15,8 @@ from . import errors as e
 from ._compat import Self
 from ._copy_base import BaseCopy, MAX_BUFFER_SIZE, QUEUE_SIZE
 from .generators import copy_to, copy_end
-from ._encodings import pgconn_encoding
+
+#from ._encodings import pgconn_encoding
 from ._acompat import aspawn, agather, AQueue, AWorker
 
 if TYPE_CHECKING:
@@ -196,7 +197,8 @@ class AsyncLibpqWriter(AsyncWriter):
         bmsg: bytes | None
         if exc:
             msg = f"error from Python: {type(exc).__qualname__} - {exc}"
-            bmsg = msg.encode(pgconn_encoding(self._pgconn), "replace")
+        
+           # bmsg = msg.encode(pgconn_encoding(self._pgconn), "replace")
         else:
             bmsg = None
 
