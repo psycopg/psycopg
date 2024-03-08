@@ -40,7 +40,7 @@ _sqlcodes: Dict[str, "Type[Error]"] = {}
 class FinishedPGconn:
     """Finished libpq connection.
 
-    Attributes are set from a real `~pscopg.pq.PGconn` but any operations will
+    Attributes are set from a real `~psycopg.pq.PGconn` but any operations will
     raise an `~psycopg.OperationalError`.
     """
 
