@@ -22,6 +22,7 @@ generator should probably yield the same value again in order to wait more.
 
 import logging
 from time import monotonic
+from threading import Lock
 from typing import List, Optional, Union
 
 from . import pq
@@ -54,6 +55,7 @@ READY_R = Ready.R
 READY_W = Ready.W
 READY_RW = Ready.RW
 
+lock = Lock()
 logger = logging.getLogger(__name__)
 
 
@@ -276,28 +278,21 @@ def _pipeline_communicate(
 
 
 def _consume_notifies(pgconn: PGconn) -> None:
-    # Consume notifies
-    while True:
-        n = pgconn.notifies()
-        if not n:
-            break
-        if pgconn.notify_handler:
-            pgconn.notify_handler(n)
+    # Consume notifies. The lock ensures that notifies
+    # are consumed and handled atomically.
+    with lock:
+        while True:
+            n = pgconn.notifies()
+            if not n:
+                break
+            if pgconn.notify_handler:
+                pgconn.notify_handler(n)
 
 
-def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
+def notifies(pgconn: PGconn) -> PQGen[None]:
     yield WAIT_R
     pgconn.consume_input()
-
-    ns = []
-    while True:
-        n = pgconn.notifies()
-        if n:
-            ns.append(n)
-        else:
-            break
-
-    return ns
+    _consume_notifies(pgconn)
 
 
 def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:

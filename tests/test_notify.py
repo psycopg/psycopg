@@ -74,14 +74,16 @@ def test_notify(conn_cls, conn, dsn):
         gen = conn.notifies()
         for n in gen:
             ns.append((n, time()))
-            if len(ns) >= 2:
-                gen.close()
+            if len(ns) == 2:
+                cur.execute("notify foo, '3'")
+            if len(ns) == 3:
+                break
 
     ns: list[tuple[Notify, float]] = []
     t0 = time()
     workers = [spawn(notifier), spawn(receiver)]
     gather(*workers)
-    assert len(ns) == 2
+    assert len(ns) == 3
 
     n, t1 = ns[0]
     assert n.pid == npid
@@ -93,6 +95,12 @@ def test_notify(conn_cls, conn, dsn):
     assert n.pid == npid
     assert n.channel == "foo"
     assert n.payload == "2"
+    assert t1 - t0 == pytest.approx(0.5, abs=0.05)
+
+    n, t1 = ns[2]
+    assert n.pid == conn.pgconn.backend_pid
+    assert n.channel == "foo"
+    assert n.payload == "3"
     assert t1 - t0 == pytest.approx(0.5, abs=0.05)
 
 

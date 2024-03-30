@@ -11,6 +11,7 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
+from collections import deque
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -25,7 +26,6 @@ from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts_async, timeout_from_conninfo
 from ._pipeline import AsyncPipeline
-from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
@@ -343,33 +343,35 @@ class AsyncConnection(BaseConnection[Row]):
 
         nreceived = 0
 
-        while True:
-            # Collect notifications. Also get the connection encoding if any
-            # notification is received to makes sure that they are consistent.
-            try:
-                async with self.lock:
-                    ns = await self.wait(notifies(self.pgconn), interval=interval)
-                    if ns:
-                        enc = pgconn_encoding(self.pgconn)
-            except e._NO_TRACEBACK as ex:
-                raise ex.with_traceback(None)
+        ns: deque[Notify] = deque()
+        self.add_notify_handler(ns.append)
+        try:
+            while True:
+                # Collect notifications. Also get the connection encoding if any
+                # notification is received to makes sure that they are consistent.
+                try:
+                    async with self.lock:
+                        await self.wait(notifies(self.pgconn), interval=interval)
+                except e._NO_TRACEBACK as ex:
+                    raise ex.with_traceback(None)
 
-            # Emit the notifications received.
-            for pgn in ns:
-                n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
-                yield n
-                nreceived += 1
+                # Emit the notifications received.
+                while ns:
+                    yield ns.popleft()
+                    nreceived += 1
 
-            # Stop if we have received enough notifications.
-            if stop_after is not None and nreceived >= stop_after:
-                break
-
-            # Check the deadline after the loop to ensure that timeout=0
-            # polls at least once.
-            if deadline:
-                interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                if interval < 0.0:
+                # Stop if we have received enough notifications.
+                if stop_after is not None and nreceived >= stop_after:
                     break
+
+                # Check the deadline after the loop to ensure that timeout=0
+                # polls at least once.
+                if deadline:
+                    timeout = min(_WAIT_INTERVAL, deadline - monotonic())
+                    if timeout < 0.0:
+                        break
+        finally:
+            self.remove_notify_handler(ns.append)
 
     @asynccontextmanager
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:

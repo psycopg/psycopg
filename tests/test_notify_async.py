@@ -71,14 +71,16 @@ async def test_notify(aconn_cls, aconn, dsn):
         gen = aconn.notifies()
         async for n in gen:
             ns.append((n, time()))
-            if len(ns) >= 2:
-                await gen.aclose()
+            if len(ns) == 2:
+                await aconn.execute("notify foo, '3'")
+            if len(ns) == 3:
+                break
 
     ns: list[tuple[Notify, float]] = []
     t0 = time()
     workers = [spawn(notifier), spawn(receiver)]
     await gather(*workers)
-    assert len(ns) == 2
+    assert len(ns) == 3
 
     n, t1 = ns[0]
     assert n.pid == npid
@@ -90,6 +92,12 @@ async def test_notify(aconn_cls, aconn, dsn):
     assert n.pid == npid
     assert n.channel == "foo"
     assert n.payload == "2"
+    assert t1 - t0 == pytest.approx(0.5, abs=0.05)
+
+    n, t1 = ns[2]
+    assert n.pid == aconn.pgconn.backend_pid
+    assert n.channel == "foo"
+    assert n.payload == "3"
     assert t1 - t0 == pytest.approx(0.5, abs=0.05)
 
 
