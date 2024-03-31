@@ -56,5 +56,5 @@ disallow_untyped_defs = false
 disallow_untyped_calls = false
 
 [tool.codespell]
-ignore-words-list = 'alot,ans,ba,fo,te'
-skip = '_build,.mypy_cache,.venv,pq.c,_psycopg.c,*.html'
+ignore-words-list = "alot,ans,ba,fo,te,erro,varning"
+skip = "build,_build,.tox,.mypy_cache,.venv,pq.c,_psycopg.c"

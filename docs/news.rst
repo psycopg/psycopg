@@ -35,6 +35,12 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.19
+^^^^^^^^^^^^^^
+
+- Fix excessive stripping of error message prefixes (:ticket:`#752`).
+
+
 Current release
 ---------------
 
