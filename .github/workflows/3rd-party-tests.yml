@@ -140,7 +140,7 @@ jobs:
             python-version: "3.8"
 
     env:
-      DEPS: ./psycopg
+      DEPS: ./psycopg ./psycopg_pool
 
     services:
       postgresql:
