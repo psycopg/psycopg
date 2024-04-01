@@ -323,3 +323,32 @@ def test_pgresult_pickle(conn):
 
 def test_blank_sqlstate(conn):
     assert e.get_base_exception("") is e.DatabaseError
+
+
+@pytest.mark.parametrize(
+    "msg",
+    [
+        'connection to server at "2001:1488:fffe:20::229", port 5432 failed',
+        "HORROR: foo\n",
+    ],
+)
+def test_strip_severity_unstripped(msg):
+    from psycopg.pq.misc import strip_severity
+
+    out = strip_severity(msg)
+    assert out == msg.strip()
+
+
+@pytest.mark.parametrize(
+    "msg",
+    [
+        "ERROR: foo\n",
+        "ERRORE: foo\nbar\n",
+        "오류: foo: bar",
+    ],
+)
+def test_strip_severity_l10n(msg):
+    from psycopg.pq.misc import strip_severity
+
+    out = strip_severity(msg)
+    assert out == msg.split(":", 1)[1].strip()

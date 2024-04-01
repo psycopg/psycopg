@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.19
+^^^^^^^^^^^^^^
+
+- Fix excessive stripping of error message prefixes (:ticket:`#752`).
+
+
 Current release
 ---------------
 
