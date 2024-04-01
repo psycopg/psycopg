@@ -75,7 +75,7 @@ def test_notify(conn_cls, conn, dsn):
         for n in gen:
             ns.append((n, time()))
             if len(ns) == 2:
-                cur.execute("notify foo, '3'")
+                conn.execute("notify foo, '3'")
             if len(ns) == 3:
                 break
 
