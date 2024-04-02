@@ -89,7 +89,7 @@ class LibpqReader:
     app = None
 
     _url_pattern = (
-        "https://raw.githubusercontent.com/postgres/postgres/REL_{ver}_STABLE"
+        "https://raw.githubusercontent.com/postgres/postgres/{branch}"
         "/doc/src/sgml/libpq.sgml"
     )
 
@@ -130,7 +130,13 @@ class LibpqReader:
 
     @property
     def sgml_url(self):
-        return self._url_pattern.format(ver=self.version)
+        return self._url_pattern.format(branch=self.branch)
+
+    @property
+    def branch(self):
+        if self.version == "devel":
+            return "master"
+        return f"REL_{self.version}_STABLE"
 
     @property
     def version(self):
