@@ -347,11 +347,10 @@ class AsyncConnection(BaseConnection[Row]):
         self.add_notify_handler(ns.append)
         try:
             while True:
-                # Collect notifications. Also get the connection encoding if any
-                # notification is received to makes sure that they are consistent.
+                # Wait for notifications, collecting and processing them using
+                # thread-safe operations.
                 try:
-                    async with self.lock:
-                        await self.wait(notifies(self.pgconn), interval=interval)
+                    await self.wait(notifies(self.pgconn), interval=interval)
                 except e._NO_TRACEBACK as ex:
                     raise ex.with_traceback(None)
 

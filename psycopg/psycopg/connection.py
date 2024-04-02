@@ -325,11 +325,10 @@ class Connection(BaseConnection[Row]):
         self.add_notify_handler(ns.append)
         try:
             while True:
-                # Collect notifications. Also get the connection encoding if any
-                # notification is received to makes sure that they are consistent.
+                # Wait for notifications, collecting and processing them using
+                # thread-safe operations.
                 try:
-                    with self.lock:
-                        self.wait(notifies(self.pgconn), interval=interval)
+                    self.wait(notifies(self.pgconn), interval=interval)
                 except e._NO_TRACEBACK as ex:
                     raise ex.with_traceback(None)
 
