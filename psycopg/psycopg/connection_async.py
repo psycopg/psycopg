@@ -7,6 +7,7 @@ Psycopg connection object (async version)
 from __future__ import annotations
 
 import logging
+from socket import close, dup
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, List, Optional
@@ -345,12 +346,20 @@ class AsyncConnection(BaseConnection[Row]):
 
         ns: deque[Notify] = deque()
         self.add_notify_handler(ns.append)
+
+        # To allow for concurrent querying operations, we use a duplicate file
+        # descriptor to wait for notifications (the asyncio framework does not allow for
+        # multiple readers against the same file descriptor).
+        fileno = dup(self.pgconn.socket)
+
         try:
             while True:
                 # Wait for notifications, collecting and processing them using
                 # thread-safe operations.
                 try:
-                    await self.wait(notifies(self.pgconn), interval=interval)
+                    await self.wait(
+                        notifies(self.pgconn), interval=interval, fileno=fileno
+                    )
                 except e._NO_TRACEBACK as ex:
                     raise ex.with_traceback(None)
 
@@ -371,6 +380,7 @@ class AsyncConnection(BaseConnection[Row]):
                         break
         finally:
             self.remove_notify_handler(ns.append)
+            close(fileno)
 
     @asynccontextmanager
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
@@ -393,7 +403,10 @@ class AsyncConnection(BaseConnection[Row]):
                     self._pipeline = None
 
     async def wait(
-        self, gen: PQGen[RV], interval: Optional[float] = _WAIT_INTERVAL
+        self,
+        gen: PQGen[RV],
+        interval: Optional[float] = _WAIT_INTERVAL,
+        fileno: Optional[int] = None,
     ) -> RV:
         """
         Consume a generator operating on the connection.
@@ -401,8 +414,10 @@ class AsyncConnection(BaseConnection[Row]):
         The function must be used on generators that don't change connection
         fd (i.e. not on connect and reset).
         """
+        if fileno is None:
+            fileno = self.pgconn.socket
         try:
-            return await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
+            return await waiting.wait_async(gen, fileno, interval=interval)
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
