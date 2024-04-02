@@ -66,6 +66,8 @@ def test_notify(conn_cls, conn, dsn):
             nconn.execute("notify foo, '1'")
             sleep(0.25)
             nconn.execute("notify foo, '2'")
+            sleep(0.25)
+            conn.execute("notify foo, '3'")
 
     def receiver():
         conn.set_autocommit(True)
@@ -74,8 +76,6 @@ def test_notify(conn_cls, conn, dsn):
         gen = conn.notifies()
         for n in gen:
             ns.append((n, time()))
-            if len(ns) == 2:
-                conn.execute("notify foo, '3'")
             if len(ns) == 3:
                 break
 
@@ -101,7 +101,7 @@ def test_notify(conn_cls, conn, dsn):
     assert n.pid == conn.pgconn.backend_pid
     assert n.channel == "foo"
     assert n.payload == "3"
-    assert t1 - t0 == pytest.approx(0.5, abs=0.05)
+    assert t1 - t0 == pytest.approx(0.75, abs=0.05)
 
 
 @pytest.mark.slow
