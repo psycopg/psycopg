@@ -29,7 +29,7 @@ from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
-from .generators import notifies
+from .generators import read_guard, notifies
 from .transaction import Transaction
 from .cursor import Cursor
 from .server_cursor import ServerCursor
@@ -76,6 +76,7 @@ class Connection(BaseConnection[Row]):
         self.lock = Lock()
         self.cursor_factory = Cursor
         self.server_cursor_factory = ServerCursor
+        self._read_lock = Lock()
 
     @classmethod
     def connect(
@@ -324,29 +325,38 @@ class Connection(BaseConnection[Row]):
         ns: deque[Notify] = deque()
         self.add_notify_handler(ns.append)
         try:
+            once = False
             while True:
-                # Wait for notifications, collecting and processing them using
-                # thread-safe operations.
+                # After the read lock has been acquired, it's safe to emit any
+                # notifications already collected and block, waiting for new ones.
+                self._read_lock.acquire()
                 try:
-                    self.wait(notifies(self.pgconn), interval=interval)
-                except e._NO_TRACEBACK as ex:
-                    raise ex.with_traceback(None)
+                    # Emit the notifications received.
+                    while ns:
+                        yield ns.popleft()
+                        nreceived += 1
 
-                # Emit the notifications received.
-                while ns:
-                    yield ns.popleft()
-                    nreceived += 1
-
-                # Stop if we have received enough notifications.
-                if stop_after is not None and nreceived >= stop_after:
-                    break
-
-                # Check the deadline after the loop to ensure that timeout=0
-                # polls at least once.
-                if deadline:
-                    timeout = min(_WAIT_INTERVAL, deadline - monotonic())
-                    if timeout < 0.0:
+                    # Stop if we have received enough notifications.
+                    if stop_after is not None and nreceived >= stop_after:
                         break
+
+                    # Check the deadline only if we've looped at least once.
+                    if once and deadline:
+                        interval = min(_WAIT_INTERVAL, deadline - monotonic())
+                        if interval < 0.0:
+                            break
+
+                    # We'll guard the processing of notifications with the connection
+                    # lock to ensure that we're not interfering with a concurrent query.
+                    gen = read_guard(self.lock, notifies(self.pgconn), False)
+                    try:
+                        self._wait_inner(gen, interval)
+                    except e._NO_TRACEBACK as ex:
+                        raise ex.with_traceback(None)
+                finally:
+                    self._read_lock.release()
+
+                once = True
         finally:
             self.remove_notify_handler(ns.append)
 
@@ -371,6 +381,22 @@ class Connection(BaseConnection[Row]):
                     self._pipeline = None
 
     def wait(self, gen: PQGen[RV], interval: Optional[float] = _WAIT_INTERVAL) -> RV:
+        """
+        Consume a generator operating on the connection.
+
+        The function must be used on generators that don't change connection
+        fd (i.e. not on connect and reset).
+        """
+        acquired = self._read_lock.acquire(False)
+        if not acquired:
+            gen = read_guard(self._read_lock, gen, True)
+        try:
+            return self._wait_inner(gen, interval)
+        finally:
+            if acquired:
+                self._read_lock.release()
+
+    def _wait_inner(self, gen: PQGen[RV], interval: Optional[float]) -> RV:
         """
         Consume a generator operating on the connection.
 

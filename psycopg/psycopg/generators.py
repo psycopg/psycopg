@@ -23,11 +23,11 @@ generator should probably yield the same value again in order to wait more.
 import logging
 from time import monotonic
 from threading import Lock
-from typing import List, Optional, Union
+from typing import List, Optional, Literal, Union, overload
 
 from . import pq
 from . import errors as e
-from .abc import Buffer, PipelineCommand, PQGen, PQGenConn
+from .abc import Buffer, PipelineCommand, PQGen, PQGenConn, RV
 from .pq.abc import PGcancelConn, PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
@@ -55,7 +55,6 @@ READY_R = Ready.R
 READY_W = Ready.W
 READY_RW = Ready.RW
 
-lock = Lock()
 logger = logging.getLogger(__name__)
 
 
@@ -278,21 +277,20 @@ def _pipeline_communicate(
 
 
 def _consume_notifies(pgconn: PGconn) -> None:
-    # Consume notifies. The lock ensures that notifies
-    # are consumed and handled atomically.
-    with lock:
-        while True:
-            n = pgconn.notifies()
-            if not n:
-                break
-            if pgconn.notify_handler:
-                pgconn.notify_handler(n)
+    # Consume notifies
+    while True:
+        n = pgconn.notifies()
+        if not n:
+            break
+        if pgconn.notify_handler:
+            pgconn.notify_handler(n)
 
 
 def notifies(pgconn: PGconn) -> PQGen[None]:
-    yield WAIT_R
-    pgconn.consume_input()
-    _consume_notifies(pgconn)
+    ready = yield WAIT_R
+    if ready & READY_R:
+        pgconn.consume_input()
+        _consume_notifies(pgconn)
 
 
 def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
@@ -364,6 +362,41 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
         raise e.error_from_result(result, encoding=encoding)
 
     return result
+
+
+@overload
+def read_guard(lock: Lock, gen: PQGen[RV], block: Literal[True]) -> PQGen[RV]: ...
+
+
+@overload
+def read_guard(
+    lock: Lock, gen: PQGen[RV], block: Literal[False]
+) -> PQGen[Optional[RV]]: ...
+
+
+def read_guard(lock: Lock, gen: PQGen[RV], block: bool) -> PQGen[Optional[RV]]:
+    s = next(gen)
+    try:
+        while True:
+            ready = yield s
+
+            if ready & READY_W:
+                gen.send(READY_W)
+            elif ready & READY_R:
+                acquired = lock.acquire(block)
+                if acquired:
+                    try:
+                        gen.send(ready)
+                        rv = yield from gen
+                    finally:
+                        lock.release()
+                    return rv
+                return None
+            else:
+                gen.send(ready)
+    except StopIteration as ex:
+        rv = ex.args[0] if ex.args else None
+        return rv
 
 
 # Override functions with fast versions if available

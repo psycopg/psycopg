@@ -375,8 +375,8 @@ class AsyncConnection(BaseConnection[Row]):
                 # Check the deadline after the loop to ensure that timeout=0
                 # polls at least once.
                 if deadline:
-                    timeout = min(_WAIT_INTERVAL, deadline - monotonic())
-                    if timeout < 0.0:
+                    interval = min(_WAIT_INTERVAL, deadline - monotonic())
+                    if interval < 0.0:
                         break
         finally:
             self.remove_notify_handler(ns.append)
