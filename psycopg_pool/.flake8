@@ -1,3 +1,7 @@
 [flake8]
 max-line-length = 88
 ignore = W503, E203, E704
+
+per-file-ignores =
+    # Allow concatenated string literals from async_to_sync
+    psycopg_pool/pool.py: E501

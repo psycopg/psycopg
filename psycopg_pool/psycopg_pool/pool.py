@@ -115,10 +115,7 @@ class ConnectionPool(Generic[CT], BasePool):
             self._open_implicit = False
 
             warnings.warn(
-                f"the default for the {type(self).__name__} 'open' parameter"
-                + " will become 'False' in a future release. Please use"
-                + " open={True|False} explicitly, or use the pool as context"
-                + f" manager using: `with {type(self).__name__}(...) as pool: ...`",
+                f"the default for the {type(self).__name__} 'open' parameter will become 'False' in a future release. Please use open={{True|False}} explicitly, or use the pool as context manager using: `with {type(self).__name__}(...) as pool: ...`",
                 DeprecationWarning,
             )
 
@@ -278,8 +275,7 @@ class ConnectionPool(Generic[CT], BasePool):
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
-                f"the pool {self.name!r} has already"
-                + f" {len(self._waiting)} requests waiting"
+                f"the pool {self.name!r} has already {len(self._waiting)} requests waiting"
             )
         return conn
 
@@ -613,8 +609,7 @@ class ConnectionPool(Generic[CT], BasePool):
             if status != TransactionStatus.IDLE:
                 sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
-                    f"connection left in status {sname} by configure function"
-                    + f" {self._configure}: discarded"
+                    f"connection left in status {sname} by configure function {self._configure}: discarded"
                 )
 
         # Set an expiry date, with some randomness to avoid mass reconnection
@@ -768,8 +763,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 if status != TransactionStatus.IDLE:
                     sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
-                        f"connection left in status {sname} by reset function"
-                        + f" {self._reset}: discarded"
+                        f"connection left in status {sname} by reset function {self._reset}: discarded"
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
@@ -791,8 +785,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         if to_close:
             logger.info(
-                "shrinking pool %r to %s because %s unused connections"
-                + " in the last %s sec",
+                "shrinking pool %r to %s because %s unused connections in the last %s sec",
                 self.name,
                 self._nconns,
                 nconns_min,
