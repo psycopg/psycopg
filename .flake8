@@ -1,3 +1,8 @@
+# Note: configuration is repeated in the package directories because flake8
+# will find the setup.cfg there and will not use this file.
+# We also need a copy here because running flake8 from the root dir will
+# use no configuration file otherwise. So, apologise for the repetitions.
+
 [flake8]
 max-line-length = 88
 ignore = W503, E203, E704
