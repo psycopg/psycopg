@@ -125,9 +125,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             else:
                 warnings.warn(
                     f"the default for the {type(self).__name__} 'open' parameter"
-                    + " will become 'False' in a future release. Please use"
-                    + " open={True|False} explicitly, or use the pool as context"
-                    + f" manager using: `with {type(self).__name__}(...) as pool: ...`",
+                    " will become 'False' in a future release. Please use"
+                    " open={True|False} explicitly, or use the pool as context"
+                    f" manager using: `with {type(self).__name__}(...) as pool: ...`",
                     DeprecationWarning,
                 )
 
@@ -300,7 +300,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
-                + f" {len(self._waiting)} requests waiting"
+                f" {len(self._waiting)} requests waiting"
             )
         return conn
 
@@ -658,7 +658,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
                     f"connection left in status {sname} by configure function"
-                    + f" {self._configure}: discarded"
+                    f" {self._configure}: discarded"
                 )
 
         # Set an expiry date, with some randomness to avoid mass reconnection
@@ -818,7 +818,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
                         f"connection left in status {sname} by reset function"
-                        + f" {self._reset}: discarded"
+                        f" {self._reset}: discarded"
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
@@ -841,7 +841,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if to_close:
             logger.info(
                 "shrinking pool %r to %s because %s unused connections"
-                + " in the last %s sec",
+                " in the last %s sec",
                 self.name,
                 self._nconns,
                 nconns_min,
