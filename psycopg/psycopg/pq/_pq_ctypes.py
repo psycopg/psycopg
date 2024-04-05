@@ -9,7 +9,7 @@ import ctypes
 import ctypes.util
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
-from typing import List, Optional, Tuple
+from typing import Any, List, NoReturn, Tuple
 
 from .misc import find_libpq_full_path
 from ..errors import NotSupportedError
@@ -185,23 +185,23 @@ PQhost = pq.PQhost
 PQhost.argtypes = [PGconn_ptr]
 PQhost.restype = c_char_p
 
-_PQhostaddr = None
 
-if libpq_version >= 120000:
-    _PQhostaddr = pq.PQhostaddr
-    _PQhostaddr.argtypes = [PGconn_ptr]
-    _PQhostaddr.restype = c_char_p
-
-
-def PQhostaddr(pgconn: PGconn_struct) -> bytes:
-    if not _PQhostaddr:
+def not_supported_before(fname: str, pgversion: int) -> Any:
+    def not_supported(*args: Any, **kwargs: Any) -> NoReturn:
         raise NotSupportedError(
-            "PQhostaddr requires libpq from PostgreSQL 12,"
-            f" {libpq_version} available instead"
+            f"{fname} requires libpq from PostgreSQL {pgversion} on the client;"
+            f" version {libpq_version // 10000} available instead"
         )
 
-    return _PQhostaddr(pgconn)
+    return not_supported
 
+
+if libpq_version >= 120000:
+    PQhostaddr = pq.PQhostaddr
+    PQhostaddr.argtypes = [PGconn_ptr]
+    PQhostaddr.restype = c_char_p
+else:
+    PQhostaddr = not_supported_before("PQhostaddr", 12)
 
 PQport = pq.PQport
 PQport.argtypes = [PGconn_ptr]
@@ -305,36 +305,18 @@ PQdescribePortal = pq.PQdescribePortal
 PQdescribePortal.argtypes = [PGconn_ptr, c_char_p]
 PQdescribePortal.restype = PGresult_ptr
 
-_PQclosePrepared = None
-_PQclosePortal = None
-
 if libpq_version >= 170000:
-    _PQclosePrepared = pq.PQclosePrepared
-    _PQclosePrepared.argtypes = [PGconn_ptr, c_char_p]
-    _PQclosePrepared.restype = PGresult_ptr
+    PQclosePrepared = pq.PQclosePrepared
+    PQclosePrepared.argtypes = [PGconn_ptr, c_char_p]
+    PQclosePrepared.restype = PGresult_ptr
 
-    _PQclosePortal = pq.PQclosePortal
-    _PQclosePortal.argtypes = [PGconn_ptr, c_char_p]
-    _PQclosePortal.restype = PGresult_ptr
+    PQclosePortal = pq.PQclosePortal
+    PQclosePortal.argtypes = [PGconn_ptr, c_char_p]
+    PQclosePortal.restype = PGresult_ptr
 
-
-def PQclosePrepared(pgconn: PGconn_struct, name: str) -> int:
-    if not _PQclosePrepared:
-        raise NotSupportedError(
-            "PQclosePrepared requires libpq from PostgreSQL 17,"
-            f" {libpq_version} available instead"
-        )
-    return _PQclosePrepared(pgconn, name)
-
-
-def PQclosePortal(pgconn: PGconn_struct, name: str) -> int:
-    if not _PQclosePortal:
-        raise NotSupportedError(
-            "PQclosePortal requires libpq from PostgreSQL 17,"
-            f" {libpq_version} available instead"
-        )
-    return _PQclosePortal(pgconn, name)
-
+else:
+    PQclosePrepared = not_supported_before("PQclosePrepared", 17)
+    PQclosePortal = not_supported_before("PQclosePrepared", 17)
 
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
@@ -529,36 +511,18 @@ PQsendDescribePortal = pq.PQsendDescribePortal
 PQsendDescribePortal.argtypes = [PGconn_ptr, c_char_p]
 PQsendDescribePortal.restype = c_int
 
-_PQsendClosePrepared = None
-_PQsendClosePortal = None
-
 if libpq_version >= 170000:
-    _PQsendClosePrepared = pq.PQsendClosePrepared
-    _PQsendClosePrepared.argtypes = [PGconn_ptr, c_char_p]
-    _PQsendClosePrepared.restype = c_int
+    PQsendClosePrepared = pq.PQsendClosePrepared
+    PQsendClosePrepared.argtypes = [PGconn_ptr, c_char_p]
+    PQsendClosePrepared.restype = c_int
 
-    _PQsendClosePortal = pq.PQsendClosePortal
-    _PQsendClosePortal.argtypes = [PGconn_ptr, c_char_p]
-    _PQsendClosePortal.restype = c_int
+    PQsendClosePortal = pq.PQsendClosePortal
+    PQsendClosePortal.argtypes = [PGconn_ptr, c_char_p]
+    PQsendClosePortal.restype = c_int
 
-
-def PQsendClosePrepared(pgconn: PGconn_struct, name: str) -> int:
-    if not _PQsendClosePrepared:
-        raise NotSupportedError(
-            "PQsendClosePrepared requires libpq from PostgreSQL 17,"
-            f" {libpq_version} available instead"
-        )
-    return _PQsendClosePrepared(pgconn, name)
-
-
-def PQsendClosePortal(pgconn: PGconn_struct, name: str) -> int:
-    if not _PQsendClosePortal:
-        raise NotSupportedError(
-            "PQsendClosePortal requires libpq from PostgreSQL 17,"
-            f" {libpq_version} available instead"
-        )
-    return _PQsendClosePortal(pgconn, name)
-
+else:
+    PQsendClosePrepared = not_supported_before("PQsendClosePrepared", 17)
+    PQsendClosePortal = not_supported_before("PQsendClosePortal", 17)
 
 PQgetResult = pq.PQgetResult
 PQgetResult.argtypes = [PGconn_ptr]
@@ -635,23 +599,12 @@ PQtrace = pq.PQtrace
 PQtrace.argtypes = [PGconn_ptr, FILE_ptr]
 PQtrace.restype = None
 
-_PQsetTraceFlags = None
-
 if libpq_version >= 140000:
-    _PQsetTraceFlags = pq.PQsetTraceFlags
-    _PQsetTraceFlags.argtypes = [PGconn_ptr, c_int]
-    _PQsetTraceFlags.restype = None
-
-
-def PQsetTraceFlags(pgconn: PGconn_struct, flags: int) -> None:
-    if not _PQsetTraceFlags:
-        raise NotSupportedError(
-            "PQsetTraceFlags requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-
-    _PQsetTraceFlags(pgconn, flags)
-
+    PQsetTraceFlags = pq.PQsetTraceFlags
+    PQsetTraceFlags.argtypes = [PGconn_ptr, c_int]
+    PQsetTraceFlags.restype = None
+else:
+    PQsetTraceFlags = not_supported_before("PQsetTraceFlags", 14)
 
 PQuntrace = pq.PQuntrace
 PQuntrace.argtypes = [PGconn_ptr]
@@ -664,27 +617,16 @@ PQfreemem.argtypes = [c_void_p]
 PQfreemem.restype = None
 
 if libpq_version >= 100000:
-    _PQencryptPasswordConn = pq.PQencryptPasswordConn
-    _PQencryptPasswordConn.argtypes = [
+    PQencryptPasswordConn = pq.PQencryptPasswordConn
+    PQencryptPasswordConn.argtypes = [
         PGconn_ptr,
         c_char_p,
         c_char_p,
         c_char_p,
     ]
-    _PQencryptPasswordConn.restype = POINTER(c_char)
-
-
-def PQencryptPasswordConn(
-    pgconn: PGconn_struct, passwd: bytes, user: bytes, algorithm: bytes
-) -> Optional[bytes]:
-    if not _PQencryptPasswordConn:
-        raise NotSupportedError(
-            "PQencryptPasswordConn requires libpq from PostgreSQL 10,"
-            f" {libpq_version} available instead"
-        )
-
-    return _PQencryptPasswordConn(pgconn, passwd, user, algorithm)
-
+    PQencryptPasswordConn.restype = POINTER(c_char)
+else:
+    PQencryptPasswordConn = not_supported_before("PQencryptPasswordConn", 10)
 
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
@@ -705,77 +647,33 @@ PQsetNoticeReceiver.restype = PQnoticeReceiver
 
 # 34.5 Pipeline Mode
 
-_PQpipelineStatus = None
-_PQenterPipelineMode = None
-_PQexitPipelineMode = None
-_PQpipelineSync = None
-_PQsendFlushRequest = None
-
 if libpq_version >= 140000:
-    _PQpipelineStatus = pq.PQpipelineStatus
-    _PQpipelineStatus.argtypes = [PGconn_ptr]
-    _PQpipelineStatus.restype = c_int
+    PQpipelineStatus = pq.PQpipelineStatus
+    PQpipelineStatus.argtypes = [PGconn_ptr]
+    PQpipelineStatus.restype = c_int
 
-    _PQenterPipelineMode = pq.PQenterPipelineMode
-    _PQenterPipelineMode.argtypes = [PGconn_ptr]
-    _PQenterPipelineMode.restype = c_int
+    PQenterPipelineMode = pq.PQenterPipelineMode
+    PQenterPipelineMode.argtypes = [PGconn_ptr]
+    PQenterPipelineMode.restype = c_int
 
-    _PQexitPipelineMode = pq.PQexitPipelineMode
-    _PQexitPipelineMode.argtypes = [PGconn_ptr]
-    _PQexitPipelineMode.restype = c_int
+    PQexitPipelineMode = pq.PQexitPipelineMode
+    PQexitPipelineMode.argtypes = [PGconn_ptr]
+    PQexitPipelineMode.restype = c_int
 
-    _PQpipelineSync = pq.PQpipelineSync
-    _PQpipelineSync.argtypes = [PGconn_ptr]
-    _PQpipelineSync.restype = c_int
+    PQpipelineSync = pq.PQpipelineSync
+    PQpipelineSync.argtypes = [PGconn_ptr]
+    PQpipelineSync.restype = c_int
 
-    _PQsendFlushRequest = pq.PQsendFlushRequest
-    _PQsendFlushRequest.argtypes = [PGconn_ptr]
-    _PQsendFlushRequest.restype = c_int
+    PQsendFlushRequest = pq.PQsendFlushRequest
+    PQsendFlushRequest.argtypes = [PGconn_ptr]
+    PQsendFlushRequest.restype = c_int
 
-
-def PQpipelineStatus(pgconn: PGconn_struct) -> int:
-    if not _PQpipelineStatus:
-        raise NotSupportedError(
-            "PQpipelineStatus requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-    return _PQpipelineStatus(pgconn)
-
-
-def PQenterPipelineMode(pgconn: PGconn_struct) -> int:
-    if not _PQenterPipelineMode:
-        raise NotSupportedError(
-            "PQenterPipelineMode requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-    return _PQenterPipelineMode(pgconn)
-
-
-def PQexitPipelineMode(pgconn: PGconn_struct) -> int:
-    if not _PQexitPipelineMode:
-        raise NotSupportedError(
-            "PQexitPipelineMode requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-    return _PQexitPipelineMode(pgconn)
-
-
-def PQpipelineSync(pgconn: PGconn_struct) -> int:
-    if not _PQpipelineSync:
-        raise NotSupportedError(
-            "PQpipelineSync requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-    return _PQpipelineSync(pgconn)
-
-
-def PQsendFlushRequest(pgconn: PGconn_struct) -> int:
-    if not _PQsendFlushRequest:
-        raise NotSupportedError(
-            "PQsendFlushRequest requires libpq from PostgreSQL 14,"
-            f" {libpq_version} available instead"
-        )
-    return _PQsendFlushRequest(pgconn)
+else:
+    PQpipelineStatus = not_supported_before("PQpipelineStatus", 14)
+    PQenterPipelineMode = not_supported_before("PQenterPipelineMode", 14)
+    PQexitPipelineMode = not_supported_before("PQexitPipelineMode", 14)
+    PQpipelineSync = not_supported_before("PQpipelineSync", 14)
+    PQsendFlushRequest = not_supported_before("PQsendFlushRequest", 14)
 
 
 # 33.18. SSL Support
@@ -787,9 +685,9 @@ PQinitOpenSSL.restype = None
 
 def generate_stub() -> None:
     import re
-    from ctypes import _CFuncPtr  # type: ignore
+    from ctypes import _CFuncPtr  # type: ignore[attr-defined]
 
-    def type2str(fname, narg, t):
+    def type2str(fname: str, narg: int | None, t: Any) -> str:
         if t is None:
             return "None"
         elif t is c_void_p:
@@ -810,7 +708,7 @@ def generate_stub() -> None:
             if narg is not None:
                 return f"Optional[{t.__name__[3:]}]"
             else:
-                return t.__name__[3:]
+                return str(t.__name__[3:])
 
         elif t.__name__ in ("LP_PQconninfoOption_struct",):
             return f"Sequence[{t.__name__[3:]}]"

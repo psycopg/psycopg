@@ -28,6 +28,12 @@ from psycopg.pq import Format as PqFormat, Trace
 from psycopg.pq.misc import PGnotify, connection_summary
 from psycopg_c.pq cimport PQBuffer
 
+cdef object _check_supported(fname, int pgversion):
+    if libpq.PG_VERSION_NUM < pgversion:
+        raise e.NotSupportedError(
+            f"{fname} requires libpq from PostgreSQL {pgversion // 10000} on the"
+            f" client; version {libpq.PG_VERSION_NUM // 10000} available instead"
+        )
 
 cdef class PGconn:
     @staticmethod
@@ -128,12 +134,7 @@ cdef class PGconn:
 
     @property
     def hostaddr(self) -> bytes:
-        if libpq.PG_VERSION_NUM < 120000:
-            raise e.NotSupportedError(
-                f"PQhostaddr requires libpq from PostgreSQL 12,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
-
+        _check_supported("PQhostaddr", 120000)
         _ensure_pgconn(self)
         cdef char *rv = libpq.PQhostaddr(self._pgconn_ptr)
         assert rv is not NULL
@@ -423,11 +424,7 @@ cdef class PGconn:
             )
 
     def close_prepared(self, const char *name) -> PGresult:
-        if libpq.PG_VERSION_NUM < 170000:
-            raise e.NotSupportedError(
-                f"PQclosePrepared requires libpq from PostgreSQL 17,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQclosePrepared", 170000)
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQclosePrepared(self._pgconn_ptr, name)
         if rv is NULL:
@@ -437,11 +434,7 @@ cdef class PGconn:
         return PGresult._from_ptr(rv)
 
     def send_close_prepared(self, const char *name) -> None:
-        if libpq.PG_VERSION_NUM < 170000:
-            raise e.NotSupportedError(
-                f"PQsendClosePrepared requires libpq from PostgreSQL 17,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQsendClosePrepared", 170000)
         _ensure_pgconn(self)
         cdef int rv = libpq.PQsendClosePrepared(self._pgconn_ptr, name)
         if not rv:
@@ -450,11 +443,7 @@ cdef class PGconn:
             )
 
     def close_portal(self, const char *name) -> PGresult:
-        if libpq.PG_VERSION_NUM < 170000:
-            raise e.NotSupportedError(
-                f"PQclosePortal requires libpq from PostgreSQL 17,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQclosePortal", 170000)
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQclosePortal(self._pgconn_ptr, name)
         if rv is NULL:
@@ -464,11 +453,7 @@ cdef class PGconn:
         return PGresult._from_ptr(rv)
 
     def send_close_portal(self, const char *name) -> None:
-        if libpq.PG_VERSION_NUM < 170000:
-            raise e.NotSupportedError(
-                f"PQsendClosePortal requires libpq from PostgreSQL 17,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQsendClosePortal", 170000)
         _ensure_pgconn(self)
         cdef int rv = libpq.PQsendClosePortal(self._pgconn_ptr, name)
         if not rv:
@@ -571,11 +556,7 @@ cdef class PGconn:
         libpq.PQtrace(self._pgconn_ptr, stream)
 
     def set_trace_flags(self, flags: Trace) -> None:
-        if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQsetTraceFlags requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQsetTraceFlags", 140000)
         libpq.PQsetTraceFlags(self._pgconn_ptr, flags)
 
     def untrace(self) -> None:
@@ -584,11 +565,7 @@ cdef class PGconn:
     def encrypt_password(
         self, const char *passwd, const char *user, algorithm = None
     ) -> bytes:
-        if libpq.PG_VERSION_NUM < 100000:
-            raise e.NotSupportedError(
-                f"PQencryptPasswordConn requires libpq from PostgreSQL 10,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQencryptPasswordConn", 100000)
 
         cdef char *out
         cdef const char *calgo = NULL
@@ -628,11 +605,7 @@ cdef class PGconn:
         :raises ~e.OperationalError: in case of failure to enter the pipeline
             mode.
         """
-        if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQenterPipelineMode requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQenterPipelineMode", 140000)
         if libpq.PQenterPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError("failed to enter pipeline mode")
 
@@ -642,11 +615,7 @@ cdef class PGconn:
         :raises ~e.OperationalError: in case of failure to exit the pipeline
             mode.
         """
-        if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQexitPipelineMode requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQexitPipelineMode", 140000)
         if libpq.PQexitPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError(error_message(self))
 
@@ -656,11 +625,7 @@ cdef class PGconn:
         :raises ~e.OperationalError: if the connection is not in pipeline mode
             or if sync failed.
         """
-        if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQpipelineSync requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQpipelineSync", 140000)
         rv = libpq.PQpipelineSync(self._pgconn_ptr)
         if rv == 0:
             raise e.OperationalError("connection not in pipeline mode")
@@ -672,11 +637,7 @@ cdef class PGconn:
 
         :raises ~e.OperationalError: if the flush request failed.
         """
-        if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQsendFlushRequest requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+        _check_supported("PQsendFlushRequest ", 140000)
         cdef int rv = libpq.PQsendFlushRequest(self._pgconn_ptr)
         if rv == 0:
             raise e.OperationalError(f"flush request failed: {error_message(self)}")
