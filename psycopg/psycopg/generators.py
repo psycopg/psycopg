@@ -21,6 +21,7 @@ generator should probably yield the same value again in order to wait more.
 # Copyright (C) 2020 The Psycopg Team
 
 import logging
+from time import monotonic
 from typing import List, Optional, Union
 
 from . import pq
@@ -56,11 +57,12 @@ READY_RW = Ready.RW
 logger = logging.getLogger(__name__)
 
 
-def _connect(conninfo: str) -> PQGenConn[PGconn]:
+def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
     """
     Generator to create a database connection without blocking.
-
     """
+    deadline = monotonic() + timeout if timeout else 0.0
+
     conn = pq.PGconn.connect_start(conninfo.encode())
     while True:
         if conn.status == BAD:
@@ -71,12 +73,18 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
             )
 
         status = conn.connect_poll()
-        if status == POLL_OK:
+
+        if status == POLL_READING or status == POLL_WRITING:
+            wait = WAIT_R if status == POLL_READING else WAIT_W
+            while True:
+                ready = yield conn.socket, wait
+                if deadline and monotonic() > deadline:
+                    raise e.ConnectionTimeout("connection timeout expired")
+                if ready:
+                    break
+
+        elif status == POLL_OK:
             break
-        elif status == POLL_READING:
-            yield conn.socket, WAIT_R
-        elif status == POLL_WRITING:
-            yield conn.socket, WAIT_W
         elif status == POLL_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(

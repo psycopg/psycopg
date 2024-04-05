@@ -34,16 +34,15 @@ READY_RW = Ready.RW
 logger = logging.getLogger(__name__)
 
 
-def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_selector(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
     """
     Wait for a generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
-    :param timeout: timeout (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C.
-    :type timeout: float
+    :param interval: interval (in seconds) to check for other interrupt, e.g.
+        to allow Ctrl-C. If zero or None, wait indefinitely.
     :return: whatever `!gen` returns on completion.
 
     Consume `!gen`, scheduling `fileno` for completion when it is reported to
@@ -54,7 +53,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) 
         with DefaultSelector() as sel:
             sel.register(fileno, s)
             while True:
-                rlist = sel.select(timeout=timeout)
+                rlist = sel.select(timeout=interval)
                 if not rlist:
                     gen.send(READY_NONE)
                     continue
@@ -69,15 +68,14 @@ def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) 
         return rv
 
 
-def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
+def wait_conn(gen: PQGenConn[RV], interval: Optional[float] = None) -> RV:
     """
     Wait for a connection generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
-    :param timeout: timeout (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C. If zero or None, wait indefinitely.
-    :type timeout: float
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
@@ -85,17 +83,20 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     """
     try:
         fileno, s = next(gen)
-        if not timeout:
-            timeout = None
+        if not interval:
+            interval = None
         with DefaultSelector() as sel:
+            sel.register(fileno, s)
             while True:
-                sel.register(fileno, s)
-                rlist = sel.select(timeout=timeout)
-                sel.unregister(fileno)
+                rlist = sel.select(timeout=interval)
                 if not rlist:
-                    raise e.ConnectionTimeout("connection timeout expired")
+                    gen.send(READY_NONE)
+                    continue
+
+                sel.unregister(fileno)
                 ready = rlist[0][1]
                 fileno, s = gen.send(ready)
+                sel.register(fileno, s)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -103,7 +104,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
 
 
 async def wait_async(
-    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
+    gen: PQGen[RV], fileno: int, interval: Optional[float] = None
 ) -> RV:
     """
     Coroutine waiting for a generator to complete.
@@ -111,8 +112,8 @@ async def wait_async(
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
-    :param timeout: timeout (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If zero, wait indefinitely.
+    :param interval: interval (in seconds) to check for other interrupt, e.g.
+        to allow Ctrl-C. If None, wait indefinitely.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
@@ -143,9 +144,9 @@ async def wait_async(
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if timeout is not None:
+                if interval is not None:
                     try:
-                        await wait_for(ev.wait(), timeout)
+                        await wait_for(ev.wait(), interval)
                     except TimeoutError:
                         pass
                 else:
@@ -165,13 +166,13 @@ async def wait_async(
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
+async def wait_conn_async(gen: PQGenConn[RV], interval: Optional[float] = None) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
-    :param timeout: timeout (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C. If zero or None, wait indefinitely.
     :return: whatever `!gen` returns on completion.
 
@@ -204,8 +205,11 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if timeout:
-                    await wait_for(ev.wait(), timeout)
+                if interval:
+                    try:
+                        await wait_for(ev.wait(), interval)
+                    except TimeoutError:
+                        pass
                 else:
                     await ev.wait()
             finally:
@@ -215,9 +219,6 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
                     loop.remove_writer(fileno)
             fileno, s = gen.send(ready)
 
-    except TimeoutError:
-        raise e.ConnectionTimeout("connection timeout expired")
-
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
         return rv
@@ -226,7 +227,7 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
 # Specialised implementation of wait functions.
 
 
-def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_select(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
     """
     Wait for a generator using select where supported.
 
@@ -242,7 +243,7 @@ def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) ->
                 fnlist if s & WAIT_R else empty,
                 fnlist if s & WAIT_W else empty,
                 fnlist,
-                timeout,
+                interval,
             )
             ready = 0
             if rl:
@@ -271,7 +272,7 @@ else:
     _epoll_evmasks = {}
 
 
-def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_epoll(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
     """
     Wait for a generator using epoll where supported.
 
@@ -290,14 +291,14 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
     try:
         s = next(gen)
 
-        if timeout is None or timeout < 0:
-            timeout = 0.0
+        if interval is None or interval < 0:
+            interval = 0.0
 
         with select.epoll() as epoll:
             evmask = _epoll_evmasks[s]
             epoll.register(fileno, evmask)
             while True:
-                fileevs = epoll.poll(timeout)
+                fileevs = epoll.poll(interval)
                 if not fileevs:
                     gen.send(READY_NONE)
                     continue
@@ -326,7 +327,7 @@ else:
     _poll_evmasks = {}
 
 
-def wait_poll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_poll(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
     """
     Wait for a generator using poll where supported.
 
@@ -335,16 +336,16 @@ def wait_poll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> R
     try:
         s = next(gen)
 
-        if timeout is None or timeout < 0:
-            timeout = 0
+        if interval is None or interval < 0:
+            interval = 0
         else:
-            timeout = int(timeout * 1000.0)
+            interval = int(interval * 1000.0)
 
         poll = select.poll()
         evmask = _poll_evmasks[s]
         poll.register(fileno, evmask)
         while True:
-            fileevs = poll.poll(timeout)
+            fileevs = poll.poll(interval)
             if not fileevs:
                 gen.send(READY_NONE)
                 continue
