@@ -464,6 +464,22 @@ def test_cancel_conn_nonblocking(pgconn):
         assert cancel_conn.status == pq.ConnStatus.OK
 
 
+@pytest.mark.libpq(">= 17")
+def test_cancel_conn_finished(pgconn):
+    cancel_conn = pgconn.cancel_conn()
+    cancel_conn.reset()
+    cancel_conn.finish()
+    with pytest.raises(psycopg.OperationalError):
+        cancel_conn.start()
+    with pytest.raises(psycopg.OperationalError):
+        cancel_conn.blocking()
+    with pytest.raises(psycopg.OperationalError):
+        cancel_conn.poll()
+    with pytest.raises(psycopg.OperationalError):
+        cancel_conn.reset()
+    assert cancel_conn.error_message.strip() == "connection pointer is NULL"
+
+
 def test_cancel(pgconn):
     cancel = pgconn.get_cancel()
     cancel.cancel()

@@ -41,6 +41,7 @@ cdef class PGcancelConn:
             )
 
     def poll(self) -> int:
+        self._ensure_pgcancelconn()
         return libpq.PQcancelPoll(self.pgcancelconn_ptr)
 
     @property
@@ -59,12 +60,17 @@ cdef class PGcancelConn:
         return libpq.PQcancelErrorMessage(self.pgcancelconn_ptr).decode()
 
     def reset(self) -> None:
+        self._ensure_pgcancelconn()
         libpq.PQcancelReset(self.pgcancelconn_ptr)
 
     def finish(self) -> None:
         if self.pgcancelconn_ptr is not NULL:
             libpq.PQcancelFinish(self.pgcancelconn_ptr)
             self.pgcancelconn_ptr = NULL
+
+    def _ensure_pgcancelconn(self) -> None:
+        if self.pgcancelconn_ptr is NULL:
+            raise e.OperationalError("the cancel connection is closed")
 
 
 cdef class PGcancel:
