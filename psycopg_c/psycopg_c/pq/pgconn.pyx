@@ -498,6 +498,13 @@ cdef class PGconn:
         if not libpq.PQsetSingleRowMode(self._pgconn_ptr):
             raise e.OperationalError("setting single row mode failed")
 
+    def cancel_conn(self) -> PGcancelConn:
+        _check_supported("PQcancelCreate", 170000)
+        cdef libpq.PGcancelConn *ptr = libpq.PQcancelCreate(self._pgconn_ptr)
+        if not ptr:
+            raise e.OperationalError("couldn't create cancelConn object")
+        return PGcancelConn._from_ptr(ptr)
+
     def get_cancel(self) -> PGcancel:
         cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self._pgconn_ptr)
         if not ptr:

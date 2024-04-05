@@ -40,6 +40,9 @@ cdef extern from "libpq-fe.h":
         int     be_pid
         char   *extra
 
+    ctypedef struct PGcancelConn:
+        pass
+
     ctypedef struct PGcancel:
         pass
 
@@ -83,6 +86,7 @@ cdef extern from "libpq-fe.h":
         CONNECTION_GSS_STARTUP
         CONNECTION_CHECK_TARGET
         CONNECTION_CHECK_STANDBY
+        CONNECTION_ALLOCATED
 
     ctypedef enum PGTransactionStatusType:
         PQTRANS_IDLE
@@ -250,7 +254,16 @@ cdef extern from "libpq-fe.h":
     # 33.5. Retrieving Query Results Row-by-Row
     int PQsetSingleRowMode(PGconn *conn)
 
-    # 33.6. Canceling Queries in Progress
+    # 34.7. Canceling Queries in Progress
+    PGcancelConn *PQcancelCreate(PGconn *conn)
+    int PQcancelStart(PGcancelConn *cancelConn)
+    int PQcancelBlocking(PGcancelConn *cancelConn)
+    PostgresPollingStatusType PQcancelPoll(PGcancelConn *cancelConn) nogil
+    ConnStatusType PQcancelStatus(const PGcancelConn *cancelConn)
+    int PQcancelSocket(PGcancelConn *cancelConn)
+    char *PQcancelErrorMessage(const PGcancelConn *cancelConn)
+    void PQcancelReset(PGcancelConn *cancelConn)
+    void PQcancelFinish(PGcancelConn *cancelConn)
     PGcancel *PQgetCancel(PGconn *conn)
     void PQfreeCancel(PGcancel *cancel)
     int PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
@@ -326,9 +339,19 @@ typedef enum {
 #endif
 
 #if PG_VERSION_NUM < 170000
+typedef struct pg_cancel_conn PGcancelConn;
 #define PQclosePrepared(conn, name) NULL
 #define PQclosePortal(conn, name) NULL
 #define PQsendClosePrepared(conn, name) 0
 #define PQsendClosePortal(conn, name) 0
+#define PQcancelCreate(conn) NULL
+#define PQcancelStart(cancelConn) 0
+#define PQcancelBlocking(cancelConn) 0
+#define PQcancelPoll(cancelConn) CONNECTION_OK
+#define PQcancelStatus(cancelConn) 0
+#define PQcancelSocket(cancelConn) -1
+#define PQcancelErrorMessage(cancelConn) NULL
+#define PQcancelReset(cancelConn) 0
+#define PQcancelFinish(cancelConn) 0
 #endif
 """
