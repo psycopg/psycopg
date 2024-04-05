@@ -148,6 +148,7 @@ Enumerations
     There are other values in this enum, but only `OK` and `BAD` are seen
     after a connection has been established. Other statuses might only be seen
     during the connection phase and are considered internal.
+    `ALLOCATED` is only expected to be returned by `PGcancelConn.status`.
 
     .. seealso:: :pq:`PQstatus()` and `PQcancelStatus()` return this value.
 

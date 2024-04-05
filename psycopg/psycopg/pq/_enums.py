@@ -32,6 +32,7 @@ class ConnStatus(IntEnum):
     CHECK_TARGET = auto()
     CHECK_STANDBY = auto()
     ALLOCATED = auto()  # Only for cancel connections.
+    """Connection to the server hasn't been initiated yet."""
 
 
 class PollingStatus(IntEnum):
