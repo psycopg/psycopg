@@ -552,8 +552,7 @@ class BaseConnection(Generic[Row]):
 
         yield from self._exec_command(b"ROLLBACK")
         self._prepared.clear()
-        for cmd in self._prepared.get_maintenance_commands():
-            yield from self._exec_command(cmd)
+        yield from self._prepared.maintain_gen(self)
 
         if self._pipeline:
             yield from self._pipeline._sync_gen()

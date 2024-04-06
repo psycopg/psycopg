@@ -5,15 +5,18 @@ Support for prepared statements
 # Copyright (C) 2020 The Psycopg Team
 
 from enum import IntEnum, auto
-from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
 from . import pq
+from .abc import PQGen
 from ._compat import Deque, TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
+    from typing import Any
     from .pq.abc import PGresult
+    from ._connection_base import BaseConnection
 
 Key: TypeAlias = Tuple[bytes, Tuple[int, ...]]
 
@@ -185,9 +188,13 @@ class PrepareManager:
         else:
             return False
 
-    def get_maintenance_commands(self) -> Iterator[bytes]:
+    def maintain_gen(self, conn: "BaseConnection[Any]") -> PQGen[None]:
         """
-        Iterate over the commands needed to align the server state to our state
+        Generator to send the commands to perform periodic maintenance
+
+        Deallocate unneeded command in the server, or flush the prepared
+        statements server state entirely if necessary.
         """
         while self._maint_commands:
-            yield self._maint_commands.popleft()
+            cmd = self._maint_commands.popleft()
+            yield from conn._exec_command(cmd)
