@@ -47,7 +47,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._to_flush = Deque[bytes]()
+        self._to_flush = Deque[Optional[bytes]]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:
@@ -183,7 +183,7 @@ class PrepareManager:
         if self._names:
             self._names.clear()
             self._to_flush.clear()
-            self._to_flush.append(b"ALL")
+            self._to_flush.append(None)
             return True
         else:
             return False
@@ -197,4 +197,4 @@ class PrepareManager:
         """
         while self._to_flush:
             name = self._to_flush.popleft()
-            yield from conn._exec_command(b"DEALLOCATE " + name)
+            yield from conn._deallocate(name)

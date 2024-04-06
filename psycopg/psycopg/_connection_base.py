@@ -50,6 +50,8 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
 
+_HAS_SEND_CLOSE = pq.__build_version__ >= 170000
+
 logger = logging.getLogger("psycopg")
 
 
@@ -466,6 +468,45 @@ class BaseConnection(Generic[Row]):
                     f" from command {command.decode()!r}"
                 )
         return result
+
+    def _deallocate(self, name: Optional[bytes]) -> PQGen[None]:
+        """
+        Deallocate one, or all, prepared statement in the session.
+
+        ``name == None`` stands for DEALLOCATE ALL.
+
+        If possible, use protocol-level commands; otherwise use SQL statements.
+
+        Note that PgBouncer doesn't support DEALLOCATE name, but it supports
+        protocol-level Close from 1.21 and DEALLOCATE ALL from 1.22.
+        """
+        if name is None or not _HAS_SEND_CLOSE:
+            stmt = b"DEALLOCATE " + name if name is not None else b"DEALLOCATE ALL"
+            yield from self._exec_command(stmt)
+            return
+
+        self._check_connection_ok()
+
+        if self._pipeline:
+            cmd = partial(
+                self.pgconn.send_close_prepared,
+                name,
+            )
+            self._pipeline.command_queue.append(cmd)
+            self._pipeline.result_queue.append(None)
+            return
+
+        self.pgconn.send_close_prepared(name)
+
+        result = (yield from generators.execute(self.pgconn))[-1]
+        if result.status != COMMAND_OK:
+            if result.status == FATAL_ERROR:
+                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
+            else:
+                raise e.InterfaceError(
+                    f"unexpected result {pq.ExecStatus(result.status).name}"
+                    " from sending closing prepared statement message"
+                )
 
     def _check_connection_ok(self) -> None:
         if self.pgconn.status == OK:
