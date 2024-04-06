@@ -47,7 +47,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._maint_commands = Deque[bytes]()
+        self._to_flush = Deque[bytes]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:
@@ -118,7 +118,7 @@ class PrepareManager:
 
         if len(self._names) > self.prepared_max:
             name = self._names.popitem(last=False)[1]
-            self._maint_commands.append(b"DEALLOCATE " + name)
+            self._to_flush.append(name)
 
     def maybe_add_to_cache(
         self, query: PostgresQuery, prep: Prepare, name: bytes
@@ -182,8 +182,8 @@ class PrepareManager:
         self._counts.clear()
         if self._names:
             self._names.clear()
-            self._maint_commands.clear()
-            self._maint_commands.append(b"DEALLOCATE ALL")
+            self._to_flush.clear()
+            self._to_flush.append(b"ALL")
             return True
         else:
             return False
@@ -195,6 +195,6 @@ class PrepareManager:
         Deallocate unneeded command in the server, or flush the prepared
         statements server state entirely if necessary.
         """
-        while self._maint_commands:
-            cmd = self._maint_commands.popleft()
-            yield from conn._exec_command(cmd)
+        while self._to_flush:
+            name = self._to_flush.popleft()
+            yield from conn._exec_command(b"DEALLOCATE " + name)
