@@ -451,7 +451,9 @@ def test_cancel_conn_nonblocking(pgconn):
         cancel_conn = pgconn.cancel_conn()
         assert cancel_conn.status == pq.ConnStatus.ALLOCATED
         cancel_conn.start()
-        assert cancel_conn.status == pq.ConnStatus.STARTED
+        # On network sockets, connection starts with STARTED.
+        # On Unix sockets, connection starts with MADE.
+        assert cancel_conn.status in (pq.ConnStatus.STARTED, pq.ConnStatus.MADE)
         wait_cancel(cancel_conn)
         assert cancel_conn.status == pq.ConnStatus.OK
 
