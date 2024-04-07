@@ -9,14 +9,16 @@ import logging
 import weakref
 from functools import partial
 from select import select
-from typing import Iterator
+from typing import Iterator, TYPE_CHECKING
 
 import pytest
 
 import psycopg
 from psycopg import pq
-from psycopg.pq.abc import PGcancelConn, PGconn
 import psycopg.generators
+
+if TYPE_CHECKING:
+    from psycopg.pq.abc import PGcancelConn, PGconn
 
 
 def wait(
