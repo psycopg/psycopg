@@ -5,6 +5,7 @@
 Prepared statements tests
 """
 
+import sys
 import logging
 import datetime as dt
 from decimal import Decimal
@@ -197,6 +198,24 @@ def test_deallocate_or_close(conn, caplog):
     else:
         assert "PGconn.send_close_prepared" not in msgs
         assert "DEALLOCATE" in msgs
+
+
+def test_prepared_max_none(conn):
+    conn.prepared_max = 42
+    assert conn.prepared_max == 42
+    assert conn._prepared.prepared_max == 42
+
+    conn.prepared_max = None
+    assert conn._prepared.prepared_max == sys.maxsize
+    assert conn.prepared_max is None
+
+    conn.prepared_max = 0
+    assert conn._prepared.prepared_max == 0
+    assert conn.prepared_max == 0
+
+    conn.prepared_max = 24
+    assert conn.prepared_max == 24
+    assert conn._prepared.prepared_max == 24
 
 
 def test_different_types(conn):

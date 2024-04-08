@@ -4,6 +4,7 @@ psycopg connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+import sys
 import logging
 from typing import Callable, Generic
 from typing import List, NamedTuple, Optional, Tuple, Union
@@ -398,16 +399,20 @@ class BaseConnection(Generic[Row]):
         self._prepared.prepare_threshold = value
 
     @property
-    def prepared_max(self) -> int:
+    def prepared_max(self) -> Optional[int]:
         """
         Maximum number of prepared statements on the connection.
 
-        Default value: 100
+        `!None` means no max number of prepared statements. The default value
+        is 100.
         """
-        return self._prepared.prepared_max
+        rv = self._prepared.prepared_max
+        return rv if rv != sys.maxsize else None
 
     @prepared_max.setter
-    def prepared_max(self, value: int) -> None:
+    def prepared_max(self, value: Optional[int]) -> None:
+        if value is None:
+            value = sys.maxsize
         self._prepared.prepared_max = value
 
     # Generators to perform high-level operations on the connection

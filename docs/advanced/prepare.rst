@@ -48,6 +48,12 @@ Statement preparation can be controlled in several ways:
 
     .. __: https://www.postgresql.org/docs/current/sql-prepare.html
 
+
+.. _pgbouncer:
+
+Using prepared statements with PgBouncer
+----------------------------------------
+
 .. warning::
 
     Unless a connection pooling middleware explicitly declares otherwise, they
@@ -55,12 +61,6 @@ Statement preparation can be controlled in several ways:
     connection may change the server session it refers to. If such middleware
     is used you should disable prepared statements, by setting the
     `Connection.prepare_threshold` attribute to `!None`.
-
-
-.. _pgbouncer:
-
-Using prepared statements with PgBouncer
-----------------------------------------
 
 Starting from 3.2, Psycopg supports prepared statements when using the
 PgBouncer__ middleware, using the following caveats:
@@ -78,4 +78,4 @@ PgBouncer__ middleware, using the following caveats:
     If libpq 17 is not available on your client, but PgBouncer is 1.22 or
     higher, you can still use Psycopg *as long as you disable deallocation*.
 
-    You can do so by setting `Connection.prepared_max` to `!sys.maxsize`.
+    You can do so by setting `Connection.prepared_max` to `!None`.
