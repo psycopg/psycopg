@@ -319,10 +319,10 @@ class BaseConnection(Generic[Row]):
             )
         return True
 
-    def _cancel_gen(self) -> PQGenConn[None]:
+    def _cancel_gen(self, *, timeout: float) -> PQGenConn[None]:
         cancel_conn = self.pgconn.cancel_conn()
         cancel_conn.start()
-        yield from generators.cancel(cancel_conn)
+        yield from generators.cancel(cancel_conn, timeout=timeout)
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """

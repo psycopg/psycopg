@@ -85,6 +85,7 @@ In addition to the standard DB-API errors, Psycopg defines a few more specific
 ones.
 
 .. autoexception:: ConnectionTimeout()
+.. autoexception:: CancellationTimeout()
 .. autoexception:: PipelineAborted()
 
 

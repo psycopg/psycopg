@@ -829,6 +829,21 @@ async def test_cancel_safe_closed(aconn):
     await aconn.cancel_safe()
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+async def test_cancel_safe_timeout(aconn_cls, proxy):
+    proxy.start()
+    async with await aconn_cls.connect(proxy.client_dsn) as aconn:
+        proxy.stop()
+        with proxy.deaf_listen():
+            t0 = time.time()
+            with pytest.raises(e.CancellationTimeout, match="timeout expired"):
+                await aconn.cancel_safe(timeout=1)
+    elapsed = time.time() - t0
+    assert elapsed == pytest.approx(1.0, abs=0.05)
+
+
 async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
     got = ""
 

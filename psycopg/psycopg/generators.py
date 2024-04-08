@@ -100,8 +100,11 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
     return conn
 
 
-def _cancel(cancel_conn: PGcancelConn) -> PQGenConn[None]:
+def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[None]:
+    deadline = monotonic() + timeout if timeout else 0.0
     while True:
+        if deadline and monotonic() > deadline:
+            raise e.CancellationTimeout("cancellation timeout expired")
         status = cancel_conn.poll()
         if status == POLL_OK:
             break

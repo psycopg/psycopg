@@ -278,7 +278,7 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             await self.wait(self._rollback_gen())
 
-    async def cancel_safe(self) -> None:
+    async def cancel_safe(self, *, timeout: float = 30.0) -> None:
         """Cancel the current operation on the connection.
 
         This is a non-blocking version of `~Connection.cancel()` which
@@ -287,6 +287,9 @@ class AsyncConnection(BaseConnection[Row]):
 
         If the underlying libpq is older than version 17, the method will fall
         back to using the same implementation of `!cancel()`.
+
+        :raises ~psycopg.errors.CancellationTimeout: If the cancellation did
+            not terminate within specified timeout.
         """
         if not self._should_cancel():
             return
@@ -295,7 +298,7 @@ class AsyncConnection(BaseConnection[Row]):
         if pq.__build_version__ >= 170000:
             try:
                 await waiting.wait_conn_async(
-                    self._cancel_gen(), interval=_WAIT_INTERVAL
+                    self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
                 )
             except Exception as ex:
                 logger.warning("couldn't try to cancel query: %s", ex)

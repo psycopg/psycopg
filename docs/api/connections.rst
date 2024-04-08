@@ -294,6 +294,11 @@ The `!Connection` class
 
         .. warning::
 
+            The `timeout` parameter has no effect for libpq older than version
+            17.
+
+        .. warning::
+
             This method shouldn't be used as a `~signal.signal` handler.
             Please use `cancel()` instead.
 

@@ -825,6 +825,21 @@ def test_cancel_safe_closed(conn):
     conn.cancel_safe()
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+def test_cancel_safe_timeout(conn_cls, proxy):
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        proxy.stop()
+        with proxy.deaf_listen():
+            t0 = time.time()
+            with pytest.raises(e.CancellationTimeout, match="timeout expired"):
+                conn.cancel_safe(timeout=1)
+    elapsed = time.time() - t0
+    assert elapsed == pytest.approx(1.0, abs=0.05)
+
+
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
     got = ""
 
