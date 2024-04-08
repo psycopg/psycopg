@@ -285,8 +285,35 @@ The `!Connection` class
 
     .. rubric:: Methods you can use to do something cool
 
-    .. automethod:: cancel
     .. automethod:: cancel_safe
+
+        .. warning::
+
+            This method shouldn't be used as a `~signal.signal` handler.
+            Please use `cancel()` instead.
+
+        .. versionadded:: 3.2
+
+    .. automethod:: cancel
+
+        .. warning::
+
+            The `!cancel()` method has a few shortcomings:
+
+            - it is blocking even on async connections,
+            - it `might use an insecure connection`__ even if the original
+              connection was secure.
+
+            Therefore you should use the `cancel_safe()` method whenever
+            possible.
+
+            .. __: https://www.postgresql.org/docs/devel/libpq-cancel.html
+                   #LIBPQ-CANCEL-DEPRECATED
+
+        .. note::
+
+            Unlike `cancel_safe()`, it is safe to call this method as a
+            `~signal.signal` handler.
 
     .. automethod:: notifies
 
@@ -504,6 +531,10 @@ The `!AsyncConnection` class
 
                 async with conn.transaction() as tx:
                     ...
+
+    .. automethod:: cancel_safe
+
+        .. versionadded:: 3.2
 
     .. automethod:: notifies
 

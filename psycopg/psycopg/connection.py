@@ -264,15 +264,12 @@ class Connection(BaseConnection[Row]):
     def cancel_safe(self) -> None:
         """Cancel the current operation on the connection.
 
-        This is a non-blocking version of `cancel()` which leverages a more
-        secure and improved cancellation feature of the libpq (available from
-        version 17).
+        This is a non-blocking version of `~Connection.cancel()` which
+        leverages a more secure and improved cancellation feature of the libpq,
+        which is only available from version 17.
 
-        In contrast with `cancel()`, it is not appropriate for use in a signal
-        handler.
-
-        If the underlying libpq is older than version 17, fall back to
-        `cancel()`.
+        If the underlying libpq is older than version 17, the method will fall
+        back to using the same implementation of `!cancel()`.
         """
         if self._should_cancel():
             try:
