@@ -41,18 +41,16 @@ different requirements:
 
 - The ``psycopg_c`` directory contains an optimization module written in
   C/Cython. In order to build it you will need a few development tools: please
-  look at `Local installation`__ in the docs for the details.
+  look at `Local installation <https://www.psycopg.org/psycopg3/docs/basic/install.html#local-installation>`_ in the docs for the details.
 
-  .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html#local-installation
 
-- The ``psycopg_pool`` directory contains the `connection pools`__
+- The ``psycopg_pool`` directory contains the `connection pools <https://www.psycopg.org/psycopg3/docs/advanced/pool.html>`_
   implementations. This is kept as a separate package to allow a different
   release cycle.
 
-  .. __: https://www.psycopg.org/psycopg3/docs/advanced/pool.html
 
-You can create a local virtualenv and install there the packages `in
-development mode`__, together with their development and testing
+You can create a local virtualenv and install the packages `in
+development mode <https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs>`_, together with their development and testing
 requirements::
 
     python -m venv .venv
@@ -61,12 +59,9 @@ requirements::
     pip install -e ./psycopg_pool           # for the connection pool
     pip install ./psycopg_c                 # for the C speedup module
 
-.. __: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
 
 Please add ``--config-settings editable_mode=strict`` to the ``pip install
--e`` above if you experience `editable mode broken`__.
-
-.. __: https://github.com/pypa/setuptools/issues/3557
+-e`` above if you experience `editable mode broken <https://github.com/pypa/setuptools/issues/3557>`_.
 
 Now hack away! You can run the tests using::
 
