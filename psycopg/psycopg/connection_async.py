@@ -36,6 +36,7 @@ if True:  # ASYNC
     import sys
     import asyncio
     from asyncio import Lock
+    from ._compat import to_thread
 else:
     from threading import Lock
 
@@ -287,11 +288,19 @@ class AsyncConnection(BaseConnection[Row]):
         In contrast with `cancel()`, it is not appropriate for use in a signal
         handler.
 
-        :raises ~psycopg.NotSupportedError: if the underlying libpq is older
-            than version 17.
+        If the underlying libpq is older than version 17, fall back to
+        `cancel()`.
         """
         if self._should_cancel():
-            await waiting.wait_conn_async(self._cancel_gen(), interval=_WAIT_INTERVAL)
+            try:
+                await waiting.wait_conn_async(
+                    self._cancel_gen(), interval=_WAIT_INTERVAL
+                )
+            except e.NotSupportedError:
+                if True:  # ASYNC
+                    await to_thread(self.cancel)
+                else:
+                    self.cancel()
 
     @asynccontextmanager
     async def transaction(
@@ -400,10 +409,7 @@ class AsyncConnection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                try:
-                    await self.cancel_safe()
-                except e.NotSupportedError:
-                    self.cancel()
+                await self.cancel_safe()
                 try:
                     await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

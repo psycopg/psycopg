@@ -61,10 +61,7 @@ async def test_concurrent_execution(aconn_cls, dsn):
 async def canceller(aconn, errors):
     try:
         await asyncio.sleep(0.5)
-        try:
-            await aconn.cancel_safe()
-        except e.NotSupportedError:
-            aconn.cancel()
+        await aconn.cancel_safe()
     except Exception as exc:
         errors.append(exc)
 

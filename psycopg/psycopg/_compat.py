@@ -5,17 +5,28 @@ compatibility functions for different Python versions
 # Copyright (C) 2021 The Psycopg Team
 
 import sys
+from functools import partial
+from typing import Any
 
 if sys.version_info >= (3, 9):
+    from asyncio import to_thread
     from zoneinfo import ZoneInfo
     from functools import cache
     from collections import Counter, deque as Deque
+    from collections.abc import Callable
 else:
-    from typing import Counter, Deque
+    import asyncio
+    from typing import Callable, Counter, Deque
     from functools import lru_cache
     from backports.zoneinfo import ZoneInfo
 
     cache = lru_cache(maxsize=None)
+
+    async def to_thread(func: Callable[..., Any], /, *args: Any, **kwargs: Any) -> None:
+        loop = asyncio.get_running_loop()
+        func_call = partial(func, *args, **kwargs)
+        await loop.run_in_executor(None, func_call)
+
 
 if sys.version_info >= (3, 10):
     from typing import TypeGuard, TypeAlias
@@ -42,4 +53,5 @@ __all__ = [
     "TypeVar",
     "ZoneInfo",
     "cache",
+    "to_thread",
 ]

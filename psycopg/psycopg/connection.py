@@ -271,11 +271,14 @@ class Connection(BaseConnection[Row]):
         In contrast with `cancel()`, it is not appropriate for use in a signal
         handler.
 
-        :raises ~psycopg.NotSupportedError: if the underlying libpq is older
-            than version 17.
+        If the underlying libpq is older than version 17, fall back to
+        `cancel()`.
         """
         if self._should_cancel():
-            waiting.wait_conn(self._cancel_gen(), interval=_WAIT_INTERVAL)
+            try:
+                waiting.wait_conn(self._cancel_gen(), interval=_WAIT_INTERVAL)
+            except e.NotSupportedError:
+                self.cancel()
 
     @contextmanager
     def transaction(
@@ -382,10 +385,7 @@ class Connection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                try:
-                    self.cancel_safe()
-                except e.NotSupportedError:
-                    self.cancel()
+                self.cancel_safe()
                 try:
                     waiting.wait(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:
