@@ -51,7 +51,7 @@ different requirements:
 
   .. __: https://www.psycopg.org/psycopg3/docs/advanced/pool.html
 
-You can create a local virtualenv and install there the packages `in
+You can create a local virtualenv and install the packages `in
 development mode`__, together with their development and testing
 requirements::
 
