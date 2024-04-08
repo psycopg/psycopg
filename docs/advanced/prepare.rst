@@ -66,10 +66,12 @@ Starting from 3.2, Psycopg supports prepared statements when using the
 PgBouncer__ middleware, using the following caveats:
 
 - PgBouncer version must be at least version `1.22`__.
+- PgBouncer `max_prepared_statements`__ must be greater than 0.
 - The libpq version on the client must be from PostgreSQL 17 or higher.
 
 .. __: https://www.pgbouncer.org/
 .. __: https://www.pgbouncer.org/2024/01/pgbouncer-1-22-0
+.. __: https://www.pgbouncer.org/config.html#max_prepared_statements
 
 .. hint::
 
