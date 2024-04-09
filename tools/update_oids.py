@@ -21,6 +21,7 @@ from typing import List
 from pathlib import Path
 
 import psycopg
+from psycopg.pq import version_pretty
 from psycopg.rows import TupleRow
 from psycopg.crdb import CrdbConnection
 from psycopg._compat import TypeAlias
@@ -90,13 +91,10 @@ def update_crdb_python_oids(conn: Connection) -> None:
 
 def get_version_comment(conn: Connection) -> List[str]:
     if conn.info.vendor == "PostgreSQL":
-        # Assume PG > 10
-        num = conn.info.server_version
-        version = f"{num // 10000}.{num % 100}"
+        version = version_pretty(conn.info.server_version)
     elif conn.info.vendor == "CockroachDB":
         assert isinstance(conn, CrdbConnection)
-        num = conn.info.server_version
-        version = f"{num // 10000}.{num % 10000 // 100}.{num % 100}"
+        version = version_pretty(conn.info.server_version)
     else:
         raise NotImplementedError(f"unexpected vendor: {conn.info.vendor}")
     return ["", f"    # Generated from {conn.info.vendor} {version}", ""]

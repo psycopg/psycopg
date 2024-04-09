@@ -24,15 +24,16 @@ from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
 
-from psycopg.pq import Format as PqFormat, Trace
+from psycopg.pq import Format as PqFormat, Trace, version_pretty
 from psycopg.pq.misc import PGnotify, connection_summary
 from psycopg_c.pq cimport PQBuffer
 
 cdef object _check_supported(fname, int pgversion):
     if libpq.PG_VERSION_NUM < pgversion:
         raise e.NotSupportedError(
-            f"{fname} requires libpq from PostgreSQL {pgversion // 10000} on the"
-            f" client; version {libpq.PG_VERSION_NUM // 10000} available instead"
+            f"{fname} requires libpq from PostgreSQL {version_pretty(pgversion)}"
+            f" on the client; version {version_pretty(libpq.PG_VERSION_NUM)}"
+            " available instead"
         )
 
 cdef class PGconn:
