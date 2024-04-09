@@ -81,3 +81,11 @@ def test_result_set_attrs(pgconn):
 
     with pytest.raises(psycopg.OperationalError):
         res.set_attributes(attrs)
+
+
+@pytest.mark.parametrize(
+    "intv, strv",
+    [(91020, "9.10.20"), (100004, "10.4"), (101112, "10.11.12")],
+)
+def test_version_pretty(intv, strv):
+    assert pq.version_pretty(intv) == strv

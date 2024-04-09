@@ -15,7 +15,7 @@ from typing import Callable, List, Type
 
 from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
-from .misc import error_message
+from .misc import error_message, version_pretty
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Trace
 from ._enums import Ping, PipelineStatus, PollingStatus, TransactionStatus
 
@@ -132,4 +132,5 @@ __all__ = (
     "error_message",
     "ConninfoOption",
     "version",
+    "version_pretty",
 )
