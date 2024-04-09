@@ -195,9 +195,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             yield from self._conn._pipeline._communicate_gen()
 
         self._last_query = query
-
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._conn._prepared.maintain_gen(self._conn)
 
     def _executemany_gen_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
@@ -232,8 +230,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if returning:
             yield from pipeline._fetch_gen(flush=True)
 
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._conn._prepared.maintain_gen(self._conn)
 
     def _executemany_gen_no_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
@@ -260,9 +257,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             yield from self._maybe_prepare_gen(pgq, prepare=True)
 
         self._last_query = query
-
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._conn._prepared.maintain_gen(self._conn)
 
     def _maybe_prepare_gen(
         self,

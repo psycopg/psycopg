@@ -5,15 +5,18 @@ Support for prepared statements
 # Copyright (C) 2020 The Psycopg Team
 
 from enum import IntEnum, auto
-from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
 from . import pq
+from .abc import PQGen
 from ._compat import Deque, TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
+    from typing import Any
     from .pq.abc import PGresult
+    from ._connection_base import BaseConnection
 
 Key: TypeAlias = Tuple[bytes, Tuple[int, ...]]
 
@@ -44,7 +47,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._maint_commands = Deque[bytes]()
+        self._to_flush = Deque[Optional[bytes]]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:
@@ -115,7 +118,7 @@ class PrepareManager:
 
         if len(self._names) > self.prepared_max:
             name = self._names.popitem(last=False)[1]
-            self._maint_commands.append(b"DEALLOCATE " + name)
+            self._to_flush.append(name)
 
     def maybe_add_to_cache(
         self, query: PostgresQuery, prep: Prepare, name: bytes
@@ -179,15 +182,19 @@ class PrepareManager:
         self._counts.clear()
         if self._names:
             self._names.clear()
-            self._maint_commands.clear()
-            self._maint_commands.append(b"DEALLOCATE ALL")
+            self._to_flush.clear()
+            self._to_flush.append(None)
             return True
         else:
             return False
 
-    def get_maintenance_commands(self) -> Iterator[bytes]:
+    def maintain_gen(self, conn: "BaseConnection[Any]") -> PQGen[None]:
         """
-        Iterate over the commands needed to align the server state to our state
+        Generator to send the commands to perform periodic maintenance
+
+        Deallocate unneeded command in the server, or flush the prepared
+        statements server state entirely if necessary.
         """
-        while self._maint_commands:
-            yield self._maint_commands.popleft()
+        while self._to_flush:
+            name = self._to_flush.popleft()
+            yield from conn._deallocate(name)

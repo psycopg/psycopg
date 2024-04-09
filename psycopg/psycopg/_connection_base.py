@@ -4,6 +4,7 @@ psycopg connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+import sys
 import logging
 from typing import Callable, Generic
 from typing import List, NamedTuple, Optional, Tuple, Union
@@ -49,6 +50,8 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
+
+_HAS_SEND_CLOSE = pq.__build_version__ >= 170000
 
 logger = logging.getLogger("psycopg")
 
@@ -396,16 +399,20 @@ class BaseConnection(Generic[Row]):
         self._prepared.prepare_threshold = value
 
     @property
-    def prepared_max(self) -> int:
+    def prepared_max(self) -> Optional[int]:
         """
         Maximum number of prepared statements on the connection.
 
-        Default value: 100
+        `!None` means no max number of prepared statements. The default value
+        is 100.
         """
-        return self._prepared.prepared_max
+        rv = self._prepared.prepared_max
+        return rv if rv != sys.maxsize else None
 
     @prepared_max.setter
-    def prepared_max(self, value: int) -> None:
+    def prepared_max(self, value: Optional[int]) -> None:
+        if value is None:
+            value = sys.maxsize
         self._prepared.prepared_max = value
 
     # Generators to perform high-level operations on the connection
@@ -466,6 +473,45 @@ class BaseConnection(Generic[Row]):
                     f" from command {command.decode()!r}"
                 )
         return result
+
+    def _deallocate(self, name: Optional[bytes]) -> PQGen[None]:
+        """
+        Deallocate one, or all, prepared statement in the session.
+
+        ``name == None`` stands for DEALLOCATE ALL.
+
+        If possible, use protocol-level commands; otherwise use SQL statements.
+
+        Note that PgBouncer doesn't support DEALLOCATE name, but it supports
+        protocol-level Close from 1.21 and DEALLOCATE ALL from 1.22.
+        """
+        if name is None or not _HAS_SEND_CLOSE:
+            stmt = b"DEALLOCATE " + name if name is not None else b"DEALLOCATE ALL"
+            yield from self._exec_command(stmt)
+            return
+
+        self._check_connection_ok()
+
+        if self._pipeline:
+            cmd = partial(
+                self.pgconn.send_close_prepared,
+                name,
+            )
+            self._pipeline.command_queue.append(cmd)
+            self._pipeline.result_queue.append(None)
+            return
+
+        self.pgconn.send_close_prepared(name)
+
+        result = (yield from generators.execute(self.pgconn))[-1]
+        if result.status != COMMAND_OK:
+            if result.status == FATAL_ERROR:
+                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
+            else:
+                raise e.InterfaceError(
+                    f"unexpected result {pq.ExecStatus(result.status).name}"
+                    " from sending closing prepared statement message"
+                )
 
     def _check_connection_ok(self) -> None:
         if self.pgconn.status == OK:
@@ -552,8 +598,7 @@ class BaseConnection(Generic[Row]):
 
         yield from self._exec_command(b"ROLLBACK")
         self._prepared.clear()
-        for cmd in self._prepared.get_maintenance_commands():
-            yield from self._exec_command(cmd)
+        yield from self._prepared.maintain_gen(self)
 
         if self._pipeline:
             yield from self._pipeline._sync_gen()

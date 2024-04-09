@@ -145,6 +145,10 @@ class BaseTransaction(Generic[ConnectionType]):
         for command in self._get_rollback_commands():
             yield from self._conn._exec_command(command)
 
+        # Also clear the prepared statements cache.
+        self._conn._prepared.clear()
+        yield from self._conn._prepared.maintain_gen(self._conn)
+
         if isinstance(exc_val, Rollback):
             if not exc_val.transaction or exc_val.transaction is self:
                 return True  # Swallow the exception
@@ -190,10 +194,6 @@ class BaseTransaction(Generic[ConnectionType]):
         if self._outer_transaction:
             assert not self._conn._num_transactions
             yield b"ROLLBACK"
-
-        # Also clear the prepared statements cache.
-        if self._conn._prepared.clear():
-            yield from self._conn._prepared.get_maintenance_commands()
 
     def _push_savepoint(self) -> None:
         """

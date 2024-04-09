@@ -273,7 +273,14 @@ The `!Connection` class
 
         If more queries need to be prepared, old ones are deallocated__.
 
+        Specifying `!None` can be useful for middleware that don't support
+        deallocation; see :ref:`prepared statements notes <pgbouncer>`.
+
         .. __: https://www.postgresql.org/docs/current/sql-deallocate.html
+
+        .. versionchanged:: 3.2
+
+            Added support for the `!None` value.
 
 
     .. rubric:: Methods you can use to do something cool
