@@ -21,7 +21,7 @@ from ._pipeline import Pipeline, AsyncPipeline
 from .connection import Connection
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
-from ._capabilities import Capabilities
+from ._capabilities import Capabilities, capabilities
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
 from .raw_cursor import AsyncRawCursor, RawCursor
@@ -40,9 +40,6 @@ from .version import __version__ as __version__  # noqa: F401
 logger = logging.getLogger("psycopg")
 if logger.level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
-
-# A global object to check for capabilities.
-capabilities = Capabilities()
 
 # DBAPI compliance
 connect = Connection.connect
@@ -74,6 +71,8 @@ __all__ = [
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
+    "Capabilities",
+    "capabilities",
     "ClientCursor",
     "Column",
     "Connection",

@@ -100,3 +100,7 @@ class Capabilities:
             return f"the psycopg[binary] package version {version}"
         else:
             return "system libraries"
+
+
+# The object that will be exposed by the module.
+capabilities = Capabilities()

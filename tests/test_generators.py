@@ -174,8 +174,10 @@ def test_pipeline_communicate_abort(pgconn, pipeline_demo, pipeline, generators)
 
 @pytest.fixture
 def pipeline_uniqviol(pgconn):
-    if not psycopg.Pipeline.is_supported():
-        pytest.skip(psycopg.Pipeline._not_supported_reason())
+    try:
+        psycopg.capabilities.has_pipeline(check=True)
+    except psycopg.NotSupportedError as ex:
+        pytest.skip(str(ex))
     assert pgconn.pipeline_status == 0
     res = pgconn.exec_(b"DROP TABLE IF EXISTS pg_pipeline_uniqviol")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
