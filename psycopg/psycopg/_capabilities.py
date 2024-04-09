@@ -11,36 +11,49 @@ from .errors import NotSupportedError
 
 class Capabilities:
     """
-    Check if a feature is supported.
-
-    Every feature check is implemented by a check method `has_SOMETHING`.
-    All the methods return a boolean stating if the capability is supported.
-    If not supported and `check` is True, raise a `NotSupportedError` instead
-    explaining why the feature is not supported.
+    An object to check if a feature is supported by the libpq available on the client.
     """
 
     def has_encrypt_password(self, check: bool = False) -> bool:
-        """Check if the `~PGconn.encrypt_password()` method is implemented."""
-        return self._has_feature("PGconn.encrypt_password()", 100000, check=check)
+        """Check if the `PGconn.encrypt_password()` method is implemented.
+
+        The feature requires libpq 10.0 and greater.
+        """
+        return self._has_feature("pq.PGconn.encrypt_password()", 100000, check=check)
 
     def has_hostaddr(self, check: bool = False) -> bool:
-        """Check if the `~ConnectionInfo.hostaddr` attribute is implemented."""
-        return self._has_feature("Connection.pipeline()", 120000, check=check)
+        """Check if the `ConnectionInfo.hostaddr` attribute is implemented.
+
+        The feature requires libpq 12.0 and greater.
+        """
+        return self._has_feature("Connection.info.hostaddr", 120000, check=check)
 
     def has_pipeline(self, check: bool = False) -> bool:
-        """Check if the `~Connection.pipeline()` method is implemented."""
+        """Check if the :ref:`pipeline mode <pipeline-mode>` is supported.
+
+        The feature requires libpq 14.0 and greater.
+        """
         return self._has_feature("Connection.pipeline()", 140000, check=check)
 
-    def has_set_trace_flag(self, check: bool = False) -> bool:
-        """Check if the `~PGconn.set_trace_flag()` method is implemented."""
-        return self._has_feature("PGconn.set_trace_flag()", 140000, check=check)
+    def has_set_trace_flags(self, check: bool = False) -> bool:
+        """Check if the `pq.PGconn.set_trace_flags()` method is implemented.
+
+        The feature requires libpq 14.0 and greater.
+        """
+        return self._has_feature("PGconn.set_trace_flags()", 140000, check=check)
 
     def has_cancel_safe(self, check: bool = False) -> bool:
-        """Check if the `Connection.cancel_safe()` method is implemented."""
+        """Check if the `Connection.cancel_safe()` method is implemented.
+
+        The feature requires libpq 17.0 and greater.
+        """
         return self._has_feature("Connection.cancel_safe()", 170000, check=check)
 
     def has_pgbouncer_prepared(self, check: bool = False) -> bool:
-        """Check if prepared statements in PgBouncer are supported."""
+        """Check if prepared statements in PgBouncer are supported.
+
+        The feature requires libpq 17.0 and greater.
+        """
         return self._has_feature(
             "PgBouncer prepared statements compatibility", 170000, check=check
         )

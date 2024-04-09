@@ -287,6 +287,11 @@ The `!Connection` class
 
     .. automethod:: cancel_safe
 
+        .. note::
+
+            You can use the `~Capabilities.has_cancel_safe` capability to check
+            if `!cancel_safe()` will not fall back on the legacy implementation.
+
         .. warning::
 
             This method shouldn't be used as a `~signal.signal` handler.

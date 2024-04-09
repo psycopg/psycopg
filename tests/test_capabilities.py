@@ -6,10 +6,10 @@ from psycopg import pq, _cmodule
 from psycopg import capabilities, NotSupportedError
 
 caps = [
-    ("has_encrypt_password", "encrypt_password", 10),
-    ("has_hostaddr", "PGconn.hostaddr", 12),
+    ("has_encrypt_password", "pq.PGconn.encrypt_password()", 10),
+    ("has_hostaddr", "Connection.info.hostaddr", 12),
     ("has_pipeline", "Connection.pipeline()", 14),
-    ("has_set_trace_flag", "PGconn.set_trace_flag()", 14),
+    ("has_set_trace_flags", "PGconn.set_trace_flags()", 14),
     ("has_cancel_safe", "Connection.cancel_safe()", 17),
     ("has_pgbouncer_prepared", "PgBouncer prepared statements compatibility", 17),
 ]
