@@ -16,16 +16,18 @@ if sys.version_info >= (3, 9):
     from collections.abc import Callable
 else:
     import asyncio
-    from typing import Callable, Counter, Deque
+    from typing import Callable, Counter, Deque, TypeVar
     from functools import lru_cache
     from backports.zoneinfo import ZoneInfo
 
     cache = lru_cache(maxsize=None)
 
-    async def to_thread(func: Callable[..., Any], /, *args: Any, **kwargs: Any) -> None:
+    R = TypeVar("R")
+
+    async def to_thread(func: Callable[..., R], /, *args: Any, **kwargs: Any) -> R:
         loop = asyncio.get_running_loop()
         func_call = partial(func, *args, **kwargs)
-        await loop.run_in_executor(None, func_call)
+        return await loop.run_in_executor(None, func_call)
 
 
 if sys.version_info >= (3, 10):
