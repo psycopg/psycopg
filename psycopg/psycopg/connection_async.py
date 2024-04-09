@@ -36,6 +36,7 @@ if True:  # ASYNC
     import sys
     import asyncio
     from asyncio import Lock
+    from ._compat import to_thread
 else:
     from threading import Lock
 
@@ -277,6 +278,27 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             await self.wait(self._rollback_gen())
 
+    async def cancel_safe(self) -> None:
+        """Cancel the current operation on the connection.
+
+        This is a non-blocking version of `~Connection.cancel()` which
+        leverages a more secure and improved cancellation feature of the libpq,
+        which is only available from version 17.
+
+        If the underlying libpq is older than version 17, the method will fall
+        back to using the same implementation of `!cancel()`.
+        """
+        if self._should_cancel():
+            try:
+                await waiting.wait_conn_async(
+                    self._cancel_gen(), interval=_WAIT_INTERVAL
+                )
+            except e.NotSupportedError:
+                if True:  # ASYNC
+                    await to_thread(self.cancel)
+                else:
+                    self.cancel()
+
     @asynccontextmanager
     async def transaction(
         self, savepoint_name: Optional[str] = None, force_rollback: bool = False
@@ -384,7 +406,7 @@ class AsyncConnection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                self._try_cancel(self.pgconn)
+                await self.cancel_safe()
                 try:
                     await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

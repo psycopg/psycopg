@@ -261,6 +261,22 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self.wait(self._rollback_gen())
 
+    def cancel_safe(self) -> None:
+        """Cancel the current operation on the connection.
+
+        This is a non-blocking version of `~Connection.cancel()` which
+        leverages a more secure and improved cancellation feature of the libpq,
+        which is only available from version 17.
+
+        If the underlying libpq is older than version 17, the method will fall
+        back to using the same implementation of `!cancel()`.
+        """
+        if self._should_cancel():
+            try:
+                waiting.wait_conn(self._cancel_gen(), interval=_WAIT_INTERVAL)
+            except e.NotSupportedError:
+                self.cancel()
+
     @contextmanager
     def transaction(
         self, savepoint_name: Optional[str] = None, force_rollback: bool = False
@@ -366,7 +382,7 @@ class Connection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                self._try_cancel(self.pgconn)
+                self.cancel_safe()
                 try:
                     waiting.wait(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

@@ -277,6 +277,8 @@ class TestTPC:
         conn.tpc_prepare()
         with pytest.raises(psycopg.ProgrammingError):
             conn.cancel()
+        with pytest.raises(psycopg.ProgrammingError):
+            conn.cancel_safe()
 
     def test_tpc_recover_non_dbapi_connection(self, conn_cls, conn, dsn, tpc):
         conn.row_factory = psycopg.rows.dict_row

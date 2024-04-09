@@ -27,7 +27,7 @@ from typing import List, Optional, Union
 from . import pq
 from . import errors as e
 from .abc import Buffer, PipelineCommand, PQGen, PQGenConn
-from .pq.abc import PGconn, PGresult
+from .pq.abc import PGcancelConn, PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._cmodule import _psycopg
@@ -98,6 +98,23 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
 
     conn.nonblocking = 1
     return conn
+
+
+def _cancel(cancel_conn: PGcancelConn) -> PQGenConn[None]:
+    while True:
+        status = cancel_conn.poll()
+        if status == POLL_OK:
+            break
+        elif status == POLL_READING:
+            yield cancel_conn.socket, WAIT_R
+        elif status == POLL_WRITING:
+            yield cancel_conn.socket, WAIT_W
+        elif status == POLL_FAILED:
+            raise e.OperationalError(
+                f"cancellation failed: {cancel_conn.error_message}"
+            )
+        else:
+            raise e.InternalError(f"unexpected poll status: {status}")
 
 
 def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
@@ -357,6 +374,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 # Override functions with fast versions if available
 if _psycopg:
     connect = _psycopg.connect
+    cancel = _psycopg.cancel
     execute = _psycopg.execute
     send = _psycopg.send
     fetch_many = _psycopg.fetch_many
@@ -365,6 +383,7 @@ if _psycopg:
 
 else:
     connect = _connect
+    cancel = _cancel
     execute = _execute
     send = _send
     fetch_many = _fetch_many

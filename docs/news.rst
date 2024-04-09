@@ -35,6 +35,9 @@ Psycopg 3.2 (unreleased)
   in non-pipeline mode and not totally reliable (:ticket:`#604`).
   The `Cursor` now only preserves the results set of the last
   `~Cursor.execute()`, consistently with non-pipeline mode.
+- Add `~Connection.cancel_safe()` for encrypted and non-blocking cancellation
+  If possible, use such method internally upon `KeyboardInterrupt` and `Copy`
+  termination (:ticket:`#754`).
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 

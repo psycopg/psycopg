@@ -7,12 +7,12 @@ information. Will submit a bug.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 from psycopg import pq, abc, BaseConnection
 from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
-from psycopg.pq.abc import PGconn, PGresult
+from psycopg.pq.abc import PGcancelConn, PGconn, PGresult
 from psycopg._compat import Deque
 
 class Transformer(abc.AdaptContext):
@@ -52,6 +52,7 @@ class Transformer(abc.AdaptContext):
 
 # Generators
 def connect(conninfo: str, *, timeout: float = 0.0) -> abc.PQGenConn[PGconn]: ...
+def cancel(cancel_conn: PGcancelConn) -> abc.PQGenConn[None]: ...
 def execute(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
 def send(pgconn: PGconn) -> abc.PQGen[None]: ...
 def fetch_many(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...

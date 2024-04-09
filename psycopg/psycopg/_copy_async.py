@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 COPY_IN = pq.ExecStatus.COPY_IN
 COPY_OUT = pq.ExecStatus.COPY_OUT
 
+ACTIVE = pq.TransactionStatus.ACTIVE
+
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     """Manage an asynchronous :sql:`COPY` operation.
@@ -145,7 +147,20 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
             await self.writer.finish(exc)
             self._finished = True
         else:
-            await self.connection.wait(self._end_copy_out_gen(exc))
+            if not exc:
+                return
+
+            if self._pgconn.transaction_status != ACTIVE:
+                # The server has already finished to send copy data. The connection
+                # is already in a good state.
+                return
+
+            # Throw a cancel to the server, then consume the rest of the copy data
+            # (which might or might not have been already transferred entirely to
+            # the client, so we won't necessary see the exception associated with
+            # canceling).
+            await self.connection.cancel_safe()
+            await self.connection.wait(self._end_copy_out_gen())
 
 
 class AsyncWriter(ABC):

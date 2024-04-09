@@ -293,21 +293,29 @@ class BaseConnection(Generic[Row]):
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
-        # No-op if the connection is closed
+        if self._should_cancel():
+            self._try_cancel(self.pgconn)
+
+    def _should_cancel(self) -> bool:
+        """Check whether the current command should actually be cancelled when
+        invoking cancel*().
+        """
+        # cancel() is a no-op if the connection is closed;
         # this allows to use the method as callback handler without caring
         # about its life.
         if self.closed:
-            return
-
+            return False
         if self._tpc and self._tpc[1]:
             raise e.ProgrammingError(
                 "cancel() cannot be used with a prepared two-phase transaction"
             )
-
-        self._try_cancel(self.pgconn)
+        return True
 
     @classmethod
     def _try_cancel(cls, pgconn: "PGconn") -> None:
+        """Try to cancel the current command using a PGcancel object,
+        which is deprecated since libpq 17.
+        """
         try:
             # Can fail if the connection is closed
             c = pgconn.get_cancel()
@@ -315,6 +323,15 @@ class BaseConnection(Generic[Row]):
             logger.warning("couldn't try to cancel query: %s", ex)
         else:
             c.cancel()
+
+    def _cancel_gen(self) -> PQGenConn[None]:
+        try:
+            cancel_conn = self.pgconn.cancel_conn()
+        except e.OperationalError as ex:  # if the connection is closed
+            logger.warning("couldn't create a cancel connection: %s", ex)
+        else:
+            cancel_conn.start()
+            yield from generators.cancel(cancel_conn)
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """

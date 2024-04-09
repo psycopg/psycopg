@@ -821,6 +821,11 @@ async def test_cancel_closed(aconn):
     aconn.cancel()
 
 
+async def test_cancel_safe_closed(aconn):
+    await aconn.close()
+    await aconn.cancel_safe()
+
+
 async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
     got = ""
 
