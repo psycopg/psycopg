@@ -131,23 +131,17 @@ jobs:
 
   # }}}
 
-  macos:  # {{{
-    runs-on: macos-latest
+  macos-14:  # {{{
+    runs-on: macos-14
     if: true
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.7"}
-          - {impl: python, python: "3.8"}
-          - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
-          - {impl: c, python: "3.7"}
-          - {impl: c, python: "3.8"}
-          - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
@@ -160,6 +154,7 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       NOT_MARKERS: "timing proxy mypy"
+      PG_VERSION: "16"
 
     steps:
       - uses: actions/checkout@v4
@@ -169,10 +164,68 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@14
+        run: brew install postgresql@${PG_VERSION}
 
       - name: Start PostgreSQL service
-        run: brew services start postgresql
+        run: brew services start postgresql@${PG_VERSION}
+
+      - name: Find the libpq
+        if: ${{ matrix.impl == 'python' }}
+        run: |
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
+        run: |
+          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+          echo "PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Python packages
+        run: pip install $DEPS
+
+      - name: Run tests
+        run: ./tools/build/ci_test.sh
+
+
+  # }}}
+
+  macos-12:  # {{{
+    runs-on: macos-12
+    if: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {impl: python, python: "3.7"}
+          - {impl: python, python: "3.8"}
+          - {impl: python, python: "3.9"}
+          - {impl: c, python: "3.7"}
+          - {impl: c, python: "3.8"}
+          - {impl: c, python: "3.9"}
+
+    env:
+      PSYCOPG_IMPL: ${{ matrix.impl }}
+      DEPS: ./psycopg[test] ./psycopg_pool
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
+      # MacOS on GitHub Actions seems particularly slow.
+      # Don't run timing-based tests as they regularly fail.
+      # pproxy-based tests fail too, with the proxy not coming up in 2s.
+      NOT_MARKERS: "timing proxy mypy"
+      PG_VERSION: "16"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install PostgreSQL on the runner
+        run: brew install postgresql@${PG_VERSION}
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql@${PG_VERSION}
 
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}

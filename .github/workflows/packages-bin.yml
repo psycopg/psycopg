@@ -92,8 +92,57 @@ jobs:
 
   # }}}
 
-  macos:  # {{{
-    runs-on: macos-latest
+  macos-14:  # {{{
+    runs-on: macos-14
+    if: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64]
+        pyver: [cp310, cp311, cp312]
+
+    env:
+      PG_VERSION: "16"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Install PostgreSQL on the runner
+        run: brew install gnu-sed postgresql@${PG_VERSION}
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql@${PG_VERSION}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.5
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
+          CIBW_ARCHS_MACOS: ${{matrix.arch}}
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
+          CIBW_TEST_COMMAND: >-
+            pytest {project}/tests -m 'not slow and not flakey' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='dbname=postgres'
+            PATH="/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
+
+  # }}}
+
+  macos-12:  # {{{
+    runs-on: macos-12
     if: true
 
     strategy:
@@ -103,11 +152,20 @@ jobs:
         arch: [x86_64]
         pyver: [cp37, cp38, cp39, cp310, cp311, cp312]
 
+    env:
+      PG_VERSION: "16"
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Install PostgreSQL on the runner
+        run: brew install gnu-sed postgresql@${PG_VERSION}
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
@@ -115,18 +173,16 @@ jobs:
           package-dir: psycopg_binary
         env:
           CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
-          CIBW_ARCHS_MACOS: x86_64
-          CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
+          CIBW_ARCHS_MACOS: ${{matrix.arch}}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
-            PG_VERSION=16
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
             PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= $PG_VERSION"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= $PG_VERSION"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
 
       - uses: actions/upload-artifact@v3
         with:
