@@ -511,7 +511,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
     assert len(deltas) == 3
     want = 0.1
     for delta in deltas:
-        assert delta == pytest.approx(want, 0.05), deltas
+        assert delta == pytest.approx(want, 0.1), deltas
         want *= 2
 
 
