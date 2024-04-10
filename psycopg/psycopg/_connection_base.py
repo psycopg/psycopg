@@ -293,8 +293,16 @@ class BaseConnection(Generic[Row]):
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
-        if self._should_cancel():
-            self._try_cancel(self.pgconn)
+        if not self._should_cancel():
+            return
+
+        # Don't fail cancelling (which might happen on connection closing) to
+        # avoid clobbering eventual exceptions with ours, which is less important.
+        try:
+            c = self.pgconn.get_cancel()
+            c.cancel()
+        except Exception as ex:
+            logger.warning("couldn't try to cancel query: %s", str(ex))
 
     def _should_cancel(self) -> bool:
         """Check whether the current command should actually be cancelled when
@@ -310,19 +318,6 @@ class BaseConnection(Generic[Row]):
                 "cancel() cannot be used with a prepared two-phase transaction"
             )
         return True
-
-    @classmethod
-    def _try_cancel(cls, pgconn: "PGconn") -> None:
-        """Try to cancel the current command using a PGcancel object,
-        which is deprecated since libpq 17.
-        """
-        try:
-            # Can fail if the connection is closed
-            c = pgconn.get_cancel()
-        except Exception as ex:
-            logger.warning("couldn't try to cancel query: %s", ex)
-        else:
-            c.cancel()
 
     def _cancel_gen(self) -> PQGenConn[None]:
         try:
