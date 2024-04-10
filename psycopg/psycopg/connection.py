@@ -271,11 +271,17 @@ class Connection(BaseConnection[Row]):
         If the underlying libpq is older than version 17, the method will fall
         back to using the same implementation of `!cancel()`.
         """
-        if self._should_cancel():
+        if not self._should_cancel():
+            return
+
+        # TODO: replace with capabilities.has_safe_cancel after merging #782
+        if pq.__build_version__ >= 170000:
             try:
                 waiting.wait_conn(self._cancel_gen(), interval=_WAIT_INTERVAL)
-            except e.NotSupportedError:
-                self.cancel()
+            except Exception as ex:
+                logger.warning("couldn't try to cancel query: %s", str(ex))
+        else:
+            self.cancel()
 
     @contextmanager
     def transaction(

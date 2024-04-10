@@ -320,13 +320,9 @@ class BaseConnection(Generic[Row]):
         return True
 
     def _cancel_gen(self) -> PQGenConn[None]:
-        try:
-            cancel_conn = self.pgconn.cancel_conn()
-        except e.OperationalError as ex:  # if the connection is closed
-            logger.warning("couldn't create a cancel connection: %s", ex)
-        else:
-            cancel_conn.start()
-            yield from generators.cancel(cancel_conn)
+        cancel_conn = self.pgconn.cancel_conn()
+        cancel_conn.start()
+        yield from generators.cancel(cancel_conn)
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """
