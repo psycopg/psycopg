@@ -425,11 +425,12 @@ class ConnectionPool(Generic[CT], BasePool):
             waiting = list(self._waiting)
             self._waiting.clear()
             connections = list(self._pool)
-            self._pool.clear()
 
-        # Now that the flag _closed is set, getconn will fail immediately,
-        # putconn will just close the returned connection.
-        self._stop_workers(waiting, connections, timeout)
+            # Now that the flag _closed is set, getconn will fail immediately,
+            # putconn will just close the returned connection.
+            self._stop_workers(waiting, connections, timeout)
+
+            self._pool.clear()
 
     def _stop_workers(
         self,
