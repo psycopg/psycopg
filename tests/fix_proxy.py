@@ -4,6 +4,7 @@ import socket
 import logging
 import subprocess as sp
 from shutil import which
+from contextlib import contextmanager
 
 import pytest
 
@@ -14,10 +15,10 @@ from psycopg import conninfo
 def pytest_collection_modifyitems(items):
     for item in items:
         # TODO: there is a race condition on macOS and Windows in the CI:
-        # listen returns before really listening and tests based on 'deaf_port'
+        # listen returns before really listening and tests based on 'deaf_listen'
         # fail 50% of the times. Just add the 'proxy' mark on these tests
         # because they are already skipped in the CI.
-        if "proxy" in item.fixturenames or "deaf_port" in item.fixturenames:
+        if "proxy" in item.fixturenames:
             item.add_marker(pytest.mark.proxy)
 
 
@@ -35,16 +36,6 @@ def proxy(dsn):
     p = Proxy(dsn)
     yield p
     p.stop()
-
-
-@pytest.fixture
-def deaf_port(dsn):
-    """Return a port number with a socket open but not answering"""
-    with socket.socket(socket.AF_INET) as s:
-        s.bind(("", 0))
-        port = s.getsockname()[1]
-        s.listen(0)
-        yield port
 
 
 class Proxy:
@@ -109,6 +100,22 @@ class Proxy:
         self.proc.wait()
         logging.info("proxy stopped")
         self.proc = None
+
+    @contextmanager
+    def deaf_listen(self):
+        """Open the proxy port to listen, but without accepting a connection.
+
+        A connection attempt on the proxy `client_host` and `client_port` will
+        block. Useful to test connection timeouts.
+        """
+        if self.proc:
+            raise Exception("the proxy is already listening")
+
+        with socket.socket(socket.AF_INET) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((self.client_host, self.client_port))
+            s.listen(0)
+            yield s
 
     @classmethod
     def _get_random_port(cls):

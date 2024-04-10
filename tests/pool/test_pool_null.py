@@ -253,9 +253,11 @@ def test_reset_broken(dsn, caplog):
 
 @pytest.mark.slow
 @pytest.mark.skipif("ver(psycopg.__version__) < ver('3.0.8')")
-def test_no_queue_timeout(deaf_port):
-    with pool.NullConnectionPool(kwargs={"host": "localhost", "port": deaf_port}) as p:
-        with pytest.raises(pool.PoolTimeout):
+def test_no_queue_timeout(proxy):
+    with pool.NullConnectionPool(
+        kwargs={"host": proxy.client_host, "port": proxy.client_port}
+    ) as p:
+        with proxy.deaf_listen(), pytest.raises(pool.PoolTimeout):
             with p.connection(timeout=1):
                 pass
 
