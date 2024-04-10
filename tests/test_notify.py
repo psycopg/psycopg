@@ -68,6 +68,11 @@ def test_notify(conn_cls, conn, dsn):
             nconn.execute("notify foo, '2'")
             sleep(0.25)
             conn.execute("notify foo, '3'")
+            sleep(0.25)
+            worker = spawn(conn.execute, ("select pg_sleep(0.5)",))
+            sleep(0.25)
+            nconn.execute("notify foo, '4'")
+            gather(worker)
 
     def receiver():
         conn.set_autocommit(True)
@@ -76,14 +81,14 @@ def test_notify(conn_cls, conn, dsn):
         gen = conn.notifies()
         for n in gen:
             ns.append((n, time()))
-            if len(ns) == 3:
+            if len(ns) == 4:
                 break
 
     ns: list[tuple[Notify, float]] = []
     t0 = time()
     workers = [spawn(notifier), spawn(receiver)]
     gather(*workers)
-    assert len(ns) == 3
+    assert len(ns) == 4
 
     n, t1 = ns[0]
     assert n.pid == npid
@@ -102,6 +107,12 @@ def test_notify(conn_cls, conn, dsn):
     assert n.channel == "foo"
     assert n.payload == "3"
     assert t1 - t0 == pytest.approx(0.75, abs=0.05)
+
+    n, t1 = ns[3]
+    assert n.pid == npid
+    assert n.channel == "foo"
+    assert n.payload == "4"
+    assert t1 - t0 == pytest.approx(1.5, abs=0.05)
 
 
 @pytest.mark.slow

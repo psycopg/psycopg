@@ -321,6 +321,12 @@ The `!Connection` class
         any sessions in the database generates a :sql:`NOTIFY` on one of the
         listened channels.
 
+        .. note::
+            While this method can be used concurrently with another
+            thread that's actively using the connection, notifications
+            received during an operation will be emitted only after it
+            completes (this behavior is mandated by the protocol).
+
         .. versionchanged:: 3.2
 
             Added `!timeout` and `!stop_after` parameters.
