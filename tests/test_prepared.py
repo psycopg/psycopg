@@ -191,7 +191,7 @@ def test_deallocate_or_close(conn, caplog):
     conn.execute("select 1::bigint")
     conn.execute("select 1::text")
 
-    msgs = "\n".join(rec.message for rec in caplog.records)
+    msgs = "\n".join((rec.message for rec in caplog.records))
     if psycopg.pq.__build_version__ >= 170000:
         assert "PGconn.send_close_prepared" in msgs
         assert "DEALLOCATE" not in msgs
