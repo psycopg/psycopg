@@ -19,9 +19,9 @@ except ImportError:
     pass
 
 
-@pytest.fixture(params=[pool.ConnectionPool, pool.NullConnectionPool])
+@pytest.fixture(params=["ConnectionPool", "NullConnectionPool"])
 def pool_cls(request):
-    return request.param
+    return getattr(pool, request.param)
 
 
 def test_defaults(pool_cls, dsn):

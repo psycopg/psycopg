@@ -19,9 +19,9 @@ if True:  # ASYNC
     pytestmark = [pytest.mark.anyio]
 
 
-@pytest.fixture(params=[pool.AsyncConnectionPool, pool.AsyncNullConnectionPool])
+@pytest.fixture(params=["AsyncConnectionPool", "AsyncNullConnectionPool"])
 def pool_cls(request):
-    return request.param
+    return getattr(pool, request.param)
 
 
 async def test_defaults(pool_cls, dsn):

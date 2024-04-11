@@ -373,6 +373,8 @@ class RenameAsyncToSync(ast.NodeTransformer):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         self._fix_docstring(node.body)
+        if node.decorator_list:
+            self._fix_decorator(node.decorator_list)
         self.generic_visit(node)
         return node
 
@@ -385,6 +387,17 @@ class RenameAsyncToSync(ast.NodeTransformer):
         ):
             body[0].value.value = body[0].value.value.replace("Async", "")
             body[0].value.value = body[0].value.value.replace("(async", "(sync")
+
+    def _fix_decorator(self, decorator_list: list[ast.AST]) -> None:
+        for dec in decorator_list:
+            match dec:
+                case ast.Call(
+                    func=ast.Attribute(value=ast.Name(id="pytest"), attr="fixture"),
+                    keywords=[ast.keyword(arg="params", value=ast.List())],
+                ):
+                    elts = dec.keywords[0].value.elts
+                    for i, elt in enumerate(elts):
+                        elts[i] = self._visit_str(elt)
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         if isinstance(node.func, ast.Name) and node.func.id == "TypeVar":
@@ -402,6 +415,13 @@ class RenameAsyncToSync(ast.NodeTransformer):
             if not isinstance(kw.value.value, str):
                 continue
             kw.value.value = self._visit_type_string(kw.value.value)
+
+        return node
+
+    def _visit_str(self, node: ast.AST) -> ast.AST:
+        match node:
+            case ast.Constant(value=str()):
+                node.value = self._visit_type_string(node.value)
 
         return node
 
