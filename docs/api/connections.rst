@@ -303,7 +303,9 @@ The `!Connection` class
 
         .. warning::
 
-            The `!cancel()` method has a few shortcomings:
+            The `!cancel()` method is implemented using the :pq:`PQcancel`
+            function, which is deprecated since PostgreSQL 17, and has a few
+            shortcomings:
 
             - it is blocking even on async connections,
             - it `might use an insecure connection`__ even if the original
