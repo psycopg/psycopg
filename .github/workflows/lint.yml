@@ -37,7 +37,7 @@ jobs:
         run: mypy
 
       - name: Check for sync/async inconsistencies
-        run: ./tools/async_to_sync.py --check -B
+        run: ./tools/async_to_sync.py --check --all
 
       - name: Check spelling
         run: codespell

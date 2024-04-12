@@ -85,7 +85,7 @@ def main() -> int:
             PYVER,
         )
 
-    if not opt.convert_all:
+    if not opt.all:
         inputs, outputs = [], []
         for fpin in opt.inputs:
             fpout = fpin.parent / fpin.name.replace("_async", "")
@@ -95,7 +95,7 @@ def main() -> int:
             inputs.append(fpin)
             outputs.append(fpout)
         if not outputs:
-            logger.warning("all output files are up to date, nothing to do")
+            logger.info("all output files are up to date, nothing to do")
             return 0
 
     else:
@@ -561,7 +561,7 @@ def parse_cmdline() -> Namespace:
     )
     parser.add_argument(
         "-B",
-        "--convert-all",
+        "--all",
         action="store_true",
         help="process specified files without checking last modification times",
     )
