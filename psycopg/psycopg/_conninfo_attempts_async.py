@@ -40,7 +40,7 @@ async def conninfo_attempts_async(params: ConnMapping) -> list[ConnDict]:
         try:
             attempts.extend(await _resolve_hostnames(attempt))
         except OSError as ex:
-            logger.debug("failed to resolve host %r: %s", attempt.get("host"), str(ex))
+            logger.debug("failed to resolve host %r: %s", attempt.get("host"), ex)
             last_exc = ex
 
     if not attempts:

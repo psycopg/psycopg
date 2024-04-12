@@ -302,7 +302,7 @@ class BaseConnection(Generic[Row]):
             c = self.pgconn.get_cancel()
             c.cancel()
         except Exception as ex:
-            logger.warning("couldn't try to cancel query: %s", str(ex))
+            logger.warning("couldn't try to cancel query: %s", ex)
 
     def _should_cancel(self) -> bool:
         """Check whether the current command should actually be cancelled when

@@ -298,7 +298,7 @@ class AsyncConnection(BaseConnection[Row]):
                     self._cancel_gen(), interval=_WAIT_INTERVAL
                 )
             except Exception as ex:
-                logger.warning("couldn't try to cancel query: %s", str(ex))
+                logger.warning("couldn't try to cancel query: %s", ex)
 
         else:
             if True:  # ASYNC
