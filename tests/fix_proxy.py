@@ -51,11 +51,11 @@ class Proxy:
         # Get server params
         host = cdict.get("host") or os.environ.get("PGHOST", "")
         assert isinstance(host, str)
-        self.server_host = host if host and not host.startswith("/") else "localhost"
+        self.server_host = host if host and not host.startswith("/") else "127.0.0.1"
         self.server_port = cdict.get("port") or os.environ.get("PGPORT", "5432")
 
         # Get client params
-        self.client_host = "localhost"
+        self.client_host = "127.0.0.1"
         self.client_port = self._get_random_port()
 
         # Make a connection string to the proxy
