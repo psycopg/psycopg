@@ -29,6 +29,7 @@ from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
+from ._capabilities import capabilities
 from .server_cursor import AsyncServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
 
@@ -294,8 +295,7 @@ class AsyncConnection(BaseConnection[Row]):
         if not self._should_cancel():
             return
 
-        # TODO: replace with capabilities.has_safe_cancel after merging #782
-        if pq.__build_version__ >= 170000:
+        if capabilities.has_cancel_safe():
             try:
                 await waiting.wait_conn_async(
                     self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
