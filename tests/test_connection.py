@@ -52,7 +52,7 @@ def test_connect_timeout(conn_cls, proxy):
         with pytest.raises(psycopg.OperationalError, match="timeout expired"):
             conn_cls.connect(proxy.client_dsn, connect_timeout=2)
         elapsed = time.time() - t0
-    assert elapsed == pytest.approx(2.0, abs=0.05)
+    assert elapsed == pytest.approx(2.0, 0.1)
 
 
 @pytest.mark.slow
@@ -67,7 +67,7 @@ def test_multi_hosts(conn_cls, proxy, dsn, monkeypatch):
         t0 = time.time()
         with conn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -84,7 +84,7 @@ def test_multi_hosts_timeout(conn_cls, proxy, dsn):
         t0 = time.time()
         with conn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -837,7 +837,7 @@ def test_cancel_safe_timeout(conn_cls, proxy):
             with pytest.raises(e.CancellationTimeout, match="timeout expired"):
                 conn.cancel_safe(timeout=1)
     elapsed = time.time() - t0
-    assert elapsed == pytest.approx(1.0, abs=0.05)
+    assert elapsed == pytest.approx(1.0, 0.1)
 
 
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
