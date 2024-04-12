@@ -3,7 +3,7 @@ import re
 import pytest
 
 from psycopg import pq, _cmodule
-from psycopg import capabilities, NotSupportedError
+from psycopg import Capabilities, capabilities, NotSupportedError
 
 caps = [
     ("has_encrypt_password", "pq.PGconn.encrypt_password()", 10),
@@ -46,13 +46,13 @@ def test_build_or_import_msg(monkeypatch):
     monkeypatch.setattr(pq, "version", lambda: 140000)
     monkeypatch.setattr(pq, "__build_version__", 139999)
     with pytest.raises(NotSupportedError, match=r"built with libpq version 13\.99\.99"):
-        capabilities.has_pipeline(check=True)
+        Capabilities().has_pipeline(check=True)
 
     monkeypatch.setattr(pq, "version", lambda: 139999)
     with pytest.raises(
         NotSupportedError, match=r"client libpq version \(.*\) is 13\.99\.99"
     ):
-        capabilities.has_pipeline(check=True)
+        Capabilities().has_pipeline(check=True)
 
 
 def test_impl_build_error(monkeypatch):
@@ -65,4 +65,27 @@ def test_impl_build_error(monkeypatch):
     else:
         msg = "(imported from system libraries)"
         with pytest.raises(NotSupportedError, match=re.escape(msg)):
-            capabilities.has_pipeline(check=True)
+            Capabilities().has_pipeline(check=True)
+
+
+def test_caching(monkeypatch):
+
+    version = 150000
+
+    caps = Capabilities()
+    called = 0
+
+    def ver():
+        nonlocal called
+        called += 1
+        return version
+
+    monkeypatch.setattr(pq, "version", ver)
+    monkeypatch.setattr(pq, "__build_version__", version)
+
+    caps.has_pipeline()
+    assert called == 1
+    caps.has_pipeline()
+    assert called == 1
+    caps.has_hostaddr()
+    assert called == 2

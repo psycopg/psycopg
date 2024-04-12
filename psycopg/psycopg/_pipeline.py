@@ -42,7 +42,6 @@ logger = logging.getLogger("psycopg")
 class BasePipeline:
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
-    _is_supported: Optional[bool] = None
 
     def __init__(self, conn: "BaseConnection[Any]") -> None:
         self._conn = conn
@@ -63,13 +62,10 @@ class BasePipeline:
     @classmethod
     def is_supported(cls) -> bool:
         """Return `!True` if the psycopg libpq wrapper supports pipeline mode."""
-        if BasePipeline._is_supported is None:
-            BasePipeline._is_supported = capabilities.has_pipeline()
-        return BasePipeline._is_supported
+        return capabilities.has_pipeline()
 
     def _enter_gen(self) -> PQGen[None]:
-        if not self._is_supported:
-            capabilities.has_pipeline(check=True)
+        capabilities.has_pipeline(check=True)
         if self.level == 0:
             self.pgconn.enter_pipeline_mode()
         elif self.command_queue or self.pgconn.transaction_status == ACTIVE:

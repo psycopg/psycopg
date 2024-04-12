@@ -4,6 +4,8 @@ psycopg capabilities objects
 
 # Copyright (C) 2024 The Psycopg Team
 
+from typing import Dict
+
 from . import pq
 from . import _cmodule
 from .errors import NotSupportedError
@@ -13,6 +15,9 @@ class Capabilities:
     """
     An object to check if a feature is supported by the libpq available on the client.
     """
+
+    def __init__(self) -> None:
+        self._cache: Dict[str, str] = {}
 
     def has_encrypt_password(self, check: bool = False) -> bool:
         """Check if the `PGconn.encrypt_password()` method is implemented.
@@ -67,9 +72,27 @@ class Capabilities:
 
         The expletive messages, are left to the user.
         """
-        msg = ""
+        if feature in self._cache:
+            msg = self._cache[feature]
+        else:
+            msg = self._get_unsupported_message(feature, want_version)
+            self._cache[feature] = msg
+
+        if not msg:
+            return True
+        elif check:
+            raise NotSupportedError(msg)
+        else:
+            return False
+
+    def _get_unsupported_message(self, feature: str, want_version: int) -> str:
+        """
+        Return a descriptinve message to describe why a feature is unsupported.
+
+        Return an empty string if the feature is supported.
+        """
         if pq.version() < want_version:
-            msg = (
+            return (
                 f"the feature '{feature}' is not available:"
                 f" the client libpq version (imported from {self._libpq_source()})"
                 f" is {pq.version_pretty(pq.version())}; the feature"
@@ -78,20 +101,15 @@ class Capabilities:
             )
 
         elif pq.__build_version__ < want_version:
-            msg = (
+            return (
                 f"the feature '{feature}' is not available:"
                 f" you are using a psycopg[{pq.__impl__}] libpq wrapper built"
                 f" with libpq version {pq.version_pretty(pq.__build_version__)};"
                 " the feature requires libpq version"
                 f" {pq.version_pretty(want_version)} or newer"
             )
-
-        if not msg:
-            return True
-        elif check:
-            raise NotSupportedError(msg)
         else:
-            return False
+            return ""
 
     def _libpq_source(self) -> str:
         """Return a string reporting where the libpq comes from."""
