@@ -16,6 +16,7 @@ from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
 from .generators import pipeline_communicate, fetch_many, send
+from ._capabilities import capabilities
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
@@ -41,7 +42,6 @@ logger = logging.getLogger("psycopg")
 class BasePipeline:
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
-    _is_supported: Optional[bool] = None
 
     def __init__(self, conn: "BaseConnection[Any]") -> None:
         self._conn = conn
@@ -62,37 +62,10 @@ class BasePipeline:
     @classmethod
     def is_supported(cls) -> bool:
         """Return `!True` if the psycopg libpq wrapper supports pipeline mode."""
-        if BasePipeline._is_supported is None:
-            BasePipeline._is_supported = not cls._not_supported_reason()
-        return BasePipeline._is_supported
-
-    @classmethod
-    def _not_supported_reason(cls) -> str:
-        """Return the reason why the pipeline mode is not supported.
-
-        Return an empty string if pipeline mode is supported.
-        """
-        # Support only depends on the libpq functions available in the pq
-        # wrapper, not on the database version.
-        if pq.version() < 140000:
-            return (
-                f"libpq too old {pq.version()};"
-                " v14 or greater required for pipeline mode"
-            )
-
-        if pq.__build_version__ < 140000:
-            return (
-                f"libpq too old: module built for {pq.__build_version__};"
-                " v14 or greater required for pipeline mode"
-            )
-
-        return ""
+        return capabilities.has_pipeline()
 
     def _enter_gen(self) -> PQGen[None]:
-        if not self.is_supported():
-            raise e.NotSupportedError(
-                f"pipeline mode not supported: {self._not_supported_reason()}"
-            )
+        capabilities.has_pipeline(check=True)
         if self.level == 0:
             self.pgconn.enter_pipeline_mode()
         elif self.command_queue or self.pgconn.transaction_status == ACTIVE:

@@ -11,7 +11,7 @@ from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import Any, List, NoReturn, Tuple
 
-from .misc import find_libpq_full_path
+from .misc import find_libpq_full_path, version_pretty
 from ..errors import NotSupportedError
 
 libname = find_libpq_full_path()
@@ -194,8 +194,8 @@ PQhost.restype = c_char_p
 def not_supported_before(fname: str, pgversion: int) -> Any:
     def not_supported(*args: Any, **kwargs: Any) -> NoReturn:
         raise NotSupportedError(
-            f"{fname} requires libpq from PostgreSQL {pgversion} on the client;"
-            f" version {libpq_version // 10000} available instead"
+            f"{fname} requires libpq from PostgreSQL {version_pretty(pgversion)} on"
+            f" the client; version {version_pretty(libpq_version)} available instead"
         )
 
     return not_supported
@@ -206,7 +206,7 @@ if libpq_version >= 120000:
     PQhostaddr.argtypes = [PGconn_ptr]
     PQhostaddr.restype = c_char_p
 else:
-    PQhostaddr = not_supported_before("PQhostaddr", 12)
+    PQhostaddr = not_supported_before("PQhostaddr", 120000)
 
 PQport = pq.PQport
 PQport.argtypes = [PGconn_ptr]
@@ -320,8 +320,8 @@ if libpq_version >= 170000:
     PQclosePortal.restype = PGresult_ptr
 
 else:
-    PQclosePrepared = not_supported_before("PQclosePrepared", 17)
-    PQclosePortal = not_supported_before("PQclosePrepared", 17)
+    PQclosePrepared = not_supported_before("PQclosePrepared", 170000)
+    PQclosePortal = not_supported_before("PQclosePrepared", 170000)
 
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
@@ -526,8 +526,8 @@ if libpq_version >= 170000:
     PQsendClosePortal.restype = c_int
 
 else:
-    PQsendClosePrepared = not_supported_before("PQsendClosePrepared", 17)
-    PQsendClosePortal = not_supported_before("PQsendClosePortal", 17)
+    PQsendClosePrepared = not_supported_before("PQsendClosePrepared", 170000)
+    PQsendClosePortal = not_supported_before("PQsendClosePortal", 170000)
 
 PQgetResult = pq.PQgetResult
 PQgetResult.argtypes = [PGconn_ptr]
@@ -600,15 +600,15 @@ if libpq_version >= 170000:
     PQcancelFinish.restype = None
 
 else:
-    PQcancelCreate = not_supported_before("PQcancelCreate", 17)
-    PQcancelStart = not_supported_before("PQcancelStart", 17)
-    PQcancelBlocking = not_supported_before("PQcancelBlocking", 17)
-    PQcancelPoll = not_supported_before("PQcancelPoll", 17)
-    PQcancelStatus = not_supported_before("PQcancelStatus", 17)
-    PQcancelSocket = not_supported_before("PQcancelSocket", 17)
-    PQcancelErrorMessage = not_supported_before("PQcancelErrorMessage", 17)
-    PQcancelReset = not_supported_before("PQcancelReset", 17)
-    PQcancelFinish = not_supported_before("PQcancelFinish", 17)
+    PQcancelCreate = not_supported_before("PQcancelCreate", 170000)
+    PQcancelStart = not_supported_before("PQcancelStart", 170000)
+    PQcancelBlocking = not_supported_before("PQcancelBlocking", 170000)
+    PQcancelPoll = not_supported_before("PQcancelPoll", 170000)
+    PQcancelStatus = not_supported_before("PQcancelStatus", 170000)
+    PQcancelSocket = not_supported_before("PQcancelSocket", 170000)
+    PQcancelErrorMessage = not_supported_before("PQcancelErrorMessage", 170000)
+    PQcancelReset = not_supported_before("PQcancelReset", 170000)
+    PQcancelFinish = not_supported_before("PQcancelFinish", 170000)
 
 
 PQgetCancel = pq.PQgetCancel
@@ -658,7 +658,7 @@ if libpq_version >= 140000:
     PQsetTraceFlags.argtypes = [PGconn_ptr, c_int]
     PQsetTraceFlags.restype = None
 else:
-    PQsetTraceFlags = not_supported_before("PQsetTraceFlags", 14)
+    PQsetTraceFlags = not_supported_before("PQsetTraceFlags", 140000)
 
 PQuntrace = pq.PQuntrace
 PQuntrace.argtypes = [PGconn_ptr]
@@ -680,7 +680,7 @@ if libpq_version >= 100000:
     ]
     PQencryptPasswordConn.restype = POINTER(c_char)
 else:
-    PQencryptPasswordConn = not_supported_before("PQencryptPasswordConn", 10)
+    PQencryptPasswordConn = not_supported_before("PQencryptPasswordConn", 100000)
 
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
@@ -723,11 +723,11 @@ if libpq_version >= 140000:
     PQsendFlushRequest.restype = c_int
 
 else:
-    PQpipelineStatus = not_supported_before("PQpipelineStatus", 14)
-    PQenterPipelineMode = not_supported_before("PQenterPipelineMode", 14)
-    PQexitPipelineMode = not_supported_before("PQexitPipelineMode", 14)
-    PQpipelineSync = not_supported_before("PQpipelineSync", 14)
-    PQsendFlushRequest = not_supported_before("PQsendFlushRequest", 14)
+    PQpipelineStatus = not_supported_before("PQpipelineStatus", 140000)
+    PQenterPipelineMode = not_supported_before("PQenterPipelineMode", 140000)
+    PQexitPipelineMode = not_supported_before("PQexitPipelineMode", 140000)
+    PQpipelineSync = not_supported_before("PQpipelineSync", 140000)
+    PQsendFlushRequest = not_supported_before("PQsendFlushRequest", 140000)
 
 
 # 33.18. SSL Support

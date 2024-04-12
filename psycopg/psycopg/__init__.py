@@ -21,6 +21,7 @@ from ._pipeline import Pipeline, AsyncPipeline
 from .connection import Connection
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
+from ._capabilities import Capabilities, capabilities
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
 from .raw_cursor import AsyncRawCursor, RawCursor
@@ -70,6 +71,8 @@ __all__ = [
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
+    "Capabilities",
+    "capabilities",
     "ClientCursor",
     "Column",
     "Connection",

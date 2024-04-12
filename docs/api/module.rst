@@ -17,6 +17,25 @@ it also exposes the `module-level objects`__ required by the specifications.
    If you need an asynchronous connection use `AsyncConnection.connect`
    instead.
 
+.. data:: capabilities
+
+    An object that can be used to verify that the client library used by
+    psycopg implements a certain feature. For instance::
+
+        # Fail at import time if encrypted passwords is not available
+        import psycopg
+        psycopg.capabilities.has_encrypt_password(check=True)
+
+        # Verify at runtime if a feature can be used
+        if psycopg.capabilities.has_hostaddr():
+            print(conn.info.hostaddr)
+        else:
+            print("unknown connection hostadd")
+
+    :type: `Capabilities`
+
+    .. versionadded:: 3.2
+
 
 .. rubric:: Exceptions
 

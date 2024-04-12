@@ -175,3 +175,17 @@ def connection_summary(pgconn: PGconn) -> str:
     if sparts:
         sparts = f" ({sparts})"
     return f"[{status}]{sparts}"
+
+
+def version_pretty(version: int) -> str:
+    """
+    Return a pretty representation of a PostgreSQL version
+
+    For instance: 140002 -> 14.2, 90610 -> 9.6.10
+    """
+    version, patch = divmod(version, 100)
+    major, minor = divmod(version, 100)
+    if major >= 10 and minor == 0:
+        return f"{major}.{patch}"
+    else:
+        return f"{major}.{minor}.{patch}"

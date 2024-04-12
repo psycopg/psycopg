@@ -302,5 +302,5 @@ The fine prints
 
 The pipeline mode is available on any currently supported PostgreSQL version,
 but, in order to make use of it, the client must use a libpq from PostgreSQL
-14 or higher. You can use `Pipeline.is_supported()` to make sure your client
-has the right library.
+14 or higher. You can use the `~Capabilities.has_pipeline` capability to make
+sure your client has the right library.

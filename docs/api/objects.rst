@@ -74,8 +74,9 @@ Connection information
 
     .. autoattribute:: hostaddr
 
-        Only available if the libpq used is at least from PostgreSQL 12.
-        Raise `~psycopg.NotSupportedError` otherwise.
+        Only available if the libpq used is from PostgreSQL 12 or newer.
+        Raise `~psycopg.NotSupportedError` otherwise. You can use the
+        `~Capabilities.has_hostaddr` capability to check for support.
 
     .. autoattribute:: port
     .. autoattribute:: dbname
@@ -107,6 +108,58 @@ Connection information
             The `PostgreSQL supported encodings`__.
 
             .. __: https://www.postgresql.org/docs/current/multibyte.html
+
+
+.. _capabilities:
+
+Libpq capabilities information
+------------------------------
+
+.. autoclass:: Capabilities
+
+    An instance of this object is normally exposed by the module as the object
+    `psycopg.capabilities`.
+
+    Every feature check is implemented by an `!has_SOMETHING()` method. All
+    the methods return a boolean value stating if the capability is supported,
+    which can be used by a program to degrade gracefully::
+
+        if psycopg.capabilities.has_pipeline()
+            with conn.pipeline():
+                operations(conn)
+        else:
+            logger.warning("slower")
+            operations(conn)
+
+    If `check` is `!True`, and the capability is not supported, raise a
+    `NotSupportedError` instead of returning `!False`, explaining why the
+    feature is not supported. This allows to make a check at import time,
+    crashing early and with a clear description of the problem.
+
+        >>> import psycopg
+        >>> psycopg.capabilities.has_pipeline(check=True)
+        Traceback (most recent call last):
+          ...
+        psycopg.NotSupportedError: the feature 'Connection.pipeline()' is not available:
+            the client libpq version (imported from system libraries) is 13.4; the
+            feature requires libpq version 14.0 or newer
+
+    .. versionadded:: 3.2
+
+    .. automethod:: has_encrypt_password
+    .. automethod:: has_hostaddr
+    .. automethod:: has_pipeline
+    .. automethod:: has_set_trace_flags
+    .. automethod:: has_cancel_safe
+
+        .. note::
+
+            The `!cancel_safe()` method is implemented anyway, but it will use
+            the legacy :pq:`PQcancel` implementation.
+
+    .. automethod:: has_pgbouncer_prepared
+
+        .. seealso:: :ref:`pgbouncer`
 
 
 The description `Column` object

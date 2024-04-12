@@ -54,4 +54,4 @@ def test_pipeline_not_supported(conn):
         with conn.pipeline():
             pass
 
-    assert "too old" in str(exc.value)
+    assert "requires libpq version 14.0 or newer" in str(exc.value)
