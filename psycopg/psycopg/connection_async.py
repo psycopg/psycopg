@@ -282,15 +282,18 @@ class AsyncConnection(BaseConnection[Row]):
     async def cancel_safe(self, *, timeout: float = 30.0) -> None:
         """Cancel the current operation on the connection.
 
+        :param timeout: raise a `~errors.CancellationTimeout` if the
+            cancellation request does not succeed within `timeout` seconds.
+
+        Note that a successful cancel attempt on the client is not a guarantee
+        that the server will successfully manage to cancel the operation.
+
         This is a non-blocking version of `~Connection.cancel()` which
         leverages a more secure and improved cancellation feature of the libpq,
         which is only available from version 17.
 
         If the underlying libpq is older than version 17, the method will fall
         back to using the same implementation of `!cancel()`.
-
-        :raises ~psycopg.errors.CancellationTimeout: If the cancellation did
-            not terminate within specified timeout.
         """
         if not self._should_cancel():
             return
