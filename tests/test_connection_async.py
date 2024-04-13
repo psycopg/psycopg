@@ -831,6 +831,25 @@ async def test_cancel_safe_closed(aconn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+async def test_cancel_safe_error(aconn_cls, proxy, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    async with await aconn_cls.connect(proxy.client_dsn) as aconn:
+        proxy.stop()
+        with pytest.raises(
+            e.OperationalError, match=r"(Connection refused)|(connect\(\) failed)"
+        ) as ex:
+            await aconn.cancel_safe(timeout=2)
+        assert not caplog.records
+
+        # Note: testing an internal method. It's ok if this behaviour changes
+        await aconn._try_cancel(timeout=2.0)
+        assert len(caplog.records) == 1
+        caplog.records[0].message == str(ex.value)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
 @pytest.mark.libpq(">= 17")
 async def test_cancel_safe_timeout(aconn_cls, proxy):
     proxy.start()

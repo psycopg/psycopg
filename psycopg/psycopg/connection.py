@@ -282,14 +282,17 @@ class Connection(BaseConnection[Row]):
             return
 
         if capabilities.has_cancel_safe():
-            try:
-                waiting.wait_conn(
-                    self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
-                )
-            except Exception as ex:
-                logger.warning("couldn't try to cancel query: %s", ex)
+            waiting.wait_conn(
+                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
+            )
         else:
             self.cancel()
+
+    def _try_cancel(self, *, timeout: float = 30.0) -> None:
+        try:
+            self.cancel_safe(timeout=timeout)
+        except Exception as ex:
+            logger.warning("query cancellation failed: %s", ex)
 
     @contextmanager
     def transaction(
@@ -396,7 +399,7 @@ class Connection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                self.cancel_safe()
+                self._try_cancel(timeout=5.0)
                 try:
                     waiting.wait(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

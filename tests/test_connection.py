@@ -827,6 +827,25 @@ def test_cancel_safe_closed(conn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+def test_cancel_safe_error(conn_cls, proxy, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        proxy.stop()
+        with pytest.raises(
+            e.OperationalError, match="(Connection refused)|(connect\\(\\) failed)"
+        ) as ex:
+            conn.cancel_safe(timeout=2)
+        assert not caplog.records
+
+        # Note: testing an internal method. It's ok if this behaviour changes
+        conn._try_cancel(timeout=2.0)
+        assert len(caplog.records) == 1
+        caplog.records[0].message == str(ex.value)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
 @pytest.mark.libpq(">= 17")
 def test_cancel_safe_timeout(conn_cls, proxy):
     proxy.start()

@@ -299,18 +299,20 @@ class AsyncConnection(BaseConnection[Row]):
             return
 
         if capabilities.has_cancel_safe():
-            try:
-                await waiting.wait_conn_async(
-                    self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
-                )
-            except Exception as ex:
-                logger.warning("couldn't try to cancel query: %s", ex)
-
+            await waiting.wait_conn_async(
+                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
+            )
         else:
             if True:  # ASYNC
                 await to_thread(self.cancel)
             else:
                 self.cancel()
+
+    async def _try_cancel(self, *, timeout: float = 30.0) -> None:
+        try:
+            await self.cancel_safe(timeout=timeout)
+        except Exception as ex:
+            logger.warning("query cancellation failed: %s", ex)
 
     @asynccontextmanager
     async def transaction(
@@ -419,7 +421,7 @@ class AsyncConnection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                await self.cancel_safe()
+                await self._try_cancel(timeout=5.0)
                 try:
                     await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:
