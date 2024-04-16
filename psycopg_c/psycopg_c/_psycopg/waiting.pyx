@@ -84,7 +84,7 @@ retry_eintr:
     }
 
     if (PyErr_CheckSignals()) { goto finally; }
-    if (select_rv < 0) { goto finally; }  /* poll error */
+    if (select_rv < 0) { goto error; }  /* poll error */
 
     rv = 0;  /* success, maybe with timeout */
     if (select_rv >= 0) {
