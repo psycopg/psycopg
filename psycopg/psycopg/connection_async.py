@@ -308,7 +308,7 @@ class AsyncConnection(BaseConnection[Row]):
             else:
                 self.cancel()
 
-    async def _try_cancel(self, *, timeout: float = 30.0) -> None:
+    async def _try_cancel(self, *, timeout: float = 5.0) -> None:
         try:
             await self.cancel_safe(timeout=timeout)
         except Exception as ex:

@@ -159,7 +159,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
             # (which might or might not have been already transferred entirely to
             # the client, so we won't necessary see the exception associated with
             # canceling).
-            await self.connection._try_cancel(timeout=5.0)
+            await self.connection._try_cancel()
             await self.connection.wait(self._end_copy_out_gen())
 
 

@@ -288,7 +288,7 @@ class Connection(BaseConnection[Row]):
         else:
             self.cancel()
 
-    def _try_cancel(self, *, timeout: float = 30.0) -> None:
+    def _try_cancel(self, *, timeout: float = 5.0) -> None:
         try:
             self.cancel_safe(timeout=timeout)
         except Exception as ex:

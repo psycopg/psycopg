@@ -160,7 +160,7 @@ class Copy(BaseCopy["Connection[Any]"]):
             # (which might or might not have been already transferred entirely to
             # the client, so we won't necessary see the exception associated with
             # canceling).
-            self.connection._try_cancel(timeout=5.0)
+            self.connection._try_cancel()
             self.connection.wait(self._end_copy_out_gen())
 
 
