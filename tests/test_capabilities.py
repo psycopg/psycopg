@@ -16,6 +16,7 @@ caps = [
     ("has_pipeline", "Connection.pipeline()", 14),
     ("has_set_trace_flags", "PGconn.set_trace_flags()", 14),
     ("has_cancel_safe", "Connection.cancel_safe()", 17),
+    ("has_stream_chunked", "Cursor.stream() with 'size' parameter greater than 1", 17),
     ("has_pgbouncer_prepared", "PgBouncer prepared statements compatibility", 17),
 ]
 

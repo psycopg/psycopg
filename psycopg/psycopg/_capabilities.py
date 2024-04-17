@@ -54,6 +54,16 @@ class Capabilities:
         """
         return self._has_feature("Connection.cancel_safe()", 170000, check=check)
 
+    def has_stream_chunked(self, check: bool = False) -> bool:
+        """Check if `Cursor.stream()` can handle a `size` parameter value
+        greater than 1 to retrieve results by chunks.
+
+        The feature requires libpq 17.0 and greater.
+        """
+        return self._has_feature(
+            "Cursor.stream() with 'size' parameter greater than 1", 170000, check=check
+        )
+
     def has_pgbouncer_prepared(self, check: bool = False) -> bool:
         """Check if prepared statements in PgBouncer are supported.
 

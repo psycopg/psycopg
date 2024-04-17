@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
 SINGLE_TUPLE = pq.ExecStatus.SINGLE_TUPLE
+TUPLES_CHUNK = pq.ExecStatus.TUPLES_CHUNK
 
 T = TypeVar("T", covariant=True)
 
@@ -265,6 +266,7 @@ def _get_nfields(res: PGresult) -> int | None:
     if (
         res.status == TUPLES_OK
         or res.status == SINGLE_TUPLE
+        or res.status == TUPLES_CHUNK
         # "describe" in named cursors
         or (res.status == COMMAND_OK and nfields)
     ):

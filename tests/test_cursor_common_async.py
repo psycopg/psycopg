@@ -695,6 +695,35 @@ async def test_stream_no_row(aconn):
     assert recs == []
 
 
+async def test_stream_chunked_invalid_size(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(ValueError, match=r"size must be >= 1"):
+        await anext(cur.stream("select 1", size=0))
+
+
+@pytest.mark.libpq("< 17")
+async def test_stream_chunked_not_supported(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(psycopg.NotSupportedError):
+        await anext(cur.stream("select generate_series(1, 4)", size=2))
+
+
+@pytest.mark.libpq(">= 17")
+async def test_stream_chunked(aconn):
+    cur = aconn.cursor()
+    recs = await alist(cur.stream("select generate_series(1, 5) as a", size=2))
+    assert recs == [(1,), (2,), (3,), (4,), (5,)]
+
+
+@pytest.mark.libpq(">= 17")
+async def test_stream_chunked_row_factory(aconn):
+    cur = aconn.cursor(row_factory=rows.scalar_row)
+    it = cur.stream("select generate_series(1, 5) as a", size=2)
+    for i in range(1, 6):
+        assert await anext(it) == i
+        assert [c.name for c in cur.description] == ["a"]
+
+
 @pytest.mark.crdb_skip("no col query")
 async def test_stream_no_col(aconn):
     cur = aconn.cursor()

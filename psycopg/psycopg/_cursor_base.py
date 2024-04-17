@@ -15,6 +15,7 @@ from . import adapt
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowMaker
+from ._capabilities import capabilities
 from ._column import Column
 from .pq.misc import connection_summary
 from ._queries import PostgresQuery, PostgresClientQuery
@@ -36,6 +37,7 @@ COPY_IN = pq.ExecStatus.COPY_IN
 COPY_BOTH = pq.ExecStatus.COPY_BOTH
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 SINGLE_TUPLE = pq.ExecStatus.SINGLE_TUPLE
+TUPLES_CHUNK = pq.ExecStatus.TUPLES_CHUNK
 PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
 
 ACTIVE = pq.TransactionStatus.ACTIVE
@@ -116,7 +118,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # the query said we got tuples (mostly to handle the super useful
         # query "SELECT ;"
         if res and (
-            res.nfields or res.status == TUPLES_OK or res.status == SINGLE_TUPLE
+            res.nfields
+            or res.status == TUPLES_OK
+            or res.status == SINGLE_TUPLE
+            or res.status == TUPLES_CHUNK
         ):
             return [Column(self, i) for i in range(res.nfields)]
         else:
@@ -314,12 +319,19 @@ class BaseCursor(Generic[ConnectionType, Row]):
         params: Params | None = None,
         *,
         binary: bool | None = None,
+        size: int,
     ) -> PQGen[None]:
         """Generator to send the query for `Cursor.stream()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
         self._execute_send(pgq, binary=binary, force_extended=True)
-        self._pgconn.set_single_row_mode()
+        if size < 1:
+            raise ValueError("size must be >= 1")
+        elif size == 1:
+            self._pgconn.set_single_row_mode()
+        else:
+            capabilities.has_stream_chunked(check=True)
+            self._pgconn.set_chunked_rows_mode(size)
         self._last_query = query
         yield from send(self._pgconn)
 
@@ -329,7 +341,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             return None
 
         status = res.status
-        if status == SINGLE_TUPLE:
+        if status == SINGLE_TUPLE or status == TUPLES_CHUNK:
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
             if first:

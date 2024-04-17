@@ -180,7 +180,14 @@ The `!Cursor` class
         .. __: https://materialize.com/docs/sql/subscribe/
         .. __: https://www.cockroachlabs.com/docs/stable/changefeed-for.html
 
-        The parameters are the same of `execute()`.
+        The parameters are the same of `execute()`, except for `size` which
+        can be used to set results retrieval by chunks instead of row-by-row.
+
+        .. note::
+
+            This `size` parameter is only available from libpq 17, you can use
+            the `~Capabilities.has_stream_chunked` capability to check if this
+            is supported.
 
         .. warning::
 

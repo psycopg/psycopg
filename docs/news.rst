@@ -43,6 +43,8 @@ Psycopg 3.2 (unreleased)
   termination (:ticket:`#754`).
 - Add support for libpq function to retrieve results in chunks introduced in
   libpq v17 (:ticket:`#793`).
+- Add a `size` parameter to `~Cursor.stream()` to enable results retrieval by
+  chunks instead of row-by-row (:ticket:`#794`).
 - Add support for libpq function to change role passwords introduced in
   libpq v17 (:ticket:`#818`).
 

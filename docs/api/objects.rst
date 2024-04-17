@@ -157,6 +157,7 @@ Libpq capabilities information
             The `!cancel_safe()` method is implemented anyway, but it will use
             the legacy :pq:`PQcancel` implementation.
 
+    .. automethod:: has_stream_chunked
     .. automethod:: has_pgbouncer_prepared
 
         .. seealso:: :ref:`pgbouncer`
