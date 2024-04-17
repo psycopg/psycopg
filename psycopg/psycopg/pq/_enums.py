@@ -121,6 +121,11 @@ class ExecStatus(IntEnum):
     status code until the end of the current pipeline, at which point it will
     return PGRES_PIPELINE_SYNC and normal processing can resume.
     """
+    TUPLES_CHUNK = auto()
+    """The PGresult contains several result tuples from the current command.
+
+    This status occurs only when chunked mode has been selected for the query.
+    """
 
 
 class TransactionStatus(IntEnum):

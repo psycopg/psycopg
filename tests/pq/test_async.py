@@ -106,6 +106,34 @@ def test_single_row_mode(pgconn):
     assert res.ntuples == 0
 
 
+@pytest.mark.libpq(">= 17")
+def test_chunked_rows_mode(pgconn):
+    pgconn.send_query(b"select generate_series(1,7)")
+    pgconn.set_chunked_rows_mode(3)
+
+    results = execute_wait(pgconn)
+    assert len(results) == 4
+
+    res = results[0]
+    assert res.status == pq.ExecStatus.TUPLES_CHUNK
+    assert res.ntuples == 3
+    assert [res.get_value(i, 0) for i in range(3)] == [b"1", b"2", b"3"]
+
+    res = results[1]
+    assert res.status == pq.ExecStatus.TUPLES_CHUNK
+    assert res.ntuples == 3
+    assert [res.get_value(i, 0) for i in range(3)] == [b"4", b"5", b"6"]
+
+    res = results[2]
+    assert res.status == pq.ExecStatus.TUPLES_CHUNK
+    assert res.ntuples == 1
+    assert res.get_value(0, 0) == b"7"
+
+    res = results[3]
+    assert res.status == pq.ExecStatus.TUPLES_OK
+    assert res.ntuples == 0
+
+
 def test_send_query_params(pgconn):
     pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
     (res,) = execute_wait(pgconn)

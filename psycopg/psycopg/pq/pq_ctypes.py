@@ -592,6 +592,10 @@ class PGconn:
         if not impl.PQsetSingleRowMode(self._pgconn_ptr):
             raise e.OperationalError("setting single row mode failed")
 
+    def set_chunked_rows_mode(self, size: int) -> None:
+        if not impl.PQsetChunkedRowsMode(self._pgconn_ptr, size):
+            raise e.OperationalError("setting chunked rows mode failed")
+
     def cancel_conn(self) -> "PGcancelConn":
         """
         Create a connection over which a cancel request can be sent.

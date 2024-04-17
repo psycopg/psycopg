@@ -554,11 +554,17 @@ PQflush.argtypes = [PGconn_ptr]
 PQflush.restype = c_int
 
 
-# 33.5. Retrieving Query Results Row-by-Row
+# 32.6. Retrieving Query Results in Chunks
 PQsetSingleRowMode = pq.PQsetSingleRowMode
 PQsetSingleRowMode.argtypes = [PGconn_ptr]
 PQsetSingleRowMode.restype = c_int
 
+if libpq_version >= 170000:
+    PQsetChunkedRowsMode = pq.PQsetChunkedRowsMode
+    PQsetChunkedRowsMode.argtypes = [PGconn_ptr, c_int]
+    PQsetChunkedRowsMode.restype = c_int
+else:
+    PQsetChunkedRowsMode = not_supported_before("PQsetChunkedRowsMode", 170000)
 
 # 33.6. Canceling Queries in Progress
 

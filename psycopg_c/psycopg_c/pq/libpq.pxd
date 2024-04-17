@@ -108,6 +108,7 @@ cdef extern from "libpq-fe.h":
         PGRES_SINGLE_TUPLE
         PGRES_PIPELINE_SYNC
         PGRES_PIPELINE_ABORT
+        PGRES_TUPLES_CHUNK
 
     # 33.1. Database Connection Control Functions
     PGconn *PQconnectdb(const char *conninfo)
@@ -251,8 +252,9 @@ cdef extern from "libpq-fe.h":
     int PQisnonblocking(const PGconn *conn)
     int PQflush(PGconn *conn) nogil
 
-    # 33.5. Retrieving Query Results Row-by-Row
+    # 32.6. Retrieving Query Results in Chunks
     int PQsetSingleRowMode(PGconn *conn)
+    int PQsetChunkedRowsMode(PGconn *conn, int chunkSize)
 
     # 34.7. Canceling Queries in Progress
     PGcancelConn *PQcancelCreate(PGconn *conn)
@@ -353,5 +355,6 @@ typedef struct pg_cancel_conn PGcancelConn;
 #define PQcancelErrorMessage(cancelConn) NULL
 #define PQcancelReset(cancelConn) 0
 #define PQcancelFinish(cancelConn) 0
+#define PQsetChunkedRowsMode(conn, chunkSize) 0
 #endif
 """

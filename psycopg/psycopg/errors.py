@@ -171,6 +171,9 @@ class FinishedPGconn:
     def set_single_row_mode(self) -> NoReturn:
         self._raise()
 
+    def set_chunked_rows_mode(self, size: int) -> NoReturn:
+        self._raise()
+
     def cancel_conn(self) -> NoReturn:
         self._raise()
 

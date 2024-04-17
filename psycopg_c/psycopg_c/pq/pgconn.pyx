@@ -499,6 +499,10 @@ cdef class PGconn:
         if not libpq.PQsetSingleRowMode(self._pgconn_ptr):
             raise e.OperationalError("setting single row mode failed")
 
+    def set_chunked_rows_mode(self, size: int) -> None:
+        if not libpq.PQsetChunkedRowsMode(self._pgconn_ptr, size):
+            raise e.OperationalError("setting chunked rows mode failed")
+
     def cancel_conn(self) -> PGcancelConn:
         _check_supported("PQcancelCreate", 170000)
         cdef libpq.PGcancelConn *ptr = libpq.PQcancelCreate(self._pgconn_ptr)

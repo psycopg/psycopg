@@ -40,6 +40,8 @@ Psycopg 3.2 (unreleased)
 - Add `~Connection.cancel_safe()` for encrypted and non-blocking cancellation
   If possible, use such method internally upon `KeyboardInterrupt` and `Copy`
   termination (:ticket:`#754`).
+- Add support for libpq function to retrieve results in chunks introduced in
+  libpq v17 (:ticket:`#793`).
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 

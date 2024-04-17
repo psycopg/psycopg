@@ -387,6 +387,15 @@ def test_set_single_row_mode(pgconn):
     pgconn.set_single_row_mode()
 
 
+@pytest.mark.libpq(">= 17")
+def test_set_chunked_rows_mode(pgconn):
+    with pytest.raises(psycopg.OperationalError):
+        pgconn.set_chunked_rows_mode(42)
+
+    pgconn.send_query(b"select 1")
+    pgconn.set_chunked_rows_mode(42)
+
+
 @contextlib.contextmanager
 def cancellable_query(pgconn: PGconn) -> Iterator[None]:
     dsn = b" ".join(b"%s='%s'" % (i.keyword, i.val) for i in pgconn.info if i.val)
