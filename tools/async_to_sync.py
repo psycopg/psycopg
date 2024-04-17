@@ -111,7 +111,7 @@ def main() -> int:
             executor.map(convert, inputs, outputs)
 
     if opt.check:
-        return check([str(o) for o in outputs])
+        return check(outputs)
 
     return 0
 
@@ -131,9 +131,9 @@ def convert(fpin: Path, fpout: Path) -> None:
     sp.check_call(["black", "-q", str(fpout)])
 
 
-def check(outputs: list[str]) -> int:
+def check(outputs: list[Path]) -> int:
     try:
-        sp.check_call(["git", "diff", "--exit-code"] + outputs)
+        sp.check_call(["git", "diff", "--exit-code"] + [str(o) for o in outputs])
     except sp.CalledProcessError:
         logger.error("sync and async files... out of sync!")
         return 1
@@ -154,6 +154,21 @@ def check(outputs: list[str]) -> int:
             ", ".join(unk_conv),
         )
         return 1
+
+    gitattributes = PROJECT_DIR / ".gitattributes"
+    relative_outputs = [str(o.relative_to(PROJECT_DIR)) for o in outputs]
+    linguist_generated = [
+        line.rsplit(None, 1)[0]
+        for line in gitattributes.read_text().splitlines()
+        if "linguist-generated=true" in line
+    ]
+    if missing_generated := set(relative_outputs) - set(linguist_generated):
+        logger.error(
+            "some files converted by %s are not marked as generated in '%s': %s",
+            SCRIPT_NAME,
+            gitattributes.relative_to(PROJECT_DIR),
+            sorted(missing_generated),
+        )
 
     return 0
 
