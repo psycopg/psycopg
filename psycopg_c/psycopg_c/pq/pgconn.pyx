@@ -26,6 +26,7 @@ import sys
 
 from psycopg.pq import Format as PqFormat, Trace, version_pretty
 from psycopg.pq.misc import PGnotify, connection_summary
+from psycopg.pq._enums import ExecStatus
 from psycopg_c.pq cimport PQBuffer
 
 cdef object _check_supported(fname, int pgversion):
@@ -592,6 +593,18 @@ cdef class PGconn:
         rv = bytes(out)
         libpq.PQfreemem(out)
         return rv
+
+    def change_password(
+        self, const char *user, const char *passwd
+    ) -> None:
+        _check_supported("PQchangePassword", 170000)
+
+        cdef libpq.PGresult *res
+        res = libpq.PQchangePassword(self._pgconn_ptr, user, passwd)
+        if libpq.PQresultStatus(res) != ExecStatus.COMMAND_OK:
+            raise e.OperationalError(
+                f"password encryption failed: {error_message(self)}"
+            )
 
     def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(

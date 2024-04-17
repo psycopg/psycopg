@@ -288,6 +288,7 @@ cdef extern from "libpq-fe.h":
     void PQconninfoFree(PQconninfoOption *connOptions)
     char *PQencryptPasswordConn(
         PGconn *conn, const char *passwd, const char *user, const char *algorithm);
+    PGresult *PQchangePassword(PGconn *conn, const char *user, const char *passwd);
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs)
     int PQlibVersion()
@@ -342,6 +343,7 @@ typedef enum {
 
 #if PG_VERSION_NUM < 170000
 typedef struct pg_cancel_conn PGcancelConn;
+#define PQchangePassword(conn, user, passwd) NULL
 #define PQclosePrepared(conn, name) NULL
 #define PQclosePortal(conn, name) NULL
 #define PQsendClosePrepared(conn, name) 0

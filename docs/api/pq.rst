@@ -99,6 +99,8 @@ Objects wrapping libpq structures and functions
            >>> encrypted = conn.pgconn.encrypt_password(password.encode(enc), rolename.encode(enc))
            b'SCRAM-SHA-256$4096:...
 
+    .. .. automethod:: change_password FIXME: needs libpq 17's docs
+
     .. automethod:: trace
     .. automethod:: set_trace_flags
     .. automethod:: untrace
