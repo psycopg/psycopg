@@ -204,6 +204,9 @@ class FinishedPGconn:
     def encrypt_password(self, *args: Any) -> NoReturn:
         self._raise()
 
+    def change_password(self, *args: Any) -> NoReturn:
+        self._raise()
+
     def make_empty_result(self, *args: Any) -> NoReturn:
         self._raise()
 

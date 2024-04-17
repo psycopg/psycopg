@@ -628,6 +628,42 @@ def test_trace_nonlinux(pgconn):
         pgconn.trace(1)
 
 
+@pytest.mark.libpq(">= 17")
+def test_change_password_error(pgconn):
+    with pytest.raises(psycopg.OperationalError, match='role "ashesh" does not exist'):
+        pgconn.change_password(b"ashesh", b"psycopg")
+
+
+@pytest.fixture
+def role(pgconn: PGconn) -> Iterator[tuple[bytes, bytes]]:
+    user, passwd = "ashesh", "psycopg2"
+    r = pgconn.exec_(f"CREATE USER {user} LOGIN PASSWORD '{passwd}'".encode())
+    if r.status != pq.ExecStatus.COMMAND_OK:
+        pytest.skip(f"cannot create a PostgreSQL role: {r.error_message.decode()}")
+    yield user.encode(), passwd.encode()
+    r = pgconn.exec_(f"DROP USER {user}".encode())
+    if r.status != pq.ExecStatus.COMMAND_OK:
+        pytest.fail(f"failed to drop {user} role: {r.error_message.decode()}")
+
+
+@pytest.mark.libpq(">= 17")
+def test_change_password(pgconn, dsn, role):
+    user, passwd = role
+    conninfo = {e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val}
+    conninfo |= {
+        b"dbname": b"postgres",
+        b"user": user,
+        b"password": passwd,
+    }
+    conn = pq.PGconn.connect(b" ".join(b"%s='%s'" % item for item in conninfo.items()))
+    assert conn.status == pq.ConnStatus.OK, conn.error_message
+
+    pgconn.change_password(user, b"psycopg")
+    conninfo[b"password"] = b"psycopg"
+    conn = pq.PGconn.connect(b" ".join(b"%s='%s'" % item for item in conninfo.items()))
+    assert conn.status == pq.ConnStatus.OK, conn.error_message
+
+
 @pytest.mark.libpq(">= 10")
 def test_encrypt_password(pgconn):
     enc = pgconn.encrypt_password(b"psycopg2", b"ashesh", b"md5")

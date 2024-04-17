@@ -688,6 +688,17 @@ if libpq_version >= 100000:
 else:
     PQencryptPasswordConn = not_supported_before("PQencryptPasswordConn", 100000)
 
+if libpq_version >= 170000:
+    PQchangePassword = pq.PQchangePassword
+    PQchangePassword.argtypes = [
+        PGconn_ptr,
+        c_char_p,
+        c_char_p,
+    ]
+    PQchangePassword.restype = PGresult_ptr
+else:
+    PQchangePassword = not_supported_before("PQchangePassword", 170000)
+
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr

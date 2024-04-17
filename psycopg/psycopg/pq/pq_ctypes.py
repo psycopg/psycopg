@@ -704,6 +704,20 @@ class PGconn:
         impl.PQfreemem(out)
         return rv
 
+    def change_password(self, user: bytes, passwd: bytes) -> None:
+        """
+        Change a PostgreSQL password.
+
+        :raises OperationalError: if the command to change password failed.
+
+        See :pq:`PQchangePassword` for details.
+        """
+        res = impl.PQchangePassword(self._pgconn_ptr, user, passwd)
+        if impl.PQresultStatus(res) != ExecStatus.COMMAND_OK:
+            raise e.OperationalError(
+                f"failed to change password change command: {error_message(self)}"
+            )
+
     def make_empty_result(self, exec_status: int) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self._pgconn_ptr, exec_status)
         if not rv:
