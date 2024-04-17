@@ -401,6 +401,15 @@ class ConnectionTimeout(OperationalError):
     """
 
 
+class CancellationTimeout(OperationalError):
+    """
+    Exception raised on timeout of connection's
+    `~psycopg.Connection.cancel_safe()` method.
+
+    Subclass of `~psycopg.OperationalError`.
+    """
+
+
 class PipelineAborted(OperationalError):
     """
     Raised when a operation fails because the current pipeline is in aborted state.

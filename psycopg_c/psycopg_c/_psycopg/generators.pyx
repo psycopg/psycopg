@@ -81,10 +81,17 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     return conn
 
 
-def cancel(pq.PGcancelConn cancel_conn) -> PQGenConn[None]:
+def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[None]:
     cdef libpq.PGcancelConn *pgcancelconn_ptr = cancel_conn.pgcancelconn_ptr
     cdef int status
+    cdef float deadline = 0.0
+
+    if timeout:
+        deadline = monotonic() + timeout
+
     while True:
+        if deadline and monotonic() > deadline:
+            raise e.CancellationTimeout("cancellation timeout expired")
         with nogil:
             status = libpq.PQcancelPoll(pgcancelconn_ptr)
         if status == libpq.PGRES_POLLING_OK:

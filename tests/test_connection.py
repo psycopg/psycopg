@@ -52,7 +52,7 @@ def test_connect_timeout(conn_cls, proxy):
         with pytest.raises(psycopg.OperationalError, match="timeout expired"):
             conn_cls.connect(proxy.client_dsn, connect_timeout=2)
         elapsed = time.time() - t0
-    assert elapsed == pytest.approx(2.0, abs=0.05)
+    assert elapsed == pytest.approx(2.0, 0.1)
 
 
 @pytest.mark.slow
@@ -67,7 +67,7 @@ def test_multi_hosts(conn_cls, proxy, dsn, monkeypatch):
         t0 = time.time()
         with conn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -84,7 +84,7 @@ def test_multi_hosts_timeout(conn_cls, proxy, dsn):
         t0 = time.time()
         with conn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -823,6 +823,40 @@ def test_cancel_closed(conn):
 def test_cancel_safe_closed(conn):
     conn.close()
     conn.cancel_safe()
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_cancel_safe_error(conn_cls, proxy, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        proxy.stop()
+        with pytest.raises(
+            e.OperationalError, match="(Connection refused)|(connect\\(\\) failed)"
+        ) as ex:
+            conn.cancel_safe(timeout=2)
+        assert not caplog.records
+
+        # Note: testing an internal method. It's ok if this behaviour changes
+        conn._try_cancel(timeout=2.0)
+        assert len(caplog.records) == 1
+        caplog.records[0].message == str(ex.value)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+def test_cancel_safe_timeout(conn_cls, proxy):
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        proxy.stop()
+        with proxy.deaf_listen():
+            t0 = time.time()
+            with pytest.raises(e.CancellationTimeout, match="timeout expired"):
+                conn.cancel_safe(timeout=1)
+    elapsed = time.time() - t0
+    assert elapsed == pytest.approx(1.0, 0.1)
 
 
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):

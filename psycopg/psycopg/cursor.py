@@ -159,7 +159,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 if self._pgconn.transaction_status == ACTIVE:
                     # Try to cancel the query, then consume the results
                     # already received.
-                    self._conn.cancel_safe()
+                    self._conn._try_cancel()
                     try:
                         while self._conn.wait(self._stream_fetchone_gen(first=False)):
                             pass

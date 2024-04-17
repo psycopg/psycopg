@@ -32,6 +32,7 @@ from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import Transaction
 from .cursor import Cursor
+from ._capabilities import capabilities
 from .server_cursor import ServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
 
@@ -261,8 +262,14 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self.wait(self._rollback_gen())
 
-    def cancel_safe(self) -> None:
+    def cancel_safe(self, *, timeout: float = 30.0) -> None:
         """Cancel the current operation on the connection.
+
+        :param timeout: raise a `~errors.CancellationTimeout` if the
+            cancellation request does not succeed within `timeout` seconds.
+
+        Note that a successful cancel attempt on the client is not a guarantee
+        that the server will successfully manage to cancel the operation.
 
         This is a non-blocking version of `~Connection.cancel()` which
         leverages a more secure and improved cancellation feature of the libpq,
@@ -274,14 +281,18 @@ class Connection(BaseConnection[Row]):
         if not self._should_cancel():
             return
 
-        # TODO: replace with capabilities.has_safe_cancel after merging #782
-        if pq.__build_version__ >= 170000:
-            try:
-                waiting.wait_conn(self._cancel_gen(), interval=_WAIT_INTERVAL)
-            except Exception as ex:
-                logger.warning("couldn't try to cancel query: %s", ex)
+        if capabilities.has_cancel_safe():
+            waiting.wait_conn(
+                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
+            )
         else:
             self.cancel()
+
+    def _try_cancel(self, *, timeout: float = 5.0) -> None:
+        try:
+            self.cancel_safe(timeout=timeout)
+        except Exception as ex:
+            logger.warning("query cancellation failed: %s", ex)
 
     @contextmanager
     def transaction(
@@ -388,7 +399,7 @@ class Connection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                self.cancel_safe()
+                self._try_cancel(timeout=5.0)
                 try:
                     waiting.wait(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

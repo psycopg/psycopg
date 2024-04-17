@@ -293,16 +293,9 @@ class BaseConnection(Generic[Row]):
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
-        if not self._should_cancel():
-            return
-
-        # Don't fail cancelling (which might happen on connection closing) to
-        # avoid clobbering eventual exceptions with ours, which is less important.
-        try:
+        if self._should_cancel():
             c = self.pgconn.get_cancel()
             c.cancel()
-        except Exception as ex:
-            logger.warning("couldn't try to cancel query: %s", ex)
 
     def _should_cancel(self) -> bool:
         """Check whether the current command should actually be cancelled when
@@ -319,10 +312,10 @@ class BaseConnection(Generic[Row]):
             )
         return True
 
-    def _cancel_gen(self) -> PQGenConn[None]:
+    def _cancel_gen(self, *, timeout: float) -> PQGenConn[None]:
         cancel_conn = self.pgconn.cancel_conn()
         cancel_conn.start()
-        yield from generators.cancel(cancel_conn)
+        yield from generators.cancel(cancel_conn, timeout=timeout)
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """

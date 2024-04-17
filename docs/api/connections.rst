@@ -290,7 +290,13 @@ The `!Connection` class
         .. note::
 
             You can use the `~Capabilities.has_cancel_safe` capability to check
-            if `!cancel_safe()` will not fall back on the legacy implementation.
+            if `!cancel_safe()` will not fall back on the legacy libpq
+            functions.
+
+        .. warning::
+
+            The `timeout` parameter has no effect for libpq older than version
+            17.
 
         .. warning::
 
@@ -320,7 +326,8 @@ The `!Connection` class
         .. note::
 
             Unlike `cancel_safe()`, it is safe to call this method as a
-            `~signal.signal` handler.
+            `~signal.signal` handler. This is pretty much the only case in
+            which you might want to use this function.
 
     .. automethod:: notifies
 

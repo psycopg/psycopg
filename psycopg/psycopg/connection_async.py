@@ -29,6 +29,7 @@ from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
+from ._capabilities import capabilities
 from .server_cursor import AsyncServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
 
@@ -278,8 +279,14 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             await self.wait(self._rollback_gen())
 
-    async def cancel_safe(self) -> None:
+    async def cancel_safe(self, *, timeout: float = 30.0) -> None:
         """Cancel the current operation on the connection.
+
+        :param timeout: raise a `~errors.CancellationTimeout` if the
+            cancellation request does not succeed within `timeout` seconds.
+
+        Note that a successful cancel attempt on the client is not a guarantee
+        that the server will successfully manage to cancel the operation.
 
         This is a non-blocking version of `~Connection.cancel()` which
         leverages a more secure and improved cancellation feature of the libpq,
@@ -291,20 +298,21 @@ class AsyncConnection(BaseConnection[Row]):
         if not self._should_cancel():
             return
 
-        # TODO: replace with capabilities.has_safe_cancel after merging #782
-        if pq.__build_version__ >= 170000:
-            try:
-                await waiting.wait_conn_async(
-                    self._cancel_gen(), interval=_WAIT_INTERVAL
-                )
-            except Exception as ex:
-                logger.warning("couldn't try to cancel query: %s", ex)
-
+        if capabilities.has_cancel_safe():
+            await waiting.wait_conn_async(
+                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
+            )
         else:
             if True:  # ASYNC
                 await to_thread(self.cancel)
             else:
                 self.cancel()
+
+    async def _try_cancel(self, *, timeout: float = 5.0) -> None:
+        try:
+            await self.cancel_safe(timeout=timeout)
+        except Exception as ex:
+            logger.warning("query cancellation failed: %s", ex)
 
     @asynccontextmanager
     async def transaction(
@@ -413,7 +421,7 @@ class AsyncConnection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                await self.cancel_safe()
+                await self._try_cancel(timeout=5.0)
                 try:
                     await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
                 except e.QueryCanceled:

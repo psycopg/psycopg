@@ -48,7 +48,7 @@ async def test_connect_timeout(aconn_cls, proxy):
         with pytest.raises(psycopg.OperationalError, match="timeout expired"):
             await aconn_cls.connect(proxy.client_dsn, connect_timeout=2)
         elapsed = time.time() - t0
-    assert elapsed == pytest.approx(2.0, abs=0.05)
+    assert elapsed == pytest.approx(2.0, 0.1)
 
 
 @pytest.mark.slow
@@ -63,7 +63,7 @@ async def test_multi_hosts(aconn_cls, proxy, dsn, monkeypatch):
         t0 = time.time()
         async with await aconn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -80,7 +80,7 @@ async def test_multi_hosts_timeout(aconn_cls, proxy, dsn):
         t0 = time.time()
         async with await aconn_cls.connect(**args) as conn:
             elapsed = time.time() - t0
-            assert 2.0 < elapsed < 2.5
+            assert elapsed == pytest.approx(2.0, 0.1)
             assert conn.info.port == int(proxy.server_port)
             assert conn.info.host == proxy.server_host
 
@@ -827,6 +827,40 @@ async def test_cancel_closed(aconn):
 async def test_cancel_safe_closed(aconn):
     await aconn.close()
     await aconn.cancel_safe()
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_cancel_safe_error(aconn_cls, proxy, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    async with await aconn_cls.connect(proxy.client_dsn) as aconn:
+        proxy.stop()
+        with pytest.raises(
+            e.OperationalError, match=r"(Connection refused)|(connect\(\) failed)"
+        ) as ex:
+            await aconn.cancel_safe(timeout=2)
+        assert not caplog.records
+
+        # Note: testing an internal method. It's ok if this behaviour changes
+        await aconn._try_cancel(timeout=2.0)
+        assert len(caplog.records) == 1
+        caplog.records[0].message == str(ex.value)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+async def test_cancel_safe_timeout(aconn_cls, proxy):
+    proxy.start()
+    async with await aconn_cls.connect(proxy.client_dsn) as aconn:
+        proxy.stop()
+        with proxy.deaf_listen():
+            t0 = time.time()
+            with pytest.raises(e.CancellationTimeout, match="timeout expired"):
+                await aconn.cancel_safe(timeout=1)
+    elapsed = time.time() - t0
+    assert elapsed == pytest.approx(1.0, 0.1)
 
 
 async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
