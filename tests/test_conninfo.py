@@ -96,6 +96,7 @@ def test_no_munging():
         ("connect_timeout=0", _DEFAULT_CONNECT_TIMEOUT, None),
         ("connect_timeout=1", 2, None),
         ("connect_timeout=10", 10, None),
+        ("connect_timeout=5.0", 5, None),
         ("", 15, {"PGCONNECT_TIMEOUT": "15"}),
     ],
 )

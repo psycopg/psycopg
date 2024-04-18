@@ -50,6 +50,8 @@ Psycopg 3.1.19
 ^^^^^^^^^^^^^^
 
 - Fix excessive stripping of error message prefixes (:ticket:`#752`).
+- Allow to specify the ``connect_timeout`` connection parameter as float
+  (:ticket:`#796`).
 
 
 Current release
