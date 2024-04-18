@@ -138,9 +138,9 @@ def timeout_from_conninfo(params: ConnDict) -> int:
     if value is None:
         value = _DEFAULT_CONNECT_TIMEOUT
     try:
-        timeout = int(value)
+        timeout = int(float(value))
     except ValueError:
-        raise e.ProgrammingError(f"bad value for connect_timeout: {value!r}")
+        raise e.ProgrammingError(f"bad value for connect_timeout: {value!r}") from None
 
     if timeout <= 0:
         # The sync connect function will stop on the default socket timeout
