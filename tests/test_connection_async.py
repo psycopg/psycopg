@@ -850,8 +850,10 @@ async def test_cancel_safe_error(aconn_cls, proxy, caplog):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.libpq(">= 17")
 async def test_cancel_safe_timeout(aconn_cls, proxy):
+    if False:  # ASYNC
+        if pq.version() < 170000:
+            pytest.skip("only for libpq >= 17")
     proxy.start()
     async with await aconn_cls.connect(proxy.client_dsn) as aconn:
         proxy.stop()

@@ -304,7 +304,10 @@ class AsyncConnection(BaseConnection[Row]):
             )
         else:
             if True:  # ASYNC
-                await to_thread(self.cancel)
+                try:
+                    await asyncio.wait_for(to_thread(self.cancel), timeout)
+                except asyncio.TimeoutError as exc:
+                    raise e.CancellationTimeout("cancellation timeout expired") from exc
             else:
                 self.cancel()
 

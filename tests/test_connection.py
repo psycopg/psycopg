@@ -846,8 +846,9 @@ def test_cancel_safe_error(conn_cls, proxy, caplog):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.libpq(">= 17")
 def test_cancel_safe_timeout(conn_cls, proxy):
+    if pq.version() < 170000:
+        pytest.skip("only for libpq >= 17")
     proxy.start()
     with conn_cls.connect(proxy.client_dsn) as conn:
         proxy.stop()
