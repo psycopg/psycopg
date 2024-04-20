@@ -46,9 +46,10 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.19
-^^^^^^^^^^^^^^
+Psycopg 3.1.19 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix unaligned access undefined behaviour in C extension (:ticket:`#734`).
 - Fix excessive stripping of error message prefixes (:ticket:`#752`).
 - Allow to specify the ``connect_timeout`` connection parameter as float
   (:ticket:`#796`).
