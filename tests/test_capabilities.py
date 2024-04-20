@@ -3,7 +3,12 @@ import re
 import pytest
 
 from psycopg import pq, _cmodule
-from psycopg import Capabilities, capabilities, NotSupportedError
+
+try:
+    from psycopg import Capabilities, capabilities, NotSupportedError
+except ImportError:
+    # Allow to import the module with Psycopg 3.1
+    pass
 
 caps = [
     ("has_encrypt_password", "pq.PGconn.encrypt_password()", 10),

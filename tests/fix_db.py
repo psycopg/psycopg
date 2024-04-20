@@ -69,11 +69,11 @@ def pytest_collection_modifyitems(items):
 
 
 def pytest_runtest_setup(item):
-    try:
-        psycopg.capabilities.has_pipeline(check=True)
-    except psycopg.NotSupportedError as ex:
+    # Note: not using Capabilities.has_pipeline() to allow running the tests
+    # with Psycopg 3.1.
+    if not psycopg.Pipeline.is_supported():
         for m in item.iter_markers(name="pipeline"):
-            pytest.skip(str(ex))
+            pytest.skip("pipeline mode not supported")
 
 
 def pytest_configure(config):
@@ -215,10 +215,8 @@ def conn(conn_cls, dsn, request, tracefile):
 @pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
 def pipeline(request, conn):
     if request.param:
-        try:
-            psycopg.capabilities.has_pipeline(check=True)
-        except psycopg.NotSupportedError as ex:
-            pytest.skip(str(ex))
+        if not psycopg.Pipeline.is_supported():
+            pytest.skip("pipeline mode not supported")
         with conn.pipeline() as p:
             yield p
         return
@@ -240,10 +238,8 @@ async def aconn(dsn, aconn_cls, request, tracefile):
 @pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
 async def apipeline(request, aconn):
     if request.param:
-        try:
-            psycopg.capabilities.has_pipeline(check=True)
-        except psycopg.NotSupportedError as ex:
-            pytest.skip(str(ex))
+        if not psycopg.Pipeline.is_supported():
+            pytest.skip("pipeline mode not supported")
         async with aconn.pipeline() as p:
             yield p
         return
