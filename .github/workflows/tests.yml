@@ -48,6 +48,9 @@ jobs:
           # Test with minimum dependencies versions
           - {impl: c, python: "3.7", ext: min, postgres: "postgres:15"}
 
+          # Test memory alignment
+          - {impl: c, python: "3.12", ext: align, postgres: "postgres:16"}
+
           # Test with PyPy.
           - {impl: python, python: "pypy3.9", postgres: "postgres:13"}
           - {impl: python, python: "pypy3.10", postgres: "postgres:14"}
@@ -111,6 +114,13 @@ jobs:
           echo "DEPS=$DEPS dnspython shapely gevent" >> $GITHUB_ENV
           echo "PIP_CONSTRAINT=${{ github.workspace }}/tests/constraints.txt" \
             >> $GITHUB_ENV
+
+      - name: Configure memory alignment tests
+        if: ${{ matrix.ext == 'align' }}
+        run: |
+          echo "CFLAGS=-fsanitize=undefined" >> $GITHUB_ENV
+          echo "UBSAN_OPTIONS=halt_on_error=1" >> $GITHUB_ENV
+          echo "PYTEST_ADDOPTS=-v" >> $GITHUB_ENV
 
       - name: Install Python packages
         run: pip install $DEPS
