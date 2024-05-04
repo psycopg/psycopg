@@ -537,11 +537,11 @@ class ConnectionPool(Generic[CT], BasePool):
         for instance as `!check` callback when a pool is created.
         """
         if conn.autocommit:
-            conn.execute("--ping")
+            conn.execute("")
         else:
             conn.autocommit = True
             try:
-                conn.execute("--ping")
+                conn.execute("")
             finally:
                 conn.autocommit = False
 
