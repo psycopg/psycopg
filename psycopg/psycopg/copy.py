@@ -5,6 +5,7 @@ psycopg copy support
 # Copyright (C) 2020 The Psycopg Team
 
 import re
+import sys
 import queue
 import struct
 import asyncio
@@ -58,6 +59,10 @@ MAX_BUFFER_SIZE = 4 * BUFFER_SIZE
 # Max size of the write queue of buffers. More than that copy will block
 # Each buffer should be around BUFFER_SIZE size.
 QUEUE_SIZE = 1024
+
+# On certain systems, memmove seems particularly slow and flushing often is
+# more performing than accumulating a larger buffer. See #746 for details.
+PREFER_FLUSH = sys.platform == "darwin"
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -358,13 +363,15 @@ class LibpqWriter(Writer):
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller
             # bits, so don't make a copy.
-            self.connection.wait(copy_to(self._pgconn, data))
+            self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         else:
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
                 self.connection.wait(
-                    copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
+                    copy_to(
+                        self._pgconn, data[i : i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH
+                    )
                 )
 
     def finish(self, exc: Optional[BaseException] = None) -> None:
@@ -416,7 +423,7 @@ class QueuedLibpqWriter(LibpqWriter):
                 data = self._queue.get(block=True, timeout=24 * 60 * 60)
                 if not data:
                     break
-                self.connection.wait(copy_to(self._pgconn, data))
+                self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         except BaseException as ex:
             # Propagate the error to the main thread.
             self._worker_error = ex
@@ -572,13 +579,15 @@ class AsyncLibpqWriter(AsyncWriter):
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller
             # bits, so don't make a copy.
-            await self.connection.wait(copy_to(self._pgconn, data))
+            await self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         else:
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
                 await self.connection.wait(
-                    copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
+                    copy_to(
+                        self._pgconn, data[i : i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH
+                    )
                 )
 
     async def finish(self, exc: Optional[BaseException] = None) -> None:

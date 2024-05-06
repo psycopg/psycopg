@@ -655,7 +655,7 @@ def test_worker_life(conn, format, buffer):
 
 
 def test_worker_error_propagated(conn, monkeypatch):
-    def copy_to_broken(pgconn, buffer):
+    def copy_to_broken(pgconn, buffer, flush=True):
         raise ZeroDivisionError
         yield
 
