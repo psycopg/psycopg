@@ -283,7 +283,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
     return result
 
 
-def copy_to(pgconn: PGconn, buffer: Buffer) -> PQGen[None]:
+def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
     # Retry enqueuing data until successful.
     #
     # WARNING! This can cause an infinite loop if the buffer is too large. (see
@@ -292,6 +292,20 @@ def copy_to(pgconn: PGconn, buffer: Buffer) -> PQGen[None]:
     # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
         yield WAIT_W
+
+    # Flushing often has a good effect on macOS because memcpy operations
+    # seem expensive on this platform so accumulating a large buffer has a
+    # bad effect (see #745).
+    if flush:
+        # Repeat until it the message is flushed to the server
+        while True:
+            while True:
+                ready = yield WAIT_W
+                if ready:
+                    break
+            f = pgconn.flush()
+            if f == 0:
+                break
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
