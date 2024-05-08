@@ -135,7 +135,7 @@ def register_crdb_types(types: TypesRegistry) -> None:
         # Generated from CockroachDB 23.1.10
         TypeInfo("bit", 1560, 1561),
         TypeInfo("bool", 16, 1000, regtype="boolean"),
-        TypeInfo("bpchar", 1042, 1014, regtype="character"),
+        TypeInfo("bpchar", 1042, 1014, regtype="character", typemod=CharTypeModifier),
         TypeInfo("bytea", 17, 1001),
         TypeInfo("date", 1082, 1182),
         TypeInfo("float4", 700, 1021, regtype="real"),

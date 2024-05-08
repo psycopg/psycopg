@@ -54,7 +54,7 @@ class Column(Sequence[Any]):
         parts.append(self._type.name)
         mod = self._type.get_modifier(self._fmod)
         if mod:
-            parts.append(f"({', '.join(map(str, mod))})")
+            parts.append(f"({','.join(map(str, mod))})")
 
         if self.type_code == self._type.array_oid:
             parts.append("[]")

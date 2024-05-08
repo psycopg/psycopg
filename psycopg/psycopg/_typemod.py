@@ -36,25 +36,29 @@ class NumericTypeModifier(TypeModifier):
     """Handle numeric type modifier."""
 
     def get_modifier(self, typemod: int) -> tuple[int, ...] | None:
-        rv = []
         precision = self.get_precision(typemod)
-        if precision is not None:
-            rv.append(precision)
         scale = self.get_scale(typemod)
-        if scale is not None:
-            rv.append(scale)
-        return tuple(rv) if rv else None
+        return None if precision is None or scale is None else (precision, scale)
 
     def get_precision(self, typemod: int) -> int | None:
         return typemod >> 16 if typemod >= 0 else None
 
     def get_scale(self, typemod: int) -> int | None:
-        typemod -= 4
-        return typemod & 0xFFFF if typemod >= 0 else None
+        if typemod < 0:
+            return None
+
+        scale = (typemod - 4) & 0xFFFF
+        if scale >= 0x400:
+            scale = scale - 0x800
+        return scale
 
 
 class CharTypeModifier(TypeModifier):
     """Handle char/varchar type modifier."""
+
+    def get_modifier(self, typemod: int) -> tuple[int, ...] | None:
+        dsize = self.get_display_size(typemod)
+        return (dsize,) if dsize else None
 
     def get_display_size(self, typemod: int) -> int | None:
         return typemod - 4 if typemod >= 0 else None
@@ -62,6 +66,10 @@ class CharTypeModifier(TypeModifier):
 
 class TimeTypeModifier(TypeModifier):
     """Handle time-related types modifier."""
+
+    def get_modifier(self, typemod: int) -> tuple[int, ...] | None:
+        prec = self.get_precision(typemod)
+        return (prec,) if prec is not None else None
 
     def get_precision(self, typemod: int) -> int | None:
         return typemod & 0xFFFF if typemod >= 0 else None

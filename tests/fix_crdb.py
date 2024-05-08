@@ -76,11 +76,6 @@ def crdb_encoding(*args):
     return skip_crdb(*args, reason="encoding")
 
 
-def crdb_time_precision(*args):
-    """Mark tests that fail on CockroachDB because time doesn't support precision"""
-    return skip_crdb(*args, reason="time precision")
-
-
 def crdb_scs_off(*args):
     return skip_crdb(*args, reason="standard_conforming_strings=off")
 

@@ -121,6 +121,7 @@ order by typname
 
 typemods = {
     "char": "CharTypeModifier",
+    "bpchar": "CharTypeModifier",
     "varchar": "CharTypeModifier",
     "numeric": "NumericTypeModifier",
     "time": "TimeTypeModifier",

@@ -29,7 +29,7 @@ def register_default_types(types: TypesRegistry) -> None:
         TypeInfo("bit", 1560, 1561),
         TypeInfo("bool", 16, 1000, regtype="boolean"),
         TypeInfo("box", 603, 1020, delimiter=";"),
-        TypeInfo("bpchar", 1042, 1014, regtype="character"),
+        TypeInfo("bpchar", 1042, 1014, regtype="character", typemod=CharTypeModifier),
         TypeInfo("bytea", 17, 1001),
         TypeInfo("cid", 29, 1012),
         TypeInfo("cidr", 650, 651),
