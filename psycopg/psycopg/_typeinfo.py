@@ -16,6 +16,7 @@ from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
 from ._compat import TypeAlias, TypeVar
+from ._typemod import TypeModifier
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -42,12 +43,14 @@ class TypeInfo:
         *,
         regtype: str = "",
         delimiter: str = ",",
+        typemod: type[TypeModifier] = TypeModifier,
     ):
         self.name = name
         self.oid = oid
         self.array_oid = array_oid
         self.regtype = regtype or name
         self.delimiter = delimiter
+        self.typemod = typemod(oid)
 
     def __repr__(self) -> str:
         return (
@@ -190,6 +193,18 @@ ORDER BY t.oid
     def _added(self, registry: TypesRegistry) -> None:
         """Method called by the `!registry` when the object is added there."""
         pass
+
+    def get_modifier(self, fmod: int) -> tuple[int, ...] | None:
+        return self.typemod.get_modifier(fmod)
+
+    def get_display_size(self, fmod: int) -> int | None:
+        return self.typemod.get_display_size(fmod)
+
+    def get_precision(self, fmod: int) -> int | None:
+        return self.typemod.get_precision(fmod)
+
+    def get_scale(self, fmod: int) -> int | None:
+        return self.typemod.get_scale(fmod)
 
 
 class TypesRegistry:

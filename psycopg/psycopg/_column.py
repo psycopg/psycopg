@@ -55,19 +55,16 @@ class Column(Sequence[Any]):
         return 7
 
     def _type_display(self) -> str:
+        if not self._type:
+            return str(self.type_code)
+
         parts = []
-        parts.append(self._type.name if self._type else str(self.type_code))
+        parts.append(self._type.name)
+        mod = self._type.get_modifier(self._data.fmod)
+        if mod:
+            parts.append(f"({', '.join(map(str, mod))})")
 
-        mod1 = self.precision
-        if mod1 is None:
-            mod1 = self.display_size
-        if mod1:
-            parts.append(f"({mod1}")
-            if self.scale:
-                parts.append(f", {self.scale}")
-            parts.append(")")
-
-        if self._type and self.type_code == self._type.array_oid:
+        if self.type_code == self._type.array_oid:
             parts.append("[]")
 
         return "".join(parts)
@@ -91,15 +88,7 @@ class Column(Sequence[Any]):
     @property
     def display_size(self) -> Optional[int]:
         """The field size, for :sql:`varchar(n)`, None otherwise."""
-        if not self._type:
-            return None
-
-        if self._type.name in ("varchar", "char"):
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod - 4
-
-        return None
+        return self._type.get_display_size(self._data.fmod) if self._type else None
 
     @property
     def internal_size(self) -> Optional[int]:
@@ -110,31 +99,12 @@ class Column(Sequence[Any]):
     @property
     def precision(self) -> Optional[int]:
         """The number of digits for fixed precision types."""
-        if not self._type:
-            return None
-
-        dttypes = ("time", "timetz", "timestamp", "timestamptz", "interval")
-        if self._type.name == "numeric":
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod >> 16
-
-        elif self._type.name in dttypes:
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod & 0xFFFF
-
-        return None
+        return self._type.get_precision(self._data.fmod) if self._type else None
 
     @property
     def scale(self) -> Optional[int]:
         """The number of digits after the decimal point if available."""
-        if self._type and self._type.name == "numeric":
-            fmod = self._data.fmod - 4
-            if fmod >= 0:
-                return fmod & 0xFFFF
-
-        return None
+        return self._type.get_scale(self._data.fmod) if self._type else None
 
     @property
     def null_ok(self) -> Optional[bool]:
