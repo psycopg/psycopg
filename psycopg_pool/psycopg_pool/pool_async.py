@@ -569,7 +569,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         for instance as `!check` callback when a pool is created.
         """
         if conn.autocommit:
-            await conn.execute("SELECT 1")
+            await conn.execute("")
         else:
             if True:  # ASYNC
                 # NOTE: with Psycopg 3.2 we could use conn.set_autocommit() in
@@ -577,13 +577,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 # previous versions too.
                 await conn.set_autocommit(True)
                 try:
-                    await conn.execute("SELECT 1")
+                    await conn.execute("")
                 finally:
                     await conn.set_autocommit(False)
             else:
                 conn.autocommit = True
                 try:
-                    conn.execute("SELECT 1")
+                    conn.execute("")
                 finally:
                     conn.autocommit = False
 

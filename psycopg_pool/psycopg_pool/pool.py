@@ -537,11 +537,11 @@ class ConnectionPool(Generic[CT], BasePool):
         for instance as `!check` callback when a pool is created.
         """
         if conn.autocommit:
-            conn.execute("SELECT 1")
+            conn.execute("")
         else:
             conn.autocommit = True
             try:
-                conn.execute("SELECT 1")
+                conn.execute("")
             finally:
                 conn.autocommit = False
 
