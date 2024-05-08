@@ -7,6 +7,7 @@ psycopg copy support
 from __future__ import annotations
 
 import re
+import sys
 import struct
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Match
@@ -52,6 +53,10 @@ MAX_BUFFER_SIZE = 4 * BUFFER_SIZE
 # Max size of the write queue of buffers. More than that copy will block
 # Each buffer should be around BUFFER_SIZE size.
 QUEUE_SIZE = 1024
+
+# On certain systems, memmove seems particularly slow and flushing often is
+# more performing than accumulating a larger buffer. See #746 for details.
+PREFER_FLUSH = sys.platform == "darwin"
 
 
 class BaseCopy(Generic[ConnectionType]):

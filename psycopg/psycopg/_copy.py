@@ -16,7 +16,7 @@ from typing import Any, Iterator, Type, Tuple, Sequence, TYPE_CHECKING
 from . import pq
 from . import errors as e
 from ._compat import Self
-from ._copy_base import BaseCopy, MAX_BUFFER_SIZE, QUEUE_SIZE
+from ._copy_base import BaseCopy, MAX_BUFFER_SIZE, QUEUE_SIZE, PREFER_FLUSH
 from .generators import copy_to, copy_end
 from ._encodings import pgconn_encoding
 from ._acompat import spawn, gather, Queue, Worker
@@ -199,13 +199,15 @@ class LibpqWriter(Writer):
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller
             # bits, so don't make a copy.
-            self.connection.wait(copy_to(self._pgconn, data))
+            self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         else:
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
                 self.connection.wait(
-                    copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
+                    copy_to(
+                        self._pgconn, data[i : i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH
+                    )
                 )
 
     def finish(self, exc: BaseException | None = None) -> None:
@@ -259,7 +261,7 @@ class QueuedLibpqWriter(LibpqWriter):
                 data = self._queue.get()
                 if not data:
                     break
-                self.connection.wait(copy_to(self._pgconn, data))
+                self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         except BaseException as ex:
             # Propagate the error to the main thread.
             self._worker_error = ex
