@@ -176,6 +176,10 @@ The description `Column` object
 
     .. autoattribute:: name
     .. autoattribute:: type_code
+    .. autoattribute:: type_display
+
+        .. versionadded:: 3.2
+
     .. autoattribute:: display_size
     .. autoattribute:: internal_size
     .. autoattribute:: precision

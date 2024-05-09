@@ -66,21 +66,23 @@ def test_description_slice(conn):
     "type, precision, scale, dsize, isize",
     [
         ("text", None, None, None, None),
+        ("text[]", None, None, None, None),
         ("varchar", None, None, None, None),
         ("varchar(1)", None, None, 1, None),
+        ("varchar(1)[]", None, None, 1, None),
         ("varchar(42)", None, None, 42, None),
         ("bpchar(42)", None, None, 42, None),
         ("varchar(10485760)", None, None, 10485760, None),
         ("int4", None, None, None, 4),
         ("numeric", None, None, None, None),
         ("numeric(10,0)", 10, 0, None, None),
-        ("numeric(10,3)", 10, 3, None, None),
+        ("numeric(10,3)[]", 10, 3, None, None),
         ("numeric(10,-1)", 10, -1, None, None),
         ("numeric(1,-1000)", 1, -1000, None, None),
         ("numeric(1,1000)", 1, 1000, None, None),
         ("numeric(1000,1000)", 1000, 1000, None, None),
         ("time", None, None, None, 8),
-        ("time", None, None, None, 8),
+        ("time[]", None, None, None, None),
         ("timetz", None, None, None, 12),
         ("timestamp", None, None, None, 8),
         ("timestamptz", None, None, None, 8),
@@ -98,7 +100,8 @@ def test_details(conn, type, precision, scale, dsize, isize):
     cur = conn.cursor()
     cur.execute(f"select null::{type}")
     col = cur.description[0]
-    assert type in (repr(col))
+    assert type == col.type_display
+    assert f" {type} " in (repr(col))
     assert col.precision == precision
     assert col.scale == scale
     assert col.display_size == dsize

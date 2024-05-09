@@ -40,26 +40,24 @@ class Column(Sequence[Any]):
     def __repr__(self) -> str:
         return (
             f"<Column {self.name!r},"
-            f" type: {self._type_display()} (oid: {self.type_code})>"
+            f" type: {self.type_display} (oid: {self.type_code})>"
         )
 
     def __len__(self) -> int:
         return 7
 
-    def _type_display(self) -> str:
+    @property
+    def type_display(self) -> str:
+        """A pretty representation of the column type.
+
+        It is composed by the type name, followed by eventual modifiers and
+        brackets to signify arrays, e.g. :sql:`text`, :sql:`varchar(42)`,
+        :sql:`date[]`.
+        """
         if not self._type:
             return str(self.type_code)
 
-        parts = []
-        parts.append(self._type.name)
-        mod = self._type.get_modifier(self._fmod)
-        if mod:
-            parts.append(f"({','.join(map(str, mod))})")
-
-        if self.type_code == self._type.array_oid:
-            parts.append("[]")
-
-        return "".join(parts)
+        return self._type.get_type_display(oid=self.type_code, fmod=self._fmod)
 
     def __getitem__(self, index: Any) -> Any:
         if isinstance(index, slice):
@@ -79,7 +77,7 @@ class Column(Sequence[Any]):
 
     @property
     def display_size(self) -> Optional[int]:
-        """The field size, for :sql:`varchar(n)`, None otherwise."""
+        """The field size, for string types such as :sql:`varchar(n)`."""
         return self._type.get_display_size(self._fmod) if self._type else None
 
     @property

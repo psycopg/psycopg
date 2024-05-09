@@ -194,8 +194,17 @@ ORDER BY t.oid
         """Method called by the `!registry` when the object is added there."""
         pass
 
-    def get_modifier(self, fmod: int) -> tuple[int, ...] | None:
-        return self.typemod.get_modifier(fmod)
+    def get_type_display(self, oid: int | None = None, fmod: int | None = None) -> str:
+        parts = []
+        parts.append(self.name)
+        mod = self.typemod.get_modifier(fmod) if fmod is not None else ()
+        if mod:
+            parts.append(f"({','.join(map(str, mod))})")
+
+        if oid == self.array_oid:
+            parts.append("[]")
+
+        return "".join(parts)
 
     def get_display_size(self, fmod: int) -> int | None:
         return self.typemod.get_display_size(fmod)
