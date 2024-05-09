@@ -85,6 +85,13 @@ def test_description_slice(conn):
         ("timestamp", None, None, None, 8),
         ("timestamptz", None, None, None, 8),
         ("interval", None, None, None, 16),
+        ("bit(1)", None, None, 1, None),
+        ("bit(42)", None, None, 42, None),
+        ("bit(83886080)", None, None, 83886080, None),
+        ("varbit", None, None, None, None),
+        ("varbit(1)", None, None, 1, None),
+        ("varbit(42)", None, None, 42, None),
+        ("varbit(83886080)", None, None, 83886080, None),
     ],
 )
 def test_details(conn, type, precision, scale, dsize, isize):

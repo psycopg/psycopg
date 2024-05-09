@@ -64,6 +64,17 @@ class CharTypeModifier(TypeModifier):
         return typemod - 4 if typemod >= 0 else None
 
 
+class BitTypeModifier(TypeModifier):
+    """Handle bit/varbit type modifier."""
+
+    def get_modifier(self, typemod: int) -> tuple[int, ...] | None:
+        dsize = self.get_display_size(typemod)
+        return (dsize,) if dsize else None
+
+    def get_display_size(self, typemod: int) -> int | None:
+        return typemod if typemod >= 0 else None
+
+
 class TimeTypeModifier(TypeModifier):
     """Handle time-related types modifier."""
 

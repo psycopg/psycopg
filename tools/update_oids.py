@@ -129,6 +129,8 @@ typemods = {
     "timestamp": "TimeTypeModifier",
     "timestamptz": "TimeTypeModifier",
     "interval": "TimeTypeModifier",
+    "bit": "BitTypeModifier",
+    "varbit": "BitTypeModifier",
 }
 
 
