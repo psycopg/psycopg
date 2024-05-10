@@ -7,11 +7,11 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.2.2 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.2.2
+^^^^^^^^^^^^^^^^^^
 
 - Raise a `RuntimeWarning` instead of a `DeprecationWarning` if an async pool
   is open in the constructor.
@@ -19,9 +19,6 @@ psycopg_pool 3.2.2 (unreleased)
 - Use an empty query instead of ``SELECT 1`` to check connections
   (:ticket:`#790`).
 
-
-Current release
----------------
 
 psycopg_pool 3.2.1
 ^^^^^^^^^^^^^^^^^^
