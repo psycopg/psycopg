@@ -16,6 +16,8 @@ psycopg_pool 3.2.2 (unreleased)
 - Raise a `RuntimeWarning` instead of a `DeprecationWarning` if an async pool
   is open in the constructor.
 - Fix connections possibly left in the pool after closing (:ticket:`#784`).
+- Use an empty query instead of ``SELECT 1`` to check connections
+  (:ticket:`#790`).
 
 
 Current release
