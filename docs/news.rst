@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.19 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.19
+^^^^^^^^^^^^^^
 
 - Fix unaligned access undefined behaviour in C extension (:ticket:`#734`).
 - Fix excessive stripping of error message prefixes (:ticket:`#752`).
@@ -19,9 +19,6 @@ Psycopg 3.1.19 (unreleased)
   (:ticket:`#796`).
 - Improve COPY performance on macOS (:ticket:`#745`).
 
-
-Current release
----------------
 
 Psycopg 3.1.18
 ^^^^^^^^^^^^^^
