@@ -125,6 +125,23 @@ as argument.
     conn = psycopg.connect(DSN)
     cur = psycopg.ClientCursor(conn)
 
+
+You can also use `~ClientCursor` with autocommit mode to disable Extended
+Query Protocol and use Simple Query Protocol instead. This is useful for
+example when issuing `SHOW STATS` to a `pgbouncer` for example, since the
+`Pgbouncer Admin Console  <https://www.pgbouncer.org/usage.html#admin-console>`_
+only support Simple Query Protocol.
+
+.. code:: python
+
+    from psycopg import connect, ClientCursor
+
+    conn = psycopg.connect(DSN, cursor_factory=ClientCursor, autocommit=True)
+    cur = conn.cursor()
+    cur.execute("SHOW STATS")
+    cur.fetchall()
+
+
 .. warning::
 
     Client-side cursors don't support :ref:`binary parameters and return
