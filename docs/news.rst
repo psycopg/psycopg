@@ -7,6 +7,17 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.20 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Use the simple query protocol to execute COMMIT/ROLLBACK when possible.
+  This should make easier to connect the PgBouncer admin database
+  (:ticket:`#820`).
+
+
 Current release
 ---------------
 
