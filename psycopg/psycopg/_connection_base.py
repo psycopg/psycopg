@@ -462,7 +462,13 @@ class BaseConnection(Generic[Row]):
             self._pipeline.result_queue.append(None)
             return None
 
-        self.pgconn.send_query_params(command, None, result_format=result_format)
+        # Unless needed, use the simple query protocol, e.g. to interact with
+        # pgbouncer. In pipeline mode we always use the advanced query protocol
+        # instead, see #350
+        if result_format == TEXT:
+            self.pgconn.send_query(command)
+        else:
+            self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from generators.execute(self.pgconn))[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:

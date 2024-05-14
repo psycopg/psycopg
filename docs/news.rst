@@ -46,6 +46,14 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.20 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Use the simple query protocol to execute COMMIT/ROLLBACK when possible.
+  This should make querying the PgBouncer admin database easier
+  (:ticket:`#820`).
+
+
 Current release
 ---------------
 
