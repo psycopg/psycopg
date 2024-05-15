@@ -3,7 +3,7 @@ import pickle
 import pytest
 
 from psycopg.postgres import types as builtins
-from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
+from .fix_crdb import is_crdb, crdb_encoding, skip_crdb
 
 
 def test_description_attribs(conn):
@@ -62,30 +62,74 @@ def test_description_slice(conn):
     curs.description[0][0:2] == ("a", 23)
 
 
+def skip_neg_scale(*args):
+    return pytest.param(
+        *args,
+        marks=[
+            pytest.mark.crdb("skip", reason="negative precision numeric"),
+            pytest.mark.pg(">=15"),
+        ],
+    )
+
+
 @pytest.mark.parametrize(
     "type, precision, scale, dsize, isize",
     [
         ("text", None, None, None, None),
+        ("text[]", None, None, None, None),
         ("varchar", None, None, None, None),
+        ("varchar(1)", None, None, 1, None),
+        ("varchar(1)[]", None, None, 1, None),
         ("varchar(42)", None, None, 42, None),
+        skip_crdb("bpchar(42)", None, None, 42, None, reason="bpchar"),
+        ("varchar(10485760)", None, None, 10485760, None),
         ("int4", None, None, None, 4),
         ("numeric", None, None, None, None),
-        ("numeric(10)", 10, 0, None, None),
-        ("numeric(10, 3)", 10, 3, None, None),
+        ("numeric(10,0)", 10, 0, None, None),
+        ("numeric(10,3)[]", 10, 3, None, None),
+        skip_neg_scale("numeric(2,-3)", 2, -3, None, None),
+        skip_neg_scale("numeric(3,5)", 3, 5, None, None),
+        skip_neg_scale("numeric(1,-1000)", 1, -1000, None, None),
+        skip_neg_scale("numeric(1,1000)", 1, 1000, None, None),
+        ("numeric(1000,1000)", 1000, 1000, None, None),
         ("time", None, None, None, 8),
-        crdb_time_precision("time(4)", 4, None, None, 8),
-        crdb_time_precision("time(10)", 6, None, None, 8),
+        ("time[]", None, None, None, None),
+        ("timetz", None, None, None, 12),
+        ("timestamp", None, None, None, 8),
+        ("timestamptz", None, None, None, 8),
+        ("interval", None, None, None, 16),
+        ("bit(1)", None, None, 1, None),
+        ("bit(42)", None, None, 42, None),
+        ("bit(83886080)", None, None, 83886080, None),
+        ("varbit", None, None, None, None),
+        ("varbit(1)", None, None, 1, None),
+        ("varbit(42)", None, None, 42, None),
+        ("varbit(83886080)", None, None, 83886080, None),
     ],
 )
 def test_details(conn, type, precision, scale, dsize, isize):
     cur = conn.cursor()
     cur.execute(f"select null::{type}")
     col = cur.description[0]
-    repr(col)
+    assert type == col.type_display
+    assert f" {type} " in (repr(col))
     assert col.precision == precision
     assert col.scale == scale
     assert col.display_size == dsize
-    assert col.internal_size == isize
+    if not is_crdb(conn):
+        assert col.internal_size == isize
+
+
+@pytest.mark.crdb("skip", reason="time precision")
+@pytest.mark.parametrize("type", "time timetz timestamp timestamptz interval".split())
+@pytest.mark.parametrize("precision", [0, 2, 6])
+def test_details_time(conn, type, precision):
+    type = f"{type}({precision})"
+    cur = conn.cursor()
+    cur.execute(f"select null::{type}")
+    col = cur.description[0]
+    assert type in (repr(col))
+    assert col.precision == precision
 
 
 def test_pickle(conn):

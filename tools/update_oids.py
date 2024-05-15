@@ -119,6 +119,21 @@ order by typname
     return lines
 
 
+typemods = {
+    "char": "CharTypeModifier",
+    "bpchar": "CharTypeModifier",
+    "varchar": "CharTypeModifier",
+    "numeric": "NumericTypeModifier",
+    "time": "TimeTypeModifier",
+    "timetz": "TimeTypeModifier",
+    "timestamp": "TimeTypeModifier",
+    "timestamptz": "TimeTypeModifier",
+    "interval": "TimeTypeModifier",
+    "bit": "BitTypeModifier",
+    "varbit": "BitTypeModifier",
+}
+
+
 def get_py_types(conn: Connection) -> List[str]:
     # Note: "record" is a pseudotype but still a useful one to have.
     # "pg_lsn" is a documented public type and useful in streaming replication
@@ -138,6 +153,8 @@ where
 order by typname
 """
     ):
+        typemod = typemods.get(typname)
+
         # Weird legacy type in postgres catalog
         if typname == "char":
             typname = regtype = '"char"'
@@ -146,9 +163,11 @@ order by typname
         if typname == "int4" and conn.info.vendor == "CockroachDB":
             regtype = typname
 
-        params = [f"{typname!r}, {oid}, {typarray}"]
+        params = [repr(typname), str(oid), str(typarray)]
         if regtype != typname:
             params.append(f"regtype={regtype!r}")
+        if typemod:
+            params.append(f"typemod={typemod}")
         if typdelim != ",":
             params.append(f"delimiter={typdelim!r}")
         lines.append(f"TypeInfo({','.join(params)}),")

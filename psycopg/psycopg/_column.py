@@ -4,17 +4,11 @@ The Column object in Cursor.description
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
 if TYPE_CHECKING:
     from ._cursor_base import BaseCursor
-
-
-class ColumnData(NamedTuple):
-    ftype: int
-    fmod: int
-    fsize: int
 
 
 class Column(Sequence[Any]):
@@ -31,12 +25,10 @@ class Column(Sequence[Any]):
             # COPY_OUT results have columns but no name
             self._name = f"column_{index + 1}"
 
-        self._data = ColumnData(
-            ftype=res.ftype(index),
-            fmod=res.fmod(index),
-            fsize=res.fsize(index),
-        )
-        self._type = cursor.adapters.types.get(self._data.ftype)
+        self._ftype = res.ftype(index)
+        self._type = cursor.adapters.types.get(self._ftype)
+        self._fmod = res.fmod(index)
+        self._fsize = res.fsize(index)
 
     _attrs = tuple(
         attrgetter(attr)
@@ -48,29 +40,24 @@ class Column(Sequence[Any]):
     def __repr__(self) -> str:
         return (
             f"<Column {self.name!r},"
-            f" type: {self._type_display()} (oid: {self.type_code})>"
+            f" type: {self.type_display} (oid: {self.type_code})>"
         )
 
     def __len__(self) -> int:
         return 7
 
-    def _type_display(self) -> str:
-        parts = []
-        parts.append(self._type.name if self._type else str(self.type_code))
+    @property
+    def type_display(self) -> str:
+        """A pretty representation of the column type.
 
-        mod1 = self.precision
-        if mod1 is None:
-            mod1 = self.display_size
-        if mod1:
-            parts.append(f"({mod1}")
-            if self.scale:
-                parts.append(f", {self.scale}")
-            parts.append(")")
+        It is composed by the type name, followed by eventual modifiers and
+        brackets to signify arrays, e.g. :sql:`text`, :sql:`varchar(42)`,
+        :sql:`date[]`.
+        """
+        if not self._type:
+            return str(self.type_code)
 
-        if self._type and self.type_code == self._type.array_oid:
-            parts.append("[]")
-
-        return "".join(parts)
+        return self._type.get_type_display(oid=self.type_code, fmod=self._fmod)
 
     def __getitem__(self, index: Any) -> Any:
         if isinstance(index, slice):
@@ -86,55 +73,28 @@ class Column(Sequence[Any]):
     @property
     def type_code(self) -> int:
         """The numeric OID of the column."""
-        return self._data.ftype
+        return self._ftype
 
     @property
     def display_size(self) -> Optional[int]:
-        """The field size, for :sql:`varchar(n)`, None otherwise."""
-        if not self._type:
-            return None
-
-        if self._type.name in ("varchar", "char"):
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod - 4
-
-        return None
+        """The field size, for string types such as :sql:`varchar(n)`."""
+        return self._type.get_display_size(self._fmod) if self._type else None
 
     @property
     def internal_size(self) -> Optional[int]:
         """The internal field size for fixed-size types, None otherwise."""
-        fsize = self._data.fsize
+        fsize = self._fsize
         return fsize if fsize >= 0 else None
 
     @property
     def precision(self) -> Optional[int]:
         """The number of digits for fixed precision types."""
-        if not self._type:
-            return None
-
-        dttypes = ("time", "timetz", "timestamp", "timestamptz", "interval")
-        if self._type.name == "numeric":
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod >> 16
-
-        elif self._type.name in dttypes:
-            fmod = self._data.fmod
-            if fmod >= 0:
-                return fmod & 0xFFFF
-
-        return None
+        return self._type.get_precision(self._fmod) if self._type else None
 
     @property
     def scale(self) -> Optional[int]:
         """The number of digits after the decimal point if available."""
-        if self._type and self._type.name == "numeric":
-            fmod = self._data.fmod - 4
-            if fmod >= 0:
-                return fmod & 0xFFFF
-
-        return None
+        return self._type.get_scale(self._fmod) if self._type else None
 
     @property
     def null_ok(self) -> Optional[bool]:
