@@ -98,6 +98,27 @@ use the `psycopg.sql` module::
     ...     .format(sql.Identifier(username), password))
 
 
+.. index::
+    single: PgBouncer
+    double: Query protocol; advanced
+
+.. _advanced-query-protocol:
+
+Extended query Protocol
+-----------------------
+
+In order to use :ref:`server-side-binding`, psycopg normally uses the
+`extended query protocol`__ to communicate with the backend.
+
+In certain context outside pure PostgreSQL, the extended query protocol is not
+supported, for instance to query the `PgBouncer admin console`__. In this case
+you should probably use a `ClientCursor`. See :ref:`simple-query-protocol` for
+details.
+
+.. __: https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+.. __: https://www.pgbouncer.org/usage.html#admin-console
+
+
 .. _multi-statements:
 
 Multiple statements in the same query
