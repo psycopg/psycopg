@@ -39,8 +39,9 @@ jobs:
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
           PGPASSWORD: password
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: ${{ matrix.package }}-${{ matrix.format }}
           path: ./dist/*
 
     services:
