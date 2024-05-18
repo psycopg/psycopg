@@ -238,3 +238,17 @@ jobs:
 
 
   # }}}
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - linux
+      - macos-14
+      - macos-12
+      - windows
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: psycopg-binary-artifact
+          delete-merged: true

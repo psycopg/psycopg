@@ -65,3 +65,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - sdist
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: psycopg-src-artifact
+          delete-merged: true
