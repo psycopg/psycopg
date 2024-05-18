@@ -27,14 +27,14 @@ jobs:
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           # Note: 6.2.0 is buggy: make sure to avoid it.
           # See https://github.com/pypa/cibuildwheel/issues/1250
           image: tonistiigi/binfmt:qemu-v7.0.0
 
       - name: Cache libpq build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
           key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
@@ -43,7 +43,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -71,8 +71,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: linux-${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
     services:
@@ -92,8 +93,58 @@ jobs:
 
   # }}}
 
-  macos:  # {{{
-    runs-on: macos-latest
+  macos-14:  # {{{
+    runs-on: macos-14
+    if: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64]
+        pyver: [cp310, cp311, cp312]
+
+    env:
+      PG_VERSION: "16"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Install PostgreSQL on the runner
+        run: brew install gnu-sed postgresql@${PG_VERSION}
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql@${PG_VERSION}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.17.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
+          CIBW_ARCHS_MACOS: ${{matrix.arch}}
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
+          CIBW_TEST_COMMAND: >-
+            pytest {project}/tests -m 'not slow and not flakey' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='dbname=postgres'
+            PATH="/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-14-${{matrix.pyver}}-macosx_${{matrix.arch}}
+          path: ./wheelhouse/*.whl
+
+
+  # }}}
+
+  macos-12:  # {{{
+    runs-on: macos-12
     if: true
 
     strategy:
@@ -110,7 +161,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -128,8 +179,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= $PG_VERSION"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= $PG_VERSION"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: macos-12-${{matrix.pyver}}-macosx_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
@@ -159,7 +211,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -179,8 +231,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: windows-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
