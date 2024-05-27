@@ -379,7 +379,7 @@ def _split_query(
                 f" '{query[m.span(0)[0]:].split()[0].decode(encoding)}'"
             )
         elif ph == b"% ":
-            # explicit messasge for a typical error
+            # explicit message for a typical error
             raise e.ProgrammingError(
                 "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
