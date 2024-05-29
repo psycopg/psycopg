@@ -114,7 +114,7 @@ def format_row_text(
     cdef char *buf
     cdef int i, j
     cdef unsigned char *target
-    cdef int nesc = 0
+    cdef int nesc
     cdef int with_tab
     cdef PyObject *fmt = <PyObject *>PG_TEXT
     cdef PyObject *row_dumper
@@ -157,6 +157,7 @@ def format_row_text(
 
         # Now from pos to pos + size there is a textual representation: it may
         # contain chars to escape. Scan to find how many such chars there are.
+        nesc = 0
         for j in range(size):
             if copy_escape_lut[target[j]]:
                 nesc += 1

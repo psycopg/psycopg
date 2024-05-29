@@ -52,6 +52,8 @@ Psycopg 3.1.20 (unreleased)
 - Use the simple query protocol to execute COMMIT/ROLLBACK when possible.
   This should make querying the PgBouncer admin database easier
   (:ticket:`#820`).
+- Avoid unneeded escaping checks and memory over-allocation in text copy
+  (:ticket:`#829`).
 
 
 Current release
