@@ -4,8 +4,10 @@ Protocol objects representing different implementations of the same classes.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 from typing import Any, Dict, Callable, Generator, Mapping
-from typing import List, Optional, Protocol, Sequence, Tuple, Union
+from typing import List, Protocol, Sequence, Tuple, Union
 from typing import TYPE_CHECKING
 
 from . import pq
@@ -56,13 +58,13 @@ class WaitFunc(Protocol):
     """
 
     def __call__(
-        self, gen: PQGen[RV], fileno: int, interval: Optional[float] = None
+        self, gen: PQGen[RV], fileno: int, interval: float | None = None
     ) -> RV: ...
 
 
 # Adaptation types
 
-DumpFunc: TypeAlias = Callable[[Any], Optional[Buffer]]
+DumpFunc: TypeAlias = Callable[[Any], Buffer | None]
 LoadFunc: TypeAlias = Callable[[Buffer], Any]
 
 
@@ -84,7 +86,7 @@ class AdaptContext(Protocol):
         ...
 
     @property
-    def connection(self) -> Optional["BaseConnection[Any]"]:
+    def connection(self) -> "BaseConnection[Any]" | None:
         """The connection used by this object, if available.
 
         :rtype: `~psycopg.Connection` or `~psycopg.AsyncConnection` or `!None`
@@ -108,9 +110,9 @@ class Dumper(Protocol):
     oid: int
     """The oid to pass to the server, if known; 0 otherwise (class attribute)."""
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None): ...
+    def __init__(self, cls: type, context: AdaptContext | None = None): ...
 
-    def dump(self, obj: Any) -> Optional[Buffer]:
+    def dump(self, obj: Any) -> Buffer | None:
         """Convert the object `!obj` to PostgreSQL representation.
 
         :param obj: the object to convert.
@@ -188,7 +190,7 @@ class Loader(Protocol):
     This is a class attribute.
     """
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None): ...
+    def __init__(self, oid: int, context: AdaptContext | None = None): ...
 
     def load(self, data: Buffer) -> Any:
         """
@@ -200,16 +202,16 @@ class Loader(Protocol):
 
 
 class Transformer(Protocol):
-    types: Optional[Tuple[int, ...]]
-    formats: Optional[List[pq.Format]]
+    types: Tuple[int, ...] | None
+    formats: List[pq.Format] | None
 
-    def __init__(self, context: Optional[AdaptContext] = None): ...
+    def __init__(self, context: AdaptContext | None = None): ...
 
     @classmethod
-    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer": ...
+    def from_context(cls, context: AdaptContext | None) -> "Transformer": ...
 
     @property
-    def connection(self) -> Optional["BaseConnection[Any]"]: ...
+    def connection(self) -> "BaseConnection[Any]" | None: ...
 
     @property
     def encoding(self) -> str: ...
@@ -218,14 +220,14 @@ class Transformer(Protocol):
     def adapters(self) -> "AdaptersMap": ...
 
     @property
-    def pgresult(self) -> Optional["PGresult"]: ...
+    def pgresult(self) -> "PGresult" | None: ...
 
     def set_pgresult(
         self,
-        result: Optional["PGresult"],
+        result: "PGresult" | None,
         *,
         set_loaders: bool = True,
-        format: Optional[pq.Format] = None
+        format: pq.Format | None = None,
     ) -> None: ...
 
     def set_dumper_types(self, types: Sequence[int], format: pq.Format) -> None: ...
@@ -234,7 +236,7 @@ class Transformer(Protocol):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Sequence[Optional[Buffer]]: ...
+    ) -> Sequence[Buffer | None]: ...
 
     def as_literal(self, obj: Any) -> bytes: ...
 
@@ -244,8 +246,8 @@ class Transformer(Protocol):
         self, row0: int, row1: int, make_row: "RowMaker[Row]"
     ) -> List["Row"]: ...
 
-    def load_row(self, row: int, make_row: "RowMaker[Row]") -> Optional["Row"]: ...
+    def load_row(self, row: int, make_row: "RowMaker[Row]") -> "Row" | None: ...
 
-    def load_sequence(self, record: Sequence[Optional[Buffer]]) -> Tuple[Any, ...]: ...
+    def load_sequence(self, record: Sequence[Buffer | None]) -> Tuple[Any, ...]: ...
 
     def get_loader(self, oid: int, format: pq.Format) -> Loader: ...

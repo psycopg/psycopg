@@ -4,8 +4,10 @@ Support for range types adaptation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
-from typing import Any, Dict, Generic, List, Optional, Type, Tuple
+from typing import Any, Dict, Generic, List, Type, Tuple
 from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
@@ -84,8 +86,8 @@ class Range(Generic[T]):
 
     def __init__(
         self,
-        lower: Optional[T] = None,
-        upper: Optional[T] = None,
+        lower: T | None = None,
+        upper: T | None = None,
         bounds: str = "[)",
         empty: bool = False,
     ):
@@ -129,12 +131,12 @@ class Range(Generic[T]):
         return "".join(items)
 
     @property
-    def lower(self) -> Optional[T]:
+    def lower(self) -> T | None:
         """The lower bound of the range. `!None` if empty or unbound."""
         return self._lower
 
     @property
-    def upper(self) -> Optional[T]:
+    def upper(self) -> T | None:
         """The upper bound of the range. `!None` if empty or unbound."""
         return self._upper
 
@@ -285,9 +287,9 @@ class TimestamptzRange(Range[datetime]):
 
 
 class BaseRangeDumper(RecursiveDumper):
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
-        self.sub_dumper: Optional[Dumper] = None
+        self.sub_dumper: Dumper | None = None
         self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
@@ -354,7 +356,7 @@ class RangeDumper(BaseRangeDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    def dump(self, obj: Range[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Range[Any]) -> Buffer | None:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
@@ -401,7 +403,7 @@ _re_esc = re.compile(rb"([\\\"])")
 class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Range[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Range[Any]) -> Buffer | None:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
@@ -459,7 +461,7 @@ class BaseRangeLoader(RecursiveLoader, Generic[T]):
 
     subtype_oid: int
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._load = self._tx.get_loader(self.subtype_oid, format=self.format).load
 
@@ -557,7 +559,7 @@ def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
     return Range(min, max, lb + ub)
 
 
-def register_range(info: RangeInfo, context: Optional[AdaptContext] = None) -> None:
+def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None:
     """Register the adapters to load and dump a range type.
 
     :param info: The object with the information about the range to register.

@@ -198,7 +198,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     return results
 
 
-def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
+def fetch(pq.PGconn pgconn) -> PQGen[PGresult | None]:
     """
     Generator retrieving a single result from the database without blocking.
 

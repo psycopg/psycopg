@@ -2,7 +2,9 @@
 Adapters for PostGIS geometries
 """
 
-from typing import Optional, Type
+from __future__ import annotations
+
+from typing import Type
 
 from .. import postgres
 from ..abc import AdaptContext, Buffer
@@ -10,7 +12,6 @@ from ..adapt import Dumper, Loader
 from ..pq import Format
 from .._compat import cache
 from .._typeinfo import TypeInfo
-
 
 try:
     from shapely.wkb import loads, dumps
@@ -43,16 +44,16 @@ class GeometryLoader(Loader):
 class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: "BaseGeometry") -> Optional[Buffer]:
+    def dump(self, obj: "BaseGeometry") -> Buffer | None:
         return dumps(obj)  # type: ignore
 
 
 class BaseGeometryDumper(Dumper):
-    def dump(self, obj: "BaseGeometry") -> Optional[Buffer]:
+    def dump(self, obj: "BaseGeometry") -> Buffer | None:
         return dumps(obj, hex=True).encode()  # type: ignore
 
 
-def register_shapely(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
+def register_shapely(info: TypeInfo, context: AdaptContext | None = None) -> None:
     """Register Shapely dumper and loaders."""
 
     # A friendly error warning instead of an AttributeError in case fetch()

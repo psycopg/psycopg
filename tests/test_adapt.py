@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import datetime as dt
 from types import ModuleType
-from typing import Any, List, Optional
+from typing import Any, List
 
 import pytest
 
@@ -521,12 +523,12 @@ class MyStr(str):
 
 
 class StrNoneDumper(StrDumper):
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         return super().dump(obj) if obj else None
 
 
 class StrNoneBinaryDumper(StrBinaryDumper):
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         return super().dump(obj) if obj else None
 
 

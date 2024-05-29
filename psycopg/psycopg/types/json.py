@@ -4,8 +4,10 @@ Adapters for JSON types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import json
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Tuple, Type, Union
 
 from .. import abc
 from .. import _oids
@@ -20,7 +22,7 @@ JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
 
 
 def set_json_dumps(
-    dumps: JsonDumpsFunction, context: Optional[abc.AdaptContext] = None
+    dumps: JsonDumpsFunction, context: abc.AdaptContext | None = None
 ) -> None:
     """
     Set the JSON serialisation function to store JSON objects in the database.
@@ -59,7 +61,7 @@ def set_json_dumps(
 
 
 def set_json_loads(
-    loads: JsonLoadsFunction, context: Optional[abc.AdaptContext] = None
+    loads: JsonLoadsFunction, context: abc.AdaptContext | None = None
 ) -> None:
     """
     Set the JSON parsing function to fetch JSON objects from the database.
@@ -114,7 +116,7 @@ def _make_loader(base: Type[Loader], loads: JsonLoadsFunction) -> Type[Loader]:
 class _JsonWrapper:
     __slots__ = ("obj", "dumps")
 
-    def __init__(self, obj: Any, dumps: Optional[JsonDumpsFunction] = None):
+    def __init__(self, obj: Any, dumps: JsonDumpsFunction | None = None):
         self.obj = obj
         self.dumps = dumps
 
@@ -138,11 +140,11 @@ class _JsonDumper(Dumper):
     # set_json_dumps) or by a subclass.
     _dumps: JsonDumpsFunction = json.dumps
 
-    def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
 
-    def dump(self, obj: Any) -> Optional[Buffer]:
+    def dump(self, obj: Any) -> Buffer | None:
         if isinstance(obj, _JsonWrapper):
             dumps = obj.dumps or self.dumps
             obj = obj.obj
@@ -171,7 +173,7 @@ class JsonbBinaryDumper(_JsonDumper):
     format = Format.BINARY
     oid = _oids.JSONB_OID
 
-    def dump(self, obj: Any) -> Optional[Buffer]:
+    def dump(self, obj: Any) -> Buffer | None:
         obj_bytes = super().dump(obj)
         if obj_bytes is not None:
             return b"\x01" + obj_bytes
@@ -184,7 +186,7 @@ class _JsonLoader(Loader):
     # set_json_loads) or by a subclass.
     _loads: JsonLoadsFunction = json.loads
 
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self.loads = self.__class__._loads
 

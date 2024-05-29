@@ -20,9 +20,11 @@ generator should probably yield the same value again in order to wait more.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from time import monotonic
-from typing import List, Optional, Union
+from typing import List, Union
 
 from . import pq
 from . import errors as e
@@ -195,7 +197,7 @@ def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     return results
 
 
-def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
+def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
     """
     Generator retrieving a single result from the database without blocking.
 
@@ -361,7 +363,7 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
                 break
 
 
-def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
+def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
         while True:

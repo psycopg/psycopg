@@ -4,8 +4,9 @@ Adapters for booleans.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 from .. import _oids
-from typing import Optional
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
@@ -14,7 +15,7 @@ from ..adapt import Buffer, Dumper, Loader
 class BoolDumper(Dumper):
     oid = _oids.BOOL_OID
 
-    def dump(self, obj: bool) -> Optional[Buffer]:
+    def dump(self, obj: bool) -> Buffer | None:
         return b"t" if obj else b"f"
 
     def quote(self, obj: bool) -> Buffer:
@@ -25,7 +26,7 @@ class BoolBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.BOOL_OID
 
-    def dump(self, obj: bool) -> Optional[Buffer]:
+    def dump(self, obj: bool) -> Buffer | None:
         return b"\x01" if obj else b"\x00"
 
 

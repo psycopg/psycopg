@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import datetime as dt
 import importlib
 import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, List, Set, Tuple, Union
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -42,7 +44,7 @@ class Faker:
         self.records = []
 
         self._schema = None
-        self._types: Optional[List[type]] = None
+        self._types: List[type] | None = None
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 import pytest
@@ -233,15 +235,15 @@ obj = {curs}
     [
         (
             "conn.cursor()",
-            "Optional[Tuple[Any, ...]]",
+            "Tuple[Any, ...] | None",
         ),
         (
             "conn.cursor(row_factory=rows.dict_row)",
-            "Optional[Dict[str, Any]]",
+            "Dict[str, Any] | None",
         ),
         (
             "conn.cursor(row_factory=thing_row)",
-            "Optional[Thing]",
+            "Thing | None",
         ),
     ],
 )
@@ -371,11 +373,11 @@ class MyCursor(psycopg.{cur_base_class}[Row]):
 
 
 def _test_reveal(stmts, type, mypy):
-    ignore = "" if type.startswith("Optional") else "# type: ignore[assignment]"
+    ignore = "" if type.endswith("| None") else "# type: ignore[assignment]"
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence
+from typing import Any, Callable, Dict, List, NamedTuple, Sequence
 from typing import Tuple, Union
 import psycopg
 from psycopg import rows

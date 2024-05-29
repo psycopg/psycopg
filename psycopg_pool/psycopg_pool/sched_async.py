@@ -12,10 +12,12 @@ Tasks are called "Task", not "Event", here, because we actually make use of
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from time import monotonic
 from heapq import heappush, heappop
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List
 
 from ._task import Task
 from ._acompat import ALock, AEvent
@@ -31,7 +33,7 @@ class AsyncScheduler:
 
     EMPTY_QUEUE_TIMEOUT = 600.0
 
-    async def enter(self, delay: float, action: Optional[Callable[[], Any]]) -> Task:
+    async def enter(self, delay: float, action: Callable[[], Any] | None) -> Task:
         """Enter a new task in the queue delayed in the future.
 
         Schedule a `!None` to stop the execution.
@@ -39,7 +41,7 @@ class AsyncScheduler:
         time = monotonic() + delay
         return await self.enterabs(time, action)
 
-    async def enterabs(self, time: float, action: Optional[Callable[[], Any]]) -> Task:
+    async def enterabs(self, time: float, action: Callable[[], Any] | None) -> Task:
         """Enter a new task in the queue at an absolute time.
 
         Schedule a `!None` to stop the execution.

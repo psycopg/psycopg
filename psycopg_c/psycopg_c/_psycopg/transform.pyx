@@ -19,7 +19,7 @@ from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
@@ -98,7 +98,7 @@ cdef class Transformer:
 
     cdef dict _oid_types
 
-    def __cinit__(self, context: Optional["AdaptContext"] = None):
+    def __cinit__(self, context: "AdaptContext" | None = None):
         if context is not None:
             self.adapters = context.adapters
             self.connection = context.connection
@@ -111,7 +111,7 @@ cdef class Transformer:
         self._none_oid = -1
 
     @classmethod
-    def from_context(cls, context: Optional["AdaptContext"]):
+    def from_context(cls, context: "AdaptContext" | None):
         """
         Return a Transformer from an AdaptContext.
 
@@ -126,7 +126,7 @@ cdef class Transformer:
         return self._encoding
 
     @property
-    def pgresult(self) -> Optional[PGresult]:
+    def pgresult(self) -> PGresult | None:
         return self._pgresult
 
     cpdef set_pgresult(
@@ -493,7 +493,7 @@ cdef class Transformer:
                 Py_DECREF(<object>brecord)
         return records
 
-    def load_row(self, int row, object make_row) -> Optional[Row]:
+    def load_row(self, int row, object make_row) -> Row | None:
         if self._pgresult is None:
             return None
 
@@ -537,7 +537,7 @@ cdef class Transformer:
                 make_row, <PyObject *>record, NULL)
         return record
 
-    cpdef object load_sequence(self, record: Sequence[Optional[Buffer]]):
+    cpdef object load_sequence(self, record: Sequence[Buffer | None]):
         cdef Py_ssize_t nfields = len(record)
         out = PyTuple_New(nfields)
         cdef PyObject *loader  # borrowed RowLoader

@@ -4,8 +4,10 @@ CockroachDB-specific connections.
 
 # Copyright (C) 2022 The Psycopg Team
 
+from __future__ import annotations
+
 import re
-from typing import Any, Optional, Union, TYPE_CHECKING
+from typing import Any, Union, TYPE_CHECKING
 
 from .. import errors as e
 from ..rows import Row
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class _CrdbConnectionMixin:
-    _adapters: Optional[AdaptersMap]
+    _adapters: AdaptersMap | None
     pgconn: "PGconn"
 
     @classmethod
@@ -97,7 +99,7 @@ class CrdbConnectionInfo(ConnectionInfo):
         return ver
 
     @classmethod
-    def parse_crdb_version(self, sver: str) -> Optional[int]:
+    def parse_crdb_version(self, sver: str) -> int | None:
         m = re.search(r"\bv(\d+)\.(\d+)\.(\d+)", sver)
         if not m:
             return None

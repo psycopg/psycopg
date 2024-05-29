@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, Iterator, cast, Dict, Generic, List
-from typing import Optional, Type
+from typing import Type
 from weakref import ref
 from contextlib import contextmanager
 
@@ -43,20 +43,20 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str = "",
         *,
         connection_class: Type[CT] = cast(Type[CT], Connection),
-        kwargs: Optional[Dict[str, Any]] = None,
+        kwargs: Dict[str, Any] | None = None,
         min_size: int = 4,
-        max_size: Optional[int] = None,
+        max_size: int | None = None,
         open: bool | None = None,
-        configure: Optional[ConnectionCB[CT]] = None,
-        check: Optional[ConnectionCB[CT]] = None,
-        reset: Optional[ConnectionCB[CT]] = None,
-        name: Optional[str] = None,
+        configure: ConnectionCB[CT] | None = None,
+        check: ConnectionCB[CT] | None = None,
+        reset: ConnectionCB[CT] | None = None,
+        name: str | None = None,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[ConnectFailedCB] = None,
+        reconnect_failed: ConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
@@ -75,9 +75,9 @@ class ConnectionPool(Generic[CT], BasePool):
         self._waiting = Deque[WaitingClient[CT]]()
 
         # to notify that the pool is full
-        self._pool_full_event: Optional[Event] = None
+        self._pool_full_event: Event | None = None
 
-        self._sched_runner: Optional[Worker] = None
+        self._sched_runner: Worker | None = None
         self._workers: List[Worker] = []
 
         super().__init__(
@@ -153,7 +153,7 @@ class ConnectionPool(Generic[CT], BasePool):
         logger.info("pool %r is ready to use", self.name)
 
     @contextmanager
-    def connection(self, timeout: Optional[float] = None) -> Iterator[CT]:
+    def connection(self, timeout: float | None = None) -> Iterator[CT]:
         """Context manager to obtain a connection from the pool.
 
         Return the connection immediately if available, otherwise wait up to
@@ -175,7 +175,7 @@ class ConnectionPool(Generic[CT], BasePool):
             t1 = monotonic()
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
 
-    def getconn(self, timeout: Optional[float] = None) -> CT:
+    def getconn(self, timeout: float | None = None) -> CT:
         """Obtain a connection from the pool.
 
         You should preferably use `connection()`. Use this function only if
@@ -262,12 +262,12 @@ class ConnectionPool(Generic[CT], BasePool):
         conn._pool = self
         return conn
 
-    def _get_ready_connection(self, timeout: Optional[float]) -> Optional[CT]:
+    def _get_ready_connection(self, timeout: float | None) -> CT | None:
         """Return a connection, if the client deserves one."""
         if timeout is not None and timeout <= 0.0:
             raise PoolTimeout()
 
-        conn: Optional[CT] = None
+        conn: CT | None = None
         if self._pool:
             # Take a connection ready out of the pool
             conn = self._pool.popleft()
@@ -467,13 +467,13 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         self.close()
 
-    def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+    def resize(self, min_size: int, max_size: int | None = None) -> None:
         """Change the size of the pool during runtime."""
         min_size, max_size = self._check_size(min_size, max_size)
 
@@ -586,7 +586,7 @@ class ConnectionPool(Generic[CT], BasePool):
                     "task run %s failed: %s: %s", task, ex.__class__.__name__, ex
                 )
 
-    def _connect(self, timeout: Optional[float] = None) -> CT:
+    def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
         kwargs = self.kwargs
@@ -619,7 +619,7 @@ class ConnectionPool(Generic[CT], BasePool):
         return conn
 
     def _add_connection(
-        self, attempt: Optional[AttemptWithBackoff], growing: bool = False
+        self, attempt: AttemptWithBackoff | None, growing: bool = False
     ) -> None:
         """Try to connect and add the connection to the pool.
 
@@ -788,7 +788,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 conn.close()
 
     def _shrink_pool(self) -> None:
-        to_close: Optional[CT] = None
+        to_close: CT | None = None
 
         with self._lock:
             # Reset the min number of connections used
@@ -823,8 +823,8 @@ class WaitingClient(Generic[CT]):
     __slots__ = ("conn", "error", "_cond")
 
     def __init__(self) -> None:
-        self.conn: Optional[CT] = None
-        self.error: Optional[BaseException] = None
+        self.conn: CT | None = None
+        self.error: BaseException | None = None
 
         # The WaitingClient behaves in a way similar to an Event, but we need
         # to notify reliably the flagger that the waiter has "accepted" the
@@ -939,7 +939,7 @@ class AddConnection(MaintenanceTask):
     def __init__(
         self,
         pool: ConnectionPool[Any],
-        attempt: Optional[AttemptWithBackoff] = None,
+        attempt: AttemptWithBackoff | None = None,
         growing: bool = False,
     ):
         super().__init__(pool)

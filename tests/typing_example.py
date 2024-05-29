@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Sequence, Tuple, Union
 
 from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
@@ -45,12 +45,12 @@ def check_row_factory_cursor() -> None:
 
     cur1: Cursor[Any]
     cur1 = conn.cursor()
-    r1: Optional[Any]
+    r1: Any | None
     r1 = cur1.fetchone()
     r1 is not None
 
     cur2: Cursor[int]
-    r2: Optional[int]
+    r2: int | None
     with conn.cursor(row_factory=int_row_factory) as cur2:
         cur2.execute("select 1")
         r2 = cur2.fetchone()
@@ -70,12 +70,12 @@ async def async_check_row_factory_cursor() -> None:
 
     cur1: AsyncCursor[Any]
     cur1 = conn.cursor()
-    r1: Optional[Any]
+    r1: Any | None
     r1 = await cur1.fetchone()
     r1 is not None
 
     cur2: AsyncCursor[int]
-    r2: Optional[int]
+    r2: int | None
     async with conn.cursor(row_factory=int_row_factory) as cur2:
         await cur2.execute("select 1")
         r2 = await cur2.fetchone()
@@ -95,7 +95,7 @@ def check_row_factory_connection() -> None:
     """
     conn1: Connection[int]
     cur1: Cursor[int]
-    r1: Optional[int]
+    r1: int | None
     conn1 = connect(row_factory=int_row_factory)
     cur1 = conn1.execute("select 1")
     r1 = cur1.fetchone()
@@ -105,7 +105,7 @@ def check_row_factory_connection() -> None:
 
     conn2: Connection[Person]
     cur2: Cursor[Person]
-    r2: Optional[Person]
+    r2: Person | None
     conn2 = connect(row_factory=Person.row_factory)
     cur2 = conn2.execute("select * from persons")
     r2 = cur2.fetchone()
@@ -114,7 +114,7 @@ def check_row_factory_connection() -> None:
         cur2.execute("select 2")
 
     cur3: Cursor[Tuple[Any, ...]]
-    r3: Optional[Tuple[Any, ...]]
+    r3: Tuple[Any, ...] | None
     conn3 = connect()
     cur3 = conn3.execute("select 3")
     with conn3.cursor() as cur3:
@@ -129,7 +129,7 @@ async def async_check_row_factory_connection() -> None:
     """
     conn1: AsyncConnection[int]
     cur1: AsyncCursor[int]
-    r1: Optional[int]
+    r1: int | None
     conn1 = await AsyncConnection.connect(row_factory=int_row_factory)
     cur1 = await conn1.execute("select 1")
     r1 = await cur1.fetchone()
@@ -139,7 +139,7 @@ async def async_check_row_factory_connection() -> None:
 
     conn2: AsyncConnection[Person]
     cur2: AsyncCursor[Person]
-    r2: Optional[Person]
+    r2: Person | None
     conn2 = await AsyncConnection.connect(row_factory=Person.row_factory)
     cur2 = await conn2.execute("select * from persons")
     r2 = await cur2.fetchone()
@@ -148,7 +148,7 @@ async def async_check_row_factory_connection() -> None:
         await cur2.execute("select 2")
 
     cur3: AsyncCursor[Tuple[Any, ...]]
-    r3: Optional[Tuple[Any, ...]]
+    r3: Tuple[Any, ...] | None
     conn3 = await AsyncConnection.connect()
     cur3 = await conn3.execute("select 3")
     async with conn3.cursor() as cur3:

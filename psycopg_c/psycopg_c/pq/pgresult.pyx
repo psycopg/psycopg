@@ -36,7 +36,7 @@ cdef class PGresult:
             self._pgresult_ptr = NULL
 
     @property
-    def pgresult_ptr(self) -> Optional[int]:
+    def pgresult_ptr(self) -> int | None:
         if self._pgresult_ptr:
             return <long long><void *>self._pgresult_ptr
         else:
@@ -50,7 +50,7 @@ cdef class PGresult:
     def error_message(self) -> bytes:
         return libpq.PQresultErrorMessage(self._pgresult_ptr)
 
-    def error_field(self, int fieldcode) -> Optional[bytes]:
+    def error_field(self, int fieldcode) -> bytes | None:
         cdef char * rv = libpq.PQresultErrorField(self._pgresult_ptr, fieldcode)
         if rv is not NULL:
             return rv
@@ -65,7 +65,7 @@ cdef class PGresult:
     def nfields(self) -> int:
         return libpq.PQnfields(self._pgresult_ptr)
 
-    def fname(self, int column_number) -> Optional[bytes]:
+    def fname(self, int column_number) -> bytes | None:
         cdef char *rv = libpq.PQfname(self._pgresult_ptr, column_number)
         if rv is not NULL:
             return rv
@@ -94,7 +94,7 @@ cdef class PGresult:
     def binary_tuples(self) -> int:
         return libpq.PQbinaryTuples(self._pgresult_ptr)
 
-    def get_value(self, int row_number, int column_number) -> Optional[bytes]:
+    def get_value(self, int row_number, int column_number) -> bytes | None:
         cdef int crow = row_number
         cdef int ccol = column_number
         cdef int length = libpq.PQgetlength(self._pgresult_ptr, crow, ccol)
@@ -117,7 +117,7 @@ cdef class PGresult:
         return libpq.PQparamtype(self._pgresult_ptr, param_number)
 
     @property
-    def command_status(self) -> Optional[bytes]:
+    def command_status(self) -> bytes | None:
         cdef char *rv = libpq.PQcmdStatus(self._pgresult_ptr)
         if rv is not NULL:
             return rv
@@ -125,7 +125,7 @@ cdef class PGresult:
             return None
 
     @property
-    def command_tuples(self) -> Optional[int]:
+    def command_tuples(self) -> int | None:
         cdef char *rv = libpq.PQcmdTuples(self._pgresult_ptr)
         if rv is NULL:
             return None

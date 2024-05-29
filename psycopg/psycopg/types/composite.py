@@ -4,10 +4,12 @@ Support for composite types adaptation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, cast, Dict, Iterator, List, Optional
+from typing import Any, Callable, cast, Dict, Iterator, List
 from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
 
 from .. import pq
@@ -48,7 +50,7 @@ class CompositeInfo(TypeInfo):
         self.field_names = field_names
         self.field_types = field_types
         # Will be set by register() if the `factory` is a type
-        self.python_type: Optional[type] = None
+        self.python_type: type | None = None
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> abc.Query:
@@ -119,7 +121,7 @@ class TupleDumper(SequenceDumper):
     # Should be this, but it doesn't work
     # oid = _oids.RECORD_OID
 
-    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
+    def dump(self, obj: Tuple[Any, ...]) -> Buffer | None:
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
@@ -129,7 +131,7 @@ class TupleBinaryDumper(Dumper):
     # Subclasses must set this info
     _field_types: Tuple[int, ...]
 
-    def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
 
         # Note: this class is not a RecursiveDumper because it would use the
@@ -142,7 +144,7 @@ class TupleBinaryDumper(Dumper):
         nfields = len(self._field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
-    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
+    def dump(self, obj: Tuple[Any, ...]) -> Buffer | None:
         out = bytearray(pack_len(len(obj)))
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
@@ -158,11 +160,11 @@ class TupleBinaryDumper(Dumper):
 
 
 class BaseCompositeLoader(Loader):
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
-    def _parse_record(self, data: abc.Buffer) -> Iterator[Optional[bytes]]:
+    def _parse_record(self, data: abc.Buffer) -> Iterator[bytes | None]:
         """
         Split a non-empty representation of a composite type into components.
 
@@ -208,7 +210,7 @@ class RecordLoader(BaseCompositeLoader):
 class RecordBinaryLoader(Loader):
     format = pq.Format.BINARY
 
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self._ctx = context
         # Cache a transformer for each sequence of oid found.
@@ -272,8 +274,8 @@ class CompositeBinaryLoader(RecordBinaryLoader):
 
 def register_composite(
     info: CompositeInfo,
-    context: Optional[abc.AdaptContext] = None,
-    factory: Optional[Callable[..., Any]] = None,
+    context: abc.AdaptContext | None = None,
+    factory: Callable[..., Any] | None = None,
 ) -> None:
     """Register the adapters to load and dump a composite type.
 

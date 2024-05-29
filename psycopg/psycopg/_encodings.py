@@ -4,10 +4,12 @@ Mappings between PostgreSQL and Python encodings.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import string
 import codecs
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 
 from .pq._enums import ConnStatus
 from .errors import NotSupportedError
@@ -78,7 +80,7 @@ py_codecs.update(
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
-def conn_encoding(conn: "Optional[BaseConnection[Any]]") -> str:
+def conn_encoding(conn: "BaseConnection[Any] | None") -> str:
     """
     Return the Python encoding name of a psycopg connection.
 

@@ -4,8 +4,10 @@ Utility module to manipulate queries
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
-from typing import Any, Callable, Dict, List, Mapping, Match, NamedTuple, Optional
+from typing import Any, Callable, Dict, List, Mapping, Match, NamedTuple
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
 from functools import lru_cache
 
@@ -43,20 +45,20 @@ class PostgresQuery:
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
 
-        self.params: Optional[Sequence[Optional[Buffer]]] = None
+        self.params: Sequence[Buffer | None] | None = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
         self.types: Tuple[int, ...] = ()
 
         # The format requested by the user and the ones to really pass Postgres
-        self._want_formats: Optional[List[PyFormat]] = None
-        self.formats: Optional[Sequence[pq.Format]] = None
+        self._want_formats: List[PyFormat] | None = None
+        self.formats: Sequence[pq.Format] | None = None
 
         self._encoding = conn_encoding(transformer.connection)
         self._parts: List[QueryPart]
         self.query = b""
-        self._order: Optional[List[str]] = None
+        self._order: List[str] | None = None
 
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
+    def convert(self, query: Query, vars: Params | None) -> None:
         """
         Set up the query and parameters to convert.
 
@@ -93,7 +95,7 @@ class PostgresQuery:
 
         self.dump(vars)
 
-    def dump(self, vars: Optional[Params]) -> None:
+    def dump(self, vars: Params | None) -> None:
         """
         Process a new set of variables on the query processed by `convert()`.
 
@@ -131,7 +133,7 @@ class PostgresQuery:
 
     @staticmethod
     def validate_and_reorder_params(
-        parts: List[QueryPart], vars: Params, order: Optional[List[str]]
+        parts: List[QueryPart], vars: Params, order: List[str] | None
     ) -> Sequence[Any]:
         """
         Verify the compatibility between a query and a set of params.
@@ -167,13 +169,13 @@ class PostgresQuery:
 
 # The type of the _query2pg() and _query2pg_nocache() methods
 _Query2Pg: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]
+    [bytes, str], Tuple[bytes, List[PyFormat], List[str] | None, List[QueryPart]]
 ]
 
 
 def _query2pg_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
+) -> Tuple[bytes, List[PyFormat], List[str] | None, List[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.
 
@@ -185,7 +187,7 @@ def _query2pg_nocache(
       ``parts`` (splits of queries and placeholders).
     """
     parts = _split_query(query, encoding)
-    order: Optional[List[str]] = None
+    order: List[str] | None = None
     chunks: List[bytes] = []
     formats = []
 
@@ -236,7 +238,7 @@ class PostgresClientQuery(PostgresQuery):
 
     __slots__ = ("template",)
 
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
+    def convert(self, query: Query, vars: Params | None) -> None:
         """
         Set up the query and parameters to convert.
 
@@ -266,7 +268,7 @@ class PostgresClientQuery(PostgresQuery):
 
         self.dump(vars)
 
-    def dump(self, vars: Optional[Params]) -> None:
+    def dump(self, vars: Params | None) -> None:
         """
         Process a new set of variables on the query processed by `convert()`.
 
@@ -283,18 +285,18 @@ class PostgresClientQuery(PostgresQuery):
 
 
 _Query2PgClient: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, Optional[List[str]], List[QueryPart]]
+    [bytes, str], Tuple[bytes, List[str] | None, List[QueryPart]]
 ]
 
 
 def _query2pg_client_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, Optional[List[str]], List[QueryPart]]:
+) -> Tuple[bytes, List[str] | None, List[QueryPart]]:
     """
     Convert Python query and params into a template to perform client-side binding
     """
     parts = _split_query(query, encoding, collapse_double_percent=False)
-    order: Optional[List[str]] = None
+    order: List[str] | None = None
     chunks: List[bytes] = []
 
     if isinstance(parts[0].item, int):
@@ -345,7 +347,7 @@ _re_placeholder = re.compile(
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> List[QueryPart]:
-    parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
+    parts: List[Tuple[bytes, Match[bytes] | None]] = []
     cur = 0
 
     # pairs [(fragment, match], with the last match None

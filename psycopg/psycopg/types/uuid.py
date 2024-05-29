@@ -4,7 +4,9 @@ Adapters for the UUID type.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Callable, Optional, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import Callable, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
@@ -21,19 +23,19 @@ UUID: Callable[..., "uuid.UUID"] = None  # type: ignore[assignment]
 class UUIDDumper(Dumper):
     oid = _oids.UUID_OID
 
-    def dump(self, obj: "uuid.UUID") -> Optional[Buffer]:
+    def dump(self, obj: "uuid.UUID") -> Buffer | None:
         return obj.hex.encode()
 
 
 class UUIDBinaryDumper(UUIDDumper):
     format = Format.BINARY
 
-    def dump(self, obj: "uuid.UUID") -> Optional[Buffer]:
+    def dump(self, obj: "uuid.UUID") -> Buffer | None:
         return obj.bytes
 
 
 class UUIDLoader(Loader):
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         global UUID
         if UUID is None:

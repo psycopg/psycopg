@@ -310,7 +310,7 @@ cdef class TimedeltaDumper(CDumper):
     oid = oids.INTERVAL_OID
     cdef int _style
 
-    def __cinit__(self, cls, context: Optional[AdaptContext] = None):
+    def __cinit__(self, cls, context: AdaptContext | None = None):
 
         cdef const char *ds = _get_intervalstyle(self._pgconn)
         if ds[0] == b's':  # sql_standard
@@ -371,7 +371,7 @@ cdef class DateLoader(CLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -576,7 +576,7 @@ cdef class TimestampLoader(CLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -714,7 +714,7 @@ cdef class TimestampBinaryLoader(CLoader):
 cdef class _BaseTimestamptzLoader(CLoader):
     cdef object _time_zone
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
         self._time_zone = _timezone_from_connection(self._pgconn)
 
 
@@ -724,7 +724,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -871,7 +871,7 @@ cdef class IntervalLoader(CLoader):
     format = PQ_TEXT
     cdef int _style
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
 
         cdef const char *ds = _get_intervalstyle(self._pgconn)
         if ds[0] == b'p' and ds[8] == 0:  # postgres
@@ -1096,7 +1096,7 @@ cdef object _timezone_from_seconds(int sec, __cache={}):
 
 
 cdef object _get_timestamp_load_error(
-    pq.PGconn pgconn, const char *data, ex: Optional[Exception] = None
+    pq.PGconn pgconn, const char *data, ex: Exception | None = None
 ):
     s = bytes(data).decode("utf8", "replace")
 

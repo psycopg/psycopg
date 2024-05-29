@@ -4,8 +4,10 @@ Dict to hstore adaptation
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import re
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Type
 
 from .. import errors as e
 from .. import postgres
@@ -35,11 +37,11 @@ _re_hstore = re.compile(
 )
 
 
-Hstore: TypeAlias = Dict[str, Optional[str]]
+Hstore: TypeAlias = Dict[str, str | None]
 
 
 class BaseHstoreDumper(RecursiveDumper):
-    def dump(self, obj: Hstore) -> Optional[Buffer]:
+    def dump(self, obj: Hstore) -> Buffer | None:
         if not obj:
             return b""
 
@@ -96,7 +98,7 @@ class HstoreLoader(RecursiveLoader):
         return rv
 
 
-def register_hstore(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
+def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None:
     """Register the adapters to load and dump hstore.
 
     :param info: The object with the information about the hstore type.

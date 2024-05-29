@@ -5,11 +5,13 @@ DNS query support
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import os
 import re
 import warnings
 from random import randint
-from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Sequence
+from typing import Any, DefaultDict, Dict, List, NamedTuple, Sequence
 from typing import TYPE_CHECKING
 from collections import defaultdict
 
@@ -88,7 +90,7 @@ class HostPort(NamedTuple):
     host: str
     port: str
     totry: bool = False
-    target: Optional[str] = None
+    target: str | None = None
 
 
 class Rfc2782Resolver:

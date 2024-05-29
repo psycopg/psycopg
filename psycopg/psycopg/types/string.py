@@ -4,7 +4,9 @@ Adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Optional, Union, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import Union, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format, Escaping
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class _BaseStrDumper(Dumper):
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         enc = conn_encoding(self.connection)
         self._encoding = enc if enc != "ascii" else "utf-8"
@@ -33,7 +35,7 @@ class _StrBinaryDumper(_BaseStrDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         # the server will raise DataError subclass if the string contains 0x00
         return obj.encode(self._encoding)
 
@@ -45,7 +47,7 @@ class _StrDumper(_BaseStrDumper):
     Subclasses shall specify the oids of real types (text, varchar, name...).
     """
 
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         if "\x00" in obj:
             raise DataError("PostgreSQL text fields cannot contain NUL (0x00) bytes")
         else:
@@ -103,7 +105,7 @@ class StrDumperUnknown(_StrDumper):
 
 
 class TextLoader(Loader):
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         enc = conn_encoding(self.connection)
         self._encoding = enc if enc != "ascii" else ""
@@ -128,11 +130,11 @@ class BytesDumper(Dumper):
     oid = _oids.BYTEA_OID
     _qprefix = b""
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         self._esc = Escaping(self.connection.pgconn if self.connection else None)
 
-    def dump(self, obj: Buffer) -> Optional[Buffer]:
+    def dump(self, obj: Buffer) -> Buffer | None:
         return self._esc.escape_bytea(obj)
 
     def quote(self, obj: Buffer) -> Buffer:
@@ -167,14 +169,14 @@ class BytesBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.BYTEA_OID
 
-    def dump(self, obj: Buffer) -> Optional[Buffer]:
+    def dump(self, obj: Buffer) -> Buffer | None:
         return obj
 
 
 class ByteaLoader(Loader):
     _escaping: "EscapingProto"
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         if not hasattr(self.__class__, "_escaping"):
             self.__class__._escaping = Escaping()

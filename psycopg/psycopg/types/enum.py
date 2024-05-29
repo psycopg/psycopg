@@ -2,8 +2,10 @@
 Adapters for the enum type.
 """
 
+from __future__ import annotations
+
 from enum import Enum
-from typing import Any, Dict, Generic, Optional, Mapping, Sequence
+from typing import Any, Dict, Generic, Mapping, Sequence
 from typing import Tuple, Type, Union, cast, TYPE_CHECKING
 
 from .. import sql
@@ -46,7 +48,7 @@ class EnumInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.labels = labels
         # Will be set by register_enum()
-        self.enum: Optional[Type[Enum]] = None
+        self.enum: Type[Enum] | None = None
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
@@ -98,7 +100,7 @@ class _BaseEnumDumper(Dumper, Generic[E]):
     enum: Type[E]
     _dump_map: EnumDumpMap[E]
 
-    def dump(self, value: E) -> Optional[Buffer]:
+    def dump(self, value: E) -> Buffer | None:
         return self._dump_map[value]
 
 
@@ -107,11 +109,11 @@ class EnumDumper(Dumper):
     Dumper for a generic Enum class
     """
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         self._encoding = conn_encoding(self.connection)
 
-    def dump(self, value: E) -> Optional[Buffer]:
+    def dump(self, value: E) -> Buffer | None:
         return value.name.encode(self._encoding)
 
 
@@ -121,8 +123,8 @@ class EnumBinaryDumper(EnumDumper):
 
 def register_enum(
     info: EnumInfo,
-    context: Optional[AdaptContext] = None,
-    enum: Optional[Type[E]] = None,
+    context: AdaptContext | None = None,
+    enum: Type[E] | None = None,
     *,
     mapping: EnumMapping[E] = None,
 ) -> None:
@@ -209,7 +211,7 @@ def _make_load_map(
     info: EnumInfo,
     enum: Type[E],
     mapping: EnumMapping[E],
-    context: Optional[AdaptContext],
+    context: AdaptContext | None,
 ) -> _HEnumLoadMap[E]:
     enc = conn_encoding(context.connection if context else None)
     rv = []
@@ -237,7 +239,7 @@ def _make_dump_map(
     info: EnumInfo,
     enum: Type[E],
     mapping: EnumMapping[E],
-    context: Optional[AdaptContext],
+    context: AdaptContext | None,
 ) -> _HEnumDumpMap[E]:
     enc = conn_encoding(context.connection if context else None)
     rv = []

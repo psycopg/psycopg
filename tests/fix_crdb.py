@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 import pytest
 
@@ -53,7 +53,7 @@ def check_crdb_version(got, mark):
 is_crdb = CrdbConnection.is_crdb
 
 
-def crdb_skip_message(reason: Optional[str]) -> str:
+def crdb_skip_message(reason: str | None) -> str:
     msg = ""
     if reason:
         msg = reason

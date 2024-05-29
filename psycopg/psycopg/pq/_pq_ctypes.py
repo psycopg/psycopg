@@ -4,6 +4,8 @@ libpq access using ctypes
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import sys
 import ctypes
 import ctypes.util
@@ -769,7 +771,7 @@ def generate_stub() -> None:
             if narg is not None:
                 return "bytes"
             else:
-                return "Optional[bytes]"
+                return "bytes | None"
 
         elif t.__name__ in (
             "LP_PGconn_struct",
@@ -778,7 +780,7 @@ def generate_stub() -> None:
             "LP_PGcancel_struct",
         ):
             if narg is not None:
-                return f"Optional[{t.__name__[3:]}]"
+                return f"{t.__name__[3:]} | None"
             else:
                 return str(t.__name__[3:])
 

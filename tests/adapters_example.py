@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 from psycopg import pq
 from psycopg.abc import Dumper, Loader, AdaptContext, PyFormat, Buffer
@@ -17,7 +17,7 @@ class MyStrDumper:
     format = pq.Format.TEXT
     oid = 25  # text
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         self._cls = cls
 
     def dump(self, obj: str) -> bytes:
@@ -38,7 +38,7 @@ class MyStrDumper:
 class MyTextLoader:
     format = pq.Format.TEXT
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         pass
 
     def load(self, data: Buffer) -> str:

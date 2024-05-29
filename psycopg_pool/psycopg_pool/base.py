@@ -4,9 +4,11 @@ psycopg connection pool base class and functionalities.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 from time import monotonic
 from random import random
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Tuple, TYPE_CHECKING
 
 from psycopg import errors as e
 
@@ -44,10 +46,10 @@ class BasePool:
         self,
         conninfo: str = "",
         *,
-        kwargs: Optional[Dict[str, Any]],
+        kwargs: Dict[str, Any] | None,
         min_size: int,
-        max_size: Optional[int],
-        name: Optional[str],
+        max_size: int | None,
+        name: str | None,
         timeout: float,
         max_waiting: int,
         max_lifetime: float,
@@ -116,7 +118,7 @@ class BasePool:
         """`!True` if the pool is closed."""
         return self._closed
 
-    def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
+    def _check_size(self, min_size: int, max_size: int | None) -> Tuple[int, int]:
         if max_size is None:
             max_size = min_size
 

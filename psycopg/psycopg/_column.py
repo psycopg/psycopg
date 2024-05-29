@@ -4,7 +4,9 @@ The Column object in Cursor.description
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Optional, Sequence, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import Any, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
 if TYPE_CHECKING:
@@ -76,27 +78,27 @@ class Column(Sequence[Any]):
         return self._ftype
 
     @property
-    def display_size(self) -> Optional[int]:
+    def display_size(self) -> int | None:
         """The field size, for string types such as :sql:`varchar(n)`."""
         return self._type.get_display_size(self._fmod) if self._type else None
 
     @property
-    def internal_size(self) -> Optional[int]:
+    def internal_size(self) -> int | None:
         """The internal field size for fixed-size types, None otherwise."""
         fsize = self._fsize
         return fsize if fsize >= 0 else None
 
     @property
-    def precision(self) -> Optional[int]:
+    def precision(self) -> int | None:
         """The number of digits for fixed precision types."""
         return self._type.get_precision(self._fmod) if self._type else None
 
     @property
-    def scale(self) -> Optional[int]:
+    def scale(self) -> int | None:
         """The number of digits after the decimal point if available."""
         return self._type.get_scale(self._fmod) if self._type else None
 
     @property
-    def null_ok(self) -> Optional[bool]:
+    def null_ok(self) -> bool | None:
         """Always `!None`"""
         return None

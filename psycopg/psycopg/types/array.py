@@ -4,10 +4,12 @@ Adapters for arrays
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import struct
 from math import prod
-from typing import Any, cast, Callable, List, Optional, Pattern, Set, Tuple, Type
+from typing import Any, cast, Callable, List, Pattern, Set, Tuple, Type
 
 from .. import pq
 from .. import errors as e
@@ -34,12 +36,12 @@ PQ_BINARY = pq.Format.BINARY
 class BaseListDumper(RecursiveDumper):
     element_oid = INVALID_OID
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         if cls is NoneType:
             cls = list
 
         super().__init__(cls, context)
-        self.sub_dumper: Optional[Dumper] = None
+        self.sub_dumper: Dumper | None = None
         if self.element_oid and context:
             sdclass = context.adapters.get_dumper_by_oid(self.element_oid, self.format)
             self.sub_dumper = sdclass(NoneType, context)
@@ -153,7 +155,7 @@ class ListDumper(BaseListDumper):
     # backslash-escaped.
     _re_esc = re.compile(rb'(["\\])')
 
-    def dump(self, obj: List[Any]) -> Optional[Buffer]:
+    def dump(self, obj: List[Any]) -> Buffer | None:
         tokens: List[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
@@ -187,7 +189,7 @@ class ListDumper(BaseListDumper):
 
         return b"".join(tokens)
 
-    def _dump_item(self, item: Any) -> Optional[Buffer]:
+    def _dump_item(self, item: Any) -> Buffer | None:
         if self.sub_dumper:
             return self.sub_dumper.dump(item)
         else:
@@ -245,7 +247,7 @@ class ListBinaryDumper(BaseListDumper):
 
         return dumper
 
-    def dump(self, obj: List[Any]) -> Optional[Buffer]:
+    def dump(self, obj: List[Any]) -> Buffer | None:
         # Postgres won't take unknown for element oid: fall back on text
         sub_oid = self.sub_dumper and self.sub_dumper.oid or TEXT_OID
 
@@ -310,7 +312,7 @@ class ArrayBinaryLoader(RecursiveLoader):
         return _load_binary(data, self._tx)
 
 
-def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
+def register_array(info: TypeInfo, context: AdaptContext | None = None) -> None:
     if not info.array_oid:
         raise ValueError(f"the type info {info} doesn't describe an array")
 

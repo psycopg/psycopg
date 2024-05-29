@@ -4,8 +4,10 @@ Timezone utility functions.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 from datetime import timezone, tzinfo
 
 from .pq.abc import PGconn
@@ -19,7 +21,7 @@ _timezones: Dict[Union[None, bytes], tzinfo] = {
 }
 
 
-def get_tzinfo(pgconn: Optional[PGconn]) -> tzinfo:
+def get_tzinfo(pgconn: PGconn | None) -> tzinfo:
     """Return the Python timezone info of the connection's timezone."""
     tzname = pgconn.parameter_status(b"TimeZone") if pgconn else None
     try:

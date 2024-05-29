@@ -4,8 +4,10 @@ Support for prepared statements
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 from enum import IntEnum, auto
-from typing import Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
 from . import pq
@@ -32,7 +34,7 @@ class Prepare(IntEnum):
 
 class PrepareManager:
     # Number of times a query is executed before it is prepared.
-    prepare_threshold: Optional[int] = 5
+    prepare_threshold: int | None = 5
 
     # Maximum number of prepared statements on the connection.
     prepared_max: int = 100
@@ -47,14 +49,14 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._to_flush = Deque[Optional[bytes]]()
+        self._to_flush = Deque[bytes | None]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:
         return (query.query, query.types)
 
     def get(
-        self, query: PostgresQuery, prepare: Optional[bool] = None
+        self, query: PostgresQuery, prepare: bool | None = None
     ) -> Tuple[Prepare, bytes]:
         """
         Check if a query is prepared, tell back whether to prepare it.
@@ -122,7 +124,7 @@ class PrepareManager:
 
     def maybe_add_to_cache(
         self, query: PostgresQuery, prep: Prepare, name: bytes
-    ) -> Optional[Key]:
+    ) -> Key | None:
         """Handle 'query' for possible addition to the cache.
 
         If a new entry has been added, return its key. Return None otherwise

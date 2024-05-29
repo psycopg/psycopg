@@ -4,7 +4,9 @@ Mapping from types/oids to Dumpers/Loaders
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Type, Union
+from __future__ import annotations
+
+from typing import Any, Dict, List, Type, Union
 from typing import cast, TYPE_CHECKING
 
 from . import pq
@@ -69,8 +71,8 @@ class AdaptersMap:
 
     def __init__(
         self,
-        template: Optional["AdaptersMap"] = None,
-        types: Optional[TypesRegistry] = None,
+        template: "AdaptersMap" | None = None,
+        types: TypesRegistry | None = None,
     ):
         if template:
             self._dumpers = template._dumpers.copy()
@@ -105,7 +107,7 @@ class AdaptersMap:
         return self
 
     @property
-    def connection(self) -> Optional["BaseConnection[Any]"]:
+    def connection(self) -> "BaseConnection[Any]" | None:
         return None
 
     def register_dumper(
@@ -256,7 +258,7 @@ class AdaptersMap:
                 )
             raise e.ProgrammingError(msg)
 
-    def get_loader(self, oid: int, format: pq.Format) -> Optional[Type["Loader"]]:
+    def get_loader(self, oid: int, format: pq.Format) -> Type["Loader"] | None:
         """
         Return the loader class for the given oid and format.
 

@@ -4,8 +4,10 @@ psycopg row factories
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import functools
-from typing import Any, Callable, Dict, List, Optional, NamedTuple, NoReturn
+from typing import Any, Callable, Dict, List, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
 
@@ -239,7 +241,7 @@ def no_result(values: Sequence[Any]) -> NoReturn:
     raise e.InterfaceError("the cursor doesn't have a result")
 
 
-def _get_names(cursor: "BaseCursor[Any, Any]") -> Optional[List[str]]:
+def _get_names(cursor: "BaseCursor[Any, Any]") -> List[str] | None:
     res = cursor.pgresult
     if not res:
         return None
@@ -254,7 +256,7 @@ def _get_names(cursor: "BaseCursor[Any, Any]") -> Optional[List[str]]:
     ]
 
 
-def _get_nfields(res: "PGresult") -> Optional[int]:
+def _get_nfields(res: "PGresult") -> int | None:
     """
     Return the number of columns in a result, if it returns tuples else None
 

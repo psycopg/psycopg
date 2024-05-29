@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import enum
 from math import isnan, isinf, exp
-from typing import Optional
 from decimal import Decimal
 
 import pytest
@@ -80,7 +81,7 @@ def test_int_none(conn, fmt_in):
     Base: type = Int8Dumper if fmt_in == PyFormat.TEXT else Int8BinaryDumper
 
     class MyDumper(Base):  # type: ignore
-        def dump(self, obj: int) -> Optional[Buffer]:
+        def dump(self, obj: int) -> Buffer | None:
             if not obj:
                 return None
             else:

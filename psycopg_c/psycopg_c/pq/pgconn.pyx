@@ -87,7 +87,7 @@ cdef class PGconn:
             self._pgconn_ptr = NULL
 
     @property
-    def pgconn_ptr(self) -> Optional[int]:
+    def pgconn_ptr(self) -> int | None:
         if self._pgconn_ptr:
             return <long long><void *>self._pgconn_ptr
         else:
@@ -162,7 +162,7 @@ cdef class PGconn:
     def transaction_status(self) -> int:
         return libpq.PQtransactionStatus(self._pgconn_ptr)
 
-    def parameter_status(self, const char *name) -> Optional[bytes]:
+    def parameter_status(self, const char *name) -> bytes | None:
         _ensure_pgconn(self)
         cdef const char *rv = libpq.PQparameterStatus(self._pgconn_ptr, name)
         if rv is not NULL:
@@ -226,9 +226,9 @@ cdef class PGconn:
     def exec_params(
         self,
         const char *command,
-        param_values: Optional[Sequence[Optional[bytes]]],
-        param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes | None] | None,
+        param_types: Sequence[int] | None = None,
+        param_formats: Sequence[int] | None = None,
         int result_format = PqFormat.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
@@ -254,9 +254,9 @@ cdef class PGconn:
     def send_query_params(
         self,
         const char *command,
-        param_values: Optional[Sequence[Optional[bytes]]],
-        param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes | None] | None,
+        param_types: Sequence[int] | None = None,
+        param_formats: Sequence[int] | None = None,
         int result_format = PqFormat.TEXT,
     ) -> None:
         _ensure_pgconn(self)
@@ -284,7 +284,7 @@ cdef class PGconn:
         self,
         const char *name,
         const char *command,
-        param_types: Optional[Sequence[int]] = None,
+        param_types: Sequence[int] | None = None,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -310,8 +310,8 @@ cdef class PGconn:
     def send_query_prepared(
         self,
         const char *name,
-        param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes | None] | None,
+        param_formats: Sequence[int] | None = None,
         int result_format = PqFormat.TEXT,
     ) -> None:
         _ensure_pgconn(self)
@@ -339,7 +339,7 @@ cdef class PGconn:
         self,
         const char *name,
         const char *command,
-        param_types: Optional[Sequence[int]] = None,
+        param_types: Sequence[int] | None = None,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -363,8 +363,8 @@ cdef class PGconn:
     def exec_prepared(
         self,
         const char *name,
-        param_values: Optional[Sequence[bytes]],
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes] | None,
+        param_formats: Sequence[int] | None = None,
         int result_format = PqFormat.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
@@ -463,7 +463,7 @@ cdef class PGconn:
                 f"sending close prepared failed: {error_message(self)}"
             )
 
-    def get_result(self) -> Optional["PGresult"]:
+    def get_result(self) -> "PGresult" | None:
         cdef libpq.PGresult *pgresult = libpq.PQgetResult(self._pgconn_ptr)
         if pgresult is NULL:
             return None
@@ -539,7 +539,7 @@ cdef class PGconn:
             raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
         return rv
 
-    def put_copy_end(self, error: Optional[bytes] = None) -> int:
+    def put_copy_end(self, error: bytes | None = None) -> int:
         cdef int rv
         cdef const char *cerr = NULL
         if error is not None:
@@ -710,9 +710,9 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
 
 
 cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
-    list param_values: Optional[Sequence[Optional[bytes]]],
-    param_types: Optional[Sequence[int]],
-    list param_formats: Optional[Sequence[int]],
+    list param_values: Sequence[bytes | None] | None,
+    param_types: Sequence[int] | None,
+    list param_formats: Sequence[int] | None,
 ) except *:
     cdef int i
 

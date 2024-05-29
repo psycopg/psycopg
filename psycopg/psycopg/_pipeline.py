@@ -4,9 +4,11 @@ commands pipeline management
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from types import TracebackType
-from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
+from typing import Any, List, Union, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 
 
 PendingResult: TypeAlias = Union[
-    None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
+    None, Tuple["BaseCursor[Any, Any]", Tuple[Key, Prepare, bytes] | None]
 ]
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
@@ -78,7 +80,7 @@ class BasePipeline:
             yield from self._sync_gen()
         self.level += 1
 
-    def _exit(self, exc: Optional[BaseException]) -> None:
+    def _exit(self, exc: BaseException | None) -> None:
         self.level -= 1
         if self.level == 0 and self.pgconn.status != BAD:
             try:
@@ -212,9 +214,9 @@ class Pipeline(BasePipeline):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         try:
             with self._conn.lock:
@@ -252,9 +254,9 @@ class AsyncPipeline(BasePipeline):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         try:
             async with self._conn.lock:

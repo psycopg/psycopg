@@ -4,10 +4,12 @@ Compatibility objects with DBAPI 2.0
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Sequence, Union
 
 from . import _oids
 from .abc import AdaptContext, Buffer
@@ -76,7 +78,7 @@ class Binary:
 
 
 class BinaryBinaryDumper(BytesBinaryDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Optional[Buffer]:
+    def dump(self, obj: Union[Buffer, Binary]) -> Buffer | None:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:
@@ -84,7 +86,7 @@ class BinaryBinaryDumper(BytesBinaryDumper):
 
 
 class BinaryTextDumper(BytesDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Optional[Buffer]:
+    def dump(self, obj: Union[Buffer, Binary]) -> Buffer | None:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:

@@ -4,9 +4,11 @@ Support for multirange types adaptation.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import Any, Generic, List, Iterable, MutableSequence
-from typing import Optional, Type, Union, overload, TYPE_CHECKING
+from typing import Type, Union, overload, TYPE_CHECKING
 from datetime import date, datetime
 
 from .. import sql
@@ -183,9 +185,9 @@ class TimestamptzMultirange(Multirange[datetime]):
 
 
 class BaseMultirangeDumper(RecursiveDumper):
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
-        self.sub_dumper: Optional[Dumper] = None
+        self.sub_dumper: Dumper | None = None
         self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(self, obj: Multirange[Any], format: PyFormat) -> DumperKey:
@@ -256,7 +258,7 @@ class MultirangeDumper(BaseMultirangeDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Multirange[Any]) -> Buffer | None:
         if not obj:
             return b"{}"
 
@@ -277,7 +279,7 @@ class MultirangeDumper(BaseMultirangeDumper):
 class MultirangeBinaryDumper(BaseMultirangeDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Multirange[Any]) -> Buffer | None:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
@@ -295,7 +297,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
 class BaseMultirangeLoader(RecursiveLoader, Generic[T]):
     subtype_oid: int
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._load = self._tx.get_loader(self.subtype_oid, format=self.format).load
 
@@ -366,7 +368,7 @@ class MultirangeBinaryLoader(BaseMultirangeLoader[T]):
 
 
 def register_multirange(
-    info: MultirangeInfo, context: Optional[AdaptContext] = None
+    info: MultirangeInfo, context: AdaptContext | None = None
 ) -> None:
     """Register the adapters to load and dump a multirange type.
 

@@ -4,7 +4,9 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, List, Optional, Protocol, Sequence, Tuple
+from __future__ import annotations
+
+from typing import Any, Callable, List, Protocol, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
 
 from ._enums import Format, Trace
@@ -18,8 +20,8 @@ Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
 
 class PGconn(Protocol):
-    notice_handler: Optional[Callable[["PGresult"], None]]
-    notify_handler: Optional[Callable[["PGnotify"], None]]
+    notice_handler: Callable[["PGresult"], None] | None
+    notify_handler: Callable[["PGnotify"], None] | None
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn": ...
@@ -73,7 +75,7 @@ class PGconn(Protocol):
     @property
     def transaction_status(self) -> int: ...
 
-    def parameter_status(self, name: bytes) -> Optional[bytes]: ...
+    def parameter_status(self, name: bytes) -> bytes | None: ...
 
     @property
     def error_message(self) -> bytes: ...
@@ -103,18 +105,18 @@ class PGconn(Protocol):
     def exec_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[Buffer]]],
-        param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[Buffer | None] | None,
+        param_types: Sequence[int] | None = None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> "PGresult": ...
 
     def send_query_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[Buffer]]],
-        param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[Buffer | None] | None,
+        param_types: Sequence[int] | None = None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> None: ...
 
@@ -122,14 +124,14 @@ class PGconn(Protocol):
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[Sequence[int]] = None,
+        param_types: Sequence[int] | None = None,
     ) -> None: ...
 
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[Optional[Buffer]]],
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[Buffer | None] | None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> None: ...
 
@@ -137,14 +139,14 @@ class PGconn(Protocol):
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[Sequence[int]] = None,
+        param_types: Sequence[int] | None = None,
     ) -> "PGresult": ...
 
     def exec_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[Buffer]],
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[Buffer] | None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = 0,
     ) -> "PGresult": ...
 
@@ -164,7 +166,7 @@ class PGconn(Protocol):
 
     def send_close_portal(self, name: bytes) -> None: ...
 
-    def get_result(self) -> Optional["PGresult"]: ...
+    def get_result(self) -> "PGresult" | None: ...
 
     def consume_input(self) -> None: ...
 
@@ -186,11 +188,11 @@ class PGconn(Protocol):
 
     def get_cancel(self) -> "PGcancel": ...
 
-    def notifies(self) -> Optional["PGnotify"]: ...
+    def notifies(self) -> "PGnotify" | None: ...
 
     def put_copy_data(self, buffer: Buffer) -> int: ...
 
-    def put_copy_end(self, error: Optional[bytes] = None) -> int: ...
+    def put_copy_end(self, error: bytes | None = None) -> int: ...
 
     def get_copy_data(self, async_: int) -> Tuple[int, memoryview]: ...
 
@@ -201,7 +203,7 @@ class PGconn(Protocol):
     def untrace(self) -> None: ...
 
     def encrypt_password(
-        self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
+        self, passwd: bytes, user: bytes, algorithm: bytes | None = None
     ) -> bytes: ...
 
     def change_password(self, user: bytes, passwd: bytes) -> None: ...
@@ -229,7 +231,7 @@ class PGresult(Protocol):
     @property
     def error_message(self) -> bytes: ...
 
-    def error_field(self, fieldcode: int) -> Optional[bytes]: ...
+    def error_field(self, fieldcode: int) -> bytes | None: ...
 
     @property
     def ntuples(self) -> int: ...
@@ -237,7 +239,7 @@ class PGresult(Protocol):
     @property
     def nfields(self) -> int: ...
 
-    def fname(self, column_number: int) -> Optional[bytes]: ...
+    def fname(self, column_number: int) -> bytes | None: ...
 
     def ftable(self, column_number: int) -> int: ...
 
@@ -254,7 +256,7 @@ class PGresult(Protocol):
     @property
     def binary_tuples(self) -> int: ...
 
-    def get_value(self, row_number: int, column_number: int) -> Optional[bytes]: ...
+    def get_value(self, row_number: int, column_number: int) -> bytes | None: ...
 
     @property
     def nparams(self) -> int: ...
@@ -262,10 +264,10 @@ class PGresult(Protocol):
     def param_type(self, param_number: int) -> int: ...
 
     @property
-    def command_status(self) -> Optional[bytes]: ...
+    def command_status(self) -> bytes | None: ...
 
     @property
-    def command_tuples(self) -> Optional[int]: ...
+    def command_tuples(self) -> int | None: ...
 
     @property
     def oid_value(self) -> int: ...
@@ -312,7 +314,7 @@ class Conninfo(Protocol):
 
 
 class Escaping(Protocol):
-    def __init__(self, conn: Optional[PGconn] = None): ...
+    def __init__(self, conn: PGconn | None = None): ...
 
     def escape_literal(self, data: Buffer) -> bytes: ...
 

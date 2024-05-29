@@ -9,7 +9,9 @@ dependencies problems).
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from __future__ import annotations
+
+from typing import Any, Dict, List, Sequence, Tuple
 from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
@@ -54,14 +56,14 @@ class Transformer(AdaptContext):
         _oid_dumpers _oid_types _row_dumpers _row_loaders
         """.split()
 
-    types: Optional[Tuple[int, ...]]
-    formats: Optional[List[pq.Format]]
+    types: Tuple[int, ...] | None
+    formats: List[pq.Format] | None
 
     _adapters: "AdaptersMap"
-    _pgresult: Optional["PGresult"]
+    _pgresult: "PGresult" | None
     _none_oid: int
 
-    def __init__(self, context: Optional[AdaptContext] = None):
+    def __init__(self, context: AdaptContext | None = None):
         self._pgresult = self.types = self.formats = None
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
@@ -80,13 +82,13 @@ class Transformer(AdaptContext):
 
         # mapping fmt, oid -> Dumper instance
         # Not often used, so create it only if needed.
-        self._oid_dumpers: Optional[Tuple[OidDumperCache, OidDumperCache]]
+        self._oid_dumpers: Tuple[OidDumperCache, OidDumperCache] | None
         self._oid_dumpers = None
 
         # mapping fmt, oid -> Loader instance
         self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
-        self._row_dumpers: Optional[List[abc.Dumper]] = None
+        self._row_dumpers: List[abc.Dumper] | None = None
 
         # sequence of load functions from value to python
         # the length of the result columns
@@ -98,7 +100,7 @@ class Transformer(AdaptContext):
         self._encoding = ""
 
     @classmethod
-    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
+    def from_context(cls, context: AdaptContext | None) -> "Transformer":
         """
         Return a Transformer from an AdaptContext.
 
@@ -110,7 +112,7 @@ class Transformer(AdaptContext):
             return cls(context)
 
     @property
-    def connection(self) -> Optional["BaseConnection[Any]"]:
+    def connection(self) -> "BaseConnection[Any]" | None:
         return self._conn
 
     @property
@@ -124,15 +126,15 @@ class Transformer(AdaptContext):
         return self._adapters
 
     @property
-    def pgresult(self) -> Optional["PGresult"]:
+    def pgresult(self) -> "PGresult" | None:
         return self._pgresult
 
     def set_pgresult(
         self,
-        result: Optional["PGresult"],
+        result: "PGresult" | None,
         *,
         set_loaders: bool = True,
-        format: Optional[pq.Format] = None,
+        format: pq.Format | None = None,
     ) -> None:
         self._pgresult = result
 
@@ -168,9 +170,9 @@ class Transformer(AdaptContext):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Sequence[Optional[Buffer]]:
+    ) -> Sequence[Buffer | None]:
         nparams = len(params)
-        out: List[Optional[Buffer]] = [None] * nparams
+        out: List[Buffer | None] = [None] * nparams
 
         # If we have dumpers, it means set_dumper_types had been called, in
         # which case self.types and self.formats are set to sequences of the
@@ -316,7 +318,7 @@ class Transformer(AdaptContext):
 
         return records
 
-    def load_row(self, row: int, make_row: RowMaker[Row]) -> Optional[Row]:
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Row | None:
         res = self._pgresult
         if not res:
             return None
@@ -332,7 +334,7 @@ class Transformer(AdaptContext):
 
         return make_row(record)
 
-    def load_sequence(self, record: Sequence[Optional[Buffer]]) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Buffer | None]) -> Tuple[Any, ...]:
         if len(self._row_loaders) != len(record):
             raise e.ProgrammingError(
                 f"cannot load sequence of {len(record)} items:"

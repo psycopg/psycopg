@@ -4,10 +4,12 @@ psycopg connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import sys
 import logging
 from typing import Callable, Generic
-from typing import List, NamedTuple, Optional, Tuple, Union
+from typing import List, NamedTuple, Tuple, Union
 from typing import TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
@@ -104,7 +106,7 @@ class BaseConnection(Generic[Row]):
         self._autocommit = False
 
         # None, but set to a copy of the global adapters map as soon as requested.
-        self._adapters: Optional[AdaptersMap] = None
+        self._adapters: AdaptersMap | None = None
 
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
@@ -114,7 +116,7 @@ class BaseConnection(Generic[Row]):
 
         self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
-        self._tpc: Optional[Tuple[Xid, bool]] = None  # xid, prepared
+        self._tpc: Tuple[Xid, bool] | None = None  # xid, prepared
 
         wself = ref(self)
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
@@ -122,16 +124,16 @@ class BaseConnection(Generic[Row]):
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
-        self._pool: Optional["BasePool"]
+        self._pool: "BasePool" | None
 
-        self._pipeline: Optional[BasePipeline] = None
+        self._pipeline: BasePipeline | None = None
 
         # Time after which the connection should be closed
         self._expire_at: float
 
-        self._isolation_level: Optional[IsolationLevel] = None
-        self._read_only: Optional[bool] = None
-        self._deferrable: Optional[bool] = None
+        self._isolation_level: IsolationLevel | None = None
+        self._read_only: bool | None = None
+        self._deferrable: bool | None = None
         self._begin_statement = b""
 
     def __del__(self) -> None:
@@ -190,58 +192,58 @@ class BaseConnection(Generic[Row]):
         self._autocommit = bool(value)
 
     @property
-    def isolation_level(self) -> Optional[IsolationLevel]:
+    def isolation_level(self) -> IsolationLevel | None:
         """
         The isolation level of the new transactions started on the connection.
         """
         return self._isolation_level
 
     @isolation_level.setter
-    def isolation_level(self, value: Optional[IsolationLevel]) -> None:
+    def isolation_level(self, value: IsolationLevel | None) -> None:
         self._set_isolation_level(value)
 
-    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+    def _set_isolation_level(self, value: IsolationLevel | None) -> None:
         raise NotImplementedError
 
-    def _set_isolation_level_gen(self, value: Optional[IsolationLevel]) -> PQGen[None]:
+    def _set_isolation_level_gen(self, value: IsolationLevel | None) -> PQGen[None]:
         yield from self._check_intrans_gen("isolation_level")
         self._isolation_level = IsolationLevel(value) if value is not None else None
         self._begin_statement = b""
 
     @property
-    def read_only(self) -> Optional[bool]:
+    def read_only(self) -> bool | None:
         """
         The read-only state of the new transactions started on the connection.
         """
         return self._read_only
 
     @read_only.setter
-    def read_only(self, value: Optional[bool]) -> None:
+    def read_only(self, value: bool | None) -> None:
         self._set_read_only(value)
 
-    def _set_read_only(self, value: Optional[bool]) -> None:
+    def _set_read_only(self, value: bool | None) -> None:
         raise NotImplementedError
 
-    def _set_read_only_gen(self, value: Optional[bool]) -> PQGen[None]:
+    def _set_read_only_gen(self, value: bool | None) -> PQGen[None]:
         yield from self._check_intrans_gen("read_only")
         self._read_only = bool(value) if value is not None else None
         self._begin_statement = b""
 
     @property
-    def deferrable(self) -> Optional[bool]:
+    def deferrable(self) -> bool | None:
         """
         The deferrable state of the new transactions started on the connection.
         """
         return self._deferrable
 
     @deferrable.setter
-    def deferrable(self, value: Optional[bool]) -> None:
+    def deferrable(self, value: bool | None) -> None:
         self._set_deferrable(value)
 
-    def _set_deferrable(self, value: Optional[bool]) -> None:
+    def _set_deferrable(self, value: bool | None) -> None:
         raise NotImplementedError
 
-    def _set_deferrable_gen(self, value: Optional[bool]) -> PQGen[None]:
+    def _set_deferrable_gen(self, value: bool | None) -> PQGen[None]:
         yield from self._check_intrans_gen("deferrable")
         self._deferrable = bool(value) if value is not None else None
         self._begin_statement = b""
@@ -382,7 +384,7 @@ class BaseConnection(Generic[Row]):
             cb(n)
 
     @property
-    def prepare_threshold(self) -> Optional[int]:
+    def prepare_threshold(self) -> int | None:
         """
         Number of times a query is executed before it is prepared.
 
@@ -396,11 +398,11 @@ class BaseConnection(Generic[Row]):
         return self._prepared.prepare_threshold
 
     @prepare_threshold.setter
-    def prepare_threshold(self, value: Optional[int]) -> None:
+    def prepare_threshold(self, value: int | None) -> None:
         self._prepared.prepare_threshold = value
 
     @property
-    def prepared_max(self) -> Optional[int]:
+    def prepared_max(self) -> int | None:
         """
         Maximum number of prepared statements on the connection.
 
@@ -411,7 +413,7 @@ class BaseConnection(Generic[Row]):
         return rv if rv != sys.maxsize else None
 
     @prepared_max.setter
-    def prepared_max(self, value: Optional[int]) -> None:
+    def prepared_max(self, value: int | None) -> None:
         if value is None:
             value = sys.maxsize
         self._prepared.prepared_max = value
@@ -437,7 +439,7 @@ class BaseConnection(Generic[Row]):
 
     def _exec_command(
         self, command: Query, result_format: pq.Format = TEXT
-    ) -> PQGen[Optional["PGresult"]]:
+    ) -> PQGen["PGresult" | None]:
         """
         Generator to send a command and receive the result to the backend.
 
@@ -481,7 +483,7 @@ class BaseConnection(Generic[Row]):
                 )
         return result
 
-    def _deallocate(self, name: Optional[bytes]) -> PQGen[None]:
+    def _deallocate(self, name: bytes | None) -> PQGen[None]:
         """
         Deallocate one, or all, prepared statement in the session.
 
