@@ -6,8 +6,7 @@ psycopg server-side cursor objects.
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, List, Iterable, Iterator
-from typing import TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, Iterator, TYPE_CHECKING, overload
 from warnings import warn
 
 from . import pq
@@ -161,7 +160,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         query = sql.SQL("CLOSE {}").format(sql.Identifier(self._name))
         yield from self._conn._exec_command(query)
 
-    def _fetch_gen(self, num: int | None) -> PQGen[List[Row]]:
+    def _fetch_gen(self, num: int | None) -> PQGen[list[Row]]:
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
         # If we are stealing the cursor, make sure we know its shape
@@ -315,7 +314,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         else:
             return None
 
-    def fetchmany(self, size: int = 0) -> List[Row]:
+    def fetchmany(self, size: int = 0) -> list[Row]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
@@ -323,7 +322,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         self._pos += len(recs)
         return recs
 
-    def fetchall(self) -> List[Row]:
+    def fetchall(self) -> list[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._fetch_gen(None))
         self._pos += len(recs)
@@ -447,7 +446,7 @@ class AsyncServerCursor(
         else:
             return None
 
-    async def fetchmany(self, size: int = 0) -> List[Row]:
+    async def fetchmany(self, size: int = 0) -> list[Row]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
@@ -455,7 +454,7 @@ class AsyncServerCursor(
         self._pos += len(recs)
         return recs
 
-    async def fetchall(self) -> List[Row]:
+    async def fetchall(self) -> list[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._fetch_gen(None))
         self._pos += len(recs)

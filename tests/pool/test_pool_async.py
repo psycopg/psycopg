@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import weakref
 from time import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import pytest
 
@@ -140,7 +142,7 @@ async def test_concurrent_filling(dsn, monkeypatch):
     add_orig = pool.AsyncConnectionPool._add_to_pool
     monkeypatch.setattr(pool.AsyncConnectionPool, "_add_to_pool", add_time)
 
-    times: List[float] = []
+    times: list[float] = []
     t0 = time()
 
     async with pool.AsyncConnectionPool(dsn, min_size=5, num_workers=2) as p:
@@ -436,7 +438,7 @@ async def test_grow(dsn, monkeypatch, min_size, want_times):
         dsn, min_size=min_size, max_size=4, num_workers=3
     ) as p:
         await p.wait(1.0)
-        results: List[Tuple[int, float]] = []
+        results: list[Tuple[int, float]] = []
         ts = [spawn(worker, args=(i,)) for i in range(len(want_times))]
         await gather(*ts)
 
@@ -450,7 +452,7 @@ async def test_grow(dsn, monkeypatch, min_size, want_times):
 async def test_shrink(dsn, monkeypatch):
     from psycopg_pool.pool_async import ShrinkPool
 
-    results: List[Tuple[int, int]] = []
+    results: list[Tuple[int, int]] = []
 
     async def run_hacked(self, pool):
         n0 = pool._nconns
@@ -656,7 +658,7 @@ async def test_resize(dsn):
         async with p.connection() as conn:
             await conn.execute("select pg_sleep(%s)", [t])
 
-    size: List[int] = []
+    size: list[int] = []
 
     async with pool.AsyncConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = spawn(sampler)

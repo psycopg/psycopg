@@ -136,7 +136,7 @@ cdef class PGresult:
     def oid_value(self) -> int:
         return libpq.PQoidValue(self._pgresult_ptr)
 
-    def set_attributes(self, descriptions: List[PGresAttDesc]):
+    def set_attributes(self, descriptions: list[PGresAttDesc]):
         cdef Py_ssize_t num = len(descriptions)
         cdef libpq.PGresAttDesc *attrs = <libpq.PGresAttDesc *>PyMem_Malloc(
             num * sizeof(libpq.PGresAttDesc))

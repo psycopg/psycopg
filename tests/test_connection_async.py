@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import sys
 import time
 import pytest
 import logging
 import weakref
-from typing import Any, List
+from typing import Any
 
 import psycopg
 from psycopg import pq, errors as e
@@ -723,7 +725,7 @@ async def test_set_transaction_param_not_intrans_external(aconn, param):
 @skip_async
 @pytest.mark.crdb("skip", reason="transaction isolation")
 def test_set_transaction_param_all_property(conn):
-    params: List[Any] = tx_params[:]
+    params: list[Any] = tx_params[:]
     params[2] = params[2].values[0]
 
     for param in params:
@@ -738,7 +740,7 @@ def test_set_transaction_param_all_property(conn):
 
 @pytest.mark.crdb("skip", reason="transaction isolation")
 async def test_set_transaction_param_all(aconn):
-    params: List[Any] = tx_params[:]
+    params: list[Any] = tx_params[:]
     params[2] = params[2].values[0]
 
     for param in params:

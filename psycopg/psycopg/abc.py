@@ -7,7 +7,7 @@ Protocol objects representing different implementations of the same classes.
 from __future__ import annotations
 
 from typing import Any, Dict, Callable, Generator, Mapping
-from typing import List, Protocol, Sequence, Tuple, TYPE_CHECKING
+from typing import Protocol, Sequence, Tuple, TYPE_CHECKING
 
 from . import pq
 from ._enums import PyFormat as PyFormat
@@ -202,7 +202,7 @@ class Loader(Protocol):
 
 class Transformer(Protocol):
     types: Tuple[int, ...] | None
-    formats: List[pq.Format] | None
+    formats: list[pq.Format] | None
 
     def __init__(self, context: AdaptContext | None = None): ...
 
@@ -243,7 +243,7 @@ class Transformer(Protocol):
 
     def load_rows(
         self, row0: int, row1: int, make_row: "RowMaker[Row]"
-    ) -> List["Row"]: ...
+    ) -> list["Row"]: ...
 
     def load_row(self, row: int, make_row: "RowMaker[Row]") -> "Row" | None: ...
 

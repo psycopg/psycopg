@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, List
+from typing import Any, AsyncGenerator, AsyncIterator
 from typing import Type, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
@@ -509,7 +509,7 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             await self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
-    async def tpc_recover(self) -> List[Xid]:
+    async def tpc_recover(self) -> list[Xid]:
         self._check_tpc()
         status = self.info.transaction_status
         async with self.cursor(row_factory=args_row(Xid._from_record)) as cur:

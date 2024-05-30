@@ -10,7 +10,7 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Match, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Generic, Match, Sequence, Tuple, TYPE_CHECKING
 
 from . import pq
 from . import adapt
@@ -375,7 +375,7 @@ def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
 
 
 def _parse_row_binary(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
-    row: List[Buffer | None] = []
+    row: list[Buffer | None] = []
     nfields = _unpack_int2(data, 0)[0]
     pos = 2
     for i in range(nfields):

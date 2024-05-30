@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from math import prod
-from typing import Any, cast, Callable, List, Pattern, Set, Tuple, Type
+from typing import Any, cast, Callable, Pattern, Set, Tuple, Type
 
 from .. import pq
 from .. import errors as e
@@ -46,7 +46,7 @@ class BaseListDumper(RecursiveDumper):
             sdclass = context.adapters.get_dumper_by_oid(self.element_oid, self.format)
             self.sub_dumper = sdclass(NoneType, context)
 
-    def _find_list_element(self, L: List[Any], format: PyFormat) -> Any:
+    def _find_list_element(self, L: list[Any], format: PyFormat) -> Any:
         """
         Find the first non-null element of an eventually nested list
         """
@@ -84,7 +84,7 @@ class BaseListDumper(RecursiveDumper):
         else:
             return max(imax, -imin - 1)
 
-    def _flatiter(self, L: List[Any], seen: Set[int]) -> Any:
+    def _flatiter(self, L: list[Any], seen: Set[int]) -> Any:
         if id(L) in seen:
             raise e.DataError("cannot dump a recursive list")
 
@@ -115,7 +115,7 @@ class BaseListDumper(RecursiveDumper):
 class ListDumper(BaseListDumper):
     delimiter = b","
 
-    def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
+    def get_key(self, obj: list[Any], format: PyFormat) -> DumperKey:
         if self.oid:
             return self.cls
 
@@ -126,7 +126,7 @@ class ListDumper(BaseListDumper):
         sd = self._tx.get_dumper(item, format)
         return (self.cls, sd.get_key(item, format))
 
-    def upgrade(self, obj: List[Any], format: PyFormat) -> "BaseListDumper":
+    def upgrade(self, obj: list[Any], format: PyFormat) -> "BaseListDumper":
         # If we have an oid we don't need to upgrade
         if self.oid:
             return self
@@ -155,11 +155,11 @@ class ListDumper(BaseListDumper):
     # backslash-escaped.
     _re_esc = re.compile(rb'(["\\])')
 
-    def dump(self, obj: List[Any]) -> Buffer | None:
-        tokens: List[Buffer] = []
+    def dump(self, obj: list[Any]) -> Buffer | None:
+        tokens: list[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
-        def dump_list(obj: List[Any]) -> None:
+        def dump_list(obj: list[Any]) -> None:
             if not obj:
                 tokens.append(b"{}")
                 return
@@ -219,7 +219,7 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
 class ListBinaryDumper(BaseListDumper):
     format = pq.Format.BINARY
 
-    def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
+    def get_key(self, obj: list[Any], format: PyFormat) -> DumperKey:
         if self.oid:
             return self.cls
 
@@ -230,7 +230,7 @@ class ListBinaryDumper(BaseListDumper):
         sd = self._tx.get_dumper(item, format)
         return (self.cls, sd.get_key(item, format))
 
-    def upgrade(self, obj: List[Any], format: PyFormat) -> "BaseListDumper":
+    def upgrade(self, obj: list[Any], format: PyFormat) -> "BaseListDumper":
         # If we have an oid we don't need to upgrade
         if self.oid:
             return self
@@ -247,18 +247,18 @@ class ListBinaryDumper(BaseListDumper):
 
         return dumper
 
-    def dump(self, obj: List[Any]) -> Buffer | None:
+    def dump(self, obj: list[Any]) -> Buffer | None:
         # Postgres won't take unknown for element oid: fall back on text
         sub_oid = self.sub_dumper and self.sub_dumper.oid or TEXT_OID
 
         if not obj:
             return _pack_head(0, 0, sub_oid)
 
-        data: List[Buffer] = [b"", b""]  # placeholders to avoid a resize
-        dims: List[int] = []
+        data: list[Buffer] = [b"", b""]  # placeholders to avoid a resize
+        dims: list[int] = []
         hasnull = 0
 
-        def calc_dims(L: List[Any]) -> None:
+        def calc_dims(L: list[Any]) -> None:
             if isinstance(L, self.cls):
                 if not L:
                     raise e.DataError("lists cannot contain empty lists")
@@ -267,7 +267,7 @@ class ListBinaryDumper(BaseListDumper):
 
         calc_dims(obj)
 
-        def dump_list(L: List[Any], dim: int) -> None:
+        def dump_list(L: list[Any], dim: int) -> None:
             nonlocal hasnull
             if len(L) != dims[dim]:
                 raise e.DataError("nested lists have inconsistent lengths")
@@ -300,7 +300,7 @@ class ArrayLoader(RecursiveLoader):
     delimiter = b","
     base_oid: int
 
-    def load(self, data: Buffer) -> List[Any]:
+    def load(self, data: Buffer) -> list[Any]:
         loader = self._tx.get_loader(self.base_oid, self.format)
         return _load_text(data, loader, self.delimiter)
 
@@ -308,7 +308,7 @@ class ArrayLoader(RecursiveLoader):
 class ArrayBinaryLoader(RecursiveLoader):
     format = pq.Format.BINARY
 
-    def load(self, data: Buffer) -> List[Any]:
+    def load(self, data: Buffer) -> list[Any]:
         return _load_binary(data, self._tx)
 
 
@@ -384,10 +384,10 @@ def _load_text(
     loader: Loader,
     delimiter: bytes = b",",
     __re_unescape: Pattern[bytes] = re.compile(rb"\\(.)"),
-) -> List[Any]:
+) -> list[Any]:
     rv = None
-    stack: List[Any] = []
-    a: List[Any] = []
+    stack: list[Any] = []
+    a: list[Any] = []
     rv = a
     load = loader.load
 
@@ -447,7 +447,7 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     )
 
 
-def _load_binary(data: Buffer, tx: Transformer) -> List[Any]:
+def _load_binary(data: Buffer, tx: Transformer) -> list[Any]:
     ndims, hasnull, oid = _unpack_head(data)
     load = tx.get_loader(oid, PQ_BINARY).load
 
@@ -458,7 +458,7 @@ def _load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     dims = [_unpack_dim(data, i)[0] for i in range(12, p, 8)]
     nelems = prod(dims)
 
-    out: List[Any] = [None] * nelems
+    out: list[Any] = [None] * nelems
     for i in range(nelems):
         size = unpack_len(data, p)[0]
         p += 4

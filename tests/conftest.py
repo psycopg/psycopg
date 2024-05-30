@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import selectors
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 
@@ -89,7 +91,7 @@ def anyio_backend(request):
     return backend, options
 
 
-allow_fail_messages: List[str] = []
+allow_fail_messages: list[str] = []
 
 
 def pytest_sessionfinish(session, exitstatus):

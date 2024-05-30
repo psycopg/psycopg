@@ -21,8 +21,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Dict, List, NoReturn, Sequence, Tuple, Type
-from typing import TYPE_CHECKING
+from typing import Any, Callable, Dict, NoReturn, Sequence, Tuple, Type, TYPE_CHECKING
 from asyncio import CancelledError
 
 from .pq.abc import PGconn, PGresult
@@ -45,7 +44,7 @@ class FinishedPGconn:
     raise an `~psycopg.OperationalError`.
     """
 
-    info: List["ConninfoOption"] = field(default_factory=list)
+    info: list[ConninfoOption] = field(default_factory=list)
 
     db: bytes = b""
     user: bytes = b""

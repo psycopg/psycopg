@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from heapq import heappush, heappop
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 from ._task import Task
 from ._acompat import Lock, Event
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class Scheduler:
 
     def __init__(self) -> None:
-        self._queue: List[Task] = []
+        self._queue: list[Task] = []
         self._lock = Lock()
         self._event = Event()
 

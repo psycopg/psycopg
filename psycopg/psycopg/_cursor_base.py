@@ -7,8 +7,7 @@ Psycopg BaseCursor object
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Generic, Iterable, List
-from typing import NoReturn, Sequence, Tuple, Type
+from typing import Any, Generic, Iterable, NoReturn, Sequence, Tuple, Type
 from typing import TYPE_CHECKING
 
 from . import pq
@@ -69,7 +68,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._reset()
 
     def _reset(self, reset_query: bool = True) -> None:
-        self._results: List["PGresult"] = []
+        self._results: list["PGresult"] = []
         self.pgresult: "PGresult" | None = None
         self._pos = 0
         self._iresult = 0
@@ -106,7 +105,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         return self._closed
 
     @property
-    def description(self) -> List[Column] | None:
+    def description(self) -> list[Column] | None:
         """
         A list of `Column` objects describing the current resultset.
 
@@ -447,7 +446,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         pgq.convert(query, params)
         return pgq
 
-    def _check_results(self, results: List["PGresult"]) -> None:
+    def _check_results(self, results: list["PGresult"]) -> None:
         """
         Verify that the results of a query are valid.
 
@@ -506,7 +505,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._make_row = self._make_row_maker()
 
-    def _set_results(self, results: List["PGresult"]) -> None:
+    def _set_results(self, results: list["PGresult"]) -> None:
         if self._execmany_returning is None:
             # Received from execute()
             self._results[:] = results

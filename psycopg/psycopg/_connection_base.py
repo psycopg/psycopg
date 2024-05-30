@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import Callable, Generic
-from typing import List, NamedTuple, Tuple
-from typing import TYPE_CHECKING
+from typing import Callable, Generic, NamedTuple, Tuple, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
@@ -108,8 +106,8 @@ class BaseConnection(Generic[Row]):
         # None, but set to a copy of the global adapters map as soon as requested.
         self._adapters: AdaptersMap | None = None
 
-        self._notice_handlers: List[NoticeHandler] = []
-        self._notify_handlers: List[NotifyHandler] = []
+        self._notice_handlers: list[NoticeHandler] = []
+        self._notify_handlers: list[NotifyHandler] = []
 
         # Number of transaction blocks currently entered
         self._num_transactions = 0

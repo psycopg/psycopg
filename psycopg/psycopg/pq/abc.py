@@ -6,7 +6,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 from __future__ import annotations
 
-from typing import Any, Callable, List, Protocol, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Protocol, Sequence, Tuple, TYPE_CHECKING
 
 from ._enums import Format, Trace
 from .._compat import TypeAlias
@@ -33,7 +33,7 @@ class PGconn(Protocol):
     def finish(self) -> None: ...
 
     @property
-    def info(self) -> List["ConninfoOption"]: ...
+    def info(self) -> list["ConninfoOption"]: ...
 
     def reset(self) -> None: ...
 
@@ -271,7 +271,7 @@ class PGresult(Protocol):
     @property
     def oid_value(self) -> int: ...
 
-    def set_attributes(self, descriptions: List["PGresAttDesc"]) -> None: ...
+    def set_attributes(self, descriptions: list["PGresAttDesc"]) -> None: ...
 
 
 class PGcancelConn(Protocol):
@@ -303,13 +303,13 @@ class PGcancel(Protocol):
 
 class Conninfo(Protocol):
     @classmethod
-    def get_defaults(cls) -> List["ConninfoOption"]: ...
+    def get_defaults(cls) -> list["ConninfoOption"]: ...
 
     @classmethod
-    def parse(cls, conninfo: bytes) -> List["ConninfoOption"]: ...
+    def parse(cls, conninfo: bytes) -> list["ConninfoOption"]: ...
 
     @classmethod
-    def _options_from_array(cls, opts: Sequence[Any]) -> List["ConninfoOption"]: ...
+    def _options_from_array(cls, opts: Sequence[Any]) -> list["ConninfoOption"]: ...
 
 
 class Escaping(Protocol):

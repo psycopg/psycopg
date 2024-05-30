@@ -7,7 +7,7 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Generic, List, Type, Tuple
+from typing import Any, Dict, Generic, Type, Tuple
 from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
@@ -370,7 +370,7 @@ def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
     if obj.isempty:
         return b"empty"
 
-    parts: List[Buffer] = [b"[" if obj.lower_inc else b"("]
+    parts: list[Buffer] = [b"[" if obj.lower_inc else b"("]
 
     def dump_item(item: Any) -> Buffer:
         ad = dump(item)

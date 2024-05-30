@@ -11,8 +11,7 @@ import os
 import re
 import warnings
 from random import randint
-from typing import Any, DefaultDict, Dict, List, NamedTuple, Sequence
-from typing import TYPE_CHECKING
+from typing import Any, DefaultDict, Dict, NamedTuple, Sequence, TYPE_CHECKING
 from collections import defaultdict
 
 try:
@@ -132,7 +131,7 @@ class Rfc2782Resolver:
 
         return self._return_params(params, hps)
 
-    def _get_attempts(self, params: Dict[str, Any]) -> List[HostPort]:
+    def _get_attempts(self, params: Dict[str, Any]) -> list[HostPort]:
         """
         Return the list of host, and for each host if SRV lookup must be tried.
 
@@ -171,14 +170,14 @@ class Rfc2782Resolver:
 
         return out if srv_found else []
 
-    def _resolve_srv(self, hp: HostPort) -> List[HostPort]:
+    def _resolve_srv(self, hp: HostPort) -> list[HostPort]:
         try:
             ans = resolver.resolve(hp.host, "SRV")
         except DNSException:
             ans = ()
         return self._get_solved_entries(hp, ans)
 
-    async def _resolve_srv_async(self, hp: HostPort) -> List[HostPort]:
+    async def _resolve_srv_async(self, hp: HostPort) -> list[HostPort]:
         try:
             ans = await async_resolver.resolve(hp.host, "SRV")
         except DNSException:
@@ -187,7 +186,7 @@ class Rfc2782Resolver:
 
     def _get_solved_entries(
         self, hp: HostPort, entries: "Sequence[SRV]"
-    ) -> List[HostPort]:
+    ) -> list[HostPort]:
         if not entries:
             # No SRV entry found. Delegate the libpq a QNAME=target lookup
             if hp.target and hp.port.lower() != "srv":
@@ -206,7 +205,7 @@ class Rfc2782Resolver:
         ]
 
     def _return_params(
-        self, params: Dict[str, Any], hps: List[HostPort]
+        self, params: Dict[str, Any], hps: list[HostPort]
     ) -> Dict[str, Any]:
         if not hps:
             # Nothing found, we ended up with an empty list
@@ -217,13 +216,13 @@ class Rfc2782Resolver:
         out["port"] = ",".join(str(hp.port) for hp in hps)
         return out
 
-    def sort_rfc2782(self, ans: "Sequence[SRV]") -> "List[SRV]":
+    def sort_rfc2782(self, ans: "Sequence[SRV]") -> "list[SRV]":
         """
         Implement the priority/weight ordering defined in RFC 2782.
         """
         # Divide the entries by priority:
-        priorities: DefaultDict[int, "List[SRV]"] = defaultdict(list)
-        out: "List[SRV]" = []
+        priorities: DefaultDict[int, "list[SRV]"] = defaultdict(list)
+        out: "list[SRV]" = []
         for entry in ans:
             priorities[entry.priority].append(entry)
 

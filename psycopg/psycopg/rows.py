@@ -7,7 +7,7 @@ psycopg row factories
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Dict, List, NamedTuple, NoReturn
+from typing import Any, Callable, Dict, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
 
@@ -241,7 +241,7 @@ def no_result(values: Sequence[Any]) -> NoReturn:
     raise e.InterfaceError("the cursor doesn't have a result")
 
 
-def _get_names(cursor: "BaseCursor[Any, Any]") -> List[str] | None:
+def _get_names(cursor: "BaseCursor[Any, Any]") -> list[str] | None:
     res = cursor.pgresult
     if not res:
         return None

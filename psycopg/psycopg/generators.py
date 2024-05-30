@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import logging
 from time import monotonic
-from typing import List
 
 from . import pq
 from . import errors as e
@@ -122,7 +121,7 @@ def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[Non
             raise e.InternalError(f"unexpected poll status: {status}")
 
 
-def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _execute(pgconn: PGconn) -> PQGen[list[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -165,7 +164,7 @@ def _send(pgconn: PGconn) -> PQGen[None]:
             pgconn.consume_input()
 
 
-def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -175,7 +174,7 @@ def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    results: List[PGresult] = []
+    results: list[PGresult] = []
     while True:
         res = yield from _fetch(pgconn)
         if not res:
@@ -228,7 +227,7 @@ def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
 
 def _pipeline_communicate(
     pgconn: PGconn, commands: Deque[PipelineCommand]
-) -> PQGen[List[List[PGresult]]]:
+) -> PQGen[list[list[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
@@ -246,7 +245,7 @@ def _pipeline_communicate(
             pgconn.consume_input()
             _consume_notifies(pgconn)
 
-            res: List[PGresult] = []
+            res: list[PGresult] = []
             while not pgconn.is_busy():
                 r = pgconn.get_result()
                 if r is None:
@@ -290,7 +289,7 @@ def _consume_notifies(pgconn: PGconn) -> None:
             pgconn.notify_handler(n)
 
 
-def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
+def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
     yield WAIT_R
     pgconn.consume_input()
 

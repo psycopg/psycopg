@@ -17,7 +17,7 @@ from weakref import ref
 
 from ctypes import Array, POINTER, cast, string_at, create_string_buffer, byref
 from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_object
-from typing import Any, Callable, List, Sequence, Tuple
+from typing import Any, Callable, Sequence, Tuple
 from typing import cast as t_cast, TYPE_CHECKING
 
 from .. import errors as e
@@ -145,7 +145,7 @@ class PGconn:
         return addressof(self._pgconn_ptr.contents)  # type: ignore[attr-defined]
 
     @property
-    def info(self) -> List["ConninfoOption"]:
+    def info(self) -> list["ConninfoOption"]:
         self._ensure_pgconn()
         opts = impl.PQconninfo(self._pgconn_ptr)
         if not opts:
@@ -914,7 +914,7 @@ class PGresult:
     def oid_value(self) -> int:
         return impl.PQoidValue(self._pgresult_ptr)
 
-    def set_attributes(self, descriptions: List[PGresAttDesc]) -> None:
+    def set_attributes(self, descriptions: list[PGresAttDesc]) -> None:
         structs = [
             impl.PGresAttDesc_struct(*desc) for desc in descriptions  # type: ignore
         ]
@@ -1051,7 +1051,7 @@ class Conninfo:
     """
 
     @classmethod
-    def get_defaults(cls) -> List[ConninfoOption]:
+    def get_defaults(cls) -> list[ConninfoOption]:
         opts = impl.PQconndefaults()
         if not opts:
             raise MemoryError("couldn't allocate connection defaults")
@@ -1061,7 +1061,7 @@ class Conninfo:
             impl.PQconninfoFree(opts)
 
     @classmethod
-    def parse(cls, conninfo: bytes) -> List[ConninfoOption]:
+    def parse(cls, conninfo: bytes) -> list[ConninfoOption]:
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {type(conninfo)} instead")
 
@@ -1085,7 +1085,7 @@ class Conninfo:
     @classmethod
     def _options_from_array(
         cls, opts: Sequence[impl.PQconninfoOption_struct]
-    ) -> List[ConninfoOption]:
+    ) -> list[ConninfoOption]:
         rv = []
         skws = "keyword envvar compiled val label dispchar".split()
         for opt in opts:

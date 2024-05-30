@@ -19,7 +19,7 @@ from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, Sequence, Tuple
 
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
@@ -423,7 +423,7 @@ cdef class Transformer:
         self.formats = pqformats
         return out
 
-    def load_rows(self, int row0, int row1, object make_row) -> List[Row]:
+    def load_rows(self, int row0, int row1, object make_row) -> list[Row]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 

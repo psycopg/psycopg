@@ -7,7 +7,7 @@ Dict to hstore adaptation
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Type
+from typing import Dict, Type
 
 from .. import errors as e
 from .. import postgres
@@ -45,7 +45,7 @@ class BaseHstoreDumper(RecursiveDumper):
         if not obj:
             return b""
 
-        tokens: List[str] = []
+        tokens: list[str] = []
 
         def add_token(s: str) -> None:
             tokens.append('"')

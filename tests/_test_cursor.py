@@ -5,7 +5,7 @@ Support module for test_cursor[_async].py
 from __future__ import annotations
 
 import re
-from typing import Any, List, Match
+from typing import Any, Match
 
 import pytest
 import psycopg
@@ -49,8 +49,8 @@ def ph(cur: Any, query: str) -> str:
 
 
 def my_row_factory(
-    cursor: psycopg.Cursor[List[str]] | psycopg.AsyncCursor[List[str]],
-) -> RowMaker[List[str]]:
+    cursor: psycopg.Cursor[list[str]] | psycopg.AsyncCursor[list[str]],
+) -> RowMaker[list[str]]:
     if cursor.description is not None:
         titles = [c.name for c in cursor.description]
 

@@ -10,7 +10,6 @@ import signal
 import threading
 import multiprocessing
 import subprocess as sp
-from typing import List
 
 import pytest
 
@@ -165,7 +164,7 @@ def canceller(conn, errors):
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
 def test_cancel(conn):
-    errors: List[Exception] = []
+    errors: list[Exception] = []
 
     cur = conn.cursor()
     t = threading.Thread(target=canceller, args=(conn, errors))
@@ -189,7 +188,7 @@ def test_cancel(conn):
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
 def test_cancel_stream(conn):
-    errors: List[Exception] = []
+    errors: list[Exception] = []
 
     cur = conn.cursor()
     t = threading.Thread(target=canceller, args=(conn, errors))

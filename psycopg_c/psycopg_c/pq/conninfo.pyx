@@ -9,7 +9,7 @@ from psycopg.pq.misc import ConninfoOption
 
 class Conninfo:
     @classmethod
-    def get_defaults(cls) -> List[ConninfoOption]:
+    def get_defaults(cls) -> list[ConninfoOption]:
         cdef libpq.PQconninfoOption *opts = libpq.PQconndefaults()
         if opts is NULL :
             raise MemoryError("couldn't allocate connection defaults")
@@ -18,7 +18,7 @@ class Conninfo:
         return rv
 
     @classmethod
-    def parse(cls, const char *conninfo) -> List[ConninfoOption]:
+    def parse(cls, const char *conninfo) -> list[ConninfoOption]:
         cdef char *errmsg = NULL
         cdef libpq.PQconninfoOption *opts = libpq.PQconninfoParse(conninfo, &errmsg)
         if opts is NULL:

@@ -9,7 +9,7 @@ from __future__ import annotations
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, List, Sequence
+from typing import Any, Iterator, Iterable, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -126,7 +126,7 @@ class Composed(Composable):
     instance).
     """
 
-    _obj: List[Composable]
+    _obj: list[Composable]
 
     def __init__(self, seq: Sequence[Any]):
         seq = [obj if isinstance(obj, Composable) else Literal(obj) for obj in seq]
@@ -245,7 +245,7 @@ class SQL(Composable):
             SELECT * FROM "people" WHERE name = 'O''Rourke'
 
         """
-        rv: List[Composable] = []
+        rv: list[Composable] = []
         autonum: int | None = 0
         # TODO: this is probably not the right way to whitelist pre
         # pyre complains. Will wait for mypy to complain too to fix.

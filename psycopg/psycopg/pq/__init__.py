@@ -9,9 +9,11 @@ implementation-dependant but all the implementations share the same interface.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import os
 import logging
-from typing import Callable, List, Type
+from typing import Callable, Type
 
 from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
@@ -59,7 +61,7 @@ def import_from_libpq() -> None:
 
     impl = os.environ.get("PSYCOPG_IMPL", "").lower()
     module = None
-    attempts: List[str] = []
+    attempts: list[str] = []
 
     def handle_error(name: str, e: Exception) -> None:
         if not impl:

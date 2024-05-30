@@ -7,7 +7,7 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Mapping, Match, NamedTuple
+from typing import Any, Callable, Dict, Mapping, Match, NamedTuple
 from typing import Sequence, Tuple, TYPE_CHECKING
 from functools import lru_cache
 
@@ -50,13 +50,13 @@ class PostgresQuery:
         self.types: Tuple[int, ...] = ()
 
         # The format requested by the user and the ones to really pass Postgres
-        self._want_formats: List[PyFormat] | None = None
+        self._want_formats: list[PyFormat] | None = None
         self.formats: Sequence[pq.Format] | None = None
 
         self._encoding = conn_encoding(transformer.connection)
-        self._parts: List[QueryPart]
+        self._parts: list[QueryPart]
         self.query = b""
-        self._order: List[str] | None = None
+        self._order: list[str] | None = None
 
     def convert(self, query: Query, vars: Params | None) -> None:
         """
@@ -133,7 +133,7 @@ class PostgresQuery:
 
     @staticmethod
     def validate_and_reorder_params(
-        parts: List[QueryPart], vars: Params, order: List[str] | None
+        parts: list[QueryPart], vars: Params, order: list[str] | None
     ) -> Sequence[Any]:
         """
         Verify the compatibility between a query and a set of params.
@@ -169,13 +169,13 @@ class PostgresQuery:
 
 # The type of the _query2pg() and _query2pg_nocache() methods
 _Query2Pg: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, List[PyFormat], List[str] | None, List[QueryPart]]
+    [bytes, str], Tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]
 ]
 
 
 def _query2pg_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, List[PyFormat], List[str] | None, List[QueryPart]]:
+) -> Tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.
 
@@ -187,8 +187,8 @@ def _query2pg_nocache(
       ``parts`` (splits of queries and placeholders).
     """
     parts = _split_query(query, encoding)
-    order: List[str] | None = None
-    chunks: List[bytes] = []
+    order: list[str] | None = None
+    chunks: list[bytes] = []
     formats = []
 
     if isinstance(parts[0].item, int):
@@ -285,19 +285,19 @@ class PostgresClientQuery(PostgresQuery):
 
 
 _Query2PgClient: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, List[str] | None, List[QueryPart]]
+    [bytes, str], Tuple[bytes, list[str] | None, list[QueryPart]]
 ]
 
 
 def _query2pg_client_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, List[str] | None, List[QueryPart]]:
+) -> Tuple[bytes, list[str] | None, list[QueryPart]]:
     """
     Convert Python query and params into a template to perform client-side binding
     """
     parts = _split_query(query, encoding, collapse_double_percent=False)
-    order: List[str] | None = None
-    chunks: List[bytes] = []
+    order: list[str] | None = None
+    chunks: list[bytes] = []
 
     if isinstance(parts[0].item, int):
         for part in parts[:-1]:
@@ -346,8 +346,8 @@ _re_placeholder = re.compile(
 
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
-) -> List[QueryPart]:
-    parts: List[Tuple[bytes, Match[bytes] | None]] = []
+) -> list[QueryPart]:
+    parts: list[Tuple[bytes, Match[bytes] | None]] = []
     cur = 0
 
     # pairs [(fragment, match], with the last match None

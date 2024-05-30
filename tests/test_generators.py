@@ -1,7 +1,6 @@
 import time
 from collections import deque
 from functools import partial
-from typing import List
 
 import pytest
 
@@ -81,7 +80,7 @@ def pipeline(pgconn):
 
 
 def _run_pipeline_communicate(pgconn, generators, commands, expected_statuses):
-    actual_statuses: List[pq.ExecStatus] = []
+    actual_statuses: list[pq.ExecStatus] = []
     while len(actual_statuses) != len(expected_statuses):
         if commands:
             gen = generators.pipeline_communicate(pgconn, commands)

@@ -11,8 +11,7 @@ dependencies problems).
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence, Tuple
-from typing import DefaultDict, TYPE_CHECKING
+from typing import Any, Dict, Sequence, Tuple, DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
@@ -57,7 +56,7 @@ class Transformer(AdaptContext):
         """.split()
 
     types: Tuple[int, ...] | None
-    formats: List[pq.Format] | None
+    formats: list[pq.Format] | None
 
     _adapters: "AdaptersMap"
     _pgresult: "PGresult" | None
@@ -88,11 +87,11 @@ class Transformer(AdaptContext):
         # mapping fmt, oid -> Loader instance
         self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
-        self._row_dumpers: List[abc.Dumper] | None = None
+        self._row_dumpers: list[abc.Dumper] | None = None
 
         # sequence of load functions from value to python
         # the length of the result columns
-        self._row_loaders: List[LoadFunc] = []
+        self._row_loaders: list[LoadFunc] = []
 
         # mapping oid -> type sql representation
         self._oid_types: Dict[int, bytes] = {}
@@ -172,7 +171,7 @@ class Transformer(AdaptContext):
         self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Sequence[Buffer | None]:
         nparams = len(params)
-        out: List[Buffer | None] = [None] * nparams
+        out: list[Buffer | None] = [None] * nparams
 
         # If we have dumpers, it means set_dumper_types had been called, in
         # which case self.types and self.formats are set to sequences of the
@@ -297,7 +296,7 @@ class Transformer(AdaptContext):
 
         return dumper
 
-    def load_rows(self, row0: int, row1: int, make_row: RowMaker[Row]) -> List[Row]:
+    def load_rows(self, row0: int, row1: int, make_row: RowMaker[Row]) -> list[Row]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")
@@ -309,7 +308,7 @@ class Transformer(AdaptContext):
 
         records = []
         for row in range(row0, row1):
-            record: List[Any] = [None] * self._nfields
+            record: list[Any] = [None] * self._nfields
             for col in range(self._nfields):
                 val = res.get_value(row, col)
                 if val is not None:
@@ -326,7 +325,7 @@ class Transformer(AdaptContext):
         if not 0 <= row < self._ntuples:
             return None
 
-        record: List[Any] = [None] * self._nfields
+        record: list[Any] = [None] * self._nfields
         for col in range(self._nfields):
             val = res.get_value(row, col)
             if val is not None:

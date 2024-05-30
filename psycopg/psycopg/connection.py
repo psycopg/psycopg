@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generator, Iterator, List
+from typing import Any, Generator, Iterator
 from typing import Type, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
 
@@ -469,7 +469,7 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
-    def tpc_recover(self) -> List[Xid]:
+    def tpc_recover(self) -> list[Xid]:
         self._check_tpc()
         status = self.info.transaction_status
         with self.cursor(row_factory=args_row(Xid._from_record)) as cur:

@@ -304,15 +304,15 @@ curs = {curs}
     [
         (
             "conn.cursor()",
-            "List[Tuple[Any, ...]]",
+            "list[Tuple[Any, ...]]",
         ),
         (
             "conn.cursor(row_factory=rows.dict_row)",
-            "List[Dict[str, Any]]",
+            "list[Dict[str, Any]]",
         ),
         (
             "conn.cursor(row_factory=thing_row)",
-            "List[Thing]",
+            "list[Thing]",
         ),
     ],
 )
@@ -377,7 +377,9 @@ def _test_reveal(stmts, type, mypy):
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, List, NamedTuple, Sequence, Tuple
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple
 import psycopg
 from psycopg import rows
 

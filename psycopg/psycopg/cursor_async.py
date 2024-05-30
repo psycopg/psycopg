@@ -7,8 +7,7 @@ Psycopg AsyncCursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List, Type
-from typing import TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, Type, TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -191,7 +190,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             self._pos += 1
         return record
 
-    async def fetchmany(self, size: int = 0) -> List[Row]:
+    async def fetchmany(self, size: int = 0) -> list[Row]:
         """
         Return the next `!size` records from the current recordset.
 
@@ -213,7 +212,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._pos += len(records)
         return records
 
-    async def fetchall(self) -> List[Row]:
+    async def fetchall(self) -> list[Row]:
         """
         Return all the remaining records from the current recordset.
 

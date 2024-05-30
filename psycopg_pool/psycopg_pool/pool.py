@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Iterator, cast, Dict, Generic, List
+from typing import Any, Iterator, cast, Dict, Generic
 from typing import Type
 from weakref import ref
 from contextlib import contextmanager
@@ -78,7 +78,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._pool_full_event: Event | None = None
 
         self._sched_runner: Worker | None = None
-        self._workers: List[Worker] = []
+        self._workers: list[Worker] = []
 
         super().__init__(
             conninfo,

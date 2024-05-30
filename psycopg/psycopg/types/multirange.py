@@ -7,7 +7,7 @@ Support for multirange types adaptation.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Generic, List, Iterable, MutableSequence
+from typing import Any, Generic, Iterable, MutableSequence
 from typing import Type, overload, TYPE_CHECKING
 from datetime import date, datetime
 
@@ -77,7 +77,7 @@ class Multirange(MutableSequence[Range[T]]):
     """
 
     def __init__(self, items: Iterable[Range[T]] = ()):
-        self._ranges: List[Range[T]] = list(map(self._check_type, items))
+        self._ranges: list[Range[T]] = list(map(self._check_type, items))
 
     def _check_type(self, item: Any) -> Range[Any]:
         if not isinstance(item, Range):
@@ -266,7 +266,7 @@ class MultirangeDumper(BaseMultirangeDumper):
         else:
             dump = fail_dump
 
-        out: List[Buffer] = [b"{"]
+        out: list[Buffer] = [b"{"]
         for r in obj:
             out.append(dump_range_text(r, dump))
             out.append(b",")
@@ -284,7 +284,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
         else:
             dump = fail_dump
 
-        out: List[Buffer] = [pack_len(len(obj))]
+        out: list[Buffer] = [pack_len(len(obj))]
         for r in obj:
             data = dump_range_binary(r, dump)
             out.append(pack_len(len(data)))

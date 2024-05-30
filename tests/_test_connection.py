@@ -2,7 +2,9 @@
 Support module for test_connection[_async].py
 """
 
-from typing import Any, List
+from __future__ import annotations
+
+from typing import Any
 from dataclasses import dataclass
 
 import pytest
@@ -29,7 +31,7 @@ def testctx(svcconn):
 class ParamDef:
     name: str
     guc: str
-    values: List[Any]
+    values: list[Any]
     non_default: str
 
 

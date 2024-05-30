@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, List, Tuple, Type, TYPE_CHECKING
+from typing import Any, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -158,7 +158,7 @@ class BasePipeline:
             raise exception
 
     def _process_results(
-        self, queued: PendingResult, results: List["PGresult"]
+        self, queued: PendingResult, results: list["PGresult"]
     ) -> None:
         """Process a results set fetched from the current pipeline.
 

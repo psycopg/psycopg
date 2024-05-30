@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, cast, Dict, Iterator, List
+from typing import Any, Callable, cast, Dict, Iterator
 from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
 
 from .. import pq
@@ -90,7 +90,7 @@ class SequenceDumper(RecursiveDumper):
         if not obj:
             return start + end
 
-        parts: List[abc.Buffer] = [start]
+        parts: list[abc.Buffer] = [start]
 
         for item in obj:
             if item is None:
@@ -244,7 +244,7 @@ class RecordBinaryLoader(Loader):
 
 class CompositeLoader(RecordLoader):
     factory: Callable[..., Any]
-    fields_types: List[int]
+    fields_types: list[int]
     _types_set = False
 
     def load(self, data: abc.Buffer) -> Any:

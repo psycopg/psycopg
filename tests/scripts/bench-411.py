@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 import time
@@ -5,7 +7,7 @@ import random
 import asyncio
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Generator
+from typing import Any, Dict, Generator
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
@@ -25,8 +27,8 @@ class Driver(str, Enum):
     asyncpg = "asyncpg"
 
 
-ids: List[int] = []
-data: List[Dict[str, Any]] = []
+ids: list[int] = []
+data: list[Dict[str, Any]] = []
 
 
 def main() -> None:

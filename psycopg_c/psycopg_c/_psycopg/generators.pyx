@@ -6,7 +6,6 @@ C implementation of generators for the communication protocols with the libpq
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
-from typing import List
 from time import monotonic
 
 from psycopg import errors as e
@@ -108,7 +107,7 @@ def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[No
             raise e.InternalError(f"unexpected poll status: {status}")
 
 
-def execute(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
+def execute(pq.PGconn pgconn) -> PQGen[list[abc.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -158,7 +157,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
                     f"consuming input failed: {error_message(pgconn)}")
 
 
-def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
+def fetch_many(pq.PGconn pgconn) -> PQGen[list[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -247,7 +246,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[PGresult | None]:
 
 def pipeline_communicate(
     pq.PGconn pgconn, commands: Deque[PipelineCommand]
-) -> PQGen[List[List[PGresult]]]:
+) -> PQGen[list[list[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
@@ -277,7 +276,7 @@ def pipeline_communicate(
 
             _consume_notifies(pgconn)
 
-            res: List[PGresult] = []
+            res: list[PGresult] = []
             while True:
                 with nogil:
                     ibres = libpq.PQisBusy(pgconn_ptr)

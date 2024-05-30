@@ -6,7 +6,7 @@ Mapping from types/oids to Dumpers/Loaders
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Type, cast, TYPE_CHECKING
+from typing import Any, Dict, Type, cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -62,8 +62,8 @@ class AdaptersMap:
     types: TypesRegistry
 
     _dumpers: Dict[PyFormat, Dict[type | str, Type[Dumper]]]
-    _dumpers_by_oid: List[Dict[int, Type[Dumper]]]
-    _loaders: List[Dict[int, Type[Loader]]]
+    _dumpers_by_oid: list[Dict[int, Type[Dumper]]]
+    _loaders: list[Dict[int, Type[Loader]]]
 
     # Record if a dumper or loader has an optimised version.
     _optimised: Dict[type, type] = {}

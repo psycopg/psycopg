@@ -6,7 +6,7 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, List, Set, Tuple
+from typing import Any, Set, Tuple
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -44,7 +44,7 @@ class Faker:
         self.records = []
 
         self._schema = None
-        self._types: List[type] | None = None
+        self._types: list[type] | None = None
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")
@@ -65,7 +65,7 @@ class Faker:
         return [sql.Identifier(f"fld_{i}") for i in range(len(self.schema))]
 
     @property
-    def types(self) -> List[type]:
+    def types(self) -> list[type]:
         if not self._types:
 
             def key(cls: type) -> str:
@@ -76,7 +76,7 @@ class Faker:
         return self._types
 
     @types.setter
-    def types(self, types: List[type]) -> None:
+    def types(self, types: list[type]) -> None:
         self._types = types
 
     @property
@@ -199,7 +199,7 @@ class Faker:
         )
 
     def choose_schema(self, ncols=20):
-        schema: List[Tuple[type, ...] | type] = []
+        schema: list[Tuple[type, ...] | type] = []
         while len(schema) < ncols:
             s = self.make_schema(choice(self.types))
             if s is not None:
@@ -577,7 +577,7 @@ class Faker:
 
             return l1 <= u2 and l2 <= u1
 
-        out: List[Range[Any]] = []
+        out: list[Range[Any]] = []
         for i in range(length):
             r = self.make_Range((Range, spec[1]), **kwargs)
             if r.isempty:
@@ -669,7 +669,7 @@ class Faker:
             return spec[0](empty=True)
 
         while True:
-            bounds: List[Any] = []
+            bounds: list[Any] = []
             while len(bounds) < 2:
                 if random() < no_bound_chance:
                     bounds.append(None)
@@ -779,7 +779,7 @@ class Faker:
         if not length:
             length = randrange(self.str_max_length)
 
-        rv: List[int] = []
+        rv: list[int] = []
         while len(rv) < length:
             c = randrange(1, 128) if random() < 0.5 else randrange(1, 0x110000)
             if not (0xD800 <= c <= 0xDBFF or 0xDC00 <= c <= 0xDFFF):
