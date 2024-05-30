@@ -6,7 +6,7 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, Set
+from typing import Any
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -225,7 +225,7 @@ class Faker:
             m = self.get_matcher(spec)
             m(spec, g, w)
 
-    def get_supported_types(self) -> Set[type]:
+    def get_supported_types(self) -> set[type]:
         dumpers = self.conn.adapters._dumpers[self.format]
         rv = set()
         for cls in dumpers.keys():

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from math import prod
-from typing import Any, cast, Callable, Pattern, Set
+from typing import Any, cast, Callable, Pattern
 
 from .. import pq
 from .. import errors as e
@@ -84,7 +84,7 @@ class BaseListDumper(RecursiveDumper):
         else:
             return max(imax, -imin - 1)
 
-    def _flatiter(self, L: list[Any], seen: Set[int]) -> Any:
+    def _flatiter(self, L: list[Any], seen: set[int]) -> Any:
         if id(L) in seen:
             raise e.DataError("cannot dump a recursive list")
 
