@@ -39,8 +39,9 @@ jobs:
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
           PGPASSWORD: password
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: ${{ matrix.package }}-${{ matrix.format }}
           path: ./dist/*
 
     services:
@@ -56,3 +57,14 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - sdist
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: psycopg-pool-artifact
+          delete-merged: true

@@ -27,14 +27,14 @@ jobs:
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           # Note: 6.2.0 is buggy: make sure to avoid it.
           # See https://github.com/pypa/cibuildwheel/issues/1250
           image: tonistiigi/binfmt:qemu-v7.0.0
 
       - name: Cache libpq build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
           key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
@@ -43,7 +43,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -71,8 +71,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: linux-${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
     services:
@@ -118,7 +119,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -134,8 +135,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: macos-14-${{matrix.pyver}}-macosx_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
@@ -168,7 +170,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -184,8 +186,9 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: macos-12-${{matrix.pyver}}-macosx_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
@@ -215,7 +218,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17.0
         with:
           package-dir: psycopg_binary
         env:
@@ -235,9 +238,24 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: windows-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
   # }}}
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - linux
+      - macos-14
+      - macos-12
+      - windows
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: psycopg-binary-artifact
+          delete-merged: true
