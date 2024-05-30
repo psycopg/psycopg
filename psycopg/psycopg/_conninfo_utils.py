@@ -7,7 +7,6 @@ Internal utilities to manipulate connection strings
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 from functools import lru_cache
 from ipaddress import ip_address
 from dataclasses import dataclass
@@ -15,9 +14,6 @@ from dataclasses import dataclass
 from . import pq
 from .abc import ConnDict, ConnMapping
 from . import errors as e
-
-if TYPE_CHECKING:
-    from typing import Any  # noqa: F401
 
 
 def split_attempts(params: ConnMapping) -> list[ConnDict]:
