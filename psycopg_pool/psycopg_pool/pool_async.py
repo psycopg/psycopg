@@ -40,7 +40,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self,
         conninfo: str = "",
         *,
-        connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
+        connection_class: type[ACT] = cast("type[ACT]", AsyncConnection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,

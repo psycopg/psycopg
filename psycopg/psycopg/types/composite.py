@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
-    Callable[[abc.Buffer, int], tuple[int, int]], _struct_oidlen.unpack_from
+    Callable[[abc.Buffer, int], "tuple[int, int]"], _struct_oidlen.unpack_from
 )
 
 

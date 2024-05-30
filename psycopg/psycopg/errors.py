@@ -31,7 +31,7 @@ from ._compat import TypeAlias, TypeGuard
 if TYPE_CHECKING:
     from .pq.misc import PGnotify, ConninfoOption
 
-ErrorInfo: TypeAlias = None | PGresult | dict[int, bytes | None]
+ErrorInfo: TypeAlias = "PGresult | dict[int, bytes | None] | None"
 
 _sqlcodes: dict[str, type[Error]] = {}
 

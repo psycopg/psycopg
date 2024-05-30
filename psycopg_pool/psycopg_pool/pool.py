@@ -41,7 +41,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self,
         conninfo: str = "",
         *,
-        connection_class: type[CT] = cast(type[CT], Connection),
+        connection_class: type[CT] = cast("type[CT]", Connection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,

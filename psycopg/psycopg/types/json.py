@@ -15,10 +15,10 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
-from .._compat import cache
+from .._compat import cache, TypeAlias
 
-JsonDumpsFunction = Callable[[Any], str | bytes]
-JsonLoadsFunction = Callable[[str | bytes], Any]
+JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
+JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]
 
 
 def set_json_dumps(

@@ -36,7 +36,7 @@ _re_hstore = re.compile(
 )
 
 
-Hstore: TypeAlias = dict[str, str | None]
+Hstore: TypeAlias = "dict[str, str | None]"
 
 
 class BaseHstoreDumper(RecursiveDumper):

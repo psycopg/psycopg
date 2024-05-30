@@ -315,7 +315,7 @@ for i in range(DefaultContext.prec):
     _contexts[i] = DefaultContext
 
 _unpack_numeric_head = cast(
-    Callable[[Buffer], tuple[int, int, int, int]],
+    Callable[[Buffer], "tuple[int, int, int, int]"],
     struct.Struct("!HhHH").unpack_from,
 )
 _pack_numeric_head = cast(

@@ -227,7 +227,7 @@ class BaseTransaction(Generic[ConnectionType]):
         )
 
 
-class Transaction(BaseTransaction[Connection[Any]]):
+class Transaction(BaseTransaction["Connection[Any]"]):
     """
     Returned by `Connection.transaction()` to handle a transaction block.
     """
@@ -257,7 +257,7 @@ class Transaction(BaseTransaction[Connection[Any]]):
             return False
 
 
-class AsyncTransaction(BaseTransaction[AsyncConnection[Any]]):
+class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
     """
     Returned by `AsyncConnection.transaction()` to handle a transaction block.
     """

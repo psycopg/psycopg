@@ -169,7 +169,7 @@ class PostgresQuery:
 
 # The type of the _query2pg() and _query2pg_nocache() methods
 _Query2Pg: TypeAlias = Callable[
-    [bytes, str], tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]
+    [bytes, str], "tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]"
 ]
 
 
@@ -285,7 +285,7 @@ class PostgresClientQuery(PostgresQuery):
 
 
 _Query2PgClient: TypeAlias = Callable[
-    [bytes, str], tuple[bytes, list[str] | None, list[QueryPart]]
+    [bytes, str], "tuple[bytes, list[str] | None, list[QueryPart]]"
 ]
 
 

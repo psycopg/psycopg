@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class AsyncCursor(BaseCursor[AsyncConnection[Any], Row]):
+class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 

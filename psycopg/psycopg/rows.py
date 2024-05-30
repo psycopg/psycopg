@@ -81,13 +81,13 @@ class BaseRowFactory(Protocol[Row]):
     def __call__(self, __cursor: BaseCursor[Any, Any]) -> RowMaker[Row]: ...
 
 
-TupleRow: TypeAlias = tuple[Any, ...]
+TupleRow: TypeAlias = "tuple[Any, ...]"
 """
 An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
 
 
-DictRow: TypeAlias = dict[str, Any]
+DictRow: TypeAlias = "dict[str, Any]"
 """
 An alias for the type returned by `dict_row()`
 

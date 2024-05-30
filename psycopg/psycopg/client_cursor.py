@@ -6,7 +6,7 @@ psycopg client-side binding cursors
 
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
@@ -22,8 +22,9 @@ from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:
-    from .connection import Connection
-    from .connection_async import AsyncConnection
+    from typing import Any  # noqa: F401
+    from .connection import Connection  # noqa: F401
+    from .connection_async import AsyncConnection  # noqa: F401
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
@@ -82,9 +83,11 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         return (Prepare.NO, b"")
 
 
-class ClientCursor(ClientCursorMixin[Connection[Any], Row], Cursor[Row]):
+class ClientCursor(ClientCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
 
 
-class AsyncClientCursor(ClientCursorMixin[AsyncConnection[Any], Row], AsyncCursor[Row]):
+class AsyncClientCursor(
+    ClientCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]
+):
     __module__ = "psycopg"

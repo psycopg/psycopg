@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class Cursor(BaseCursor[Connection[Any], Row]):
+class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 

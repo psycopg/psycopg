@@ -282,7 +282,7 @@ class AdaptersMap:
         from psycopg import types
 
         if cls.__module__.startswith(types.__name__):
-            new = cast(type[RV], getattr(_psycopg, cls.__name__, None))
+            new = cast("type[RV]", getattr(_psycopg, cls.__name__, None))
             if new:
                 self._optimised[cls] = new
                 return new

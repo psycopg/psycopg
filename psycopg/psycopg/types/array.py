@@ -24,10 +24,12 @@ from .._typeinfo import TypeInfo
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
 _pack_head = cast(Callable[[int, int, int], bytes], _struct_head.pack)
-_unpack_head = cast(Callable[[Buffer], tuple[int, int, int]], _struct_head.unpack_from)
+_unpack_head = cast(
+    Callable[[Buffer], "tuple[int, int, int]"], _struct_head.unpack_from
+)
 _struct_dim = struct.Struct("!II")  # dim, lower bound
 _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
-_unpack_dim = cast(Callable[[Buffer, int], tuple[int, int]], _struct_dim.unpack_from)
+_unpack_dim = cast(Callable[[Buffer, int], "tuple[int, int]"], _struct_dim.unpack_from)
 
 PY_TEXT = PyFormat.TEXT
 PQ_BINARY = pq.Format.BINARY

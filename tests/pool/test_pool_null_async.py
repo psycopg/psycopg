@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Dict
 
 import pytest
 from packaging.version import parse as ver  # noqa: F401  # used in skipif
@@ -41,7 +41,7 @@ async def test_bad_size(dsn, min_size, max_size):
         pool.AsyncNullConnectionPool(min_size=min_size, max_size=max_size)
 
 
-class MyRow(dict[str, Any]):
+class MyRow(Dict[str, Any]):
     pass
 
 

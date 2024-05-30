@@ -6,8 +6,7 @@ psycopg raw queries cursors
 
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
-
+from typing import TYPE_CHECKING
 from .abc import ConnectionType, Query, Params
 from .sql import Composable
 from .rows import Row
@@ -18,8 +17,9 @@ from ._queries import PostgresQuery
 from ._cursor_base import BaseCursor
 
 if TYPE_CHECKING:
-    from .connection import Connection
-    from .connection_async import AsyncConnection
+    from typing import Any  # noqa: F401
+    from .connection import Connection  # noqa: F401
+    from .connection_async import AsyncConnection  # noqa: F401
 
 
 class PostgresRawQuery(PostgresQuery):
@@ -54,9 +54,9 @@ class RawCursorMixin(BaseCursor[ConnectionType, Row]):
     _query_cls = PostgresRawQuery
 
 
-class RawCursor(RawCursorMixin[Connection[Any], Row], Cursor[Row]):
+class RawCursor(RawCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
 
 
-class AsyncRawCursor(RawCursorMixin[AsyncConnection[Any], Row], AsyncCursor[Row]):
+class AsyncRawCursor(RawCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]):
     __module__ = "psycopg"

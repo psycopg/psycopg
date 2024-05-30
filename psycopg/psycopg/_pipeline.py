@@ -16,20 +16,20 @@ from .abc import PipelineCommand, PQGen
 from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
-from ._preparing import Key, Prepare
 from .generators import pipeline_communicate, fetch_many, send
 from ._capabilities import capabilities
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
-    from ._cursor_base import BaseCursor
     from .connection import Connection
+    from ._preparing import Key, Prepare  # noqa: F401
+    from ._cursor_base import BaseCursor  # noqa: F401
     from ._connection_base import BaseConnection
     from .connection_async import AsyncConnection
 
 
 PendingResult: TypeAlias = (
-    tuple[BaseCursor[Any, Any], tuple[Key, Prepare, bytes] | None] | None
+    "tuple[BaseCursor[Any, Any], tuple[Key, Prepare, bytes] | None] | None"
 )
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR

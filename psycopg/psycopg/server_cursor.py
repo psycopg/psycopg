@@ -211,7 +211,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
-class ServerCursor(ServerCursorMixin[Connection[Any], Row], Cursor[Row]):
+class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
@@ -348,7 +348,9 @@ class ServerCursor(ServerCursorMixin[Connection[Any], Row], Cursor[Row]):
             self._pos = value
 
 
-class AsyncServerCursor(ServerCursorMixin[AsyncConnection[Any], Row], AsyncCursor[Row]):
+class AsyncServerCursor(
+    ServerCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]
+):
     __module__ = "psycopg"
     __slots__ = ()
 

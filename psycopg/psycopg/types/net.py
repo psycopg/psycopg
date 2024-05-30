@@ -17,9 +17,9 @@ from .._compat import TypeAlias
 if TYPE_CHECKING:
     import ipaddress
 
-Address: TypeAlias = "ipaddress.IPv4Address" | "ipaddress.IPv6Address"
-Interface: TypeAlias = "ipaddress.IPv4Interface" | "ipaddress.IPv6Interface"
-Network: TypeAlias = "ipaddress.IPv4Network" | "ipaddress.IPv6Network"
+Address: TypeAlias = "ipaddress.IPv4Address | ipaddress.IPv6Address"
+Interface: TypeAlias = "ipaddress.IPv4Interface | ipaddress.IPv6Interface"
+Network: TypeAlias = "ipaddress.IPv4Network | ipaddress.IPv6Network"
 
 # These objects will be imported lazily
 ip_address: Callable[[str], Address] = None  # type: ignore[assignment]

@@ -11,28 +11,29 @@ from typing import Protocol, Sequence, TYPE_CHECKING
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import LiteralString, TypeAlias, TypeVar
+from ._compat import TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from . import sql
+    from . import sql  # noqa: F401
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
-    from .waiting import Wait, Ready
+    from .waiting import Wait, Ready  # noqa: F401
+    from ._compat import LiteralString  # noqa: F401
     from ._adapters_map import AdaptersMap
     from ._connection_base import BaseConnection
 
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer: TypeAlias = bytes | bytearray | memoryview
+Buffer: TypeAlias = "bytes | bytearray | memoryview"
 
-Query: TypeAlias = LiteralString | bytes | sql.SQL | sql.Composed
-Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
+Query: TypeAlias = "LiteralString | bytes | sql.SQL | sql.Composed"
+Params: TypeAlias = "Sequence[Any] | Mapping[str, Any]"
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = type | tuple["DumperKey", ...]
-ConnParam: TypeAlias = str | int | None
-ConnDict: TypeAlias = dict[str, ConnParam]
+DumperKey: TypeAlias = "type | tuple[DumperKey, ...]"
+ConnParam: TypeAlias = "str | int | None"
+ConnDict: TypeAlias = "dict[str, ConnParam]"
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 
@@ -40,13 +41,13 @@ ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 RV = TypeVar("RV")
 
-PQGenConn: TypeAlias = Generator[tuple[int, Wait], Ready | int, RV]
+PQGenConn: TypeAlias = Generator["tuple[int, Wait]", "Ready | int", RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen: TypeAlias = Generator[Wait, Ready | int, RV]
+PQGen: TypeAlias = Generator["Wait", "Ready | int", RV]
 """Generator for processes where the connection file number won't change.
 """
 
@@ -63,7 +64,7 @@ class WaitFunc(Protocol):
 
 # Adaptation types
 
-DumpFunc: TypeAlias = Callable[[Any], Buffer | None]
+DumpFunc: TypeAlias = Callable[[Any], "Buffer | None"]
 LoadFunc: TypeAlias = Callable[[Buffer], Any]
 
 

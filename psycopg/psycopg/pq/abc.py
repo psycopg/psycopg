@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
 
 # An object implementing the buffer protocol (ish)
-Buffer: TypeAlias = bytes | bytearray | memoryview
+Buffer: TypeAlias = "bytes | bytearray | memoryview"
 
 
 class PGconn(Protocol):

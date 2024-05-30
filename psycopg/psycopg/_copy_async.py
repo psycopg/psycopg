@@ -21,7 +21,7 @@ from ._acompat import aspawn, agather, AQueue, AWorker
 if TYPE_CHECKING:
     from .abc import Buffer
     from .cursor_async import AsyncCursor
-    from .connection_async import AsyncConnection
+    from .connection_async import AsyncConnection  # noqa: F401
 
 COPY_IN = pq.ExecStatus.COPY_IN
 COPY_OUT = pq.ExecStatus.COPY_OUT
@@ -29,7 +29,7 @@ COPY_OUT = pq.ExecStatus.COPY_OUT
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class AsyncCopy(BaseCopy[AsyncConnection[Any]]):
+class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     """Manage an asynchronous :sql:`COPY` operation.
 
     :param cursor: the cursor where the operation is performed.

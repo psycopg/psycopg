@@ -17,20 +17,21 @@ from collections import defaultdict
 from . import pq
 from . import abc
 from . import errors as e
-from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
+from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, NoneType
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
 from ._compat import TypeAlias
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
+    from .abc import DumperKey  # noqa: F401
     from .adapt import AdaptersMap
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
-DumperCache: TypeAlias = dict[DumperKey, abc.Dumper]
-OidDumperCache: TypeAlias = dict[int, abc.Dumper]
-LoaderCache: TypeAlias = dict[int, abc.Loader]
+DumperCache: TypeAlias = "dict[DumperKey, abc.Dumper]"
+OidDumperCache: TypeAlias = "dict[int, abc.Dumper]"
+LoaderCache: TypeAlias = "dict[int, abc.Loader]"
 
 TEXT = pq.Format.TEXT
 PY_TEXT = PyFormat.TEXT
