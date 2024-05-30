@@ -10,7 +10,7 @@ import sys
 import struct
 from abc import ABC, abstractmethod
 from math import log
-from typing import Any, Callable, DefaultDict, Dict, Tuple, cast, TYPE_CHECKING
+from typing import Any, Callable, DefaultDict, Tuple, cast, TYPE_CHECKING
 from decimal import Decimal, DefaultContext, Context
 
 from .. import _oids
@@ -60,7 +60,7 @@ class _IntOrSubclassDumper(_IntDumper):
 
 
 class _SpecialValuesDumper(Dumper):
-    _special: Dict[bytes, bytes] = {}
+    _special: dict[bytes, bytes] = {}
 
     def dump(self, obj: Any) -> Buffer | None:
         return str(obj).encode()

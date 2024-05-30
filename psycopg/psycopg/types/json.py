@@ -7,7 +7,7 @@ Adapters for JSON types.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, Tuple, Type
+from typing import Any, Callable, Tuple, Type
 
 from .. import abc
 from .. import _oids
@@ -230,7 +230,7 @@ def _get_current_dumper(
         return _default_dumpers[cls, format]
 
 
-_default_dumpers: Dict[Tuple[Type[_JsonWrapper], PyFormat], Type[Dumper]] = {
+_default_dumpers: dict[Tuple[Type[_JsonWrapper], PyFormat], Type[Dumper]] = {
     (Json, PyFormat.BINARY): JsonBinaryDumper,
     (Json, PyFormat.TEXT): JsonDumper,
     (Jsonb, PyFormat.BINARY): JsonbBinaryDumper,

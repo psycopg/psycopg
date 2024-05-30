@@ -6,7 +6,7 @@ Protocol objects representing different implementations of the same classes.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Callable, Generator, Mapping
+from typing import Any, Callable, Generator, Mapping
 from typing import Protocol, Sequence, Tuple, TYPE_CHECKING
 
 from . import pq
@@ -32,7 +32,7 @@ ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
 DumperKey: TypeAlias = type | Tuple["DumperKey", ...]
 ConnParam: TypeAlias = str | int | None
-ConnDict: TypeAlias = Dict[str, ConnParam]
+ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 

@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Iterator, cast, Dict, Generic
+from typing import Any, Iterator, cast, Generic
 from typing import Type
 from weakref import ref
 from contextlib import contextmanager
@@ -43,7 +43,7 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str = "",
         *,
         connection_class: Type[CT] = cast(Type[CT], Connection),
-        kwargs: Dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -811,7 +811,7 @@ class ConnectionPool(Generic[CT], BasePool):
             )
             to_close.close()
 
-    def _get_measures(self) -> Dict[str, int]:
+    def _get_measures(self) -> dict[str, int]:
         rv = super()._get_measures()
         rv[self._REQUESTS_WAITING] = len(self._waiting)
         return rv

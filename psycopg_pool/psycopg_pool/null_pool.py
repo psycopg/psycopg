@@ -10,7 +10,7 @@ Psycopg null connection pool module (sync version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Type
+from typing import Any, cast, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
@@ -32,7 +32,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         conninfo: str = "",
         *,
         connection_class: Type[CT] = cast(Type[CT], Connection),
-        kwargs: Dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | None = None,
         min_size: int = 0,
         max_size: int | None = None,
         open: bool | None = None,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from time import monotonic
 from random import random
-from typing import Any, Dict, Tuple, TYPE_CHECKING
+from typing import Any, Tuple, TYPE_CHECKING
 
 from psycopg import errors as e
 
@@ -46,7 +46,7 @@ class BasePool:
         self,
         conninfo: str = "",
         *,
-        kwargs: Dict[str, Any] | None,
+        kwargs: dict[str, Any] | None,
         min_size: int,
         max_size: int | None,
         name: str | None,
@@ -67,7 +67,7 @@ class BasePool:
             raise ValueError("num_workers must be at least 1")
 
         self.conninfo = conninfo
-        self.kwargs: Dict[str, Any] = kwargs or {}
+        self.kwargs: dict[str, Any] = kwargs or {}
         self.name = name
         self._min_size = min_size
         self._max_size = max_size
@@ -157,7 +157,7 @@ class BasePool:
             f"can't return connection to pool {self.name!r}, {msg}: {conn}"
         )
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """
         Return current stats about the pool usage.
         """
@@ -165,7 +165,7 @@ class BasePool:
         rv.update(self._get_measures())
         return rv
 
-    def pop_stats(self) -> Dict[str, int]:
+    def pop_stats(self) -> dict[str, int]:
         """
         Return current stats about the pool usage.
 
@@ -176,7 +176,7 @@ class BasePool:
         rv.update(self._get_measures())
         return rv
 
-    def _get_measures(self) -> Dict[str, int]:
+    def _get_measures(self) -> dict[str, int]:
         """
         Return immediate measures of the pool (not counters).
         """

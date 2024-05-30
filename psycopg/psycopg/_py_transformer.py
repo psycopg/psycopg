@@ -11,7 +11,7 @@ dependencies problems).
 
 from __future__ import annotations
 
-from typing import Any, Dict, Sequence, Tuple, DefaultDict, TYPE_CHECKING
+from typing import Any, Sequence, Tuple, DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
@@ -28,9 +28,9 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
-DumperCache: TypeAlias = Dict[DumperKey, abc.Dumper]
-OidDumperCache: TypeAlias = Dict[int, abc.Dumper]
-LoaderCache: TypeAlias = Dict[int, abc.Loader]
+DumperCache: TypeAlias = dict[DumperKey, abc.Dumper]
+OidDumperCache: TypeAlias = dict[int, abc.Dumper]
+LoaderCache: TypeAlias = dict[int, abc.Loader]
 
 TEXT = pq.Format.TEXT
 PY_TEXT = PyFormat.TEXT
@@ -94,7 +94,7 @@ class Transformer(AdaptContext):
         self._row_loaders: list[LoadFunc] = []
 
         # mapping oid -> type sql representation
-        self._oid_types: Dict[int, bytes] = {}
+        self._oid_types: dict[int, bytes] = {}
 
         self._encoding = ""
 

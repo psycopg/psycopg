@@ -1,5 +1,5 @@
 """
-Dict to hstore adaptation
+dict to hstore adaptation
 """
 
 # Copyright (C) 2021 The Psycopg Team
@@ -7,7 +7,7 @@ Dict to hstore adaptation
 from __future__ import annotations
 
 import re
-from typing import Dict, Type
+from typing import Type
 
 from .. import errors as e
 from .. import postgres
@@ -37,7 +37,7 @@ _re_hstore = re.compile(
 )
 
 
-Hstore: TypeAlias = Dict[str, str | None]
+Hstore: TypeAlias = dict[str, str | None]
 
 
 class BaseHstoreDumper(RecursiveDumper):

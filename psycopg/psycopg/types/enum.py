@@ -5,8 +5,7 @@ Adapters for the enum type.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Generic, Mapping, Sequence
-from typing import Tuple, Type, cast, TYPE_CHECKING
+from typing import Any, Generic, Mapping, Sequence, Tuple, Type, cast, TYPE_CHECKING
 
 from .. import sql
 from .. import postgres
@@ -23,8 +22,8 @@ if TYPE_CHECKING:
 
 E = TypeVar("E", bound=Enum)
 
-EnumDumpMap: TypeAlias = Dict[E, bytes]
-EnumLoadMap: TypeAlias = Dict[bytes, E]
+EnumDumpMap: TypeAlias = dict[E, bytes]
+EnumLoadMap: TypeAlias = dict[bytes, E]
 EnumMapping: TypeAlias = Mapping[E, str] | Sequence[Tuple[E, str]] | None
 
 # Hashable versions

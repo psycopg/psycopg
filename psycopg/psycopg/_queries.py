@@ -7,7 +7,7 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, Mapping, Match, NamedTuple
+from typing import Any, Callable, Mapping, Match, NamedTuple
 from typing import Sequence, Tuple, TYPE_CHECKING
 from functools import lru_cache
 
@@ -199,7 +199,7 @@ def _query2pg_nocache(
             formats.append(part.format)
 
     elif isinstance(parts[0].item, str):
-        seen: Dict[str, Tuple[bytes, PyFormat]] = {}
+        seen: dict[str, Tuple[bytes, PyFormat]] = {}
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)
@@ -306,7 +306,7 @@ def _query2pg_client_nocache(
             chunks.append(b"%s")
 
     elif isinstance(parts[0].item, str):
-        seen: Dict[str, Tuple[bytes, PyFormat]] = {}
+        seen: dict[str, Tuple[bytes, PyFormat]] = {}
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)

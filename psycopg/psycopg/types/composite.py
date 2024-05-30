@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, cast, Dict, Iterator
+from typing import Any, Callable, cast, Iterator
 from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
 
 from .. import pq
@@ -217,7 +217,7 @@ class RecordBinaryLoader(Loader):
         # Usually there will be only one, but if there is more than one
         # row in the same query (in different columns, or even in different
         # records), oids might differ and we'd need separate transformers.
-        self._txs: Dict[Tuple[int, ...], abc.Transformer] = {}
+        self._txs: dict[Tuple[int, ...], abc.Transformer] = {}
 
     def load(self, data: abc.Buffer) -> Tuple[Any, ...]:
         nfields = unpack_len(data, 0)[0]

@@ -7,8 +7,7 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Generic, Type, Tuple
-from typing import cast, TYPE_CHECKING
+from typing import Any, Generic, Type, Tuple, cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -248,12 +247,12 @@ class Range(Generic[T]):
     def __ge__(self, other: Any) -> bool:
         return self == other or self > other  # type: ignore
 
-    def __getstate__(self) -> Dict[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return {
             slot: getattr(self, slot) for slot in self.__slots__ if hasattr(self, slot)
         }
 
-    def __setstate__(self, state: Dict[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         for slot, value in state.items():
             setattr(self, slot, value)
 

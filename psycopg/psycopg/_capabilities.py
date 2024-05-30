@@ -4,7 +4,7 @@ psycopg capabilities objects
 
 # Copyright (C) 2024 The Psycopg Team
 
-from typing import Dict
+from __future__ import annotations
 
 from . import pq
 from . import _cmodule
@@ -17,7 +17,7 @@ class Capabilities:
     """
 
     def __init__(self) -> None:
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
 
     def has_encrypt_password(self, check: bool = False) -> bool:
         """Check if the `PGconn.encrypt_password()` method is implemented.

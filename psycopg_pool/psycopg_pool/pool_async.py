@@ -11,7 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, cast, Dict, Generic
+from typing import Any, AsyncIterator, cast, Generic
 from typing import Type
 from weakref import ref
 from contextlib import asynccontextmanager
@@ -42,7 +42,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         conninfo: str = "",
         *,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        kwargs: Dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -868,7 +868,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             )
             await to_close.close()
 
-    def _get_measures(self) -> Dict[str, int]:
+    def _get_measures(self) -> dict[str, int]:
         rv = super()._get_measures()
         rv[self._REQUESTS_WAITING] = len(self._waiting)
         return rv

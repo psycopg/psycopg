@@ -22,7 +22,7 @@ __author__ = 'Stuart Bishop <stuart@stuartbishop.net>'
 import unittest
 import time
 import sys
-from typing import Any, Dict
+from typing import Any
 
 
 # Revision 1.12  2009/02/06 03:35:11  kf7xm
@@ -103,7 +103,7 @@ class DatabaseAPI20Test(unittest.TestCase):
     # method is to be found
     driver: Any = None
     connect_args = () # List of arguments to pass to connect
-    connect_kw_args: Dict[Any, Any] = {} # Keyword arguments for connect
+    connect_kw_args: dict[Any, Any] = {} # Keyword arguments for connect
     table_prefix = 'dbapi20test_' # If you need to specify a prefix for tables
 
     ddl1 = 'create table %sbooze (name varchar(20))' % table_prefix

@@ -11,7 +11,7 @@ import os
 import re
 import warnings
 from random import randint
-from typing import Any, DefaultDict, Dict, NamedTuple, Sequence, TYPE_CHECKING
+from typing import Any, DefaultDict, NamedTuple, Sequence, TYPE_CHECKING
 from collections import defaultdict
 
 try:
@@ -36,7 +36,7 @@ async_resolver = AsyncResolver()
 async_resolver.cache = Cache()
 
 
-async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
+async def resolve_hostaddr_async(params: dict[str, Any]) -> dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
 
@@ -75,12 +75,12 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def resolve_srv(params: Dict[str, Any]) -> Dict[str, Any]:
+def resolve_srv(params: dict[str, Any]) -> dict[str, Any]:
     """Apply SRV DNS lookup as defined in :RFC:`2782`."""
     return Rfc2782Resolver().resolve(params)
 
 
-async def resolve_srv_async(params: Dict[str, Any]) -> Dict[str, Any]:
+async def resolve_srv_async(params: dict[str, Any]) -> dict[str, Any]:
     """Async equivalent of `resolve_srv()`."""
     return await Rfc2782Resolver().resolve_async(params)
 
@@ -101,7 +101,7 @@ class Rfc2782Resolver:
 
     re_srv_rr = re.compile(r"^(?P<service>_[^\.]+)\.(?P<proto>_[^\.]+)\.(?P<target>.+)")
 
-    def resolve(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def resolve(self, params: dict[str, Any]) -> dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
         attempts = self._get_attempts(params)
         if not attempts:
@@ -116,7 +116,7 @@ class Rfc2782Resolver:
 
         return self._return_params(params, hps)
 
-    async def resolve_async(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def resolve_async(self, params: dict[str, Any]) -> dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
         attempts = self._get_attempts(params)
         if not attempts:
@@ -131,7 +131,7 @@ class Rfc2782Resolver:
 
         return self._return_params(params, hps)
 
-    def _get_attempts(self, params: Dict[str, Any]) -> list[HostPort]:
+    def _get_attempts(self, params: dict[str, Any]) -> list[HostPort]:
         """
         Return the list of host, and for each host if SRV lookup must be tried.
 
@@ -205,8 +205,8 @@ class Rfc2782Resolver:
         ]
 
     def _return_params(
-        self, params: Dict[str, Any], hps: list[HostPort]
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], hps: list[HostPort]
+    ) -> dict[str, Any]:
         if not hps:
             # Nothing found, we ended up with an empty list
             raise e.OperationalError("no host found after SRV RR lookup")

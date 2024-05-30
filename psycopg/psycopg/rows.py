@@ -7,7 +7,7 @@ psycopg row factories
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Dict, NamedTuple, NoReturn
+from typing import Any, Callable, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
 from collections import namedtuple
 
@@ -87,7 +87,7 @@ An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
 
 
-DictRow: TypeAlias = Dict[str, Any]
+DictRow: TypeAlias = dict[str, Any]
 """
 An alias for the type returned by `dict_row()`
 
@@ -118,7 +118,7 @@ def dict_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[DictRow]":
     if names is None:
         return no_result
 
-    def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
+    def dict_row_(values: Sequence[Any]) -> dict[str, Any]:
         return dict(zip(names, values))
 
     return dict_row_

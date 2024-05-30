@@ -7,7 +7,7 @@ import random
 import asyncio
 import logging
 from enum import Enum
-from typing import Any, Dict, Generator
+from typing import Any, Generator
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
@@ -28,7 +28,7 @@ class Driver(str, Enum):
 
 
 ids: list[int] = []
-data: list[Dict[str, Any]] = []
+data: list[dict[str, Any]] = []
 
 
 def main() -> None:

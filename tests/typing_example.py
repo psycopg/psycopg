@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Sequence, Tuple
+from typing import Any, Callable, Sequence, Tuple
 
 from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
@@ -162,7 +162,7 @@ def check_row_factories() -> None:
     v1: Tuple[Any, ...] = conn1.execute("").fetchall()[0]
 
     conn2 = connect(row_factory=rows.dict_row)
-    v2: Dict[str, Any] = conn2.execute("").fetchall()[0]
+    v2: dict[str, Any] = conn2.execute("").fetchall()[0]
 
     conn3 = connect(row_factory=rows.class_row(Person))
     v3: Person = conn3.execute("").fetchall()[0]
