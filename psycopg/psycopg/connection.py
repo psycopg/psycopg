@@ -13,7 +13,7 @@ import logging
 from time import monotonic
 from types import TracebackType
 from typing import Any, Generator, Iterator, List
-from typing import Type, Union, cast, overload, TYPE_CHECKING
+from typing import Type, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -208,7 +208,7 @@ class Connection(BaseConnection[Row]):
         row_factory: RowFactory[Any] | None = None,
         scrollable: bool | None = None,
         withhold: bool = False,
-    ) -> Union[Cursor[Any], ServerCursor[Any]]:
+    ) -> Cursor[Any] | ServerCursor[Any]:
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
@@ -217,7 +217,7 @@ class Connection(BaseConnection[Row]):
         if not row_factory:
             row_factory = self.row_factory
 
-        cur: Union[Cursor[Any], ServerCursor[Any]]
+        cur: Cursor[Any] | ServerCursor[Any]
         if name:
             cur = self.server_cursor_factory(
                 self,
@@ -438,7 +438,7 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self.wait(self._set_deferrable_gen(value))
 
-    def tpc_begin(self, xid: Union[Xid, str]) -> None:
+    def tpc_begin(self, xid: Xid | str) -> None:
         """
         Begin a TPC transaction with the given transaction ID `!xid`.
         """
@@ -455,14 +455,14 @@ class Connection(BaseConnection[Row]):
         except e.ObjectNotInPrerequisiteState as ex:
             raise e.NotSupportedError(str(ex)) from None
 
-    def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+    def tpc_commit(self, xid: Xid | str | None = None) -> None:
         """
         Commit a prepared two-phase transaction.
         """
         with self.lock:
             self.wait(self._tpc_finish_gen("COMMIT", xid))
 
-    def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+    def tpc_rollback(self, xid: Xid | str | None = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """

@@ -7,15 +7,14 @@ Protocol objects representing different implementations of the same classes.
 from __future__ import annotations
 
 from typing import Any, Dict, Callable, Generator, Mapping
-from typing import List, Protocol, Sequence, Tuple, Union
-from typing import TYPE_CHECKING
+from typing import List, Protocol, Sequence, Tuple, TYPE_CHECKING
 
 from . import pq
 from ._enums import PyFormat as PyFormat
 from ._compat import LiteralString, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from . import sql
+    from . import sql  # noqa: F401
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready
@@ -25,14 +24,14 @@ if TYPE_CHECKING:
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = bytes | bytearray | memoryview
 
-Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
-Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
+Query: TypeAlias = LiteralString | bytes | "sql.SQL" | "sql.Composed"
+Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = Union[type, Tuple["DumperKey", ...]]
-ConnParam: TypeAlias = Union[str, int, None]
+DumperKey: TypeAlias = type | Tuple["DumperKey", ...]
+ConnParam: TypeAlias = str | int | None
 ConnDict: TypeAlias = Dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
@@ -41,13 +40,13 @@ ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 RV = TypeVar("RV")
 
-PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], Union["Ready", int], RV]
+PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], "Ready" | int, RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen: TypeAlias = Generator["Wait", Union["Ready", int], RV]
+PQGen: TypeAlias = Generator["Wait", "Ready" | int, RV]
 """Generator for processes where the connection file number won't change.
 """
 

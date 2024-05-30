@@ -7,7 +7,7 @@ Adapters for JSON types.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, Tuple, Type, Union
+from typing import Any, Callable, Dict, Tuple, Type
 
 from .. import abc
 from .. import _oids
@@ -17,8 +17,8 @@ from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
 from .._compat import cache
 
-JsonDumpsFunction = Callable[[Any], Union[str, bytes]]
-JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
+JsonDumpsFunction = Callable[[Any], str | bytes]
+JsonLoadsFunction = Callable[[str | bytes], Any]
 
 
 def set_json_dumps(

@@ -7,7 +7,7 @@ CockroachDB-specific connections.
 from __future__ import annotations
 
 import re
-from typing import Any, Union, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from .. import errors as e
 from ..rows import Row
@@ -26,9 +26,7 @@ class _CrdbConnectionMixin:
     pgconn: "PGconn"
 
     @classmethod
-    def is_crdb(
-        cls, conn: Union[Connection[Any], AsyncConnection[Any], "PGconn"]
-    ) -> bool:
+    def is_crdb(cls, conn: Connection[Any] | AsyncConnection[Any] | "PGconn") -> bool:
         """
         Return `!True` if the server connected to `!conn` is CockroachDB.
         """

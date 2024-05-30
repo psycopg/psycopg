@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from time import monotonic
-from typing import List, Union
+from typing import List
 
 from . import pq
 from . import errors as e
@@ -305,7 +305,7 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
-def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
+def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
     while True:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:

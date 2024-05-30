@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, Type, Union, TYPE_CHECKING
+from typing import Generic, Iterator, Type, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -41,10 +41,7 @@ class Rollback(Exception):
 
     __module__ = "psycopg"
 
-    def __init__(
-        self,
-        transaction: Union["Transaction", "AsyncTransaction", None] = None,
-    ):
+    def __init__(self, transaction: "Transaction" | "AsyncTransaction" | None = None):
         self.transaction = transaction
 
     def __repr__(self) -> str:

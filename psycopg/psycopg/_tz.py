@@ -7,7 +7,7 @@ Timezone utility functions.
 from __future__ import annotations
 
 import logging
-from typing import Dict, Union
+from typing import Dict
 from datetime import timezone, tzinfo
 
 from .pq.abc import PGconn
@@ -15,7 +15,7 @@ from ._compat import ZoneInfo
 
 logger = logging.getLogger("psycopg")
 
-_timezones: Dict[Union[None, bytes], tzinfo] = {
+_timezones: Dict[bytes | None, tzinfo] = {
     None: timezone.utc,
     b"UTC": timezone.utc,
 }

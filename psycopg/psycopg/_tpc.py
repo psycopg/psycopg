@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 import datetime as dt
 from base64 import b64encode, b64decode
-from typing import Union
 from dataclasses import dataclass, replace
 
 _re_xid = re.compile(r"^(\d+)_([^_]*)_([^_]*)$")
@@ -48,7 +47,7 @@ class Xid:
     def __len__(self) -> int:
         return 3
 
-    def __getitem__(self, index: int) -> Union[int, str, None]:
+    def __getitem__(self, index: int) -> int | str | None:
         return (self.format_id, self.gtrid, self.bqual)[index]
 
     @classmethod

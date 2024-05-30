@@ -10,7 +10,7 @@ import logging
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, List
-from typing import Type, Union, cast, overload, TYPE_CHECKING
+from typing import Type, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -224,7 +224,7 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: AsyncRowFactory[Any] | None = None,
         scrollable: bool | None = None,
         withhold: bool = False,
-    ) -> Union[AsyncCursor[Any], AsyncServerCursor[Any]]:
+    ) -> AsyncCursor[Any] | AsyncServerCursor[Any]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
@@ -233,7 +233,7 @@ class AsyncConnection(BaseConnection[Row]):
         if not row_factory:
             row_factory = self.row_factory
 
-        cur: Union[AsyncCursor[Any], AsyncServerCursor[Any]]
+        cur: AsyncCursor[Any] | AsyncServerCursor[Any]
         if name:
             cur = self.server_cursor_factory(
                 self,
@@ -478,7 +478,7 @@ class AsyncConnection(BaseConnection[Row]):
                 f" please use 'await .set_{attribute}()' instead."
             )
 
-    async def tpc_begin(self, xid: Union[Xid, str]) -> None:
+    async def tpc_begin(self, xid: Xid | str) -> None:
         """
         Begin a TPC transaction with the given transaction ID `!xid`.
         """
@@ -495,14 +495,14 @@ class AsyncConnection(BaseConnection[Row]):
         except e.ObjectNotInPrerequisiteState as ex:
             raise e.NotSupportedError(str(ex)) from None
 
-    async def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+    async def tpc_commit(self, xid: Xid | str | None = None) -> None:
         """
         Commit a prepared two-phase transaction.
         """
         async with self.lock:
             await self.wait(self._tpc_finish_gen("COMMIT", xid))
 
-    async def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+    async def tpc_rollback(self, xid: Xid | str | None = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """

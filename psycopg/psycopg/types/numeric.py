@@ -10,8 +10,7 @@ import sys
 import struct
 from abc import ABC, abstractmethod
 from math import log
-from typing import Any, Callable, DefaultDict, Dict, Tuple, Union
-from typing import cast, TYPE_CHECKING
+from typing import Any, Callable, DefaultDict, Dict, Tuple, cast, TYPE_CHECKING
 from decimal import Decimal, DefaultContext, Context
 
 from .. import _oids
@@ -371,7 +370,7 @@ class _MixedNumericDumper(Dumper, ABC):
     oid = _oids.NUMERIC_OID
 
     # If numpy is available, the dumped object might be a numpy integer too
-    int_classes: Union[type, Tuple[type, ...]] = ()
+    int_classes: type | Tuple[type, ...] = ()
 
     def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
@@ -387,11 +386,11 @@ class _MixedNumericDumper(Dumper, ABC):
                 _MixedNumericDumper.int_classes = int
 
     @abstractmethod
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer | None: ...
+    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None: ...
 
 
 class NumericDumper(_MixedNumericDumper):
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer | None:
+    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None:
         if isinstance(obj, self.int_classes):
             return str(obj).encode()
         elif isinstance(obj, Decimal):
@@ -405,7 +404,7 @@ class NumericDumper(_MixedNumericDumper):
 class NumericBinaryDumper(_MixedNumericDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer | None:
+    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None:
         if type(obj) is int:
             return dump_int_to_numeric_binary(obj)
         elif isinstance(obj, Decimal):
@@ -426,7 +425,7 @@ def dump_decimal_to_text(obj: Decimal) -> bytes:
         return str(obj).encode()
 
 
-def dump_decimal_to_numeric_binary(obj: Decimal) -> Union[bytearray, bytes]:
+def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
     sign, digits, exp = obj.as_tuple()
     if exp == "n" or exp == "N":
         return NUMERIC_NAN_BIN

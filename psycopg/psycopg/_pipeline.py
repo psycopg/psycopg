@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, List, Union, Tuple, Type, TYPE_CHECKING
+from typing import Any, List, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -28,9 +28,9 @@ if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
 
-PendingResult: TypeAlias = Union[
-    None, Tuple["BaseCursor[Any, Any]", Tuple[Key, Prepare, bytes] | None]
-]
+PendingResult: TypeAlias = (
+    Tuple["BaseCursor[Any, Any]", Tuple[Key, Prepare, bytes] | None] | None
+)
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED

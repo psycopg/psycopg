@@ -377,8 +377,7 @@ def _test_reveal(stmts, type, mypy):
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, List, NamedTuple, Sequence
-from typing import Tuple, Union
+from typing import Any, Callable, Dict, List, NamedTuple, Sequence, Tuple
 import psycopg
 from psycopg import rows
 
@@ -387,7 +386,7 @@ class Thing:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: Union[psycopg.Cursor[Any], psycopg.AsyncCursor[Any]],
+    cur: psycopg.Cursor[Any] | psycopg.AsyncCursor[Any],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]

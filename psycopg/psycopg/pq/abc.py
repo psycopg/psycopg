@@ -6,8 +6,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 from __future__ import annotations
 
-from typing import Any, Callable, List, Protocol, Sequence, Tuple
-from typing import Union, TYPE_CHECKING
+from typing import Any, Callable, List, Protocol, Sequence, Tuple, TYPE_CHECKING
 
 from ._enums import Format, Trace
 from .._compat import TypeAlias
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
 
 # An object implementing the buffer protocol (ish)
-Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = bytes | bytearray | memoryview
 
 
 class PGconn(Protocol):

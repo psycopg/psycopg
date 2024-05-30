@@ -6,7 +6,7 @@ Adapters for textual types.
 
 from __future__ import annotations
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format, Escaping
@@ -110,7 +110,7 @@ class TextLoader(Loader):
         enc = conn_encoding(self.connection)
         self._encoding = enc if enc != "ascii" else ""
 
-    def load(self, data: Buffer) -> Union[bytes, str]:
+    def load(self, data: Buffer) -> bytes | str:
         if self._encoding:
             if isinstance(data, memoryview):
                 data = bytes(data)

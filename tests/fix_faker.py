@@ -6,7 +6,7 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, List, Set, Tuple, Union
+from typing import Any, List, Set, Tuple
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -199,7 +199,7 @@ class Faker:
         )
 
     def choose_schema(self, ncols=20):
-        schema: List[Union[Tuple[type, ...], type]] = []
+        schema: List[Tuple[type, ...] | type] = []
         while len(schema) < ncols:
             s = self.make_schema(choice(self.types))
             if s is not None:
@@ -245,7 +245,7 @@ class Faker:
 
         return rv
 
-    def make_schema(self, cls: type) -> Union[Tuple[type, ...], type, None]:
+    def make_schema(self, cls: type) -> Tuple[type, ...] | type | None:
         """Create a schema spec from a Python type.
 
         A schema specifies what Postgres type to generate when a Python type
@@ -669,7 +669,7 @@ class Faker:
             return spec[0](empty=True)
 
         while True:
-            bounds: List[Union[Any, None]] = []
+            bounds: List[Any] = []
             while len(bounds) < 2:
                 if random() < no_bound_chance:
                     bounds.append(None)
@@ -730,7 +730,7 @@ class Faker:
             want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
 
         # Normalise discrete ranges
-        unit: Union[dt.timedelta, int, None]
+        unit: dt.timedelta | int | None
         if spec[1] is dt.date:
             unit = dt.timedelta(days=1)
         elif type(spec[1]) is type and issubclass(spec[1], int):

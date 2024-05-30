@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Any, Generic, List, Iterable, MutableSequence
-from typing import Type, Union, overload, TYPE_CHECKING
+from typing import Type, overload, TYPE_CHECKING
 from datetime import date, datetime
 
 from .. import sql
@@ -98,7 +98,7 @@ class Multirange(MutableSequence[Range[T]]):
     @overload
     def __getitem__(self, index: slice) -> "Multirange[T]": ...
 
-    def __getitem__(self, index: Union[int, slice]) -> "Union[Range[T],Multirange[T]]":
+    def __getitem__(self, index: int | slice) -> "Range[T] | Multirange[T]":
         if isinstance(index, int):
             return self._ranges[index]
         else:
@@ -114,9 +114,7 @@ class Multirange(MutableSequence[Range[T]]):
     def __setitem__(self, index: slice, value: Iterable[Range[T]]) -> None: ...
 
     def __setitem__(
-        self,
-        index: Union[int, slice],
-        value: Union[Range[T], Iterable[Range[T]]],
+        self, index: int | slice, value: Range[T] | Iterable[Range[T]]
     ) -> None:
         if isinstance(index, int):
             self._check_type(value)
@@ -127,7 +125,7 @@ class Multirange(MutableSequence[Range[T]]):
             value = map(self._check_type, value)
             self._ranges[index] = value
 
-    def __delitem__(self, index: Union[int, slice]) -> None:
+    def __delitem__(self, index: int | slice) -> None:
         del self._ranges[index]
 
     def insert(self, index: int, value: Range[T]) -> None:

@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Sequence, Union
+from typing import Any, Sequence
 
 from . import _oids
 from .abc import AdaptContext, Buffer
@@ -78,7 +78,7 @@ class Binary:
 
 
 class BinaryBinaryDumper(BytesBinaryDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Buffer | None:
+    def dump(self, obj: Buffer | Binary) -> Buffer | None:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:
@@ -86,7 +86,7 @@ class BinaryBinaryDumper(BytesBinaryDumper):
 
 
 class BinaryTextDumper(BytesDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Buffer | None:
+    def dump(self, obj: Buffer | Binary) -> Buffer | None:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:

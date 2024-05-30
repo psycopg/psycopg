@@ -6,7 +6,7 @@ Types used in the psycopg_pool package
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Union, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, TYPE_CHECKING
 
 from ._compat import TypeAlias, TypeVar
 
@@ -26,7 +26,7 @@ AsyncConnectionCB: TypeAlias = Callable[[ACT], Awaitable[None]]
 
 # Callbacks to pass the pool to on connection failure
 ConnectFailedCB: TypeAlias = Callable[["ConnectionPool[Any]"], None]
-AsyncConnectFailedCB: TypeAlias = Union[
-    Callable[["AsyncConnectionPool[Any]"], None],
-    Callable[["AsyncConnectionPool[Any]"], Awaitable[None]],
-]
+AsyncConnectFailedCB: TypeAlias = (
+    Callable[["AsyncConnectionPool[Any]"], None]
+    | Callable[["AsyncConnectionPool[Any]"], Awaitable[None]]
+)

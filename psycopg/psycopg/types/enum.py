@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Dict, Generic, Mapping, Sequence
-from typing import Tuple, Type, Union, cast, TYPE_CHECKING
+from typing import Tuple, Type, cast, TYPE_CHECKING
 
 from .. import sql
 from .. import postgres
@@ -25,7 +25,7 @@ E = TypeVar("E", bound=Enum)
 
 EnumDumpMap: TypeAlias = Dict[E, bytes]
 EnumLoadMap: TypeAlias = Dict[bytes, E]
-EnumMapping: TypeAlias = Union[Mapping[E, str], Sequence[Tuple[E, str]], None]
+EnumMapping: TypeAlias = Mapping[E, str] | Sequence[Tuple[E, str]] | None
 
 # Hashable versions
 _HEnumDumpMap: TypeAlias = Tuple[Tuple[E, bytes], ...]

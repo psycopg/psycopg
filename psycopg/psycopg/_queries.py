@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Callable, Dict, List, Mapping, Match, NamedTuple
-from typing import Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Sequence, Tuple, TYPE_CHECKING
 from functools import lru_cache
 
 from . import pq
@@ -28,7 +28,7 @@ MAX_CACHED_STATEMENT_PARAMS = 50
 
 class QueryPart(NamedTuple):
     pre: bytes
-    item: Union[int, str]
+    item: int | str
     format: PyFormat
 
 
@@ -401,7 +401,7 @@ def _split_query(
             )
 
         # Index or name
-        item: Union[int, str]
+        item: int | str
         item = m.group(1).decode(encoding) if m.group(1) else i
 
         if not phtype:

@@ -10,8 +10,7 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Match
-from typing import Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, Generic, List, Match, Sequence, Tuple, TYPE_CHECKING
 
 from . import pq
 from . import adapt
@@ -117,7 +116,7 @@ class BaseCopy(Generic[ConnectionType]):
         if self._finished:
             raise TypeError("copy blocks can be used only once")
 
-    def set_types(self, types: Sequence[Union[int, str]]) -> None:
+    def set_types(self, types: Sequence[int | str]) -> None:
         """
         Set the types expected in a COPY operation.
 
@@ -203,7 +202,7 @@ class Formatter(ABC):
     def parse_row(self, data: Buffer) -> Tuple[Any, ...] | None: ...
 
     @abstractmethod
-    def write(self, buffer: Union[Buffer, str]) -> Buffer: ...
+    def write(self, buffer: Buffer | str) -> Buffer: ...
 
     @abstractmethod
     def write_row(self, row: Sequence[Any]) -> Buffer: ...
@@ -225,7 +224,7 @@ class TextFormatter(Formatter):
         else:
             return None
 
-    def write(self, buffer: Union[Buffer, str]) -> Buffer:
+    def write(self, buffer: Buffer | str) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -246,7 +245,7 @@ class TextFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+    def _ensure_bytes(self, data: Buffer | str) -> Buffer:
         if isinstance(data, str):
             return data.encode(self._encoding)
         else:
@@ -277,7 +276,7 @@ class BinaryFormatter(Formatter):
 
         return parse_row_binary(data, self.transformer)
 
-    def write(self, buffer: Union[Buffer, str]) -> Buffer:
+    def write(self, buffer: Buffer | str) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -317,7 +316,7 @@ class BinaryFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+    def _ensure_bytes(self, data: Buffer | str) -> Buffer:
         if isinstance(data, str):
             raise TypeError("cannot copy str data in binary mode: use bytes instead")
         else:

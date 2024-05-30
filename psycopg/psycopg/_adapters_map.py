@@ -6,8 +6,7 @@ Mapping from types/oids to Dumpers/Loaders
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Type, Union
-from typing import cast, TYPE_CHECKING
+from typing import Any, Dict, List, Type, cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -62,7 +61,7 @@ class AdaptersMap:
 
     types: TypesRegistry
 
-    _dumpers: Dict[PyFormat, Dict[Union[type, str], Type[Dumper]]]
+    _dumpers: Dict[PyFormat, Dict[type | str, Type[Dumper]]]
     _dumpers_by_oid: List[Dict[int, Type[Dumper]]]
     _loaders: List[Dict[int, Type[Loader]]]
 
@@ -110,9 +109,7 @@ class AdaptersMap:
     def connection(self) -> "BaseConnection[Any]" | None:
         return None
 
-    def register_dumper(
-        self, cls: Union[type, str, None], dumper: Type[Dumper]
-    ) -> None:
+    def register_dumper(self, cls: type | str | None, dumper: Type[Dumper]) -> None:
         """
         Configure the context to use `!dumper` to convert objects of type `!cls`.
 
@@ -163,7 +160,7 @@ class AdaptersMap:
 
             self._dumpers_by_oid[dumper.format][dumper.oid] = dumper
 
-    def register_loader(self, oid: Union[int, str], loader: Type["Loader"]) -> None:
+    def register_loader(self, oid: int | str, loader: Type["Loader"]) -> None:
         """
         Configure the context to use `!loader` to convert data of oid `!oid`.
 

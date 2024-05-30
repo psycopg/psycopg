@@ -11,7 +11,7 @@ import os
 import sys
 import logging
 import ctypes.util
-from typing import cast, NamedTuple, Union
+from typing import cast, NamedTuple
 
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
@@ -76,7 +76,7 @@ def find_libpq_full_path() -> str | None:
     return libname
 
 
-def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
+def error_message(obj: PGconn | PGresult, encoding: str = "utf8") -> str:
     """
     Return an error message from a `PGconn` or `PGresult`.
 

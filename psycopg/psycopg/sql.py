@@ -9,7 +9,7 @@ from __future__ import annotations
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, List, Sequence, Union
+from typing import Any, Iterator, Iterable, List, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -146,7 +146,7 @@ class Composed(Composable):
         else:
             return NotImplemented
 
-    def join(self, joiner: Union["SQL", LiteralString]) -> "Composed":
+    def join(self, joiner: "SQL" | LiteralString) -> "Composed":
         """
         Return a new `!Composed` interposing the `!joiner` with the `!Composed` items.
 
@@ -435,7 +435,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: Union[str, PyFormat] = PyFormat.AUTO):
+    def __init__(self, name: str = "", format: str | PyFormat = PyFormat.AUTO):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")

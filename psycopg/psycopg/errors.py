@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, NoReturn, Sequence, Tuple, Type
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from asyncio import CancelledError
 
 from .pq.abc import PGconn, PGresult
@@ -32,7 +32,7 @@ from ._compat import TypeAlias, TypeGuard
 if TYPE_CHECKING:
     from .pq.misc import PGnotify, ConninfoOption
 
-ErrorInfo: TypeAlias = Union[None, PGresult, Dict[int, bytes | None]]
+ErrorInfo: TypeAlias = None | PGresult | Dict[int, bytes | None]
 
 _sqlcodes: Dict[str, "Type[Error]"] = {}
 
@@ -299,7 +299,7 @@ class Error(Exception):
         """
         return Diagnostic(self._info, encoding=self._encoding)
 
-    def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
+    def __reduce__(self) -> str | Tuple[Any, ...]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
             # To make the exception picklable
@@ -514,7 +514,7 @@ class Diagnostic:
 
         return None
 
-    def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
+    def __reduce__(self) -> str | Tuple[Any, ...]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
             res[2]["_info"] = _info_to_dict(self._info)

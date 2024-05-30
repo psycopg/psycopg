@@ -6,7 +6,7 @@ Adapters for network types.
 
 from __future__ import annotations
 
-from typing import Callable, Type, Union, TYPE_CHECKING
+from typing import Callable, Type, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
@@ -17,9 +17,9 @@ from .._compat import TypeAlias
 if TYPE_CHECKING:
     import ipaddress
 
-Address: TypeAlias = Union["ipaddress.IPv4Address", "ipaddress.IPv6Address"]
-Interface: TypeAlias = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
-Network: TypeAlias = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
+Address: TypeAlias = "ipaddress.IPv4Address" | "ipaddress.IPv6Address"
+Interface: TypeAlias = "ipaddress.IPv4Interface" | "ipaddress.IPv6Interface"
+Network: TypeAlias = "ipaddress.IPv4Network" | "ipaddress.IPv6Network"
 
 # These objects will be imported lazily
 ip_address: Callable[[str], Address] = None  # type: ignore[assignment]
@@ -96,7 +96,7 @@ class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
         super().__init__(cls, context)
         self._ensure_module()
 
-    def dump(self, obj: Union[Address, Interface]) -> Buffer | None:
+    def dump(self, obj: Address | Interface) -> Buffer | None:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         if isinstance(obj, (IPv4Interface, IPv6Interface)):
@@ -126,7 +126,7 @@ class _LazyIpaddressLoader(Loader, _LazyIpaddress):
 
 
 class InetLoader(_LazyIpaddressLoader):
-    def load(self, data: Buffer) -> Union[Address, Interface]:
+    def load(self, data: Buffer) -> Address | Interface:
         if isinstance(data, memoryview):
             data = bytes(data)
 
@@ -139,7 +139,7 @@ class InetLoader(_LazyIpaddressLoader):
 class InetBinaryLoader(_LazyIpaddressLoader):
     format = Format.BINARY
 
-    def load(self, data: Buffer) -> Union[Address, Interface]:
+    def load(self, data: Buffer) -> Address | Interface:
         if isinstance(data, memoryview):
             data = bytes(data)
 

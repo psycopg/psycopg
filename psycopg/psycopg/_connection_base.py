@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 import logging
 from typing import Callable, Generic
-from typing import List, NamedTuple, Tuple, Union
+from typing import List, NamedTuple, Tuple
 from typing import TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
@@ -625,7 +625,7 @@ class BaseConnection(Generic[Row]):
         self._check_tpc()
         return Xid.from_parts(format_id, gtrid, bqual)
 
-    def _tpc_begin_gen(self, xid: Union[Xid, str]) -> PQGen[None]:
+    def _tpc_begin_gen(self, xid: Xid | str) -> PQGen[None]:
         self._check_tpc()
 
         if not isinstance(xid, Xid):
@@ -661,7 +661,7 @@ class BaseConnection(Generic[Row]):
             yield from self._pipeline._sync_gen()
 
     def _tpc_finish_gen(
-        self, action: LiteralString, xid: Union[Xid, str, None]
+        self, action: LiteralString, xid: Xid | str | None
     ) -> PQGen[None]:
         fname = f"tpc_{action.lower()}()"
         if xid is None:

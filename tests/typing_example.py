@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Sequence, Tuple
 
 from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
 
 
 def int_row_factory(
-    cursor: Union[Cursor[Any], AsyncCursor[Any]]
+    cursor: Cursor[Any] | AsyncCursor[Any],
 ) -> Callable[[Sequence[int]], int]:
     return lambda values: values[0] if values else 42
 
@@ -22,7 +22,7 @@ class Person:
 
     @classmethod
     def row_factory(
-        cls, cursor: Union[Cursor[Any], AsyncCursor[Any]]
+        cls, cursor: Cursor[Any] | AsyncCursor[Any]
     ) -> Callable[[Sequence[str]], Person]:
         def mkrow(values: Sequence[str]) -> Person:
             name, address = values
