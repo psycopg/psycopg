@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Iterator, Type, Tuple, Sequence, TYPE_CHECKING
+from typing import Any, Iterator, Tuple, Sequence, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -71,7 +71,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

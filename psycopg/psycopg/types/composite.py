@@ -10,7 +10,7 @@ import re
 import struct
 from collections import namedtuple
 from typing import Any, Callable, cast, Iterator
-from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import NamedTuple, Sequence, Tuple, TYPE_CHECKING
 
 from .. import pq
 from .. import abc
@@ -307,7 +307,7 @@ def register_composite(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseCompositeLoader]
+    loader: type[BaseCompositeLoader]
     loader = _make_loader(info.name, tuple(info.field_types), factory)
     adapters.register_loader(info.oid, loader)
 
@@ -317,7 +317,7 @@ def register_composite(
 
     # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
-        dumper: Type[Dumper]
+        dumper: type[Dumper]
         dumper = _make_binary_dumper(info.name, info.oid, tuple(info.field_types))
         adapters.register_dumper(factory, dumper)
 
@@ -335,7 +335,7 @@ def register_default_adapters(context: abc.AdaptContext) -> None:
     adapters.register_loader("record", RecordBinaryLoader)
 
 
-def _nt_from_info(info: CompositeInfo) -> Type[NamedTuple]:
+def _nt_from_info(info: CompositeInfo) -> type[NamedTuple]:
     name = _as_python_identifier(info.name)
     fields = tuple(_as_python_identifier(n) for n in info.field_names)
     return _make_nt(name, fields)
@@ -346,14 +346,14 @@ def _nt_from_info(info: CompositeInfo) -> Type[NamedTuple]:
 
 
 @cache
-def _make_nt(name: str, fields: Tuple[str, ...]) -> Type[NamedTuple]:
+def _make_nt(name: str, fields: Tuple[str, ...]) -> type[NamedTuple]:
     return namedtuple(name, fields)  # type: ignore[return-value]
 
 
 @cache
 def _make_loader(
     name: str, types: Tuple[int, ...], factory: Callable[..., Any]
-) -> Type[BaseCompositeLoader]:
+) -> type[BaseCompositeLoader]:
     return type(
         f"{name.title()}Loader",
         (CompositeLoader,),
@@ -364,21 +364,21 @@ def _make_loader(
 @cache
 def _make_binary_loader(
     name: str, factory: Callable[..., Any]
-) -> Type[BaseCompositeLoader]:
+) -> type[BaseCompositeLoader]:
     return type(
         f"{name.title()}BinaryLoader", (CompositeBinaryLoader,), {"factory": factory}
     )
 
 
 @cache
-def _make_dumper(name: str, oid: int) -> Type[TupleDumper]:
+def _make_dumper(name: str, oid: int) -> type[TupleDumper]:
     return type(f"{name.title()}Dumper", (TupleDumper,), {"oid": oid})
 
 
 @cache
 def _make_binary_dumper(
     name: str, oid: int, field_types: Tuple[int, ...]
-) -> Type[TupleBinaryDumper]:
+) -> type[TupleBinaryDumper]:
     return type(
         f"{name.title()}BinaryDumper",
         (TupleBinaryDumper,),

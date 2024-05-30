@@ -15,7 +15,6 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, Iterator, cast, Generic
-from typing import Type
 from weakref import ref
 from contextlib import contextmanager
 
@@ -42,7 +41,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[CT] = cast(Type[CT], Connection),
+        connection_class: type[CT] = cast(type[CT], Connection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
@@ -467,7 +466,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

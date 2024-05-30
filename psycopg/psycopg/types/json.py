@@ -7,7 +7,7 @@ Adapters for JSON types.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Tuple, Type
+from typing import Any, Callable, Tuple
 
 from .. import abc
 from .. import _oids
@@ -98,7 +98,7 @@ def set_json_loads(
 
 
 @cache
-def _make_dumper(base: Type[abc.Dumper], dumps: JsonDumpsFunction) -> Type[abc.Dumper]:
+def _make_dumper(base: type[abc.Dumper], dumps: JsonDumpsFunction) -> type[abc.Dumper]:
     name = base.__name__
     if not name.startswith("Custom"):
         name = f"Custom{name}"
@@ -106,7 +106,7 @@ def _make_dumper(base: Type[abc.Dumper], dumps: JsonDumpsFunction) -> Type[abc.D
 
 
 @cache
-def _make_loader(base: Type[Loader], loads: JsonLoadsFunction) -> Type[Loader]:
+def _make_loader(base: type[Loader], loads: JsonLoadsFunction) -> type[Loader]:
     name = base.__name__
     if not name.startswith("Custom"):
         name = f"Custom{name}"
@@ -223,14 +223,14 @@ class JsonbBinaryLoader(_JsonLoader):
 
 def _get_current_dumper(
     adapters: AdaptersMap, cls: type, format: PyFormat
-) -> Type[abc.Dumper]:
+) -> type[abc.Dumper]:
     try:
         return adapters.get_dumper(cls, format)
     except e.ProgrammingError:
         return _default_dumpers[cls, format]
 
 
-_default_dumpers: dict[Tuple[Type[_JsonWrapper], PyFormat], Type[Dumper]] = {
+_default_dumpers: dict[Tuple[type[_JsonWrapper], PyFormat], type[Dumper]] = {
     (Json, PyFormat.BINARY): JsonBinaryDumper,
     (Json, PyFormat.TEXT): JsonDumper,
     (Jsonb, PyFormat.BINARY): JsonbBinaryDumper,

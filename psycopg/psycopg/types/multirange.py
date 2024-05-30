@@ -7,8 +7,7 @@ Support for multirange types adaptation.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Generic, Iterable, MutableSequence
-from typing import Type, overload, TYPE_CHECKING
+from typing import Any, Generic, Iterable, MutableSequence, overload, TYPE_CHECKING
 from datetime import date, datetime
 
 from .. import sql
@@ -395,7 +394,7 @@ def register_multirange(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseMultirangeLoader[Any]]
+    loader: type[BaseMultirangeLoader[Any]]
     loader = _make_loader(info.name, info.subtype_oid)
     adapters.register_loader(info.oid, loader)
 
@@ -409,12 +408,12 @@ def register_multirange(
 
 
 @cache
-def _make_loader(name: str, oid: int) -> Type[MultirangeLoader[Any]]:
+def _make_loader(name: str, oid: int) -> type[MultirangeLoader[Any]]:
     return type(f"{name.title()}Loader", (MultirangeLoader,), {"subtype_oid": oid})
 
 
 @cache
-def _make_binary_loader(name: str, oid: int) -> Type[MultirangeBinaryLoader[Any]]:
+def _make_binary_loader(name: str, oid: int) -> type[MultirangeBinaryLoader[Any]]:
     return type(
         f"{name.title()}BinaryLoader", (MultirangeBinaryLoader,), {"subtype_oid": oid}
     )

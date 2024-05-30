@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, Tuple, Type, TYPE_CHECKING
+from typing import Any, Tuple, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -214,7 +214,7 @@ class Pipeline(BasePipeline):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
@@ -254,7 +254,7 @@ class AsyncPipeline(BasePipeline):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

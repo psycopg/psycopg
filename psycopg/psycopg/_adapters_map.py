@@ -6,7 +6,7 @@ Mapping from types/oids to Dumpers/Loaders
 
 from __future__ import annotations
 
-from typing import Any, Type, cast, TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -61,9 +61,9 @@ class AdaptersMap:
 
     types: TypesRegistry
 
-    _dumpers: dict[PyFormat, dict[type | str, Type[Dumper]]]
-    _dumpers_by_oid: list[dict[int, Type[Dumper]]]
-    _loaders: list[dict[int, Type[Loader]]]
+    _dumpers: dict[PyFormat, dict[type | str, type[Dumper]]]
+    _dumpers_by_oid: list[dict[int, type[Dumper]]]
+    _loaders: list[dict[int, type[Loader]]]
 
     # Record if a dumper or loader has an optimised version.
     _optimised: dict[type, type] = {}
@@ -109,7 +109,7 @@ class AdaptersMap:
     def connection(self) -> "BaseConnection[Any]" | None:
         return None
 
-    def register_dumper(self, cls: type | str | None, dumper: Type[Dumper]) -> None:
+    def register_dumper(self, cls: type | str | None, dumper: type[Dumper]) -> None:
         """
         Configure the context to use `!dumper` to convert objects of type `!cls`.
 
@@ -160,7 +160,7 @@ class AdaptersMap:
 
             self._dumpers_by_oid[dumper.format][dumper.oid] = dumper
 
-    def register_loader(self, oid: int | str, loader: Type["Loader"]) -> None:
+    def register_loader(self, oid: int | str, loader: type[Loader]) -> None:
         """
         Configure the context to use `!loader` to convert data of oid `!oid`.
 
@@ -186,7 +186,7 @@ class AdaptersMap:
 
         self._loaders[fmt][oid] = loader
 
-    def get_dumper(self, cls: type, format: PyFormat) -> Type["Dumper"]:
+    def get_dumper(self, cls: type, format: PyFormat) -> type[Dumper]:
         """
         Return the dumper class for the given type and format.
 
@@ -225,7 +225,7 @@ class AdaptersMap:
             f" (format: {format.name})"
         )
 
-    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> Type["Dumper"]:
+    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> type[Dumper]:
         """
         Return the dumper class for the given oid and format.
 
@@ -255,7 +255,7 @@ class AdaptersMap:
                 )
             raise e.ProgrammingError(msg)
 
-    def get_loader(self, oid: int, format: pq.Format) -> Type["Loader"] | None:
+    def get_loader(self, oid: int, format: pq.Format) -> type[Loader] | None:
         """
         Return the loader class for the given oid and format.
 
@@ -267,7 +267,7 @@ class AdaptersMap:
         return self._loaders[format].get(oid)
 
     @classmethod
-    def _get_optimised(self, cls: Type[RV]) -> Type[RV]:
+    def _get_optimised(self, cls: type[RV]) -> type[RV]:
         """Return the optimised version of a Dumper or Loader class.
 
         Return the input class itself if there is no optimised version.
@@ -282,7 +282,7 @@ class AdaptersMap:
         from psycopg import types
 
         if cls.__module__.startswith(types.__name__):
-            new = cast(Type[RV], getattr(_psycopg, cls.__name__, None))
+            new = cast(type[RV], getattr(_psycopg, cls.__name__, None))
             if new:
                 self._optimised[cls] = new
                 return new

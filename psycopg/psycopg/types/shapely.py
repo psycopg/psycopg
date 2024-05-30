@@ -4,8 +4,6 @@ Adapters for PostGIS geometries
 
 from __future__ import annotations
 
-from typing import Type
-
 from .. import postgres
 from ..abc import AdaptContext, Buffer
 from ..adapt import Dumper, Loader
@@ -76,7 +74,7 @@ def register_shapely(info: TypeInfo, context: AdaptContext | None = None) -> Non
 
 
 @cache
-def _make_dumper(oid_in: int) -> Type[BaseGeometryDumper]:
+def _make_dumper(oid_in: int) -> type[BaseGeometryDumper]:
     class GeometryDumper(BaseGeometryDumper):
         oid = oid_in
 
@@ -84,7 +82,7 @@ def _make_dumper(oid_in: int) -> Type[BaseGeometryDumper]:
 
 
 @cache
-def _make_binary_dumper(oid_in: int) -> Type[BaseGeometryBinaryDumper]:
+def _make_binary_dumper(oid_in: int) -> type[BaseGeometryBinaryDumper]:
     class GeometryBinaryDumper(BaseGeometryBinaryDumper):
         oid = oid_in
 

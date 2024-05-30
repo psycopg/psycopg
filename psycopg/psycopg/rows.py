@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import functools
 from typing import Any, Callable, NamedTuple, NoReturn
-from typing import TYPE_CHECKING, Protocol, Sequence, Tuple, Type
+from typing import TYPE_CHECKING, Protocol, Sequence, Tuple
 from collections import namedtuple
 
 from . import pq
@@ -145,12 +145,12 @@ def namedtuple_row(
 
 
 @functools.lru_cache(512)
-def _make_nt(enc: str, *names: bytes) -> Type[NamedTuple]:
+def _make_nt(enc: str, *names: bytes) -> type[NamedTuple]:
     snames = tuple(_as_python_identifier(n.decode(enc)) for n in names)
     return namedtuple("Row", snames)  # type: ignore[return-value]
 
 
-def class_row(cls: Type[T]) -> BaseRowFactory[T]:
+def class_row(cls: type[T]) -> BaseRowFactory[T]:
     r"""Generate a row factory to represent rows as instances of the class `!cls`.
 
     The class must support every output column name as a keyword parameter.

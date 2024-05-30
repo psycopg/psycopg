@@ -12,8 +12,7 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generator, Iterator
-from typing import Type, cast, overload, TYPE_CHECKING
+from typing import Any, Generator, Iterator, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -62,8 +61,8 @@ class Connection(BaseConnection[Row]):
 
     __module__ = "psycopg"
 
-    cursor_factory: Type[Cursor[Row]]
-    server_cursor_factory: Type[ServerCursor[Row]]
+    cursor_factory: type[Cursor[Row]]
+    server_cursor_factory: type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
     _pipeline: Pipeline | None
 
@@ -87,7 +86,7 @@ class Connection(BaseConnection[Row]):
         prepare_threshold: int | None = 5,
         context: AdaptContext | None = None,
         row_factory: RowFactory[Row] | None = None,
-        cursor_factory: Type[Cursor[Row]] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
         **kwargs: ConnParam,
     ) -> Self:
         """
@@ -135,7 +134,7 @@ class Connection(BaseConnection[Row]):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

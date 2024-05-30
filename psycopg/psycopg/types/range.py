@@ -7,7 +7,7 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import Any, Generic, Type, Tuple, cast, TYPE_CHECKING
+from typing import Any, Generic, Tuple, cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -586,7 +586,7 @@ def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseRangeLoader[Any]]
+    loader: type[BaseRangeLoader[Any]]
     loader = _make_loader(info.name, info.subtype_oid)
     adapters.register_loader(info.oid, loader)
 
@@ -600,12 +600,12 @@ def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None
 
 
 @cache
-def _make_loader(name: str, oid: int) -> Type[RangeLoader[Any]]:
+def _make_loader(name: str, oid: int) -> type[RangeLoader[Any]]:
     return type(f"{name.title()}Loader", (RangeLoader,), {"subtype_oid": oid})
 
 
 @cache
-def _make_binary_loader(name: str, oid: int) -> Type[RangeBinaryLoader[Any]]:
+def _make_binary_loader(name: str, oid: int) -> type[RangeBinaryLoader[Any]]:
     return type(
         f"{name.title()}BinaryLoader", (RangeBinaryLoader,), {"subtype_oid": oid}
     )

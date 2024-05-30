@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, cast, Generic
-from typing import Type
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -41,7 +40,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
+        connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
@@ -499,7 +498,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

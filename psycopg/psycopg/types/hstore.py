@@ -7,7 +7,6 @@ dict to hstore adaptation
 from __future__ import annotations
 
 import re
-from typing import Type
 
 from .. import errors as e
 from .. import postgres
@@ -134,7 +133,7 @@ def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None
 
 
 @cache
-def _make_hstore_dumper(oid_in: int) -> Type[BaseHstoreDumper]:
+def _make_hstore_dumper(oid_in: int) -> type[BaseHstoreDumper]:
     """
     Return an hstore dumper class configured using `oid_in`.
 

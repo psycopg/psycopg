@@ -7,7 +7,7 @@ Psycopg null connection pool module (async version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Type
+from typing import Any, cast
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
@@ -27,7 +27,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
+        connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 0,  # Note: min_size default value changed to 0.
         max_size: int | None = None,

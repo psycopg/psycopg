@@ -7,7 +7,7 @@ Psycopg AsyncCursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, Type, TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -51,7 +51,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

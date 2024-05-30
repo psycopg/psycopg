@@ -7,7 +7,7 @@ Psycopg BaseCursor object
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Generic, Iterable, NoReturn, Sequence, Tuple, Type
+from typing import Any, Generic, Iterable, NoReturn, Sequence, Tuple
 from typing import TYPE_CHECKING
 
 from . import pq
@@ -55,7 +55,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     _tx: "Transformer"
     _make_row: RowMaker[Row]
     _pgconn: "PGconn"
-    _query_cls: Type[PostgresQuery] = PostgresQuery
+    _query_cls: type[PostgresQuery] = PostgresQuery
 
     def __init__(self, connection: ConnectionType):
         self._conn = connection

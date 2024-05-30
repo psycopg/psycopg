@@ -10,7 +10,7 @@ Psycopg Cursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Iterator, Iterable, Type, TYPE_CHECKING, overload
+from typing import Any, Iterator, Iterable, TYPE_CHECKING, overload
 from contextlib import contextmanager
 
 from . import pq
@@ -51,7 +51,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

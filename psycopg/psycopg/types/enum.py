@@ -5,7 +5,7 @@ Adapters for the enum type.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Generic, Mapping, Sequence, Tuple, Type, cast, TYPE_CHECKING
+from typing import Any, Generic, Mapping, Sequence, Tuple, cast, TYPE_CHECKING
 
 from .. import sql
 from .. import postgres
@@ -47,7 +47,7 @@ class EnumInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.labels = labels
         # Will be set by register_enum()
-        self.enum: Type[Enum] | None = None
+        self.enum: type[Enum] | None = None
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
@@ -74,7 +74,7 @@ class _BaseEnumLoader(Loader, Generic[E]):
     Loader for a specific Enum class
     """
 
-    enum: Type[E]
+    enum: type[E]
     _load_map: EnumLoadMap[E]
 
     def load(self, data: Buffer) -> E:
@@ -96,7 +96,7 @@ class _BaseEnumDumper(Dumper, Generic[E]):
     Dumper for a specific Enum class
     """
 
-    enum: Type[E]
+    enum: type[E]
     _dump_map: EnumDumpMap[E]
 
     def dump(self, value: E) -> Buffer | None:
@@ -123,7 +123,7 @@ class EnumBinaryDumper(EnumDumper):
 def register_enum(
     info: EnumInfo,
     context: AdaptContext | None = None,
-    enum: Type[E] | None = None,
+    enum: type[E] | None = None,
     *,
     mapping: EnumMapping[E] = None,
 ) -> None:
@@ -142,7 +142,7 @@ def register_enum(
         raise TypeError("no info passed. Is the requested enum available?")
 
     if enum is None:
-        enum = cast(Type[E], _make_enum(info.name, tuple(info.labels)))
+        enum = cast(type[E], _make_enum(info.name, tuple(info.labels)))
 
     info.enum = enum
     adapters = context.adapters if context else postgres.adapters
@@ -176,41 +176,38 @@ def _make_enum(name: str, labels: Tuple[str, ...]) -> Enum:
 
 @cache
 def _make_loader(
-    name: str, enum: Type[Enum], load_map: _HEnumLoadMap[E]
-) -> Type[_BaseEnumLoader[E]]:
+    name: str, enum: type[Enum], load_map: _HEnumLoadMap[E]
+) -> type[_BaseEnumLoader[E]]:
     attribs = {"enum": enum, "_load_map": dict(load_map)}
     return type(f"{name.title()}Loader", (_BaseEnumLoader,), attribs)
 
 
 @cache
 def _make_binary_loader(
-    name: str, enum: Type[Enum], load_map: _HEnumLoadMap[E]
-) -> Type[_BaseEnumLoader[E]]:
+    name: str, enum: type[Enum], load_map: _HEnumLoadMap[E]
+) -> type[_BaseEnumLoader[E]]:
     attribs = {"enum": enum, "_load_map": dict(load_map), "format": BINARY}
     return type(f"{name.title()}BinaryLoader", (_BaseEnumLoader,), attribs)
 
 
 @cache
 def _make_dumper(
-    enum: Type[Enum], oid: int, dump_map: _HEnumDumpMap[E]
-) -> Type[_BaseEnumDumper[E]]:
+    enum: type[Enum], oid: int, dump_map: _HEnumDumpMap[E]
+) -> type[_BaseEnumDumper[E]]:
     attribs = {"enum": enum, "oid": oid, "_dump_map": dict(dump_map)}
     return type(f"{enum.__name__}Dumper", (_BaseEnumDumper,), attribs)
 
 
 @cache
 def _make_binary_dumper(
-    enum: Type[Enum], oid: int, dump_map: _HEnumDumpMap[E]
-) -> Type[_BaseEnumDumper[E]]:
+    enum: type[Enum], oid: int, dump_map: _HEnumDumpMap[E]
+) -> type[_BaseEnumDumper[E]]:
     attribs = {"enum": enum, "oid": oid, "_dump_map": dict(dump_map), "format": BINARY}
     return type(f"{enum.__name__}BinaryDumper", (_BaseEnumDumper,), attribs)
 
 
 def _make_load_map(
-    info: EnumInfo,
-    enum: Type[E],
-    mapping: EnumMapping[E],
-    context: AdaptContext | None,
+    info: EnumInfo, enum: type[E], mapping: EnumMapping[E], context: AdaptContext | None
 ) -> _HEnumLoadMap[E]:
     enc = conn_encoding(context.connection if context else None)
     rv = []
@@ -235,10 +232,7 @@ def _make_load_map(
 
 
 def _make_dump_map(
-    info: EnumInfo,
-    enum: Type[E],
-    mapping: EnumMapping[E],
-    context: AdaptContext | None,
+    info: EnumInfo, enum: type[E], mapping: EnumMapping[E], context: AdaptContext | None
 ) -> _HEnumDumpMap[E]:
     enc = conn_encoding(context.connection if context else None)
     rv = []

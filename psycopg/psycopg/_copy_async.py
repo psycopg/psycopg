@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, AsyncIterator, Type, Tuple, Sequence, TYPE_CHECKING
+from typing import Any, AsyncIterator, Tuple, Sequence, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -68,7 +68,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

@@ -21,7 +21,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, NoReturn, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import Any, Callable, NoReturn, Sequence, Tuple, TYPE_CHECKING
 from asyncio import CancelledError
 
 from .pq.abc import PGconn, PGresult
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 ErrorInfo: TypeAlias = None | PGresult | dict[int, bytes | None]
 
-_sqlcodes: dict[str, "Type[Error]"] = {}
+_sqlcodes: dict[str, type[Error]] = {}
 
 
 @dataclass
@@ -532,7 +532,7 @@ def _info_to_dict(info: ErrorInfo) -> ErrorInfo:
         return info
 
 
-def lookup(sqlstate: str) -> Type[Error]:
+def lookup(sqlstate: str) -> type[Error]:
     """Lookup an error code or `constant name`__ and return its exception class.
 
     Raise `!KeyError` if the code is not found.
@@ -561,14 +561,14 @@ def _is_pgresult(info: ErrorInfo) -> TypeGuard[PGresult]:
     return hasattr(info, "error_field")
 
 
-def _class_for_state(sqlstate: str) -> Type[Error]:
+def _class_for_state(sqlstate: str) -> type[Error]:
     try:
         return lookup(sqlstate)
     except KeyError:
         return get_base_exception(sqlstate)
 
 
-def get_base_exception(sqlstate: str) -> Type[Error]:
+def get_base_exception(sqlstate: str) -> type[Error]:
     return (
         _base_exc_map.get(sqlstate[:2])
         or _base_exc_map.get(sqlstate[:1])

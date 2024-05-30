@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from math import prod
-from typing import Any, cast, Callable, Pattern, Set, Tuple, Type
+from typing import Any, cast, Callable, Pattern, Set, Tuple
 
 from .. import pq
 from .. import errors as e
@@ -337,7 +337,7 @@ def register_array(info: TypeInfo, context: AdaptContext | None = None) -> None:
 
 
 @cache
-def _make_loader(name: str, oid: int, delimiter: str) -> Type[Loader]:
+def _make_loader(name: str, oid: int, delimiter: str) -> type[Loader]:
     # Note: caching this function is really needed because, if the C extension
     # is available, the resulting type cannot be GC'd, so calling
     # register_array() in a loop results in a leak. See #647.
@@ -349,13 +349,13 @@ def _make_loader(name: str, oid: int, delimiter: str) -> Type[Loader]:
 @cache
 def _make_dumper(
     name: str, oid: int, array_oid: int, delimiter: str
-) -> Type[BaseListDumper]:
+) -> type[BaseListDumper]:
     attribs = {"oid": array_oid, "element_oid": oid, "delimiter": delimiter.encode()}
     return type(f"{name.title()}ListDumper", (ListDumper,), attribs)
 
 
 @cache
-def _make_binary_dumper(name: str, oid: int, array_oid: int) -> Type[BaseListDumper]:
+def _make_binary_dumper(name: str, oid: int, array_oid: int) -> type[BaseListDumper]:
     attribs = {"oid": array_oid, "element_oid": oid}
     return type(f"{name.title()}ListBinaryDumper", (ListBinaryDumper,), attribs)
 

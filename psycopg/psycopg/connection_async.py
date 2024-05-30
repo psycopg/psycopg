@@ -9,8 +9,7 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator
-from typing import Type, cast, overload, TYPE_CHECKING
+from typing import Any, AsyncGenerator, AsyncIterator, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -68,8 +67,8 @@ class AsyncConnection(BaseConnection[Row]):
 
     __module__ = "psycopg"
 
-    cursor_factory: Type[AsyncCursor[Row]]
-    server_cursor_factory: Type[AsyncServerCursor[Row]]
+    cursor_factory: type[AsyncCursor[Row]]
+    server_cursor_factory: type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
     _pipeline: AsyncPipeline | None
 
@@ -93,7 +92,7 @@ class AsyncConnection(BaseConnection[Row]):
         prepare_threshold: int | None = 5,
         context: AdaptContext | None = None,
         row_factory: AsyncRowFactory[Row] | None = None,
-        cursor_factory: Type[AsyncCursor[Row]] | None = None,
+        cursor_factory: type[AsyncCursor[Row]] | None = None,
         **kwargs: ConnParam,
     ) -> Self:
         """
@@ -151,7 +150,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:

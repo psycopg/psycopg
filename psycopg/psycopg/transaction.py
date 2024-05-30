@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, Type, TYPE_CHECKING
+from typing import Generic, Iterator, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -100,7 +100,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _exit_gen(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> PQGen[bool]:
@@ -247,7 +247,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> bool:
@@ -276,7 +276,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> bool:
