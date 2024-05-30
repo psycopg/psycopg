@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class Column(Sequence[Any]):
     __module__ = "psycopg"
 
-    def __init__(self, cursor: "BaseCursor[Any, Any]", index: int):
+    def __init__(self, cursor: BaseCursor[Any, Any], index: int):
         res = cursor.pgresult
         assert res
 

@@ -42,7 +42,7 @@ class PostgresQuery:
         _tx _want_formats _parts _encoding _order
         """.split()
 
-    def __init__(self, transformer: "Transformer"):
+    def __init__(self, transformer: Transformer):
         self._tx = transformer
 
         self.params: Sequence[Buffer | None] | None = None

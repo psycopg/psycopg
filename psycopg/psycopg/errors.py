@@ -68,8 +68,8 @@ class FinishedPGconn:
 
     nonblocking: int = 0
 
-    notice_handler: Callable[["PGresult"], None] | None = None
-    notify_handler: Callable[["PGnotify"], None] | None = None
+    notice_handler: Callable[[PGresult], None] | None = None
+    notify_handler: Callable[[PGnotify], None] | None = None
 
     @staticmethod
     def _raise() -> NoReturn:

@@ -14,7 +14,7 @@ from . import pq, abc
 # Objects exported here
 from ._enums import PyFormat as PyFormat
 from ._transformer import Transformer as Transformer
-from ._adapters_map import AdaptersMap as AdaptersMap  # noqa: F401
+from ._adapters_map import AdaptersMap as AdaptersMap  # noqa: F401 # reexport
 
 if TYPE_CHECKING:
     from ._connection_base import BaseConnection
@@ -37,7 +37,7 @@ class Dumper(abc.Dumper, ABC):
 
     def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         self.cls = cls
-        self.connection: "BaseConnection[Any]" | None
+        self.connection: BaseConnection[Any] | None
         self.connection = context.connection if context else None
 
     def __repr__(self) -> str:
@@ -128,7 +128,7 @@ class Loader(abc.Loader, ABC):
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         self.oid = oid
-        self.connection: "BaseConnection[Any]" | None
+        self.connection: BaseConnection[Any] | None
         self.connection = context.connection if context else None
 
     @abstractmethod

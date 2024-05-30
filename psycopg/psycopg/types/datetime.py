@@ -678,7 +678,7 @@ class IntervalBinaryLoader(Loader):
             raise DataError(f"can't parse interval: {e}") from None
 
 
-def _get_datestyle(conn: "BaseConnection[Any]" | None) -> bytes:
+def _get_datestyle(conn: BaseConnection[Any] | None) -> bytes:
     if conn:
         ds = conn.pgconn.parameter_status(b"DateStyle")
         if ds:
@@ -687,7 +687,7 @@ def _get_datestyle(conn: "BaseConnection[Any]" | None) -> bytes:
     return b"ISO, DMY"
 
 
-def _get_intervalstyle(conn: "BaseConnection[Any]" | None) -> bytes:
+def _get_intervalstyle(conn: BaseConnection[Any] | None) -> bytes:
     if conn:
         ints = conn.pgconn.parameter_status(b"IntervalStyle")
         if ints:
@@ -697,7 +697,7 @@ def _get_intervalstyle(conn: "BaseConnection[Any]" | None) -> bytes:
 
 
 def _get_timestamp_load_error(
-    conn: "BaseConnection[Any]" | None, data: Buffer, ex: Exception | None = None
+    conn: BaseConnection[Any] | None, data: Buffer, ex: Exception | None = None
 ) -> Exception:
     s = bytes(data).decode("utf8", "replace")
 

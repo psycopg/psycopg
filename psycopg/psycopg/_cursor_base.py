@@ -52,9 +52,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     ExecStatus = pq.ExecStatus
 
-    _tx: "Transformer"
+    _tx: Transformer
     _make_row: RowMaker[Row]
-    _pgconn: "PGconn"
+    _pgconn: PGconn
     _query_cls: type[PostgresQuery] = PostgresQuery
 
     def __init__(self, connection: ConnectionType):
@@ -68,8 +68,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._reset()
 
     def _reset(self, reset_query: bool = True) -> None:
-        self._results: list["PGresult"] = []
-        self.pgresult: "PGresult" | None = None
+        self._results: list[PGresult] = []
+        self.pgresult: PGresult | None = None
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
@@ -324,7 +324,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query = query
         yield from send(self._pgconn)
 
-    def _stream_fetchone_gen(self, first: bool) -> PQGen["PGresult" | None]:
+    def _stream_fetchone_gen(self, first: bool) -> PQGen[PGresult | None]:
         res = yield from fetch(self._pgconn)
         if res is None:
             return None
@@ -446,7 +446,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         pgq.convert(query, params)
         return pgq
 
-    def _check_results(self, results: list["PGresult"]) -> None:
+    def _check_results(self, results: list[PGresult]) -> None:
         """
         Verify that the results of a query are valid.
 
@@ -461,7 +461,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             if status != TUPLES_OK and status != COMMAND_OK and status != EMPTY_QUERY:
                 self._raise_for_result(res)
 
-    def _raise_for_result(self, result: "PGresult") -> NoReturn:
+    def _raise_for_result(self, result: PGresult) -> NoReturn:
         """
         Raise an appropriate error message for an unexpected database result
         """
@@ -505,7 +505,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._make_row = self._make_row_maker()
 
-    def _set_results(self, results: list["PGresult"]) -> None:
+    def _set_results(self, results: list[PGresult]) -> None:
         if self._execmany_returning is None:
             # Received from execute()
             self._results[:] = results
@@ -578,7 +578,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             raise e.ProgrammingError("the last operation didn't produce a result")
 
-    def _check_copy_result(self, result: "PGresult") -> None:
+    def _check_copy_result(self, result: PGresult) -> None:
         """
         Check that the value returned in a copy() operation is a legit COPY.
         """

@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 
 class _CrdbConnectionMixin:
     _adapters: AdaptersMap | None
-    pgconn: "PGconn"
+    pgconn: PGconn
 
     @classmethod
-    def is_crdb(cls, conn: Connection[Any] | AsyncConnection[Any] | "PGconn") -> bool:
+    def is_crdb(cls, conn: Connection[Any] | AsyncConnection[Any] | PGconn) -> bool:
         """
         Return `!True` if the server connected to `!conn` is CockroachDB.
         """

@@ -81,7 +81,7 @@ class PGconn:
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self._pgconn_ptr: impl.PGconn_struct | None = pgconn_ptr
-        self.notice_handler: Callable[["abc.PGresult"], None] | None = None
+        self.notice_handler: Callable[[abc.PGresult], None] | None = None
         self.notify_handler: Callable[[PGnotify], None] | None = None
 
         # Keep alive for the lifetime of PGconn
@@ -102,7 +102,7 @@ class PGconn:
         return f"<{cls} {info} at 0x{id(self):x}>"
 
     @classmethod
-    def connect(cls, conninfo: bytes) -> "PGconn":
+    def connect(cls, conninfo: bytes) -> PGconn:
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {type(conninfo)} instead")
 
@@ -112,7 +112,7 @@ class PGconn:
         return cls(pgconn_ptr)
 
     @classmethod
-    def connect_start(cls, conninfo: bytes) -> "PGconn":
+    def connect_start(cls, conninfo: bytes) -> PGconn:
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {type(conninfo)} instead")
 
@@ -145,7 +145,7 @@ class PGconn:
         return addressof(self._pgconn_ptr.contents)  # type: ignore[attr-defined]
 
     @property
-    def info(self) -> list["ConninfoOption"]:
+    def info(self) -> list[ConninfoOption]:
         self._ensure_pgconn()
         opts = impl.PQconninfo(self._pgconn_ptr)
         if not opts:
@@ -261,7 +261,7 @@ class PGconn:
     def ssl_in_use(self) -> bool:
         return self._call_bool(impl.PQsslInUse)
 
-    def exec_(self, command: bytes) -> "PGresult":
+    def exec_(self, command: bytes) -> PGresult:
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
         self._ensure_pgconn()
@@ -280,11 +280,11 @@ class PGconn:
     def exec_params(
         self,
         command: bytes,
-        param_values: Sequence["abc.Buffer" | None] | None,
+        param_values: Sequence[abc.Buffer | None] | None,
         param_types: Sequence[int] | None = None,
         param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
-    ) -> "PGresult":
+    ) -> PGresult:
         args = self._query_params_args(
             command, param_values, param_types, param_formats, result_format
         )
@@ -297,7 +297,7 @@ class PGconn:
     def send_query_params(
         self,
         command: bytes,
-        param_values: Sequence["abc.Buffer" | None] | None,
+        param_values: Sequence[abc.Buffer | None] | None,
         param_types: Sequence[int] | None = None,
         param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
@@ -334,7 +334,7 @@ class PGconn:
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Sequence["abc.Buffer" | None] | None,
+        param_values: Sequence[abc.Buffer | None] | None,
         param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> None:
@@ -354,7 +354,7 @@ class PGconn:
     def _query_params_args(
         self,
         command: bytes,
-        param_values: Sequence["abc.Buffer" | None] | None,
+        param_values: Sequence[abc.Buffer | None] | None,
         param_types: Sequence[int] | None = None,
         param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
@@ -415,7 +415,7 @@ class PGconn:
         name: bytes,
         command: bytes,
         param_types: Sequence[int] | None = None,
-    ) -> "PGresult":
+    ) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
@@ -438,10 +438,10 @@ class PGconn:
     def exec_prepared(
         self,
         name: bytes,
-        param_values: Sequence["abc.Buffer"] | None,
+        param_values: Sequence[abc.Buffer] | None,
         param_formats: Sequence[int] | None = None,
         result_format: int = 0,
-    ) -> "PGresult":
+    ) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
@@ -487,7 +487,7 @@ class PGconn:
             )
         return PGresult(rv)
 
-    def describe_prepared(self, name: bytes) -> "PGresult":
+    def describe_prepared(self, name: bytes) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
         self._ensure_pgconn()
@@ -505,7 +505,7 @@ class PGconn:
                 f"sending describe prepared failed: {error_message(self)}"
             )
 
-    def describe_portal(self, name: bytes) -> "PGresult":
+    def describe_portal(self, name: bytes) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
         self._ensure_pgconn()
@@ -523,7 +523,7 @@ class PGconn:
                 f"sending describe portal failed: {error_message(self)}"
             )
 
-    def close_prepared(self, name: bytes) -> "PGresult":
+    def close_prepared(self, name: bytes) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
         self._ensure_pgconn()
@@ -541,7 +541,7 @@ class PGconn:
                 f"sending close prepared failed: {error_message(self)}"
             )
 
-    def close_portal(self, name: bytes) -> "PGresult":
+    def close_portal(self, name: bytes) -> PGresult:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
         self._ensure_pgconn()
@@ -559,7 +559,7 @@ class PGconn:
                 f"sending close portal failed: {error_message(self)}"
             )
 
-    def get_result(self) -> "PGresult" | None:
+    def get_result(self) -> PGresult | None:
         rv = impl.PQgetResult(self._pgconn_ptr)
         return PGresult(rv) if rv else None
 
@@ -598,7 +598,7 @@ class PGconn:
         if not impl.PQsetChunkedRowsMode(self._pgconn_ptr, size):
             raise e.OperationalError("setting chunked rows mode failed")
 
-    def cancel_conn(self) -> "PGcancelConn":
+    def cancel_conn(self) -> PGcancelConn:
         """
         Create a connection over which a cancel request can be sent.
 
@@ -609,7 +609,7 @@ class PGconn:
             raise e.OperationalError("couldn't create cancelConn object")
         return PGcancelConn(rv)
 
-    def get_cancel(self) -> "PGcancel":
+    def get_cancel(self) -> PGcancel:
         """
         Create an object with the information needed to cancel a command.
 
@@ -630,7 +630,7 @@ class PGconn:
         else:
             return None
 
-    def put_copy_data(self, buffer: "abc.Buffer") -> int:
+    def put_copy_data(self, buffer: abc.Buffer) -> int:
         if not isinstance(buffer, bytes):
             buffer = bytes(buffer)
         rv = impl.PQputCopyData(self._pgconn_ptr, buffer, len(buffer))
@@ -720,7 +720,7 @@ class PGconn:
                 f"failed to change password change command: {error_message(self)}"
             )
 
-    def make_empty_result(self, exec_status: int) -> "PGresult":
+    def make_empty_result(self, exec_status: int) -> PGresult:
         rv = impl.PQmakeEmptyPGresult(self._pgconn_ptr, exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
@@ -1106,7 +1106,7 @@ class Escaping:
     def __init__(self, conn: PGconn | None = None):
         self.conn = conn
 
-    def escape_literal(self, data: "abc.Buffer") -> bytes:
+    def escape_literal(self, data: abc.Buffer) -> bytes:
         if not self.conn:
             raise e.OperationalError("escape_literal failed: no connection provided")
 
@@ -1123,7 +1123,7 @@ class Escaping:
         impl.PQfreemem(out)
         return rv
 
-    def escape_identifier(self, data: "abc.Buffer") -> bytes:
+    def escape_identifier(self, data: abc.Buffer) -> bytes:
         if not self.conn:
             raise e.OperationalError("escape_identifier failed: no connection provided")
 
@@ -1140,7 +1140,7 @@ class Escaping:
         impl.PQfreemem(out)
         return rv
 
-    def escape_string(self, data: "abc.Buffer") -> bytes:
+    def escape_string(self, data: abc.Buffer) -> bytes:
         if not isinstance(data, bytes):
             data = bytes(data)
 
@@ -1171,7 +1171,7 @@ class Escaping:
 
         return out.value
 
-    def escape_bytea(self, data: "abc.Buffer") -> bytes:
+    def escape_bytea(self, data: abc.Buffer) -> bytes:
         len_out = c_size_t()
         # TODO: might be able to do without a copy but it's a mess.
         # the C library does it better anyway, so maybe not worth optimising
@@ -1201,7 +1201,7 @@ class Escaping:
         impl.PQfreemem(out)
         return rv
 
-    def unescape_bytea(self, data: "abc.Buffer") -> bytes:
+    def unescape_bytea(self, data: abc.Buffer) -> bytes:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn:

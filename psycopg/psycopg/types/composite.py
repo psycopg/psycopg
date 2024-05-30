@@ -53,7 +53,7 @@ class CompositeInfo(TypeInfo):
         self.python_type: type | None = None
 
     @classmethod
-    def _get_info_query(cls, conn: "BaseConnection[Any]") -> abc.Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> abc.Query:
         return sql.SQL(
             """\
 SELECT

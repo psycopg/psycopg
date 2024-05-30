@@ -24,7 +24,7 @@ from ._acompat import spawn, gather, Queue, Worker
 if TYPE_CHECKING:
     from .abc import Buffer
     from .cursor import Cursor
-    from .connection import Connection  # noqa: F401
+    from .connection import Connection
 
 COPY_IN = pq.ExecStatus.COPY_IN
 COPY_OUT = pq.ExecStatus.COPY_OUT
@@ -32,7 +32,7 @@ COPY_OUT = pq.ExecStatus.COPY_OUT
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class Copy(BaseCopy["Connection[Any]"]):
+class Copy(BaseCopy[Connection[Any]]):
     """Manage an asynchronous :sql:`COPY` operation.
 
     :param cursor: the cursor where the operation is performed.

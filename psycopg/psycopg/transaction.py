@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, TYPE_CHECKING
+from typing import Any, Generic, Iterator, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -19,7 +19,6 @@ from ._compat import Self
 from .pq.misc import connection_summary
 
 if TYPE_CHECKING:
-    from typing import Any
     from .connection import Connection
     from .connection_async import AsyncConnection
 
@@ -228,7 +227,7 @@ class BaseTransaction(Generic[ConnectionType]):
         )
 
 
-class Transaction(BaseTransaction["Connection[Any]"]):
+class Transaction(BaseTransaction[Connection[Any]]):
     """
     Returned by `Connection.transaction()` to handle a transaction block.
     """
@@ -236,7 +235,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
     __module__ = "psycopg"
 
     @property
-    def connection(self) -> "Connection[Any]":
+    def connection(self) -> Connection[Any]:
         """The connection the object is managing."""
         return self._conn
 
@@ -258,7 +257,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
             return False
 
 
-class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
+class AsyncTransaction(BaseTransaction[AsyncConnection[Any]]):
     """
     Returned by `AsyncConnection.transaction()` to handle a transaction block.
     """
@@ -266,7 +265,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
     __module__ = "psycopg"
 
     @property
-    def connection(self) -> "AsyncConnection[Any]":
+    def connection(self) -> AsyncConnection[Any]:
         return self._conn
 
     async def __aenter__(self) -> Self:

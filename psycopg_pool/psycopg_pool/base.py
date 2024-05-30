@@ -144,7 +144,7 @@ class BasePool:
             else:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
-    def _check_pool_putconn(self, conn: "BaseConnection[Any]") -> None:
+    def _check_pool_putconn(self, conn: BaseConnection[Any]) -> None:
         pool = getattr(conn, "_pool", None)
         if pool is self:
             return
@@ -194,7 +194,7 @@ class BasePool:
         """
         return value * (1.0 + ((max_pc - min_pc) * random()) + min_pc)
 
-    def _set_connection_expiry_date(self, conn: "BaseConnection[Any]") -> None:
+    def _set_connection_expiry_date(self, conn: BaseConnection[Any]) -> None:
         """Set an expiry date on a connection.
 
         Add some randomness to avoid mass reconnection.

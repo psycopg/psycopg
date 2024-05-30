@@ -7,7 +7,7 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Sequence, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING
 from collections import OrderedDict
 
 from . import pq
@@ -16,7 +16,6 @@ from ._compat import Deque, TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
-    from typing import Any
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
@@ -81,7 +80,7 @@ class PrepareManager:
             # The query is not to be prepared yet
             return Prepare.NO, b""
 
-    def _should_discard(self, prep: Prepare, results: Sequence["PGresult"]) -> bool:
+    def _should_discard(self, prep: Prepare, results: Sequence[PGresult]) -> bool:
         """Check if we need to discard our entire state: it should happen on
         rollback or on dropping objects, because the same object may get
         recreated and postgres would fail internal lookups.
@@ -96,7 +95,7 @@ class PrepareManager:
         return False
 
     @staticmethod
-    def _check_results(results: Sequence["PGresult"]) -> bool:
+    def _check_results(results: Sequence[PGresult]) -> bool:
         """Return False if 'results' are invalid for prepared statement cache."""
         if len(results) != 1:
             # We cannot prepare a multiple statement
@@ -160,7 +159,7 @@ class PrepareManager:
         key: Key,
         prep: Prepare,
         name: bytes,
-        results: Sequence["PGresult"],
+        results: Sequence[PGresult],
     ) -> None:
         """Validate cached entry with 'key' by checking query 'results'.
 
@@ -190,7 +189,7 @@ class PrepareManager:
         else:
             return False
 
-    def maintain_gen(self, conn: "BaseConnection[Any]") -> PQGen[None]:
+    def maintain_gen(self, conn: BaseConnection[Any]) -> PQGen[None]:
         """
         Generator to send the commands to perform periodic maintenance
 

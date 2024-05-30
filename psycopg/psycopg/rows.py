@@ -62,7 +62,7 @@ class RowFactory(Protocol[Row]):
     use the values to create a dictionary for each record.
     """
 
-    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]: ...
+    def __call__(self, __cursor: Cursor[Any]) -> RowMaker[Row]: ...
 
 
 class AsyncRowFactory(Protocol[Row]):
@@ -70,7 +70,7 @@ class AsyncRowFactory(Protocol[Row]):
     Like `RowFactory`, taking an async cursor as argument.
     """
 
-    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]: ...
+    def __call__(self, __cursor: AsyncCursor[Any]) -> RowMaker[Row]: ...
 
 
 class BaseRowFactory(Protocol[Row]):
@@ -78,7 +78,7 @@ class BaseRowFactory(Protocol[Row]):
     Like `RowFactory`, taking either type of cursor as argument.
     """
 
-    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]: ...
+    def __call__(self, __cursor: BaseCursor[Any, Any]) -> RowMaker[Row]: ...
 
 
 TupleRow: TypeAlias = tuple[Any, ...]
@@ -96,7 +96,7 @@ database.
 """
 
 
-def tuple_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[TupleRow]":
+def tuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[TupleRow]:
     r"""Row factory to represent rows as simple tuples.
 
     This is the default factory, used when `~psycopg.Connection.connect()` or
@@ -109,7 +109,7 @@ def tuple_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[TupleRow]":
     return tuple
 
 
-def dict_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[DictRow]":
+def dict_row(cursor: BaseCursor[Any, Any]) -> RowMaker[DictRow]:
     """Row factory to represent rows as dictionaries.
 
     The dictionary keys are taken from the column names of the returned columns.
@@ -124,9 +124,7 @@ def dict_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[DictRow]":
     return dict_row_
 
 
-def namedtuple_row(
-    cursor: "BaseCursor[Any, Any]",
-) -> "RowMaker[NamedTuple]":
+def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
     """Row factory to represent rows as `~collections.namedtuple`.
 
     The field names are taken from the column names of the returned columns,
@@ -160,7 +158,7 @@ def class_row(cls: type[T]) -> BaseRowFactory[T]:
     :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
     """
 
-    def class_row_(cursor: "BaseCursor[Any, Any]") -> "RowMaker[T]":
+    def class_row_(cursor: BaseCursor[Any, Any]) -> RowMaker[T]:
         names = _get_names(cursor)
         if names is None:
             return no_result
@@ -180,7 +178,7 @@ def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
         returned by the query as positional arguments.
     """
 
-    def args_row_(cur: "BaseCursor[Any, T]") -> "RowMaker[T]":
+    def args_row_(cur: BaseCursor[Any, T]) -> RowMaker[T]:
         def args_row__(values: Sequence[Any]) -> T:
             return func(*values)
 
@@ -196,7 +194,7 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
         returned by the query as keyword arguments.
     """
 
-    def kwargs_row_(cursor: "BaseCursor[Any, T]") -> "RowMaker[T]":
+    def kwargs_row_(cursor: BaseCursor[Any, T]) -> RowMaker[T]:
         names = _get_names(cursor)
         if names is None:
             return no_result
@@ -209,7 +207,7 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
     return kwargs_row_
 
 
-def scalar_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[Any]":
+def scalar_row(cursor: BaseCursor[Any, Any]) -> RowMaker[Any]:
     """
     Generate a row factory returning the first column
     as a scalar value.
@@ -241,7 +239,7 @@ def no_result(values: Sequence[Any]) -> NoReturn:
     raise e.InterfaceError("the cursor doesn't have a result")
 
 
-def _get_names(cursor: "BaseCursor[Any, Any]") -> list[str] | None:
+def _get_names(cursor: BaseCursor[Any, Any]) -> list[str] | None:
     res = cursor.pgresult
     if not res:
         return None
@@ -256,7 +254,7 @@ def _get_names(cursor: "BaseCursor[Any, Any]") -> list[str] | None:
     ]
 
 
-def _get_nfields(res: "PGresult") -> int | None:
+def _get_nfields(res: PGresult) -> int | None:
     """
     Return the number of columns in a result, if it returns tuples else None
 

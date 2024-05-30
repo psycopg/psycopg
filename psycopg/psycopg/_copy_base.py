@@ -23,8 +23,6 @@ from .generators import copy_from
 
 if TYPE_CHECKING:
     from ._cursor_base import BaseCursor
-    from .connection import Connection  # noqa: F401
-    from .connection_async import AsyncConnection  # noqa: F401
 
 PY_TEXT = adapt.PyFormat.TEXT
 PY_BINARY = adapt.PyFormat.BINARY
@@ -77,7 +75,7 @@ class BaseCopy(Generic[ConnectionType]):
 
     def __init__(
         self,
-        cursor: "BaseCursor[ConnectionType, Any]",
+        cursor: BaseCursor[ConnectionType, Any],
         *,
         binary: bool | None = None,
     ):

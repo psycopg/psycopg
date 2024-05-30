@@ -45,7 +45,7 @@ class BasePipeline:
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
 
-    def __init__(self, conn: "BaseConnection[Any]") -> None:
+    def __init__(self, conn: BaseConnection[Any]) -> None:
         self._conn = conn
         self.pgconn = conn.pgconn
         self.command_queue = Deque[PipelineCommand]()
@@ -157,9 +157,7 @@ class BasePipeline:
         if exception is not None:
             raise exception
 
-    def _process_results(
-        self, queued: PendingResult, results: list["PGresult"]
-    ) -> None:
+    def _process_results(self, queued: PendingResult, results: list[PGresult]) -> None:
         """Process a results set fetched from the current pipeline.
 
         This matches 'results' with its respective element in the pipeline
@@ -192,9 +190,9 @@ class Pipeline(BasePipeline):
     """Handler for connection in pipeline mode."""
 
     __module__ = "psycopg"
-    _conn: "Connection[Any]"
+    _conn: Connection[Any]
 
-    def __init__(self, conn: "Connection[Any]") -> None:
+    def __init__(self, conn: Connection[Any]) -> None:
         super().__init__(conn)
 
     def sync(self) -> None:
@@ -235,9 +233,9 @@ class AsyncPipeline(BasePipeline):
     """Handler for async connection in pipeline mode."""
 
     __module__ = "psycopg"
-    _conn: "AsyncConnection[Any]"
+    _conn: AsyncConnection[Any]
 
-    def __init__(self, conn: "AsyncConnection[Any]") -> None:
+    def __init__(self, conn: AsyncConnection[Any]) -> None:
         super().__init__(conn)
 
     async def sync(self) -> None:

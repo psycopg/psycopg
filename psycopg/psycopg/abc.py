@@ -14,7 +14,7 @@ from ._enums import PyFormat as PyFormat
 from ._compat import LiteralString, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from . import sql  # noqa: F401
+    from . import sql
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready
@@ -26,7 +26,7 @@ NoneType: type = type(None)
 # An object implementing the buffer protocol
 Buffer: TypeAlias = bytes | bytearray | memoryview
 
-Query: TypeAlias = LiteralString | bytes | "sql.SQL" | "sql.Composed"
+Query: TypeAlias = LiteralString | bytes | sql.SQL | sql.Composed
 Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
@@ -46,7 +46,7 @@ PQGenConn: TypeAlias = Generator[tuple[int, Wait], Ready | int, RV]
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen: TypeAlias = Generator["Wait", "Ready" | int, RV]
+PQGen: TypeAlias = Generator[Wait, Ready | int, RV]
 """Generator for processes where the connection file number won't change.
 """
 
@@ -80,12 +80,12 @@ class AdaptContext(Protocol):
     """
 
     @property
-    def adapters(self) -> "AdaptersMap":
+    def adapters(self) -> AdaptersMap:
         """The adapters configuration that this object uses."""
         ...
 
     @property
-    def connection(self) -> "BaseConnection[Any]" | None:
+    def connection(self) -> BaseConnection[Any] | None:
         """The connection used by this object, if available.
 
         :rtype: `~psycopg.Connection` or `~psycopg.AsyncConnection` or `!None`
@@ -161,7 +161,7 @@ class Dumper(Protocol):
         """
         ...
 
-    def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
+    def upgrade(self, obj: Any, format: PyFormat) -> Dumper:
         """Return a new dumper to manage `!obj`.
 
         :param obj: The object to convert
@@ -207,23 +207,23 @@ class Transformer(Protocol):
     def __init__(self, context: AdaptContext | None = None): ...
 
     @classmethod
-    def from_context(cls, context: AdaptContext | None) -> "Transformer": ...
+    def from_context(cls, context: AdaptContext | None) -> Transformer: ...
 
     @property
-    def connection(self) -> "BaseConnection[Any]" | None: ...
+    def connection(self) -> BaseConnection[Any] | None: ...
 
     @property
     def encoding(self) -> str: ...
 
     @property
-    def adapters(self) -> "AdaptersMap": ...
+    def adapters(self) -> AdaptersMap: ...
 
     @property
-    def pgresult(self) -> "PGresult" | None: ...
+    def pgresult(self) -> PGresult | None: ...
 
     def set_pgresult(
         self,
-        result: "PGresult" | None,
+        result: PGresult | None,
         *,
         set_loaders: bool = True,
         format: pq.Format | None = None,
@@ -241,11 +241,9 @@ class Transformer(Protocol):
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper: ...
 
-    def load_rows(
-        self, row0: int, row1: int, make_row: "RowMaker[Row]"
-    ) -> list["Row"]: ...
+    def load_rows(self, row0: int, row1: int, make_row: RowMaker[Row]) -> list[Row]: ...
 
-    def load_row(self, row: int, make_row: "RowMaker[Row]") -> "Row" | None: ...
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Row | None: ...
 
     def load_sequence(self, record: Sequence[Buffer | None]) -> tuple[Any, ...]: ...
 

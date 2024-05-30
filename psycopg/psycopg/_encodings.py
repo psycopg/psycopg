@@ -80,7 +80,7 @@ py_codecs.update(
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
-def conn_encoding(conn: "BaseConnection[Any] | None") -> str:
+def conn_encoding(conn: BaseConnection[Any] | None) -> str:
     """
     Return the Python encoding name of a psycopg connection.
 
@@ -92,7 +92,7 @@ def conn_encoding(conn: "BaseConnection[Any] | None") -> str:
         return "utf-8"
 
 
-def pgconn_encoding(pgconn: "PGconn") -> str:
+def pgconn_encoding(pgconn: PGconn) -> str:
     """
     Return the Python encoding name of a libpq connection.
 

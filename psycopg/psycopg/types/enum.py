@@ -50,7 +50,7 @@ class EnumInfo(TypeInfo):
         self.enum: type[Enum] | None = None
 
     @classmethod
-    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> Query:
         return sql.SQL(
             """\
 SELECT name, oid, array_oid, array_agg(label) AS labels

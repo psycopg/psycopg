@@ -53,7 +53,7 @@ class RangeInfo(TypeInfo):
         self.subtype_oid = subtype_oid
 
     @classmethod
-    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> Query:
         return sql.SQL(
             """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,

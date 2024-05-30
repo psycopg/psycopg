@@ -70,7 +70,7 @@ class AdaptersMap:
 
     def __init__(
         self,
-        template: "AdaptersMap" | None = None,
+        template: AdaptersMap | None = None,
         types: TypesRegistry | None = None,
     ):
         if template:
@@ -102,11 +102,11 @@ class AdaptersMap:
 
     # implement the AdaptContext protocol too
     @property
-    def adapters(self) -> "AdaptersMap":
+    def adapters(self) -> AdaptersMap:
         return self
 
     @property
-    def connection(self) -> "BaseConnection[Any]" | None:
+    def connection(self) -> BaseConnection[Any] | None:
         return None
 
     def register_dumper(self, cls: type | str | None, dumper: type[Dumper]) -> None:

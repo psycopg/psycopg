@@ -58,8 +58,8 @@ class Transformer(AdaptContext):
     types: tuple[int, ...] | None
     formats: list[pq.Format] | None
 
-    _adapters: "AdaptersMap"
-    _pgresult: "PGresult" | None
+    _adapters: AdaptersMap
+    _pgresult: PGresult | None
     _none_oid: int
 
     def __init__(self, context: AdaptContext | None = None):
@@ -111,7 +111,7 @@ class Transformer(AdaptContext):
             return cls(context)
 
     @property
-    def connection(self) -> "BaseConnection[Any]" | None:
+    def connection(self) -> BaseConnection[Any] | None:
         return self._conn
 
     @property
@@ -121,16 +121,16 @@ class Transformer(AdaptContext):
         return self._encoding
 
     @property
-    def adapters(self) -> "AdaptersMap":
+    def adapters(self) -> AdaptersMap:
         return self._adapters
 
     @property
-    def pgresult(self) -> "PGresult" | None:
+    def pgresult(self) -> PGresult | None:
         return self._pgresult
 
     def set_pgresult(
         self,
-        result: "PGresult" | None,
+        result: PGresult | None,
         *,
         set_loaders: bool = True,
         format: pq.Format | None = None,

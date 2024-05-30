@@ -25,8 +25,8 @@ ConnectionCB: TypeAlias = Callable[[CT], None]
 AsyncConnectionCB: TypeAlias = Callable[[ACT], Awaitable[None]]
 
 # Callbacks to pass the pool to on connection failure
-ConnectFailedCB: TypeAlias = Callable[["ConnectionPool[Any]"], None]
+ConnectFailedCB: TypeAlias = Callable[[ConnectionPool[Any]], None]
 AsyncConnectFailedCB: TypeAlias = (
-    Callable[["AsyncConnectionPool[Any]"], None]
-    | Callable[["AsyncConnectionPool[Any]"], Awaitable[None]]
+    Callable[[AsyncConnectionPool[Any]], None]
+    | Callable[[AsyncConnectionPool[Any]], Awaitable[None]]
 )

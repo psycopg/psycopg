@@ -68,7 +68,7 @@ class Connection(BaseConnection[Row]):
 
     def __init__(
         self,
-        pgconn: "PGconn",
+        pgconn: PGconn,
         row_factory: RowFactory[Row] = cast(RowFactory[Row], tuple_row),
     ):
         super().__init__(pgconn)

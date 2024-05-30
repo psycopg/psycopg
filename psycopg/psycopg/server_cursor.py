@@ -211,14 +211,14 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
-class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
+class ServerCursor(ServerCursorMixin[Connection[Any], Row], Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
     @overload
     def __init__(
         self,
-        connection: "Connection[Row]",
+        connection: Connection[Row],
         name: str,
         *,
         scrollable: bool | None = None,
@@ -228,7 +228,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     @overload
     def __init__(
         self,
-        connection: "Connection[Any]",
+        connection: Connection[Any],
         name: str,
         *,
         row_factory: RowFactory[Row],
@@ -238,7 +238,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
     def __init__(
         self,
-        connection: "Connection[Any]",
+        connection: Connection[Any],
         name: str,
         *,
         row_factory: RowFactory[Row] | None = None,
@@ -348,16 +348,14 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
             self._pos = value
 
 
-class AsyncServerCursor(
-    ServerCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]
-):
+class AsyncServerCursor(ServerCursorMixin[AsyncConnection[Any], Row], AsyncCursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
     @overload
     def __init__(
         self,
-        connection: "AsyncConnection[Row]",
+        connection: AsyncConnection[Row],
         name: str,
         *,
         scrollable: bool | None = None,
@@ -367,7 +365,7 @@ class AsyncServerCursor(
     @overload
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         name: str,
         *,
         row_factory: AsyncRowFactory[Row],
@@ -377,7 +375,7 @@ class AsyncServerCursor(
 
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         name: str,
         *,
         row_factory: AsyncRowFactory[Row] | None = None,

@@ -48,9 +48,9 @@ logger = logging.getLogger("psycopg.debug")
 class PGconnDebug:
     """Wrapper for a PQconn logging all its access."""
 
-    _pgconn: "abc.PGconn"
+    _pgconn: abc.PGconn
 
-    def __init__(self, pgconn: "abc.PGconn"):
+    def __init__(self, pgconn: abc.PGconn):
         super().__setattr__("_pgconn", pgconn)
 
     def __repr__(self) -> str:

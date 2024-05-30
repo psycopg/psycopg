@@ -74,7 +74,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     def __init__(
         self,
-        pgconn: "PGconn",
+        pgconn: PGconn,
         row_factory: AsyncRowFactory[Row] = cast(AsyncRowFactory[Row], tuple_row),
     ):
         super().__init__(pgconn)

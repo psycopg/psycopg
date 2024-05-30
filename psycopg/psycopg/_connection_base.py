@@ -99,7 +99,7 @@ class BaseConnection(Generic[Row]):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    def __init__(self, pgconn: "PGconn"):
+    def __init__(self, pgconn: PGconn):
         self.pgconn = pgconn
         self._autocommit = False
 
@@ -122,7 +122,7 @@ class BaseConnection(Generic[Row]):
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
-        self._pool: "BasePool" | None
+        self._pool: BasePool | None
 
         self._pipeline: BasePipeline | None = None
 
@@ -337,7 +337,7 @@ class BaseConnection(Generic[Row]):
 
     @staticmethod
     def _notice_handler(
-        wself: "ReferenceType[BaseConnection[Row]]", res: "PGresult"
+        wself: "ReferenceType[BaseConnection[Row]]", res: PGresult
     ) -> None:
         self = wself()
         if not (self and self._notice_handlers):
@@ -437,7 +437,7 @@ class BaseConnection(Generic[Row]):
 
     def _exec_command(
         self, command: Query, result_format: pq.Format = TEXT
-    ) -> PQGen["PGresult" | None]:
+    ) -> PQGen[PGresult | None]:
         """
         Generator to send a command and receive the result to the backend.
 

@@ -94,7 +94,7 @@ cdef class PGconn:
             return None
 
     @property
-    def info(self) -> list["ConninfoOption"]:
+    def info(self) -> list[ConninfoOption]:
         _ensure_pgconn(self)
         cdef libpq.PQconninfoOption *opts = libpq.PQconninfo(self._pgconn_ptr)
         if opts is NULL:

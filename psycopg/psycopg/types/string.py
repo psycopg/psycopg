@@ -174,7 +174,7 @@ class BytesBinaryDumper(Dumper):
 
 
 class ByteaLoader(Loader):
-    _escaping: "EscapingProto"
+    _escaping: EscapingProto
 
     def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
