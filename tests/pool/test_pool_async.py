@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import weakref
 from time import time
-from typing import Any, Tuple
+from typing import Any
 
 import pytest
 
@@ -438,7 +438,7 @@ async def test_grow(dsn, monkeypatch, min_size, want_times):
         dsn, min_size=min_size, max_size=4, num_workers=3
     ) as p:
         await p.wait(1.0)
-        results: list[Tuple[int, float]] = []
+        results: list[tuple[int, float]] = []
         ts = [spawn(worker, args=(i,)) for i in range(len(want_times))]
         await gather(*ts)
 
@@ -452,7 +452,7 @@ async def test_grow(dsn, monkeypatch, min_size, want_times):
 async def test_shrink(dsn, monkeypatch):
     from psycopg_pool.pool_async import ShrinkPool
 
-    results: list[Tuple[int, int]] = []
+    results: list[tuple[int, int]] = []
 
     async def run_hacked(self, pool):
         n0 = pool._nconns

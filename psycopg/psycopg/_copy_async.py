@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, AsyncIterator, Tuple, Sequence, TYPE_CHECKING
+from typing import Any, AsyncIterator, Sequence, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -92,7 +92,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         """
         return await self.connection.wait(self._read_gen())
 
-    async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
+    async def rows(self) -> AsyncIterator[tuple[Any, ...]]:
         """
         Iterate on the result of a :sql:`COPY TO` operation record by record.
 
@@ -105,7 +105,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
                 break
             yield record
 
-    async def read_row(self) -> Tuple[Any, ...] | None:
+    async def read_row(self) -> tuple[Any, ...] | None:
         """
         Read a parsed row of data from a table after a :sql:`COPY TO` operation.
 

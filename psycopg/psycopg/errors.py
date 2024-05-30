@@ -21,7 +21,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, NoReturn, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Callable, NoReturn, Sequence, TYPE_CHECKING
 from asyncio import CancelledError
 
 from .pq.abc import PGconn, PGresult
@@ -298,7 +298,7 @@ class Error(Exception):
         """
         return Diagnostic(self._info, encoding=self._encoding)
 
-    def __reduce__(self) -> str | Tuple[Any, ...]:
+    def __reduce__(self) -> str | tuple[Any, ...]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
             # To make the exception picklable
@@ -513,7 +513,7 @@ class Diagnostic:
 
         return None
 
-    def __reduce__(self) -> str | Tuple[Any, ...]:
+    def __reduce__(self) -> str | tuple[Any, ...]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
             res[2]["_info"] = _info_to_dict(self._info)

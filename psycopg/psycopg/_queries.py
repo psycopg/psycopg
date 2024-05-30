@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Callable, Mapping, Match, NamedTuple
-from typing import Sequence, Tuple, TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING
 from functools import lru_cache
 
 from . import pq
@@ -47,7 +47,7 @@ class PostgresQuery:
 
         self.params: Sequence[Buffer | None] | None = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
-        self.types: Tuple[int, ...] = ()
+        self.types: tuple[int, ...] = ()
 
         # The format requested by the user and the ones to really pass Postgres
         self._want_formats: list[PyFormat] | None = None
@@ -169,13 +169,13 @@ class PostgresQuery:
 
 # The type of the _query2pg() and _query2pg_nocache() methods
 _Query2Pg: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]
+    [bytes, str], tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]
 ]
 
 
 def _query2pg_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]:
+) -> tuple[bytes, list[PyFormat], list[str] | None, list[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.
 
@@ -199,7 +199,7 @@ def _query2pg_nocache(
             formats.append(part.format)
 
     elif isinstance(parts[0].item, str):
-        seen: dict[str, Tuple[bytes, PyFormat]] = {}
+        seen: dict[str, tuple[bytes, PyFormat]] = {}
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)
@@ -285,13 +285,13 @@ class PostgresClientQuery(PostgresQuery):
 
 
 _Query2PgClient: TypeAlias = Callable[
-    [bytes, str], Tuple[bytes, list[str] | None, list[QueryPart]]
+    [bytes, str], tuple[bytes, list[str] | None, list[QueryPart]]
 ]
 
 
 def _query2pg_client_nocache(
     query: bytes, encoding: str
-) -> Tuple[bytes, list[str] | None, list[QueryPart]]:
+) -> tuple[bytes, list[str] | None, list[QueryPart]]:
     """
     Convert Python query and params into a template to perform client-side binding
     """
@@ -306,7 +306,7 @@ def _query2pg_client_nocache(
             chunks.append(b"%s")
 
     elif isinstance(parts[0].item, str):
-        seen: dict[str, Tuple[bytes, PyFormat]] = {}
+        seen: dict[str, tuple[bytes, PyFormat]] = {}
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)
@@ -347,7 +347,7 @@ _re_placeholder = re.compile(
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> list[QueryPart]:
-    parts: list[Tuple[bytes, Match[bytes] | None]] = []
+    parts: list[tuple[bytes, Match[bytes] | None]] = []
     cur = 0
 
     # pairs [(fragment, match], with the last match None

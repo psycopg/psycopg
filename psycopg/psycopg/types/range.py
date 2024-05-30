@@ -7,7 +7,7 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import Any, Generic, Tuple, cast, TYPE_CHECKING
+from typing import Any, Generic, cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -470,7 +470,7 @@ class RangeLoader(BaseRangeLoader[T]):
         return load_range_text(data, self._load)[0]
 
 
-def load_range_text(data: Buffer, load: LoadFunc) -> Tuple[Range[Any], int]:
+def load_range_text(data: Buffer, load: LoadFunc) -> tuple[Range[Any], int]:
     if data == b"empty":
         return Range(empty=True), 5
 

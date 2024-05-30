@@ -19,7 +19,7 @@ from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
-from typing import Any, Iterable, Sequence, Tuple
+from typing import Any, Iterable, Sequence
 
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence, Tuple
+from typing import Any, Callable, Sequence
 
 from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
@@ -113,8 +113,8 @@ def check_row_factory_connection() -> None:
     with conn2.cursor() as cur2:
         cur2.execute("select 2")
 
-    cur3: Cursor[Tuple[Any, ...]]
-    r3: Tuple[Any, ...] | None
+    cur3: Cursor[tuple[Any, ...]]
+    r3: tuple[Any, ...] | None
     conn3 = connect()
     cur3 = conn3.execute("select 3")
     with conn3.cursor() as cur3:
@@ -147,8 +147,8 @@ async def async_check_row_factory_connection() -> None:
     async with conn2.cursor() as cur2:
         await cur2.execute("select 2")
 
-    cur3: AsyncCursor[Tuple[Any, ...]]
-    r3: Tuple[Any, ...] | None
+    cur3: AsyncCursor[tuple[Any, ...]]
+    r3: tuple[Any, ...] | None
     conn3 = await AsyncConnection.connect()
     cur3 = await conn3.execute("select 3")
     async with conn3.cursor() as cur3:
@@ -159,7 +159,7 @@ async def async_check_row_factory_connection() -> None:
 
 def check_row_factories() -> None:
     conn1 = connect(row_factory=rows.tuple_row)
-    v1: Tuple[Any, ...] = conn1.execute("").fetchall()[0]
+    v1: tuple[Any, ...] = conn1.execute("").fetchall()[0]
 
     conn2 = connect(row_factory=rows.dict_row)
     v2: dict[str, Any] = conn2.execute("").fetchall()[0]

@@ -10,7 +10,7 @@ import re
 import struct
 from collections import namedtuple
 from typing import Any, Callable, cast, Iterator
-from typing import NamedTuple, Sequence, Tuple, TYPE_CHECKING
+from typing import NamedTuple, Sequence, TYPE_CHECKING
 
 from .. import pq
 from .. import abc
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
-    Callable[[abc.Buffer, int], Tuple[int, int]], _struct_oidlen.unpack_from
+    Callable[[abc.Buffer, int], tuple[int, int]], _struct_oidlen.unpack_from
 )
 
 
@@ -121,7 +121,7 @@ class TupleDumper(SequenceDumper):
     # Should be this, but it doesn't work
     # oid = _oids.RECORD_OID
 
-    def dump(self, obj: Tuple[Any, ...]) -> Buffer | None:
+    def dump(self, obj: tuple[Any, ...]) -> Buffer | None:
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
@@ -129,7 +129,7 @@ class TupleBinaryDumper(Dumper):
     format = pq.Format.BINARY
 
     # Subclasses must set this info
-    _field_types: Tuple[int, ...]
+    _field_types: tuple[int, ...]
 
     def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
@@ -144,7 +144,7 @@ class TupleBinaryDumper(Dumper):
         nfields = len(self._field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
-    def dump(self, obj: Tuple[Any, ...]) -> Buffer | None:
+    def dump(self, obj: tuple[Any, ...]) -> Buffer | None:
         out = bytearray(pack_len(len(obj)))
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
@@ -196,7 +196,7 @@ class BaseCompositeLoader(Loader):
 
 
 class RecordLoader(BaseCompositeLoader):
-    def load(self, data: abc.Buffer) -> Tuple[Any, ...]:
+    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         if data == b"()":
             return ()
 
@@ -217,9 +217,9 @@ class RecordBinaryLoader(Loader):
         # Usually there will be only one, but if there is more than one
         # row in the same query (in different columns, or even in different
         # records), oids might differ and we'd need separate transformers.
-        self._txs: dict[Tuple[int, ...], abc.Transformer] = {}
+        self._txs: dict[tuple[int, ...], abc.Transformer] = {}
 
-    def load(self, data: abc.Buffer) -> Tuple[Any, ...]:
+    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         nfields = unpack_len(data, 0)[0]
         offset = 4
         oids = []
@@ -346,13 +346,13 @@ def _nt_from_info(info: CompositeInfo) -> type[NamedTuple]:
 
 
 @cache
-def _make_nt(name: str, fields: Tuple[str, ...]) -> type[NamedTuple]:
+def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
     return namedtuple(name, fields)  # type: ignore[return-value]
 
 
 @cache
 def _make_loader(
-    name: str, types: Tuple[int, ...], factory: Callable[..., Any]
+    name: str, types: tuple[int, ...], factory: Callable[..., Any]
 ) -> type[BaseCompositeLoader]:
     return type(
         f"{name.title()}Loader",
@@ -377,7 +377,7 @@ def _make_dumper(name: str, oid: int) -> type[TupleDumper]:
 
 @cache
 def _make_binary_dumper(
-    name: str, oid: int, field_types: Tuple[int, ...]
+    name: str, oid: int, field_types: tuple[int, ...]
 ) -> type[TupleBinaryDumper]:
     return type(
         f"{name.title()}BinaryDumper",

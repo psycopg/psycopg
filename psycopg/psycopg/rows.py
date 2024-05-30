@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import functools
 from typing import Any, Callable, NamedTuple, NoReturn
-from typing import TYPE_CHECKING, Protocol, Sequence, Tuple
+from typing import TYPE_CHECKING, Protocol, Sequence
 from collections import namedtuple
 
 from . import pq
@@ -81,7 +81,7 @@ class BaseRowFactory(Protocol[Row]):
     def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]: ...
 
 
-TupleRow: TypeAlias = Tuple[Any, ...]
+TupleRow: TypeAlias = tuple[Any, ...]
 """
 An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """

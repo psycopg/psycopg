@@ -549,7 +549,7 @@ cdef class PGconn:
             raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, int async_) -> Tuple[int, memoryview]:
+    def get_copy_data(self, int async_) -> tuple[int, memoryview]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self._pgconn_ptr, &buffer_ptr, async_)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import Callable, Generic, NamedTuple, Tuple, TYPE_CHECKING
+from typing import Callable, Generic, NamedTuple, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
@@ -114,7 +114,7 @@ class BaseConnection(Generic[Row]):
 
         self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
-        self._tpc: Tuple[Xid, bool] | None = None  # xid, prepared
+        self._tpc: tuple[Xid, bool] | None = None  # xid, prepared
 
         wself = ref(self)
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)

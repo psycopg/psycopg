@@ -6,7 +6,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Protocol, Sequence, TYPE_CHECKING
 
 from ._enums import Format, Trace
 from .._compat import TypeAlias
@@ -193,7 +193,7 @@ class PGconn(Protocol):
 
     def put_copy_end(self, error: bytes | None = None) -> int: ...
 
-    def get_copy_data(self, async_: int) -> Tuple[int, memoryview]: ...
+    def get_copy_data(self, async_: int) -> tuple[int, memoryview]: ...
 
     def trace(self, fileno: int) -> None: ...
 

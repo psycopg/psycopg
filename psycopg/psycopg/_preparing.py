@@ -7,7 +7,7 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Sequence, Tuple, TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING
 from collections import OrderedDict
 
 from . import pq
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
-Key: TypeAlias = Tuple[bytes, Tuple[int, ...]]
+Key: TypeAlias = tuple[bytes, tuple[int, ...]]
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
@@ -57,7 +57,7 @@ class PrepareManager:
 
     def get(
         self, query: PostgresQuery, prepare: bool | None = None
-    ) -> Tuple[Prepare, bytes]:
+    ) -> tuple[Prepare, bytes]:
         """
         Check if a query is prepared, tell back whether to prepare it.
         """

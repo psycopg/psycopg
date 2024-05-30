@@ -6,7 +6,7 @@ psycopg client-side binding cursors
 
 from __future__ import annotations
 
-from typing import Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
@@ -79,7 +79,7 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: bool | None = None
-    ) -> Tuple[Prepare, bytes]:
+    ) -> tuple[Prepare, bytes]:
         return (Prepare.NO, b"")
 
 

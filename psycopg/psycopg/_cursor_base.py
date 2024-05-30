@@ -7,7 +7,7 @@ Psycopg BaseCursor object
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Generic, Iterable, NoReturn, Sequence, Tuple
+from typing import Any, Generic, Iterable, NoReturn, Sequence
 from typing import TYPE_CHECKING
 
 from . import pq
@@ -306,7 +306,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: bool | None = None
-    ) -> Tuple[Prepare, bytes]:
+    ) -> tuple[Prepare, bytes]:
         return self._conn._prepared.get(pgq, prepare)
 
     def _stream_send_gen(

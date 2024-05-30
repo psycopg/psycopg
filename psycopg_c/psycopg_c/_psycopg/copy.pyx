@@ -208,7 +208,7 @@ cdef int _append_text_none(bytearray out, Py_ssize_t *pos, int with_tab) except 
     return 0
 
 
-def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
+def parse_row_binary(data, tx: Transformer) -> tuple[Any, ...]:
     cdef unsigned char *ptr
     cdef Py_ssize_t bufsize
     _buffer_as_string_and_size(data, <char **>&ptr, &bufsize)
@@ -243,7 +243,7 @@ def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
     return tx.load_sequence(row)
 
 
-def parse_row_text(data, tx: Transformer) -> Tuple[Any, ...]:
+def parse_row_text(data, tx: Transformer) -> tuple[Any, ...]:
     cdef unsigned char *fstart
     cdef Py_ssize_t size
     _buffer_as_string_and_size(data, <char **>&fstart, &size)

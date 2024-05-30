@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from time import time
-from typing import Any, Tuple
+from typing import Any
 
 import pytest
 
@@ -171,7 +171,7 @@ def test_queue(pool_cls, dsn):
         t1 = time()
         results.append((n, t1 - t0, pid))
 
-    results: list[Tuple[int, float, int]] = []
+    results: list[tuple[int, float, int]] = []
     with pool_cls(dsn, min_size=min_size(pool_cls, 2), max_size=2) as p:
         p.wait()
         ts = [spawn(worker, args=(i,)) for i in range(6)]
@@ -237,8 +237,8 @@ def test_queue_timeout(pool_cls, dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results: list[Tuple[int, float, int]] = []
-    errors: list[Tuple[int, float, Exception]] = []
+    results: list[tuple[int, float, int]] = []
+    errors: list[tuple[int, float, Exception]] = []
 
     with pool_cls(dsn, min_size=min_size(pool_cls, 2), max_size=2, timeout=0.1) as p:
         ts = [spawn(worker, args=(i,)) for i in range(4)]
@@ -296,8 +296,8 @@ def test_queue_timeout_override(pool_cls, dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results: list[Tuple[int, float, int]] = []
-    errors: list[Tuple[int, float, Exception]] = []
+    results: list[tuple[int, float, int]] = []
+    errors: list[tuple[int, float, Exception]] = []
 
     with pool_cls(dsn, min_size=min_size(pool_cls, 2), max_size=2, timeout=0.1) as p:
         ts = [spawn(worker, args=(i,)) for i in range(4)]

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from time import monotonic
 from random import random
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from psycopg import errors as e
 
@@ -118,7 +118,7 @@ class BasePool:
         """`!True` if the pool is closed."""
         return self._closed
 
-    def _check_size(self, min_size: int, max_size: int | None) -> Tuple[int, int]:
+    def _check_size(self, min_size: int, max_size: int | None) -> tuple[int, int]:
         if max_size is None:
             max_size = min_size
 

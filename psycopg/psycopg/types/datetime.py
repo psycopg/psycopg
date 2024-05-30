@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Any, Callable, cast, Tuple, TYPE_CHECKING
+from typing import Any, Callable, cast, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
@@ -24,12 +24,12 @@ if TYPE_CHECKING:
 
 _struct_timetz = struct.Struct("!qi")  # microseconds, sec tz offset
 _pack_timetz = cast(Callable[[int, int], bytes], _struct_timetz.pack)
-_unpack_timetz = cast(Callable[[Buffer], Tuple[int, int]], _struct_timetz.unpack)
+_unpack_timetz = cast(Callable[[Buffer], tuple[int, int]], _struct_timetz.unpack)
 
 _struct_interval = struct.Struct("!qii")  # microseconds, days, months
 _pack_interval = cast(Callable[[int, int, int], bytes], _struct_interval.pack)
 _unpack_interval = cast(
-    Callable[[Buffer], Tuple[int, int, int]], _struct_interval.unpack
+    Callable[[Buffer], tuple[int, int, int]], _struct_interval.unpack
 )
 
 utc = timezone.utc

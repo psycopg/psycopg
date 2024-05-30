@@ -17,7 +17,7 @@ from weakref import ref
 
 from ctypes import Array, POINTER, cast, string_at, create_string_buffer, byref
 from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_object
-from typing import Any, Callable, Sequence, Tuple
+from typing import Any, Callable, Sequence
 from typing import cast as t_cast, TYPE_CHECKING
 
 from .. import errors as e
@@ -644,7 +644,7 @@ class PGconn:
             raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, async_: int) -> Tuple[int, memoryview]:
+    def get_copy_data(self, async_: int) -> tuple[int, memoryview]:
         buffer_ptr = c_char_p()
         nbytes = impl.PQgetCopyData(self._pgconn_ptr, byref(buffer_ptr), async_)
         if nbytes == -2:

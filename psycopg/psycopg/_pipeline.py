@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 PendingResult: TypeAlias = (
-    Tuple["BaseCursor[Any, Any]", Tuple[Key, Prepare, bytes] | None] | None
+    tuple[BaseCursor[Any, Any], tuple[Key, Prepare, bytes] | None] | None
 )
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR

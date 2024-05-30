@@ -11,7 +11,7 @@ import ctypes
 import ctypes.util
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
-from typing import Any, NoReturn, Tuple
+from typing import Any, NoReturn
 
 from .misc import find_libpq_full_path, version_pretty
 from ..errors import NotSupportedError
@@ -58,11 +58,11 @@ Oid = c_uint
 
 
 class PGconn_struct(Structure):
-    _fields_: list[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGresult_struct(Structure):
-    _fields_: list[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PQconninfoOption_struct(Structure):
@@ -86,11 +86,11 @@ class PGnotify_struct(Structure):
 
 
 class PGcancelConn_struct(Structure):
-    _fields_: list[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGcancel_struct(Structure):
-    _fields_: list[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGresAttDesc_struct(Structure):

@@ -15,7 +15,7 @@ import asyncio
 import logging
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Iterator, Sequence, Tuple
+from typing import Any, Iterator, Sequence
 
 from psycopg import AsyncConnection, Connection
 from psycopg import pq, waiting
@@ -111,7 +111,7 @@ class LoggingPGconn:
 @contextmanager
 def prepare_pipeline_demo_pq(
     pgconn: LoggingPGconn, rows_to_send: int, logger: logging.Logger
-) -> Iterator[Tuple[Deque[PipelineCommand], Deque[str]]]:
+) -> Iterator[tuple[Deque[PipelineCommand], Deque[str]]]:
     """Set up pipeline demo with initial queries and yield commands and
     results queue for pipeline_communicate().
     """

@@ -10,7 +10,7 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Match, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Generic, Match, Sequence, TYPE_CHECKING
 
 from . import pq
 from . import adapt
@@ -164,7 +164,7 @@ class BaseCopy(Generic[ConnectionType]):
         self.cursor._rowcount = nrows if nrows is not None else -1
         return memoryview(b"")
 
-    def _read_row_gen(self) -> PQGen[Tuple[Any, ...] | None]:
+    def _read_row_gen(self) -> PQGen[tuple[Any, ...] | None]:
         data = yield from self._read_gen()
         if not data:
             return None
@@ -199,7 +199,7 @@ class Formatter(ABC):
         self._row_mode = False  # true if the user is using write_row()
 
     @abstractmethod
-    def parse_row(self, data: Buffer) -> Tuple[Any, ...] | None: ...
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None: ...
 
     @abstractmethod
     def write(self, buffer: Buffer | str) -> Buffer: ...
@@ -218,7 +218,7 @@ class TextFormatter(Formatter):
         super().__init__(transformer)
         self._encoding = encoding
 
-    def parse_row(self, data: Buffer) -> Tuple[Any, ...] | None:
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None:
         if data:
             return parse_row_text(data, self.transformer)
         else:
@@ -262,7 +262,7 @@ class BinaryFormatter(Formatter):
         super().__init__(transformer)
         self._signature_sent = False
 
-    def parse_row(self, data: Buffer) -> Tuple[Any, ...] | None:
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None:
         if not self._signature_sent:
             if data[: len(_binary_signature)] != _binary_signature:
                 raise e.DataError(
@@ -365,7 +365,7 @@ def _format_row_binary(
     return out
 
 
-def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_text(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
     if not isinstance(data, bytes):
         data = bytes(data)
     fields = data.split(b"\t")
@@ -374,7 +374,7 @@ def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
     return tx.load_sequence(row)
 
 
-def _parse_row_binary(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_binary(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
     row: list[Buffer | None] = []
     nfields = _unpack_int2(data, 0)[0]
     pos = 2

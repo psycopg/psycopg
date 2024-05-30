@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import sys
 import operator
-from typing import Callable, Tuple
+from typing import Callable
 from contextlib import contextmanager
 
 
@@ -73,7 +73,7 @@ class VersionCheck:
         *,
         skip: bool = False,
         op: str | None = None,
-        version_tuple: Tuple[int, ...] = (),
+        version_tuple: tuple[int, ...] = (),
         whose: str = "(wanted)",
         postgres_rule: bool = False,
     ):
@@ -136,7 +136,7 @@ class VersionCheck:
 
     _OP_NAMES = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq", "!=": "ne"}
 
-    def _match_version(self, got_tuple: Tuple[int, ...]) -> bool:
+    def _match_version(self, got_tuple: tuple[int, ...]) -> bool:
         if not self.version_tuple:
             return True
 
@@ -145,11 +145,11 @@ class VersionCheck:
             assert len(version_tuple) <= 2
             version_tuple = version_tuple[:1] + (0,) + version_tuple[1:]
 
-        op: Callable[[Tuple[int, ...], Tuple[int, ...]], bool]
+        op: Callable[[tuple[int, ...], tuple[int, ...]], bool]
         op = getattr(operator, self._OP_NAMES[self.op])
         return op(got_tuple, version_tuple)
 
-    def _parse_int_version(self, version: int | None) -> Tuple[int, ...]:
+    def _parse_int_version(self, version: int | None) -> tuple[int, ...]:
         if version is None:
             return ()
         version, ver_fix = divmod(version, 100)

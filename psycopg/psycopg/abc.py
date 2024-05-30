@@ -7,7 +7,7 @@ Protocol objects representing different implementations of the same classes.
 from __future__ import annotations
 
 from typing import Any, Callable, Generator, Mapping
-from typing import Protocol, Sequence, Tuple, TYPE_CHECKING
+from typing import Protocol, Sequence, TYPE_CHECKING
 
 from . import pq
 from ._enums import PyFormat as PyFormat
@@ -30,7 +30,7 @@ Query: TypeAlias = LiteralString | bytes | "sql.SQL" | "sql.Composed"
 Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = type | Tuple["DumperKey", ...]
+DumperKey: TypeAlias = type | tuple["DumperKey", ...]
 ConnParam: TypeAlias = str | int | None
 ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
@@ -40,7 +40,7 @@ ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 RV = TypeVar("RV")
 
-PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], "Ready" | int, RV]
+PQGenConn: TypeAlias = Generator[tuple[int, Wait], Ready | int, RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
@@ -201,7 +201,7 @@ class Loader(Protocol):
 
 
 class Transformer(Protocol):
-    types: Tuple[int, ...] | None
+    types: tuple[int, ...] | None
     formats: list[pq.Format] | None
 
     def __init__(self, context: AdaptContext | None = None): ...
@@ -247,6 +247,6 @@ class Transformer(Protocol):
 
     def load_row(self, row: int, make_row: "RowMaker[Row]") -> "Row" | None: ...
 
-    def load_sequence(self, record: Sequence[Buffer | None]) -> Tuple[Any, ...]: ...
+    def load_sequence(self, record: Sequence[Buffer | None]) -> tuple[Any, ...]: ...
 
     def get_loader(self, oid: int, format: pq.Format) -> Loader: ...

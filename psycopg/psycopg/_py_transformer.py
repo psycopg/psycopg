@@ -11,7 +11,7 @@ dependencies problems).
 
 from __future__ import annotations
 
-from typing import Any, Sequence, Tuple, DefaultDict, TYPE_CHECKING
+from typing import Any, Sequence, DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
@@ -55,7 +55,7 @@ class Transformer(AdaptContext):
         _oid_dumpers _oid_types _row_dumpers _row_loaders
         """.split()
 
-    types: Tuple[int, ...] | None
+    types: tuple[int, ...] | None
     formats: list[pq.Format] | None
 
     _adapters: "AdaptersMap"
@@ -81,11 +81,11 @@ class Transformer(AdaptContext):
 
         # mapping fmt, oid -> Dumper instance
         # Not often used, so create it only if needed.
-        self._oid_dumpers: Tuple[OidDumperCache, OidDumperCache] | None
+        self._oid_dumpers: tuple[OidDumperCache, OidDumperCache] | None
         self._oid_dumpers = None
 
         # mapping fmt, oid -> Loader instance
-        self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
+        self._loaders: tuple[LoaderCache, LoaderCache] = ({}, {})
 
         self._row_dumpers: list[abc.Dumper] | None = None
 
@@ -333,7 +333,7 @@ class Transformer(AdaptContext):
 
         return make_row(record)
 
-    def load_sequence(self, record: Sequence[Buffer | None]) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Buffer | None]) -> tuple[Any, ...]:
         if len(self._row_loaders) != len(record):
             raise e.ProgrammingError(
                 f"cannot load sequence of {len(record)} items:"

@@ -10,7 +10,7 @@ import sys
 import struct
 from abc import ABC, abstractmethod
 from math import log
-from typing import Any, Callable, DefaultDict, Tuple, cast, TYPE_CHECKING
+from typing import Any, Callable, DefaultDict, cast, TYPE_CHECKING
 from decimal import Decimal, DefaultContext, Context
 
 from .. import _oids
@@ -315,7 +315,7 @@ for i in range(DefaultContext.prec):
     _contexts[i] = DefaultContext
 
 _unpack_numeric_head = cast(
-    Callable[[Buffer], Tuple[int, int, int, int]],
+    Callable[[Buffer], tuple[int, int, int, int]],
     struct.Struct("!HhHH").unpack_from,
 )
 _pack_numeric_head = cast(
@@ -370,7 +370,7 @@ class _MixedNumericDumper(Dumper, ABC):
     oid = _oids.NUMERIC_OID
 
     # If numpy is available, the dumped object might be a numpy integer too
-    int_classes: type | Tuple[type, ...] = ()
+    int_classes: type | tuple[type, ...] = ()
 
     def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)

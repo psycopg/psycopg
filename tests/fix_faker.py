@@ -6,7 +6,7 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, Set, Tuple
+from typing import Any, Set
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -199,7 +199,7 @@ class Faker:
         )
 
     def choose_schema(self, ncols=20):
-        schema: list[Tuple[type, ...] | type] = []
+        schema: list[tuple[type, ...] | type] = []
         while len(schema) < ncols:
             s = self.make_schema(choice(self.types))
             if s is not None:
@@ -245,7 +245,7 @@ class Faker:
 
         return rv
 
-    def make_schema(self, cls: type) -> Tuple[type, ...] | type | None:
+    def make_schema(self, cls: type) -> tuple[type, ...] | type | None:
         """Create a schema spec from a Python type.
 
         A schema specifies what Postgres type to generate when a Python type

@@ -5,7 +5,7 @@ Adapters for the enum type.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Generic, Mapping, Sequence, Tuple, cast, TYPE_CHECKING
+from typing import Any, Generic, Mapping, Sequence, cast, TYPE_CHECKING
 
 from .. import sql
 from .. import postgres
@@ -24,11 +24,11 @@ E = TypeVar("E", bound=Enum)
 
 EnumDumpMap: TypeAlias = dict[E, bytes]
 EnumLoadMap: TypeAlias = dict[bytes, E]
-EnumMapping: TypeAlias = Mapping[E, str] | Sequence[Tuple[E, str]] | None
+EnumMapping: TypeAlias = Mapping[E, str] | Sequence[tuple[E, str]] | None
 
 # Hashable versions
-_HEnumDumpMap: TypeAlias = Tuple[Tuple[E, bytes], ...]
-_HEnumLoadMap: TypeAlias = Tuple[Tuple[bytes, E], ...]
+_HEnumDumpMap: TypeAlias = tuple[tuple[E, bytes], ...]
+_HEnumLoadMap: TypeAlias = tuple[tuple[bytes, E], ...]
 
 TEXT = Format.TEXT
 BINARY = Format.BINARY
@@ -170,7 +170,7 @@ def register_enum(
 
 
 @cache
-def _make_enum(name: str, labels: Tuple[str, ...]) -> Enum:
+def _make_enum(name: str, labels: tuple[str, ...]) -> Enum:
     return Enum(name.title(), labels, module=__name__)
 
 
