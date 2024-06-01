@@ -28,6 +28,11 @@ Dumpers and loaders
 
     .. automethod:: dump
 
+        .. versionchanged:: 3.2
+
+            `!dump()` can also return `!None`, to represent a :sql:`NULL` in
+            the database.
+
     .. attribute:: format
         :type: psycopg.pq.Format
         :value: TEXT

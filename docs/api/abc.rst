@@ -25,6 +25,11 @@ checking.
         The format returned by dump shouldn't contain quotes or escaped
         values.
 
+        .. versionchanged:: 3.2
+
+            `!dump()` can also return `!None`, to represent a :sql:`NULL` in
+            the database.
+
     .. automethod:: quote
 
         .. tip::
