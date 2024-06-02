@@ -71,7 +71,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
@@ -95,7 +95,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         """
         return self.connection.wait(self._read_gen())
 
-    def rows(self) -> Iterator[Tuple[Any, ...]]:
+    def rows(self) -> Iterator[tuple[Any, ...]]:
         """
         Iterate on the result of a :sql:`COPY TO` operation record by record.
 
@@ -108,7 +108,7 @@ class Copy(BaseCopy["Connection[Any]"]):
                 break
             yield record
 
-    def read_row(self) -> Tuple[Any, ...] | None:
+    def read_row(self) -> tuple[Any, ...] | None:
         """
         Read a parsed row of data from a table after a :sql:`COPY TO` operation.
 

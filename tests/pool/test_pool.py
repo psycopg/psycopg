@@ -635,7 +635,7 @@ def test_uniform_use(dsn):
                 counts[id(conn)] += 1
 
     assert len(counts) == 4
-    assert set(counts.values()) == set([2])
+    assert set(counts.values()) == {2}
 
 
 @pytest.mark.slow
@@ -710,7 +710,7 @@ def test_check(dsn, caplog):
             pid = conn.info.backend_pid
 
         p.wait(1.0)
-        pids = set((conn.info.backend_pid for conn in p._pool))
+        pids = {conn.info.backend_pid for conn in p._pool}
         assert pid in pids
         conn.close()
 
@@ -718,7 +718,7 @@ def test_check(dsn, caplog):
         p.check()
         assert len(caplog.records) == 1
         p.wait(1.0)
-        pids2 = set((conn.info.backend_pid for conn in p._pool))
+        pids2 = {conn.info.backend_pid for conn in p._pool}
         assert len(pids & pids2) == 3
         assert pid not in pids2
 

@@ -45,7 +45,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self,
         connection: Connection[Any],
         *,
-        row_factory: Optional[RowFactory[Row]] = None,
+        row_factory: RowFactory[Row] | None = None,
     ):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
@@ -55,9 +55,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         self.close()
 
@@ -84,10 +84,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     def execute(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        prepare: Optional[bool] = None,
-        binary: Optional[bool] = None,
+        prepare: bool | None = None,
+        binary: bool | None = None,
     ) -> Self:
         """
         Execute a query or command to the database.
@@ -134,9 +134,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     def stream(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        binary: Optional[bool] = None,
+        binary: bool | None = None,
     ) -> Iterator[Row]:
         """
         Iterate row-by-row on a result from the database.
@@ -173,7 +173,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     except Exception:
                         pass
 
-    def fetchone(self) -> Optional[Row]:
+    def fetchone(self) -> Row | None:
         """
         Return the next record from the current recordset.
 
@@ -188,7 +188,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             self._pos += 1
         return record
 
-    def fetchmany(self, size: int = 0) -> List[Row]:
+    def fetchmany(self, size: int = 0) -> list[Row]:
         """
         Return the next `!size` records from the current recordset.
 
@@ -208,7 +208,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._pos += len(records)
         return records
 
-    def fetchall(self) -> List[Row]:
+    def fetchall(self) -> list[Row]:
         """
         Return all the remaining records from the current recordset.
 
@@ -225,7 +225,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._fetch_pipeline()
         self._check_result_for_fetch()
 
-        def load(pos: int) -> Optional[Row]:
+        def load(pos: int) -> Row | None:
             return self._tx.load_row(pos, self._make_row)
 
         while True:
@@ -253,9 +253,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     def copy(
         self,
         statement: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        writer: Optional[Writer] = None,
+        writer: Writer | None = None,
     ) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.

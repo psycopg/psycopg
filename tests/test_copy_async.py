@@ -841,7 +841,7 @@ class DataGenerator:
     def file(self):
         f = StringIO()
         for i, s in self.records():
-            f.write("%s\t%s\n" % (i, s))
+            f.write("{}\t{}\n".format(i, s))
 
         f.seek(0)
         return f

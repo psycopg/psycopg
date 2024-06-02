@@ -118,7 +118,7 @@ def get_param_def(keyword: str, _cache: dict[str, ParamDef] = {}) -> ParamDef | 
     return _cache.get(keyword)
 
 
-@lru_cache()
+@lru_cache
 def is_ip_address(s: str) -> bool:
     """Return True if the string represent a valid ip address."""
     try:

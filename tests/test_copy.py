@@ -165,7 +165,7 @@ def test_read_row_notypes(conn, format):
                 break
             rows.append(row)
 
-    ref = [tuple((py_to_raw(i, format) for i in record)) for record in sample_records]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
@@ -174,7 +174,7 @@ def test_rows_notypes(conn, format):
     cur = conn.cursor()
     with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = list(copy.rows())
-    ref = [tuple((py_to_raw(i, format) for i in record)) for record in sample_records]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
@@ -274,7 +274,7 @@ def test_copy_in_empty(conn, format):
 def test_copy_big_size_record(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    data = "".join((chr(randrange(1, 256)) for i in range(10 * 1024 * 1024)))
+    data = "".join(chr(randrange(1, 256)) for i in range(10 * 1024 * 1024))
     with cur.copy("copy copy_in (data) from stdin") as copy:
         copy.write_row([data])
 
@@ -287,7 +287,7 @@ def test_copy_big_size_record(conn):
 def test_copy_big_size_block(conn, pytype):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    data = "".join((choice(string.ascii_letters) for i in range(10 * 1024 * 1024)))
+    data = "".join(choice(string.ascii_letters) for i in range(10 * 1024 * 1024))
     copy_data = data + "\n" if pytype is str else pytype(data.encode() + b"\n")
     with cur.copy("copy copy_in (data) from stdin") as copy:
         copy.write(copy_data)
@@ -396,7 +396,7 @@ def test_copy_in_records(conn, format):
     with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         for row in sample_records:
             if format == Format.BINARY:
-                row2 = tuple((Int4(i) if isinstance(i, int) else i for i in row))
+                row2 = tuple(Int4(i) if isinstance(i, int) else i for i in row)
                 row = row2  # type: ignore[assignment]
             copy.write_row(row)
 
@@ -825,7 +825,7 @@ class DataGenerator:
     def file(self):
         f = StringIO()
         for i, s in self.records():
-            f.write("%s\t%s\n" % (i, s))
+            f.write("{}\t{}\n".format(i, s))
 
         f.seek(0)
         return f

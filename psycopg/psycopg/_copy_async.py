@@ -68,7 +68,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
@@ -92,7 +92,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         """
         return await self.connection.wait(self._read_gen())
 
-    async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
+    async def rows(self) -> AsyncIterator[tuple[Any, ...]]:
         """
         Iterate on the result of a :sql:`COPY TO` operation record by record.
 
@@ -105,7 +105,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
                 break
             yield record
 
-    async def read_row(self) -> Tuple[Any, ...] | None:
+    async def read_row(self) -> tuple[Any, ...] | None:
         """
         Read a parsed row of data from a table after a :sql:`COPY TO` operation.
 

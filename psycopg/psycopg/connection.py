@@ -62,14 +62,14 @@ class Connection(BaseConnection[Row]):
 
     __module__ = "psycopg"
 
-    cursor_factory: Type[Cursor[Row]]
-    server_cursor_factory: Type[ServerCursor[Row]]
+    cursor_factory: type[Cursor[Row]]
+    server_cursor_factory: type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
-    _pipeline: Optional[Pipeline]
+    _pipeline: Pipeline | None
 
     def __init__(
         self,
-        pgconn: "PGconn",
+        pgconn: PGconn,
         row_factory: RowFactory[Row] = cast(RowFactory[Row], tuple_row),
     ):
         super().__init__(pgconn)
@@ -84,10 +84,10 @@ class Connection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        prepare_threshold: Optional[int] = 5,
-        context: Optional[AdaptContext] = None,
-        row_factory: Optional[RowFactory[Row]] = None,
-        cursor_factory: Optional[Type[Cursor[Row]]] = None,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
         **kwargs: ConnParam,
     ) -> Self:
         """
@@ -135,9 +135,9 @@ class Connection(BaseConnection[Row]):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         if self.closed:
             return
@@ -185,7 +185,7 @@ class Connection(BaseConnection[Row]):
         name: str,
         *,
         binary: bool = False,
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ) -> ServerCursor[Row]: ...
 
@@ -196,7 +196,7 @@ class Connection(BaseConnection[Row]):
         *,
         binary: bool = False,
         row_factory: RowFactory[CursorRow],
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ) -> ServerCursor[CursorRow]: ...
 
@@ -205,10 +205,10 @@ class Connection(BaseConnection[Row]):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory[Any]] = None,
-        scrollable: Optional[bool] = None,
+        row_factory: RowFactory[Any] | None = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
-    ) -> Union[Cursor[Any], ServerCursor[Any]]:
+    ) -> Cursor[Any] | ServerCursor[Any]:
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
@@ -217,7 +217,7 @@ class Connection(BaseConnection[Row]):
         if not row_factory:
             row_factory = self.row_factory
 
-        cur: Union[Cursor[Any], ServerCursor[Any]]
+        cur: Cursor[Any] | ServerCursor[Any]
         if name:
             cur = self.server_cursor_factory(
                 self,
@@ -237,9 +237,9 @@ class Connection(BaseConnection[Row]):
     def execute(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        prepare: Optional[bool] = None,
+        prepare: bool | None = None,
         binary: bool = False,
     ) -> Cursor[Row]:
         """Execute a query and return a cursor to read its results."""
@@ -296,7 +296,7 @@ class Connection(BaseConnection[Row]):
 
     @contextmanager
     def transaction(
-        self, savepoint_name: Optional[str] = None, force_rollback: bool = False
+        self, savepoint_name: str | None = None, force_rollback: bool = False
     ) -> Iterator[Transaction]:
         """
         Start a context block with a new transaction or nested transaction.
@@ -316,7 +316,7 @@ class Connection(BaseConnection[Row]):
                 yield tx
 
     def notifies(
-        self, *, timeout: Optional[float] = None, stop_after: Optional[int] = None
+        self, *, timeout: float | None = None, stop_after: int | None = None
     ) -> Generator[Notify, None, None]:
         """
         Yield `Notify` objects as soon as they are received from the database.
@@ -386,7 +386,7 @@ class Connection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
-    def wait(self, gen: PQGen[RV], interval: Optional[float] = _WAIT_INTERVAL) -> RV:
+    def wait(self, gen: PQGen[RV], interval: float | None = _WAIT_INTERVAL) -> RV:
         """
         Consume a generator operating on the connection.
 
@@ -414,31 +414,31 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self.wait(self._set_autocommit_gen(value))
 
-    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+    def _set_isolation_level(self, value: IsolationLevel | None) -> None:
         self.set_isolation_level(value)
 
-    def set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+    def set_isolation_level(self, value: IsolationLevel | None) -> None:
         """Method version of the `~Connection.isolation_level` setter."""
         with self.lock:
             self.wait(self._set_isolation_level_gen(value))
 
-    def _set_read_only(self, value: Optional[bool]) -> None:
+    def _set_read_only(self, value: bool | None) -> None:
         self.set_read_only(value)
 
-    def set_read_only(self, value: Optional[bool]) -> None:
+    def set_read_only(self, value: bool | None) -> None:
         """Method version of the `~Connection.read_only` setter."""
         with self.lock:
             self.wait(self._set_read_only_gen(value))
 
-    def _set_deferrable(self, value: Optional[bool]) -> None:
+    def _set_deferrable(self, value: bool | None) -> None:
         self.set_deferrable(value)
 
-    def set_deferrable(self, value: Optional[bool]) -> None:
+    def set_deferrable(self, value: bool | None) -> None:
         """Method version of the `~Connection.deferrable` setter."""
         with self.lock:
             self.wait(self._set_deferrable_gen(value))
 
-    def tpc_begin(self, xid: Union[Xid, str]) -> None:
+    def tpc_begin(self, xid: Xid | str) -> None:
         """
         Begin a TPC transaction with the given transaction ID `!xid`.
         """
@@ -455,21 +455,21 @@ class Connection(BaseConnection[Row]):
         except e.ObjectNotInPrerequisiteState as ex:
             raise e.NotSupportedError(str(ex)) from None
 
-    def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+    def tpc_commit(self, xid: Xid | str | None = None) -> None:
         """
         Commit a prepared two-phase transaction.
         """
         with self.lock:
             self.wait(self._tpc_finish_gen("COMMIT", xid))
 
-    def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+    def tpc_rollback(self, xid: Xid | str | None = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """
         with self.lock:
             self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
-    def tpc_recover(self) -> List[Xid]:
+    def tpc_recover(self) -> list[Xid]:
         self._check_tpc()
         status = self.info.transaction_status
         with self.cursor(row_factory=args_row(Xid._from_record)) as cur:

@@ -295,7 +295,7 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
-    cur.execute("select %s::%s" % (expr, pgtype))
+    cur.execute("select {}::{}".format(expr, pgtype))
     assert cur.pgresult.fformat(0) == fmt_out
     result = cur.fetchone()[0]
     assert result == pytest.approx(want)

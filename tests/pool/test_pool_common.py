@@ -180,7 +180,7 @@ def test_queue(pool_cls, dsn):
     for got, want in zip(times, want_times):
         assert got == pytest.approx(want, 0.2), times
 
-    assert len(set((r[2] for r in results))) == 2, results
+    assert len({r[2] for r in results}) == 2, results
 
 
 @pytest.mark.slow
@@ -270,7 +270,7 @@ def test_dead_client(pool_cls, dsn):
         gather(*ts)
 
         sleep(0.2)
-        assert set(results) == set([0, 1, 3, 4])
+        assert set(results) == {0, 1, 3, 4}
         if pool_cls is pool.ConnectionPool:
             assert len(p._pool) == 2  # no connection was lost
 

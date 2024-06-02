@@ -226,7 +226,7 @@ def _query2pg_nocache(
 # records), and the resulting cache size is >100Mb. So, we will avoid to cache
 # large queries or queries with a large number of params. See
 # https://github.com/sqlalchemy/sqlalchemy/discussions/10270
-_query2pg = lru_cache()(_query2pg_nocache)
+_query2pg = lru_cache(_query2pg_nocache)
 
 
 class PostgresClientQuery(PostgresQuery):
@@ -324,7 +324,7 @@ def _query2pg_client_nocache(
     return b"".join(chunks), order, parts
 
 
-_query2pg_client = lru_cache()(_query2pg_client_nocache)
+_query2pg_client = lru_cache(_query2pg_client_nocache)
 
 
 _re_placeholder = re.compile(

@@ -405,7 +405,7 @@ reveal_type(ref)
     cp = mypy.run_on_source(src)
     out = cp.stdout.decode("utf8", "replace").splitlines()
     assert len(out) == 2, "\n".join(out)
-    got, want = [mypy.get_revealed(line) for line in out]
+    got, want = (mypy.get_revealed(line) for line in out)
     assert got == want
 
 
@@ -444,5 +444,5 @@ reveal_type(ref)
     cp = mypy.run_on_source(src)
     out = cp.stdout.decode("utf8", "replace").splitlines()
     assert len(out) == 2, "\n".join(out)
-    got, want = [mypy.get_revealed(line) for line in out]
+    got, want = (mypy.get_revealed(line) for line in out)
     assert got == want

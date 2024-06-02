@@ -27,21 +27,21 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        kwargs: Optional[Dict[str, Any]] = None,
+        connection_class: type[ACT] = cast(Type[ACT], AsyncConnection),
+        kwargs: dict[str, Any] | None = None,
         min_size: int = 0,  # Note: min_size default value changed to 0.
-        max_size: Optional[int] = None,
+        max_size: int | None = None,
         open: bool | None = None,
-        configure: Optional[AsyncConnectionCB[ACT]] = None,
-        check: Optional[AsyncConnectionCB[ACT]] = None,
-        reset: Optional[AsyncConnectionCB[ACT]] = None,
-        name: Optional[str] = None,
+        configure: AsyncConnectionCB[ACT] | None = None,
+        check: AsyncConnectionCB[ACT] | None = None,
+        reset: AsyncConnectionCB[ACT] | None = None,
+        name: str | None = None,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[AsyncConnectFailedCB] = None,
+        reconnect_failed: AsyncConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
         super().__init__(
@@ -92,11 +92,11 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
         logger.info("pool %r is ready to use", self.name)
 
-    async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
+    async def _get_ready_connection(self, timeout: float | None) -> ACT | None:
         if timeout is not None and timeout <= 0.0:
             raise PoolTimeout()
 
-        conn: Optional[ACT] = None
+        conn: ACT | None = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client
             try:
@@ -128,7 +128,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             self._nconns -= 1
             return True
 
-    async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+    async def resize(self, min_size: int, max_size: int | None = None) -> None:
         """Change the size of the pool during runtime.
 
         Only *max_size* can be changed; *min_size* must remain 0.

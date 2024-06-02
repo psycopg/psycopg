@@ -78,9 +78,9 @@ class BaseCopy(Generic[ConnectionType]):
 
     def __init__(
         self,
-        cursor: "BaseCursor[ConnectionType, Any]",
+        cursor: BaseCursor[ConnectionType, Any],
         *,
-        binary: Optional[bool] = None,
+        binary: bool | None = None,
     ):
         self.cursor = cursor
         self.connection = cursor.connection
@@ -117,7 +117,7 @@ class BaseCopy(Generic[ConnectionType]):
         if self._finished:
             raise TypeError("copy blocks can be used only once")
 
-    def set_types(self, types: Sequence[Union[int, str]]) -> None:
+    def set_types(self, types: Sequence[int | str]) -> None:
         """
         Set the types expected in a COPY operation.
 
@@ -165,7 +165,7 @@ class BaseCopy(Generic[ConnectionType]):
         self.cursor._rowcount = nrows if nrows is not None else -1
         return memoryview(b"")
 
-    def _read_row_gen(self) -> PQGen[Optional[Tuple[Any, ...]]]:
+    def _read_row_gen(self) -> PQGen[tuple[Any, ...] | None]:
         data = yield from self._read_gen()
         if not data:
             return None
@@ -200,10 +200,10 @@ class Formatter(ABC):
         self._row_mode = False  # true if the user is using write_row()
 
     @abstractmethod
-    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]: ...
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None: ...
 
     @abstractmethod
-    def write(self, buffer: Union[Buffer, str]) -> Buffer: ...
+    def write(self, buffer: Buffer | str) -> Buffer: ...
 
     @abstractmethod
     def write_row(self, row: Sequence[Any]) -> Buffer: ...
@@ -219,13 +219,13 @@ class TextFormatter(Formatter):
         super().__init__(transformer)
         self._encoding = encoding
 
-    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None:
         if data:
             return parse_row_text(data, self.transformer)
         else:
             return None
 
-    def write(self, buffer: Union[Buffer, str]) -> Buffer:
+    def write(self, buffer: Buffer | str) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -246,7 +246,7 @@ class TextFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+    def _ensure_bytes(self, data: Buffer | str) -> Buffer:
         if isinstance(data, str):
             return data.encode(self._encoding)
         else:
@@ -263,7 +263,7 @@ class BinaryFormatter(Formatter):
         super().__init__(transformer)
         self._signature_sent = False
 
-    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
+    def parse_row(self, data: Buffer) -> tuple[Any, ...] | None:
         if not self._signature_sent:
             if data[: len(_binary_signature)] != _binary_signature:
                 raise e.DataError(
@@ -277,7 +277,7 @@ class BinaryFormatter(Formatter):
 
         return parse_row_binary(data, self.transformer)
 
-    def write(self, buffer: Union[Buffer, str]) -> Buffer:
+    def write(self, buffer: Buffer | str) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -317,7 +317,7 @@ class BinaryFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+    def _ensure_bytes(self, data: Buffer | str) -> Buffer:
         if isinstance(data, str):
             raise TypeError("cannot copy str data in binary mode: use bytes instead")
         else:
@@ -328,7 +328,7 @@ class BinaryFormatter(Formatter):
 
 
 def _format_row_text(
-    row: Sequence[Any], tx: Transformer, out: Optional[bytearray] = None
+    row: Sequence[Any], tx: Transformer, out: bytearray | None = None
 ) -> bytearray:
     """Convert a row of objects to the data to send for copy."""
     if out is None:
@@ -348,7 +348,7 @@ def _format_row_text(
 
 
 def _format_row_binary(
-    row: Sequence[Any], tx: Transformer, out: Optional[bytearray] = None
+    row: Sequence[Any], tx: Transformer, out: bytearray | None = None
 ) -> bytearray:
     """Convert a row of objects to the data to send for binary copy."""
     if out is None:
@@ -366,7 +366,7 @@ def _format_row_binary(
     return out
 
 
-def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_text(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
     if not isinstance(data, bytes):
         data = bytes(data)
     fields = data.split(b"\t")
@@ -375,8 +375,8 @@ def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
     return tx.load_sequence(row)
 
 
-def _parse_row_binary(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
-    row: List[Optional[Buffer]] = []
+def _parse_row_binary(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
+    row: list[Buffer | None] = []
     nfields = _unpack_int2(data, 0)[0]
     pos = 2
     for i in range(nfields):
@@ -416,7 +416,7 @@ _dump_repl = {
 }
 
 
-def _dump_sub(m: Match[bytes], __map: Dict[bytes, bytes] = _dump_repl) -> bytes:
+def _dump_sub(m: Match[bytes], __map: dict[bytes, bytes] = _dump_repl) -> bytes:
     return __map[m.group(0)]
 
 
@@ -424,7 +424,7 @@ _load_re = re.compile(b"\\\\[btnvfr\\\\]")
 _load_repl = {v: k for k, v in _dump_repl.items()}
 
 
-def _load_sub(m: Match[bytes], __map: Dict[bytes, bytes] = _load_repl) -> bytes:
+def _load_sub(m: Match[bytes], __map: dict[bytes, bytes] = _load_repl) -> bytes:
     return __map[m.group(0)]
 
 

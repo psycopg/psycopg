@@ -117,8 +117,7 @@ class TraceLog:
     def __iter__(self) -> "Iterator[TraceEntry]":
         self.tempfile.seek(0)
         data = self.tempfile.read()
-        for entry in self._parse_entries(data):
-            yield entry
+        yield from self._parse_entries(data)
 
     def _parse_entries(self, data: bytes) -> "Iterator[TraceEntry]":
         for line in data.splitlines():

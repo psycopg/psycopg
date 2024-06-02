@@ -145,7 +145,7 @@ def check(outputs: list[str]) -> int:
         logger.error("no file to check? Maybe this script bitrot?")
         return 1
     unk_conv = sorted(
-        set(maybe_conv) - set(fn.replace("_async", "") for fn in ALL_INPUTS)
+        set(maybe_conv) - {fn.replace("_async", "") for fn in ALL_INPUTS}
     )
     if unk_conv:
         logger.error(
