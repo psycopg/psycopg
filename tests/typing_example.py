@@ -10,7 +10,7 @@ from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
 
 
 def int_row_factory(
-    cursor: Cursor[Any] | AsyncCursor[Any]
+    cursor: Cursor[Any] | AsyncCursor[Any],
 ) -> Callable[[Sequence[int]], int]:
     return lambda values: values[0] if values else 42
 
