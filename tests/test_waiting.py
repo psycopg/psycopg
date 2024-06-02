@@ -1,6 +1,5 @@
 import sys
 import time
-import select  # noqa: used in pytest.mark.skipif
 import socket
 
 import pytest

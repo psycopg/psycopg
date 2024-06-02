@@ -10,7 +10,7 @@ Psycopg Cursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Iterator, Iterable, List, Optional, Type
+from typing import Any, Iterator, Iterable
 from typing import TYPE_CHECKING, overload
 from contextlib import contextmanager
 

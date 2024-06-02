@@ -10,7 +10,7 @@ Psycopg null connection pool module (sync version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Optional, Type
+from typing import Any, cast, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus

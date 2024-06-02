@@ -7,7 +7,7 @@ Psycopg null connection pool module (async version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Optional, Type
+from typing import Any, cast, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus

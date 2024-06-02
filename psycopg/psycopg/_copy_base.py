@@ -10,8 +10,8 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Match
-from typing import Optional, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Any, Generic, Match
+from typing import Sequence, TYPE_CHECKING
 
 from . import pq
 from . import adapt

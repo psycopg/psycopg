@@ -11,8 +11,8 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, cast, Dict, Generic, List
-from typing import Optional, Type
+from typing import Any, AsyncIterator, cast, Generic
+from typing import Type
 from weakref import ref
 from contextlib import asynccontextmanager
 

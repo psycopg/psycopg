@@ -7,7 +7,7 @@ Psycopg AsyncCursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List, Optional, Type
+from typing import Any, AsyncIterator, Iterable
 from typing import TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
