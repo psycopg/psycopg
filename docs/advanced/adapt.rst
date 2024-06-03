@@ -146,6 +146,34 @@ you only need to implement the `~psycopg.abc.Dumper.dump()` method::
         <TypeInfo: hstore (oid: 770082, array oid: 770087)>
 
 
+.. _adapt-example-null-str:
+
+Example: converting empty strings to NULL
+-----------------------------------------
+
+.. versionchanged:: 3.2
+
+    The `dump()` method can also return `!None`, which will be stored as
+    :sql:`NULL` in the database.
+
+If you prefer to store missing values as :sql:`NULL`, in the database, but
+your input may contain empty strings, you can subclass the stock string dumper
+to return `!None` upon empty or whitespace-only strings::
+
+    >>> from psycopg.types.string import StrDumper
+
+    >>> class NullStrDumper(StrDumper):
+    ...     def dump(self, obj):
+    ...         if not obj or obj.isspace():
+    ...             return None
+    ...         return super().dump(obj)
+
+    >>> conn.adapters.register_dumper(str, NullStrDumper)
+
+    >>> conn.execute("select %s, %s, %s, %s", ("foo", "", "bar", "  ")).fetchone()
+    ('foo', None, 'bar', None)
+
+
 .. _adapt-example-float:
 
 Example: PostgreSQL numeric to Python float

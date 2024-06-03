@@ -7,7 +7,7 @@ Compatibility objects with DBAPI 2.0
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Sequence, Union
+from typing import Any, Optional, Sequence, Union
 
 from . import _oids
 from .abc import AdaptContext, Buffer
@@ -76,7 +76,7 @@ class Binary:
 
 
 class BinaryBinaryDumper(BytesBinaryDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Buffer:
+    def dump(self, obj: Union[Buffer, Binary]) -> Optional[Buffer]:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:
@@ -84,7 +84,7 @@ class BinaryBinaryDumper(BytesBinaryDumper):
 
 
 class BinaryTextDumper(BytesDumper):
-    def dump(self, obj: Union[Buffer, Binary]) -> Buffer:
+    def dump(self, obj: Union[Buffer, Binary]) -> Optional[Buffer]:
         if isinstance(obj, Binary):
             return super().dump(obj.obj)
         else:

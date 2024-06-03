@@ -46,7 +46,7 @@ class Dumper(abc.Dumper, ABC):
         )
 
     @abstractmethod
-    def dump(self, obj: Any) -> Buffer: ...
+    def dump(self, obj: Any) -> Optional[Buffer]: ...
 
     def quote(self, obj: Any) -> Buffer:
         """
@@ -56,6 +56,8 @@ class Dumper(abc.Dumper, ABC):
         subclass.
         """
         value = self.dump(obj)
+        if value is None:
+            return b"NULL"
 
         if self.connection:
             esc = pq.Escaping(self.connection.pgconn)

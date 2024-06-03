@@ -17,6 +17,7 @@ Psycopg 3.2 (unreleased)
   (:ticket:`#332`).
 - Add `!timeout` and `!stop_after` parameters to `Connection.notifies()`
   (:ticket:`340`).
+- Allow dumpers to return `!None`, to be converted to NULL (:ticket:`#377`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
 - Add `psycopg.capabilities` object to :ref:`inspect the libpq capabilities

@@ -24,6 +24,7 @@ from .utils import eur
 from ._test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from ._test_copy import sample_values, sample_records, sample_tabledef
 from ._test_copy import ensure_table, py_to_raw, special_chars, FileWriter
+from .test_adapt import StrNoneDumper, StrNoneBinaryDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")
 
@@ -308,7 +309,9 @@ def test_subclass_adapter(conn, format):
     class MyStrDumper(BaseDumper):
 
         def dump(self, obj):
-            return super().dump(obj) * 2
+            rv = super().dump(obj)
+            assert rv
+            return bytes(rv) * 2
 
     conn.adapters.register_dumper(str, MyStrDumper)
 
@@ -321,6 +324,29 @@ def test_subclass_adapter(conn, format):
     cur.execute("select data from copy_in")
     rec = cur.fetchone()
     assert rec[0] == "hellohello"
+
+
+@pytest.mark.parametrize("format", Format)
+def test_subclass_nulling_dumper(conn, format):
+    Base: type = StrNoneDumper if format == Format.TEXT else StrNoneBinaryDumper
+
+    class MyStrDumper(Base):  # type: ignore
+
+        def dump(self, obj):
+            return super().dump(obj) if obj else None
+
+    conn.adapters.register_dumper(str, MyStrDumper)
+
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+
+    with cur.copy(f"copy copy_in (data) from stdin (format {format.name})") as copy:
+        copy.write_row(("hello",))
+        copy.write_row(("",))
+
+    cur.execute("select data from copy_in order by col1")
+    recs = cur.fetchall()
+    assert recs == [("hello",), (None,)]
 
 
 @pytest.mark.parametrize("format", Format)

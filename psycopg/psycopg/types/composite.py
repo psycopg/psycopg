@@ -14,7 +14,7 @@ from .. import pq
 from .. import abc
 from .. import sql
 from .. import postgres
-from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper
+from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper, Buffer
 from .._oids import TEXT_OID
 from .._compat import cache
 from .._struct import pack_len, unpack_len
@@ -97,7 +97,9 @@ class SequenceDumper(RecursiveDumper):
 
             dumper = self._tx.get_dumper(item, PyFormat.from_pq(self.format))
             ad = dumper.dump(item)
-            if not ad:
+            if ad is None:
+                ad = b""
+            elif not ad:
                 ad = b'""'
             elif self._re_needs_quotes.search(ad):
                 ad = b'"' + self._re_esc.sub(rb"\1\1", ad) + b'"'
@@ -117,7 +119,7 @@ class TupleDumper(SequenceDumper):
     # Should be this, but it doesn't work
     # oid = _oids.RECORD_OID
 
-    def dump(self, obj: Tuple[Any, ...]) -> bytes:
+    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
@@ -140,7 +142,7 @@ class TupleBinaryDumper(Dumper):
         nfields = len(self._field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
-    def dump(self, obj: Tuple[Any, ...]) -> bytearray:
+    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
         out = bytearray(pack_len(len(obj)))
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):

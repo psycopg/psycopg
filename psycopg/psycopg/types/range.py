@@ -5,7 +5,7 @@ Support for range types adaptation.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, Tuple
+from typing import Any, Dict, Generic, List, Optional, Type, Tuple
 from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
@@ -15,7 +15,7 @@ from .. import _oids
 from .. import errors as e
 from .. import postgres
 from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
 from .._compat import cache, TypeVar
@@ -354,7 +354,7 @@ class RangeDumper(BaseRangeDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    def dump(self, obj: Range[Any]) -> Buffer:
+    def dump(self, obj: Range[Any]) -> Optional[Buffer]:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
@@ -364,7 +364,7 @@ class RangeDumper(BaseRangeDumper):
         return dump_range_text(obj, dump)
 
 
-def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
+def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
     if obj.isempty:
         return b"empty"
 
@@ -372,7 +372,9 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
 
     def dump_item(item: Any) -> Buffer:
         ad = dump(item)
-        if not ad:
+        if ad is None:
+            return b""
+        elif not ad:
             return b'""'
         elif _re_needs_quotes.search(ad):
             return b'"' + _re_esc.sub(rb"\1\1", ad) + b'"'
@@ -399,7 +401,7 @@ _re_esc = re.compile(rb"([\\\"])")
 class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Range[Any]) -> Buffer:
+    def dump(self, obj: Range[Any]) -> Optional[Buffer]:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
@@ -409,7 +411,7 @@ class RangeBinaryDumper(BaseRangeDumper):
         return dump_range_binary(obj, dump)
 
 
-def dump_range_binary(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
+def dump_range_binary(obj: Range[Any], dump: DumpFunc) -> Buffer:
     if not obj:
         return _EMPTY_HEAD
 
@@ -423,15 +425,21 @@ def dump_range_binary(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
 
     if obj.lower is not None:
         data = dump(obj.lower)
-        out += pack_len(len(data))
-        out += data
+        if data is not None:
+            out += pack_len(len(data))
+            out += data
+        else:
+            head |= RANGE_LB_INF
     else:
         head |= RANGE_LB_INF
 
     if obj.upper is not None:
         data = dump(obj.upper)
-        out += pack_len(len(data))
-        out += data
+        if data is not None:
+            out += pack_len(len(data))
+            out += data
+        else:
+            head |= RANGE_UB_INF
     else:
         head |= RANGE_UB_INF
 
@@ -461,9 +469,7 @@ class RangeLoader(BaseRangeLoader[T]):
         return load_range_text(data, self._load)[0]
 
 
-def load_range_text(
-    data: Buffer, load: Callable[[Buffer], Any]
-) -> Tuple[Range[Any], int]:
+def load_range_text(data: Buffer, load: LoadFunc) -> Tuple[Range[Any], int]:
     if data == b"empty":
         return Range(empty=True), 5
 
@@ -523,7 +529,7 @@ class RangeBinaryLoader(BaseRangeLoader[T]):
         return load_range_binary(data, self._load)
 
 
-def load_range_binary(data: Buffer, load: Callable[[Buffer], Any]) -> Range[Any]:
+def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
     head = data[0]
     if head & RANGE_EMPTY:
         return Range(empty=True)

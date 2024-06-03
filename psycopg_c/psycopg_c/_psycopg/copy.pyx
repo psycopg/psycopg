@@ -57,9 +57,7 @@ def format_row_binary(
     for i in range(rowlen):
         item = row[i]
         if item is None:
-            target = CDumper.ensure_size(out, pos, sizeof(_binary_null))
-            memcpy(target, <void *>&_binary_null, sizeof(_binary_null))
-            pos += sizeof(_binary_null)
+            _append_binary_none(out, &pos)
             continue
 
         row_dumper = PyList_GET_ITEM(dumpers, i)
@@ -80,17 +78,29 @@ def format_row_binary(
             # A Python dumper, gotta call it and extract its juices
             b = PyObject_CallFunctionObjArgs(
                 (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
-            _buffer_as_string_and_size(b, &buf, &size)
-            target = CDumper.ensure_size(out, pos, size + sizeof(besize))
-            besize = endian.htobe32(<int32_t>size)
-            memcpy(target, <void *>&besize, sizeof(besize))
-            memcpy(target + sizeof(besize), buf, size)
+            if b is None:
+                _append_binary_none(out, &pos)
+                continue
+            else:
+                _buffer_as_string_and_size(b, &buf, &size)
+                target = CDumper.ensure_size(out, pos, size + sizeof(besize))
+                besize = endian.htobe32(<int32_t>size)
+                memcpy(target, <void *>&besize, sizeof(besize))
+                memcpy(target + sizeof(besize), buf, size)
 
         pos += size + sizeof(besize)
 
     # Resize to the final size
     PyByteArray_Resize(out, pos)
     return out
+
+
+cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
+    cdef char *target
+    target = CDumper.ensure_size(out, pos[0], sizeof(_binary_null))
+    memcpy(target, <void *>&_binary_null, sizeof(_binary_null))
+    pos[0] += sizeof(_binary_null)
+    return 0
 
 
 def format_row_text(
@@ -125,14 +135,7 @@ def format_row_text(
 
         item = row[i]
         if item is None:
-            if with_tab:
-                target = <unsigned char *>CDumper.ensure_size(out, pos, 3)
-                memcpy(target, b"\t\\N", 3)
-                pos += 3
-            else:
-                target = <unsigned char *>CDumper.ensure_size(out, pos, 2)
-                memcpy(target, b"\\N", 2)
-                pos += 2
+            _append_text_none(out, &pos, with_tab)
             continue
 
         row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
@@ -145,9 +148,13 @@ def format_row_text(
             # A Python dumper, gotta call it and extract its juices
             b = PyObject_CallFunctionObjArgs(
                 (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
-            _buffer_as_string_and_size(b, &buf, &size)
-            target = <unsigned char *>CDumper.ensure_size(out, pos, size + with_tab)
-            memcpy(target + with_tab, buf, size)
+            if b is None:
+                _append_text_none(out, &pos, with_tab)
+                continue
+            else:
+                _buffer_as_string_and_size(b, &buf, &size)
+                target = <unsigned char *>CDumper.ensure_size(out, pos, size + with_tab)
+                memcpy(target + with_tab, buf, size)
 
         # Prepend a tab to the data just written
         if with_tab:
@@ -184,6 +191,21 @@ def format_row_text(
     PyByteArray_Resize(out, pos + 1)
     out[pos] = b"\n"
     return out
+
+
+cdef int _append_text_none(bytearray out, Py_ssize_t *pos, int with_tab) except -1:
+    cdef char *target
+
+    if with_tab:
+        target = CDumper.ensure_size(out, pos[0], 3)
+        memcpy(target, b"\t\\N", 3)
+        pos[0] += 3
+    else:
+        target = CDumper.ensure_size(out, pos[0], 2)
+        memcpy(target, b"\\N", 2)
+        pos[0] += 2
+
+    return 0
 
 
 def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
