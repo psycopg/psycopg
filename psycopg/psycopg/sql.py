@@ -88,7 +88,7 @@ class Composable(ABC):
             # buffer object
             return codecs.lookup(enc).decode(b)[0]
 
-    def __add__(self, other: "Composable") -> "Composed":
+    def __add__(self, other: Composable) -> Composed:
         if isinstance(other, Composed):
             return Composed([self]) + other
         if isinstance(other, Composable):
@@ -96,7 +96,7 @@ class Composable(ABC):
         else:
             return NotImplemented
 
-    def __mul__(self, n: int) -> "Composed":
+    def __mul__(self, n: int) -> Composed:
         return Composed([self] * n)
 
     def __eq__(self, other: Any) -> bool:
@@ -138,7 +138,7 @@ class Composed(Composable):
     def __iter__(self) -> Iterator[Composable]:
         return iter(self._obj)
 
-    def __add__(self, other: Composable) -> "Composed":
+    def __add__(self, other: Composable) -> Composed:
         if isinstance(other, Composed):
             return Composed(self._obj + other._obj)
         if isinstance(other, Composable):
@@ -146,7 +146,7 @@ class Composed(Composable):
         else:
             return NotImplemented
 
-    def join(self, joiner: "SQL" | LiteralString) -> "Composed":
+    def join(self, joiner: SQL | LiteralString) -> Composed:
         """
         Return a new `!Composed` interposing the `!joiner` with the `!Composed` items.
 

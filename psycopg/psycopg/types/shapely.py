@@ -25,14 +25,14 @@ except ImportError:
 class GeometryBinaryLoader(Loader):
     format = Format.BINARY
 
-    def load(self, data: Buffer) -> "BaseGeometry":
+    def load(self, data: Buffer) -> BaseGeometry:
         if not isinstance(data, bytes):
             data = bytes(data)
         return loads(data)
 
 
 class GeometryLoader(Loader):
-    def load(self, data: Buffer) -> "BaseGeometry":
+    def load(self, data: Buffer) -> BaseGeometry:
         # it's a hex string in binary
         if isinstance(data, memoryview):
             data = bytes(data)
@@ -42,12 +42,12 @@ class GeometryLoader(Loader):
 class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: "BaseGeometry") -> Buffer | None:
+    def dump(self, obj: BaseGeometry) -> Buffer | None:
         return dumps(obj)  # type: ignore
 
 
 class BaseGeometryDumper(Dumper):
-    def dump(self, obj: "BaseGeometry") -> Buffer | None:
+    def dump(self, obj: BaseGeometry) -> Buffer | None:
         return dumps(obj, hex=True).encode()  # type: ignore
 
 

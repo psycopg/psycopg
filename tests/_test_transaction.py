@@ -37,14 +37,14 @@ def inserted(conn):
     sql = "SELECT * FROM test_table"
     if isinstance(conn, psycopg.Connection):
         rows = conn.cursor().execute(sql).fetchall()
-        return set(v for (v,) in rows)
+        return {v for (v,) in rows}
     else:
 
         async def f():
             cur = conn.cursor()
             await cur.execute(sql)
             rows = await cur.fetchall()
-            return set(v for (v,) in rows)
+            return {v for (v,) in rows}
 
         return f()
 

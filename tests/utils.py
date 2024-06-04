@@ -85,7 +85,7 @@ class VersionCheck:
         self.postgres_rule = postgres_rule
 
     @classmethod
-    def parse(cls, spec: str, *, postgres_rule: bool = False) -> "VersionCheck":
+    def parse(cls, spec: str, *, postgres_rule: bool = False) -> VersionCheck:
         # Parse a spec like "> 9.6", "skip < 21.2.0"
         m = re.match(
             r"""(?ix)
