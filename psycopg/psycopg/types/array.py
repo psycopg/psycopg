@@ -63,7 +63,7 @@ class BaseListDumper(RecursiveDumper):
             # More than one type in the list. It might be still good, as long
             # as they dump with the same oid (e.g. IPv4Network, IPv6Network).
             dumpers = [self._tx.get_dumper(item, format) for item in types.values()]
-            oids = set(d.oid for d in dumpers)
+            oids = {d.oid for d in dumpers}
             if len(oids) == 1:
                 t, v = types.popitem()
             else:
