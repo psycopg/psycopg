@@ -84,7 +84,7 @@ class Bumper:
 
     @cached_property
     def current_version(self) -> Version:
-        versions = set(self._parse_version_from_file(f) for f in self.package.ini_files)
+        versions = {self._parse_version_from_file(f) for f in self.package.ini_files}
         if len(versions) > 1:
             raise ValueError(
                 f"inconsistent versions ({', '.join(map(str, sorted(versions)))})"
