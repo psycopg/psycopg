@@ -278,7 +278,7 @@ class BaseConnection(Generic[Row]):
         return self._adapters
 
     @property
-    def connection(self) -> "BaseConnection[Row]":
+    def connection(self) -> BaseConnection[Row]:
         # implement the AdaptContext protocol
         return self
 
@@ -337,7 +337,7 @@ class BaseConnection(Generic[Row]):
 
     @staticmethod
     def _notice_handler(
-        wself: "ReferenceType[BaseConnection[Row]]", res: PGresult
+        wself: ReferenceType[BaseConnection[Row]], res: PGresult
     ) -> None:
         self = wself()
         if not (self and self._notice_handlers):
@@ -370,7 +370,7 @@ class BaseConnection(Generic[Row]):
 
     @staticmethod
     def _notify_handler(
-        wself: "ReferenceType[BaseConnection[Row]]", pgn: pq.PGnotify
+        wself: ReferenceType[BaseConnection[Row]], pgn: pq.PGnotify
     ) -> None:
         self = wself()
         if not (self and self._notify_handlers):

@@ -303,7 +303,7 @@ class BaseRangeDumper(RecursiveDumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: Range[Any], format: PyFormat) -> "BaseRangeDumper":
+    def upgrade(self, obj: Range[Any], format: PyFormat) -> BaseRangeDumper:
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.cls is not Range:
             return self

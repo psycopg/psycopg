@@ -40,7 +40,7 @@ class BasePool:
     _CONNECTIONS_ERRORS = "connections_errors"
     _CONNECTIONS_LOST = "connections_lost"
 
-    _pool: Deque["Any"]
+    _pool: Deque[Any]
 
     def __init__(
         self,

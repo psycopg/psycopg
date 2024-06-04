@@ -204,13 +204,13 @@ class TimedeltaDumper(Dumper):
         return self._dump_method(self, obj)
 
     @staticmethod
-    def _dump_any(self: "TimedeltaDumper", obj: timedelta) -> bytes:
+    def _dump_any(self: TimedeltaDumper, obj: timedelta) -> bytes:
         # The comma is parsed ok by PostgreSQL but it's not documented
         # and it seems brittle to rely on it. CRDB doesn't consume it well.
         return str(obj).encode().replace(b",", b"")
 
     @staticmethod
-    def _dump_sql(self: "TimedeltaDumper", obj: timedelta) -> bytes:
+    def _dump_sql(self: TimedeltaDumper, obj: timedelta) -> bytes:
         # sql_standard format needs explicit signs
         # otherwise -1 day 1 sec will mean -1 sec
         return b"%+d day %+d second %+d microsecond" % (
@@ -509,7 +509,7 @@ class TimestamptzLoader(Loader):
         return self._load_method(self, data)
 
     @staticmethod
-    def _load_iso(self: "TimestamptzLoader", data: Buffer) -> datetime:
+    def _load_iso(self: TimestamptzLoader, data: Buffer) -> datetime:
         m = self._re_format.match(data)
         if not m:
             raise _get_timestamp_load_error(self.connection, data) from None
@@ -556,7 +556,7 @@ class TimestamptzLoader(Loader):
         raise _get_timestamp_load_error(self.connection, data, ex) from None
 
     @staticmethod
-    def _load_notimpl(self: "TimestamptzLoader", data: Buffer) -> datetime:
+    def _load_notimpl(self: TimestamptzLoader, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
         ds = _get_datestyle(self.connection).decode("ascii")
         raise NotImplementedError(
@@ -623,7 +623,7 @@ class IntervalLoader(Loader):
         return self._load_method(self, data)
 
     @staticmethod
-    def _load_postgres(self: "IntervalLoader", data: Buffer) -> timedelta:
+    def _load_postgres(self: IntervalLoader, data: Buffer) -> timedelta:
         m = self._re_interval.match(data)
         if not m:
             s = bytes(data).decode("utf8", "replace")
@@ -652,7 +652,7 @@ class IntervalLoader(Loader):
             raise DataError(f"can't parse interval {s!r}: {e}") from None
 
     @staticmethod
-    def _load_notimpl(self: "IntervalLoader", data: Buffer) -> timedelta:
+    def _load_notimpl(self: IntervalLoader, data: Buffer) -> timedelta:
         s = bytes(data).decode("utf8", "replace")
         ints = _get_intervalstyle(self.connection).decode("utf8", "replace")
         raise NotImplementedError(

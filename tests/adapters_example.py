@@ -31,7 +31,7 @@ class MyStrDumper:
     def get_key(self, obj: str, format: PyFormat) -> type:
         return self._cls
 
-    def upgrade(self, obj: str, format: PyFormat) -> "MyStrDumper":
+    def upgrade(self, obj: str, format: PyFormat) -> MyStrDumper:
         return self
 
 

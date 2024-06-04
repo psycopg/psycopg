@@ -128,7 +128,7 @@ class ListDumper(BaseListDumper):
         sd = self._tx.get_dumper(item, format)
         return (self.cls, sd.get_key(item, format))
 
-    def upgrade(self, obj: list[Any], format: PyFormat) -> "BaseListDumper":
+    def upgrade(self, obj: list[Any], format: PyFormat) -> BaseListDumper:
         # If we have an oid we don't need to upgrade
         if self.oid:
             return self
@@ -232,7 +232,7 @@ class ListBinaryDumper(BaseListDumper):
         sd = self._tx.get_dumper(item, format)
         return (self.cls, sd.get_key(item, format))
 
-    def upgrade(self, obj: list[Any], format: PyFormat) -> "BaseListDumper":
+    def upgrade(self, obj: list[Any], format: PyFormat) -> BaseListDumper:
         # If we have an oid we don't need to upgrade
         if self.oid:
             return self

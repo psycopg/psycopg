@@ -44,7 +44,7 @@ class _CrdbConnectionMixin:
         return self._adapters
 
     @property
-    def info(self) -> "CrdbConnectionInfo":
+    def info(self) -> CrdbConnectionInfo:
         return CrdbConnectionInfo(self.pgconn)
 
     def _check_tpc(self) -> None:

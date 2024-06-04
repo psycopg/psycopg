@@ -100,7 +100,7 @@ class Transformer(AdaptContext):
         self._encoding = ""
 
     @classmethod
-    def from_context(cls, context: AdaptContext | None) -> "Transformer":
+    def from_context(cls, context: AdaptContext | None) -> Transformer:
         """
         Return a Transformer from an AdaptContext.
 

@@ -63,7 +63,7 @@ WHERE t.oid = {regtype}
 """
         ).format(regtype=cls._to_regtype(conn))
 
-    def _added(self, registry: "TypesRegistry") -> None:
+    def _added(self, registry: TypesRegistry) -> None:
         # Map multiranges ranges and subtypes to info
         registry._registry[MultirangeInfo, self.range_oid] = self
         registry._registry[MultirangeInfo, self.subtype_oid] = self
@@ -95,9 +95,9 @@ class Multirange(MutableSequence[Range[T]]):
     def __getitem__(self, index: int) -> Range[T]: ...
 
     @overload
-    def __getitem__(self, index: slice) -> "Multirange[T]": ...
+    def __getitem__(self, index: slice) -> Multirange[T]: ...
 
-    def __getitem__(self, index: int | slice) -> "Range[T] | Multirange[T]":
+    def __getitem__(self, index: int | slice) -> Range[T] | Multirange[T]:
         if isinstance(index, int):
             return self._ranges[index]
         else:
@@ -199,7 +199,7 @@ class BaseMultirangeDumper(RecursiveDumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: Multirange[Any], format: PyFormat) -> "BaseMultirangeDumper":
+    def upgrade(self, obj: Multirange[Any], format: PyFormat) -> BaseMultirangeDumper:
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.cls is not Multirange:
             return self

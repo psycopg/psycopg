@@ -31,7 +31,7 @@ class Xid:
     database: str | None = None
 
     @classmethod
-    def from_string(cls, s: str) -> "Xid":
+    def from_string(cls, s: str) -> Xid:
         """Try to parse an XA triple from the string.
 
         This may fail for several reasons. In such case return an unparsed Xid.
@@ -51,7 +51,7 @@ class Xid:
         return (self.format_id, self.gtrid, self.bqual)[index]
 
     @classmethod
-    def _parse_string(cls, s: str) -> "Xid":
+    def _parse_string(cls, s: str) -> Xid:
         m = _re_xid.match(s)
         if not m:
             raise ValueError("bad Xid format")
@@ -62,7 +62,7 @@ class Xid:
         return cls.from_parts(format_id, gtrid, bqual)
 
     @classmethod
-    def from_parts(cls, format_id: int | None, gtrid: str, bqual: str | None) -> "Xid":
+    def from_parts(cls, format_id: int | None, gtrid: str, bqual: str | None) -> Xid:
         if format_id is not None:
             if bqual is None:
                 raise TypeError("if format_id is specified, bqual must be too")
@@ -107,7 +107,7 @@ class Xid:
     @classmethod
     def _from_record(
         cls, gid: str, prepared: dt.datetime, owner: str, database: str
-    ) -> "Xid":
+    ) -> Xid:
         xid = Xid.from_string(gid)
         return replace(xid, prepared=prepared, owner=owner, database=database)
 
