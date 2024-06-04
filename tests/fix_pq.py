@@ -92,7 +92,7 @@ def trace(libpq):
 
 class Tracer:
     def trace(self, conn):
-        pgconn: "pq.abc.PGconn"
+        pgconn: pq.abc.PGconn
 
         if hasattr(conn, "exec_"):
             pgconn = conn
@@ -105,7 +105,7 @@ class Tracer:
 
 
 class TraceLog:
-    def __init__(self, pgconn: "pq.abc.PGconn"):
+    def __init__(self, pgconn: pq.abc.PGconn):
         self.pgconn = pgconn
         self.tempfile = TemporaryFile(buffering=0)
         pgconn.trace(self.tempfile.fileno())
@@ -116,13 +116,12 @@ class TraceLog:
             self.pgconn.untrace()
         self.tempfile.close()
 
-    def __iter__(self) -> "Iterator[TraceEntry]":
+    def __iter__(self) -> Iterator[TraceEntry]:
         self.tempfile.seek(0)
         data = self.tempfile.read()
-        for entry in self._parse_entries(data):
-            yield entry
+        yield from self._parse_entries(data)
 
-    def _parse_entries(self, data: bytes) -> "Iterator[TraceEntry]":
+    def _parse_entries(self, data: bytes) -> Iterator[TraceEntry]:
         for line in data.splitlines():
             direction, length, type, *content = line.split(b"\t")
             yield TraceEntry(

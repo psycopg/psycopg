@@ -107,7 +107,7 @@ class Dumper(abc.Dumper, ABC):
         """
         return self.cls
 
-    def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
+    def upgrade(self, obj: Any, format: PyFormat) -> Dumper:
         """
         Implementation of the `~psycopg.abc.Dumper.upgrade()` member of the
         `~psycopg.abc.Dumper` protocol. Look at its definition for details.

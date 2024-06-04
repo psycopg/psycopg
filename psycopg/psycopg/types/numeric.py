@@ -386,11 +386,11 @@ class _MixedNumericDumper(Dumper, ABC):
                 _MixedNumericDumper.int_classes = int
 
     @abstractmethod
-    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None: ...
+    def dump(self, obj: Decimal | int | numpy.integer[Any]) -> Buffer | None: ...
 
 
 class NumericDumper(_MixedNumericDumper):
-    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None:
+    def dump(self, obj: Decimal | int | numpy.integer[Any]) -> Buffer | None:
         if isinstance(obj, self.int_classes):
             return str(obj).encode()
         elif isinstance(obj, Decimal):
@@ -404,7 +404,7 @@ class NumericDumper(_MixedNumericDumper):
 class NumericBinaryDumper(_MixedNumericDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Decimal | int | "numpy.integer[Any]") -> Buffer | None:
+    def dump(self, obj: Decimal | int | numpy.integer[Any]) -> Buffer | None:
         if type(obj) is int:
             return dump_int_to_numeric_binary(obj)
         elif isinstance(obj, Decimal):

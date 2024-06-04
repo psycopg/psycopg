@@ -292,7 +292,7 @@ class Error(Exception):
         return self._info if _is_pgresult(self._info) else None
 
     @property
-    def diag(self) -> "Diagnostic":
+    def diag(self) -> Diagnostic:
         """
         A `Diagnostic` object to inspect details of the errors from the database.
         """

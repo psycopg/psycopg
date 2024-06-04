@@ -185,7 +185,7 @@ class Rfc2782Resolver:
         return self._get_solved_entries(hp, ans)
 
     def _get_solved_entries(
-        self, hp: HostPort, entries: "Sequence[SRV]"
+        self, hp: HostPort, entries: Sequence[SRV]
     ) -> list[HostPort]:
         if not entries:
             # No SRV entry found. Delegate the libpq a QNAME=target lookup
@@ -216,13 +216,13 @@ class Rfc2782Resolver:
         out["port"] = ",".join(str(hp.port) for hp in hps)
         return out
 
-    def sort_rfc2782(self, ans: "Sequence[SRV]") -> "list[SRV]":
+    def sort_rfc2782(self, ans: Sequence[SRV]) -> list[SRV]:
         """
         Implement the priority/weight ordering defined in RFC 2782.
         """
         # Divide the entries by priority:
-        priorities: DefaultDict[int, "list[SRV]"] = defaultdict(list)
-        out: "list[SRV]" = []
+        priorities: DefaultDict[int, list[SRV]] = defaultdict(list)
+        out: list[SRV] = []
         for entry in ans:
             priorities[entry.priority].append(entry)
 

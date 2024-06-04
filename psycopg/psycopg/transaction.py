@@ -40,7 +40,7 @@ class Rollback(Exception):
 
     __module__ = "psycopg"
 
-    def __init__(self, transaction: "Transaction" | "AsyncTransaction" | None = None):
+    def __init__(self, transaction: Transaction | AsyncTransaction | None = None):
         self.transaction = transaction
 
     def __repr__(self) -> str:
