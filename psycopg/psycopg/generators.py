@@ -20,9 +20,10 @@ generator should probably yield the same value again in order to wait more.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from time import monotonic
-from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
@@ -120,7 +121,7 @@ def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[Non
             raise e.InternalError(f"unexpected poll status: {status}")
 
 
-def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _execute(pgconn: PGconn) -> PQGen[list[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -163,7 +164,7 @@ def _send(pgconn: PGconn) -> PQGen[None]:
             pgconn.consume_input()
 
 
-def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -173,7 +174,7 @@ def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    results: List[PGresult] = []
+    results: list[PGresult] = []
     while True:
         res = yield from _fetch(pgconn)
         if not res:
@@ -195,7 +196,7 @@ def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     return results
 
 
-def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
+def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
     """
     Generator retrieving a single result from the database without blocking.
 
@@ -226,7 +227,7 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
 
 def _pipeline_communicate(
     pgconn: PGconn, commands: Deque[PipelineCommand]
-) -> PQGen[List[List[PGresult]]]:
+) -> PQGen[list[list[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
@@ -244,7 +245,7 @@ def _pipeline_communicate(
             pgconn.consume_input()
             _consume_notifies(pgconn)
 
-            res: List[PGresult] = []
+            res: list[PGresult] = []
             while not pgconn.is_busy():
                 r = pgconn.get_result()
                 if r is None:
@@ -288,7 +289,7 @@ def _consume_notifies(pgconn: PGconn) -> None:
             pgconn.notify_handler(n)
 
 
-def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
+def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
     yield WAIT_R
     pgconn.consume_input()
 
@@ -303,7 +304,7 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
-def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
+def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
     while True:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:
@@ -361,7 +362,7 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
                 break
 
 
-def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
+def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
         while True:

@@ -4,10 +4,12 @@ SQL composition utility module
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
+from typing import Any, Iterator, Iterable, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -17,7 +19,7 @@ from ._encodings import conn_encoding
 from ._transformer import Transformer
 
 
-def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
+def quote(obj: Any, context: AdaptContext | None = None) -> str:
     """
     Adapt a Python object to a quoted SQL string.
 
@@ -55,7 +57,7 @@ class Composable(ABC):
         return f"{self.__class__.__name__}({self._obj!r})"
 
     @abstractmethod
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         """
         Return the value of the object as bytes.
 
@@ -69,7 +71,7 @@ class Composable(ABC):
         """
         raise NotImplementedError
 
-    def as_string(self, context: Optional[AdaptContext] = None) -> str:
+    def as_string(self, context: AdaptContext | None = None) -> str:
         """
         Return the value of the object as string.
 
@@ -124,13 +126,13 @@ class Composed(Composable):
     instance).
     """
 
-    _obj: List[Composable]
+    _obj: list[Composable]
 
     def __init__(self, seq: Sequence[Any]):
         seq = [obj if isinstance(obj, Composable) else Literal(obj) for obj in seq]
         super().__init__(seq)
 
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         return b"".join(obj.as_bytes(context) for obj in self._obj)
 
     def __iter__(self) -> Iterator[Composable]:
@@ -144,7 +146,7 @@ class Composed(Composable):
         else:
             return NotImplemented
 
-    def join(self, joiner: Union["SQL", LiteralString]) -> "Composed":
+    def join(self, joiner: "SQL" | LiteralString) -> "Composed":
         """
         Return a new `!Composed` interposing the `!joiner` with the `!Composed` items.
 
@@ -200,10 +202,10 @@ class SQL(Composable):
         if not isinstance(obj, str):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
 
-    def as_string(self, context: Optional[AdaptContext] = None) -> str:
+    def as_string(self, context: AdaptContext | None = None) -> str:
         return self._obj
 
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self._obj.encode(enc)
@@ -243,8 +245,8 @@ class SQL(Composable):
             SELECT * FROM "people" WHERE name = 'O''Rourke'
 
         """
-        rv: List[Composable] = []
-        autonum: Optional[int] = 0
+        rv: list[Composable] = []
+        autonum: int | None = 0
         # TODO: this is probably not the right way to whitelist pre
         # pyre complains. Will wait for mypy to complain too to fix.
         pre: LiteralString
@@ -362,7 +364,7 @@ class Identifier(Composable):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
 
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         conn = context.connection if context else None
         if conn:
             esc = Escaping(conn.pgconn)
@@ -400,7 +402,7 @@ class Literal(Composable):
 
     """
 
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         tx = Transformer.from_context(context)
         return tx.as_literal(self._obj)
 
@@ -433,7 +435,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: Union[str, PyFormat] = PyFormat.AUTO):
+    def __init__(self, name: str = "", format: str | PyFormat = PyFormat.AUTO):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")
@@ -459,11 +461,11 @@ class Placeholder(Composable):
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
-    def as_string(self, context: Optional[AdaptContext] = None) -> str:
+    def as_string(self, context: AdaptContext | None = None) -> str:
         code = self._format.value
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
-    def as_bytes(self, context: Optional[AdaptContext] = None) -> bytes:
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self.as_string(context).encode(enc)

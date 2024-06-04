@@ -4,9 +4,10 @@ Support for multirange types adaptation.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 from decimal import Decimal
-from typing import Any, Generic, List, Iterable, MutableSequence
-from typing import Optional, Type, Union, overload, TYPE_CHECKING
+from typing import Any, Generic, Iterable, MutableSequence, overload, TYPE_CHECKING
 from datetime import date, datetime
 
 from .. import sql
@@ -46,7 +47,7 @@ class MultirangeInfo(TypeInfo):
         self.subtype_oid = subtype_oid
 
     @classmethod
-    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> Query:
         if conn.info.server_version < 140000:
             raise e.NotSupportedError(
                 "multirange types are only available from PostgreSQL 14"
@@ -75,7 +76,7 @@ class Multirange(MutableSequence[Range[T]]):
     """
 
     def __init__(self, items: Iterable[Range[T]] = ()):
-        self._ranges: List[Range[T]] = list(map(self._check_type, items))
+        self._ranges: list[Range[T]] = list(map(self._check_type, items))
 
     def _check_type(self, item: Any) -> Range[Any]:
         if not isinstance(item, Range):
@@ -96,7 +97,7 @@ class Multirange(MutableSequence[Range[T]]):
     @overload
     def __getitem__(self, index: slice) -> "Multirange[T]": ...
 
-    def __getitem__(self, index: Union[int, slice]) -> "Union[Range[T],Multirange[T]]":
+    def __getitem__(self, index: int | slice) -> "Range[T] | Multirange[T]":
         if isinstance(index, int):
             return self._ranges[index]
         else:
@@ -112,9 +113,7 @@ class Multirange(MutableSequence[Range[T]]):
     def __setitem__(self, index: slice, value: Iterable[Range[T]]) -> None: ...
 
     def __setitem__(
-        self,
-        index: Union[int, slice],
-        value: Union[Range[T], Iterable[Range[T]]],
+        self, index: int | slice, value: Range[T] | Iterable[Range[T]]
     ) -> None:
         if isinstance(index, int):
             self._check_type(value)
@@ -125,7 +124,7 @@ class Multirange(MutableSequence[Range[T]]):
             value = map(self._check_type, value)
             self._ranges[index] = value
 
-    def __delitem__(self, index: Union[int, slice]) -> None:
+    def __delitem__(self, index: int | slice) -> None:
         del self._ranges[index]
 
     def insert(self, index: int, value: Range[T]) -> None:
@@ -183,9 +182,9 @@ class TimestamptzMultirange(Multirange[datetime]):
 
 
 class BaseMultirangeDumper(RecursiveDumper):
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
-        self.sub_dumper: Optional[Dumper] = None
+        self.sub_dumper: Dumper | None = None
         self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(self, obj: Multirange[Any], format: PyFormat) -> DumperKey:
@@ -256,7 +255,7 @@ class MultirangeDumper(BaseMultirangeDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Multirange[Any]) -> Buffer | None:
         if not obj:
             return b"{}"
 
@@ -266,7 +265,7 @@ class MultirangeDumper(BaseMultirangeDumper):
         else:
             dump = fail_dump
 
-        out: List[Buffer] = [b"{"]
+        out: list[Buffer] = [b"{"]
         for r in obj:
             out.append(dump_range_text(r, dump))
             out.append(b",")
@@ -277,14 +276,14 @@ class MultirangeDumper(BaseMultirangeDumper):
 class MultirangeBinaryDumper(BaseMultirangeDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
+    def dump(self, obj: Multirange[Any]) -> Buffer | None:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
 
-        out: List[Buffer] = [pack_len(len(obj))]
+        out: list[Buffer] = [pack_len(len(obj))]
         for r in obj:
             data = dump_range_binary(r, dump)
             out.append(pack_len(len(data)))
@@ -295,7 +294,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
 class BaseMultirangeLoader(RecursiveLoader, Generic[T]):
     subtype_oid: int
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._load = self._tx.get_loader(self.subtype_oid, format=self.format).load
 
@@ -366,7 +365,7 @@ class MultirangeBinaryLoader(BaseMultirangeLoader[T]):
 
 
 def register_multirange(
-    info: MultirangeInfo, context: Optional[AdaptContext] = None
+    info: MultirangeInfo, context: AdaptContext | None = None
 ) -> None:
     """Register the adapters to load and dump a multirange type.
 
@@ -395,7 +394,7 @@ def register_multirange(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseMultirangeLoader[Any]]
+    loader: type[BaseMultirangeLoader[Any]]
     loader = _make_loader(info.name, info.subtype_oid)
     adapters.register_loader(info.oid, loader)
 
@@ -409,12 +408,12 @@ def register_multirange(
 
 
 @cache
-def _make_loader(name: str, oid: int) -> Type[MultirangeLoader[Any]]:
+def _make_loader(name: str, oid: int) -> type[MultirangeLoader[Any]]:
     return type(f"{name.title()}Loader", (MultirangeLoader,), {"subtype_oid": oid})
 
 
 @cache
-def _make_binary_loader(name: str, oid: int) -> Type[MultirangeBinaryLoader[Any]]:
+def _make_binary_loader(name: str, oid: int) -> type[MultirangeBinaryLoader[Any]]:
     return type(
         f"{name.title()}BinaryLoader", (MultirangeBinaryLoader,), {"subtype_oid": oid}
     )

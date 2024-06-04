@@ -4,10 +4,11 @@ psycopg two-phase commit support
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import datetime as dt
 from base64 import b64encode, b64decode
-from typing import Optional, Union
 from dataclasses import dataclass, replace
 
 _re_xid = re.compile(r"^(\d+)_([^_]*)_([^_]*)$")
@@ -22,12 +23,12 @@ class Xid:
 
     """
 
-    format_id: Optional[int]
+    format_id: int | None
     gtrid: str
-    bqual: Optional[str]
-    prepared: Optional[dt.datetime] = None
-    owner: Optional[str] = None
-    database: Optional[str] = None
+    bqual: str | None
+    prepared: dt.datetime | None = None
+    owner: str | None = None
+    database: str | None = None
 
     @classmethod
     def from_string(cls, s: str) -> "Xid":
@@ -46,7 +47,7 @@ class Xid:
     def __len__(self) -> int:
         return 3
 
-    def __getitem__(self, index: int) -> Union[int, str, None]:
+    def __getitem__(self, index: int) -> int | str | None:
         return (self.format_id, self.gtrid, self.bqual)[index]
 
     @classmethod
@@ -61,9 +62,7 @@ class Xid:
         return cls.from_parts(format_id, gtrid, bqual)
 
     @classmethod
-    def from_parts(
-        cls, format_id: Optional[int], gtrid: str, bqual: Optional[str]
-    ) -> "Xid":
+    def from_parts(cls, format_id: int | None, gtrid: str, bqual: str | None) -> "Xid":
         if format_id is not None:
             if bqual is None:
                 raise TypeError("if format_id is specified, bqual must be too")

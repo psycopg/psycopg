@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 from packaging.version import parse as ver  # noqa: F401  # used in skipif
@@ -408,7 +410,7 @@ async def test_bad_resize(dsn, min_size, max_size):
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
 async def test_max_lifetime(dsn):
-    pids: List[int] = []
+    pids: list[int] = []
 
     async def worker():
         async with p.connection() as conn:

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import re
 import sys
 import operator
-from typing import Callable, Optional, Tuple
+from typing import Callable
 from contextlib import contextmanager
 
 
@@ -70,8 +72,8 @@ class VersionCheck:
         self,
         *,
         skip: bool = False,
-        op: Optional[str] = None,
-        version_tuple: Tuple[int, ...] = (),
+        op: str | None = None,
+        version_tuple: tuple[int, ...] = (),
         whose: str = "(wanted)",
         postgres_rule: bool = False,
     ):
@@ -105,10 +107,10 @@ class VersionCheck:
             skip=skip, op=op, version_tuple=version_tuple, postgres_rule=postgres_rule
         )
 
-    def get_skip_message(self, version: Optional[int]) -> Optional[str]:
+    def get_skip_message(self, version: int | None) -> str | None:
         got_tuple = self._parse_int_version(version)
 
-        msg: Optional[str] = None
+        msg: str | None = None
         if self.skip:
             if got_tuple:
                 if not self.version_tuple:
@@ -134,7 +136,7 @@ class VersionCheck:
 
     _OP_NAMES = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq", "!=": "ne"}
 
-    def _match_version(self, got_tuple: Tuple[int, ...]) -> bool:
+    def _match_version(self, got_tuple: tuple[int, ...]) -> bool:
         if not self.version_tuple:
             return True
 
@@ -143,11 +145,11 @@ class VersionCheck:
             assert len(version_tuple) <= 2
             version_tuple = version_tuple[:1] + (0,) + version_tuple[1:]
 
-        op: Callable[[Tuple[int, ...], Tuple[int, ...]], bool]
+        op: Callable[[tuple[int, ...], tuple[int, ...]], bool]
         op = getattr(operator, self._OP_NAMES[self.op])
         return op(got_tuple, version_tuple)
 
-    def _parse_int_version(self, version: Optional[int]) -> Tuple[int, ...]:
+    def _parse_int_version(self, version: int | None) -> tuple[int, ...]:
         if version is None:
             return ()
         version, ver_fix = divmod(version, 100)

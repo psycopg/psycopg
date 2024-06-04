@@ -8,12 +8,14 @@ handled by execute() calls when pgconn socket is read-ready, which
 happens when the output buffer is full.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Iterator, Optional, Sequence, Tuple
+from typing import Any, Iterator, Sequence
 
 from psycopg import AsyncConnection, Connection
 from psycopg import pq, waiting
@@ -36,7 +38,7 @@ class LoggingPGconn:
         self._logger = logger
 
         def log_notice(result: pq.abc.PGresult) -> None:
-            def get_field(field: DiagnosticField) -> Optional[str]:
+            def get_field(field: DiagnosticField) -> str | None:
                 value = result.error_field(field)
                 return value.decode("utf-8", "replace") if value else None
 
@@ -68,9 +70,9 @@ class LoggingPGconn:
     def send_query_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
-        param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes | None] | None,
+        param_types: Sequence[int] | None = None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> None:
         self._pgconn.send_query_params(
@@ -81,8 +83,8 @@ class LoggingPGconn:
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[int]] = None,
+        param_values: Sequence[bytes | None] | None,
+        param_formats: Sequence[int] | None = None,
         result_format: int = Format.TEXT,
     ) -> None:
         self._pgconn.send_query_prepared(
@@ -94,12 +96,12 @@ class LoggingPGconn:
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[Sequence[int]] = None,
+        param_types: Sequence[int] | None = None,
     ) -> None:
         self._pgconn.send_prepare(name, command, param_types)
         self._logger.info("prepare %s as '%s'", command.decode(), name.decode())
 
-    def get_result(self) -> Optional[pq.abc.PGresult]:
+    def get_result(self) -> pq.abc.PGresult | None:
         r = self._pgconn.get_result()
         if r is not None:
             self._logger.info("got %s result", pq.ExecStatus(r.status).name)
@@ -109,7 +111,7 @@ class LoggingPGconn:
 @contextmanager
 def prepare_pipeline_demo_pq(
     pgconn: LoggingPGconn, rows_to_send: int, logger: logging.Logger
-) -> Iterator[Tuple[Deque[PipelineCommand], Deque[str]]]:
+) -> Iterator[tuple[Deque[PipelineCommand], Deque[str]]]:
     """Set up pipeline demo with initial queries and yield commands and
     results queue for pipeline_communicate().
     """

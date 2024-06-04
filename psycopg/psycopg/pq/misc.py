@@ -4,12 +4,14 @@ Various functionalities to make easier to work with the libpq.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import os
 import sys
 import logging
 import ctypes.util
-from typing import cast, NamedTuple, Optional, Union
+from typing import cast, NamedTuple
 
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
@@ -29,9 +31,9 @@ class PGnotify(NamedTuple):
 
 class ConninfoOption(NamedTuple):
     keyword: bytes
-    envvar: Optional[bytes]
-    compiled: Optional[bytes]
-    val: Optional[bytes]
+    envvar: bytes | None
+    compiled: bytes | None
+    val: bytes | None
     label: bytes
     dispchar: bytes
     dispsize: int
@@ -48,7 +50,7 @@ class PGresAttDesc(NamedTuple):
 
 
 @cache
-def find_libpq_full_path() -> Optional[str]:
+def find_libpq_full_path() -> str | None:
     if sys.platform == "win32":
         libname = ctypes.util.find_library("libpq.dll")
 
@@ -74,7 +76,7 @@ def find_libpq_full_path() -> Optional[str]:
     return libname
 
 
-def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
+def error_message(obj: PGconn | PGresult, encoding: str = "utf8") -> str:
     """
     Return an error message from a `PGconn` or `PGresult`.
 

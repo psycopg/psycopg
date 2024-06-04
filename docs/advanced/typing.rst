@@ -36,7 +36,7 @@ annotations such as `!Connection[Any]` and `!Cursor[Any]`.
 
    cur = conn.cursor()      # type is psycopg.Cursor[tuple[Any, ...]]
 
-   rec = cur.fetchone()     # type is Optional[tuple[Any, ...]]
+   rec = cur.fetchone()     # type is tuple[Any, ...] | None
 
    recs = cur.fetchall()    # type is List[tuple[Any, ...]]
 
@@ -63,7 +63,7 @@ cursors and annotate the returned objects accordingly. See
    # dcur type is psycopg.Cursor[dict[str, Any]] in both cases
 
    drec = dcur.fetchone()
-   # drec type is Optional[dict[str, Any]]
+   # drec type is dict[str, Any] | None
 
 
 .. _pool-generic:
@@ -97,7 +97,7 @@ otherwise the typing system and the runtime will not agree.
             # reveal_type(conn): Connection[dict[str, Any]]
 
             row = conn.execute("SELECT now()").fetchone()
-            # reveal_type(row): Optional[dict[str, Any]]
+            # reveal_type(row): dict[str, Any] | None
 
             print(row)  # {"now": datetime.datetime(...)}
 
@@ -118,7 +118,7 @@ type is not parametric) then it's not necessary to specify `!kwargs`:
             # reveal_type(conn): MyConnection
 
             row = conn.execute("SELECT now()").fetchone()
-            # reveal_type(row): Optional[dict[str, Any]]
+            # reveal_type(row): dict[str, Any] | None
 
             print(row)  # {"now": datetime.datetime(...)}
 

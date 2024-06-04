@@ -1,11 +1,12 @@
 """
-Dict to hstore adaptation
+dict to hstore adaptation
 """
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import re
-from typing import Dict, List, Optional, Type
 
 from .. import errors as e
 from .. import postgres
@@ -35,15 +36,15 @@ _re_hstore = re.compile(
 )
 
 
-Hstore: TypeAlias = Dict[str, Optional[str]]
+Hstore: TypeAlias = "dict[str, str | None]"
 
 
 class BaseHstoreDumper(RecursiveDumper):
-    def dump(self, obj: Hstore) -> Optional[Buffer]:
+    def dump(self, obj: Hstore) -> Buffer | None:
         if not obj:
             return b""
 
-        tokens: List[str] = []
+        tokens: list[str] = []
 
         def add_token(s: str) -> None:
             tokens.append('"')
@@ -96,7 +97,7 @@ class HstoreLoader(RecursiveLoader):
         return rv
 
 
-def register_hstore(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
+def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None:
     """Register the adapters to load and dump hstore.
 
     :param info: The object with the information about the hstore type.
@@ -132,7 +133,7 @@ def register_hstore(info: TypeInfo, context: Optional[AdaptContext] = None) -> N
 
 
 @cache
-def _make_hstore_dumper(oid_in: int) -> Type[BaseHstoreDumper]:
+def _make_hstore_dumper(oid_in: int) -> type[BaseHstoreDumper]:
     """
     Return an hstore dumper class configured using `oid_in`.
 

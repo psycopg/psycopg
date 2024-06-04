@@ -30,15 +30,13 @@ Suggested usage::
 
 import inspect
 import logging
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable
 from functools import wraps
 from .._compat import Self, TypeVar
 
+from . import abc
 from . import PGconn
 from .misc import connection_summary
-
-if TYPE_CHECKING:
-    from . import abc
 
 Func = TypeVar("Func", bound=Callable[..., Any])
 
@@ -48,9 +46,9 @@ logger = logging.getLogger("psycopg.debug")
 class PGconnDebug:
     """Wrapper for a PQconn logging all its access."""
 
-    _pgconn: "abc.PGconn"
+    _pgconn: abc.PGconn
 
-    def __init__(self, pgconn: "abc.PGconn"):
+    def __init__(self, pgconn: abc.PGconn):
         super().__setattr__("_pgconn", pgconn)
 
     def __repr__(self) -> str:

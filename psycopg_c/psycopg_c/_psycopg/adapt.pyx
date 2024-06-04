@@ -35,7 +35,7 @@ cdef class CDumper:
 
     oid = oids.INVALID_OID
 
-    def __cinit__(self, cls, context: Optional[AdaptContext] = None):
+    def __cinit__(self, cls, context: AdaptContext | None = None):
         self.cls = cls
         conn = context.connection if context is not None else None
         self._pgconn = conn.pgconn if conn is not None else None
@@ -58,7 +58,7 @@ cdef class CDumper:
         """
         raise NotImplementedError()
 
-    def dump(self, obj) -> Optional[Buffer]:
+    def dump(self, obj) -> Buffer | None:
         """Return the Postgres representation of *obj* as Python array of bytes"""
         cdef rv = PyByteArray_FromStringAndSize("", 0)
         cdef Py_ssize_t length = self.cdump(obj, rv, 0)
@@ -148,7 +148,7 @@ cdef class CLoader:
     cdef public libpq.Oid oid
     cdef pq.PGconn _pgconn
 
-    def __cinit__(self, libpq.Oid oid, context: Optional[AdaptContext] = None):
+    def __cinit__(self, libpq.Oid oid, context: AdaptContext | None = None):
         self.oid = oid
         conn = context.connection if context is not None else None
         self._pgconn = conn.pgconn if conn is not None else None
@@ -167,5 +167,5 @@ cdef class _CRecursiveLoader(CLoader):
 
     cdef Transformer _tx
 
-    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
         self._tx = Transformer.from_context(context)

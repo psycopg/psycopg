@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import datetime as dt
 from types import ModuleType
-from typing import Any, List, Optional
+from typing import Any
 
 import pytest
 
@@ -322,7 +324,7 @@ def test_list_dumper(conn, fmt_out):
     assert dempty.oid == 0
     assert dempty.dump([]) == b"{}"
 
-    L: List[List[Any]] = []
+    L: list[list[Any]] = []
     L.append(L)
     with pytest.raises(psycopg.DataError):
         assert t.get_dumper(L, fmt_in)
@@ -521,12 +523,12 @@ class MyStr(str):
 
 
 class StrNoneDumper(StrDumper):
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         return super().dump(obj) if obj else None
 
 
 class StrNoneBinaryDumper(StrBinaryDumper):
-    def dump(self, obj: str) -> Optional[Buffer]:
+    def dump(self, obj: str) -> Buffer | None:
         return super().dump(obj) if obj else None
 
 

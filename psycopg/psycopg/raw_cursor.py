@@ -4,8 +4,9 @@ psycopg raw queries cursors
 
 # Copyright (C) 2023 The Psycopg Team
 
-from typing import Optional, TYPE_CHECKING
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from .abc import ConnectionType, Query, Params
 from .sql import Composable
 from .rows import Row
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class PostgresRawQuery(PostgresQuery):
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
+    def convert(self, query: Query, vars: Params | None) -> None:
         if isinstance(query, str):
             bquery = query.encode(self._encoding)
         elif isinstance(query, Composable):
@@ -34,7 +35,7 @@ class PostgresRawQuery(PostgresQuery):
         self._want_formats = self._order = None
         self.dump(vars)
 
-    def dump(self, vars: Optional[Params]) -> None:
+    def dump(self, vars: Params | None) -> None:
         if vars is not None:
             if not PostgresQuery.is_params_sequence(vars):
                 raise TypeError("raw queries require a sequence of parameters")

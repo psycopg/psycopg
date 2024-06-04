@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import selectors
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -71,7 +73,7 @@ def pytest_sessionstart(session):
     cache.set("segfault", True)
 
 
-asyncio_options: Dict[str, Any] = {}
+asyncio_options: dict[str, Any] = {}
 if sys.platform == "win32":
     asyncio_options["loop_factory"] = (
         asyncio.WindowsSelectorEventLoopPolicy().new_event_loop
@@ -89,7 +91,7 @@ def anyio_backend(request):
     return backend, options
 
 
-allow_fail_messages: List[str] = []
+allow_fail_messages: list[str] = []
 
 
 def pytest_sessionfinish(session, exitstatus):

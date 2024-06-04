@@ -7,14 +7,16 @@ otherwise it only relies on the c files to have been precompiled.
 
 # Copyright (C) 2023 The Psycopg Team
 
+from __future__ import annotations
+
 import os
-from typing import Any, List
+from typing import Any
 
 import tomli
 from setuptools import build_meta
 
 
-def get_requires_for_build_wheel(config_settings: Any = None) -> List[str]:
+def get_requires_for_build_wheel(config_settings: Any = None) -> list[str]:
     if not os.path.exists("psycopg_c/_psycopg.pyx"):
         # Cython files don't exist: we must be in a sdist and we can trust
         # that the .c files we have packaged exist.
@@ -26,7 +28,7 @@ def get_requires_for_build_wheel(config_settings: Any = None) -> List[str]:
     with open("pyproject.toml", "rb") as f:
         pyprj = tomli.load(f)
 
-    rv: List[str] = pyprj["cython-backend"]["cython-requires"]
+    rv: list[str] = pyprj["cython-backend"]["cython-requires"]
     return rv
 
 

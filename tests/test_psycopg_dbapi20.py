@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import pytest
 import datetime as dt
-from typing import Any, Dict
+from typing import Any
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
@@ -18,7 +20,7 @@ def with_dsn(request, session_dsn):
 class PsycopgTests(dbapi20.DatabaseAPI20Test):
     driver = psycopg
     # connect_args = () # set by the fixture
-    connect_kw_args: Dict[Any, Any] = {}
+    connect_kw_args: dict[Any, Any] = {}
 
     def test_nextset(self):
         # tested elsewhere

@@ -4,10 +4,12 @@ Adapters for date/time types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import struct
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Any, Callable, cast, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, cast, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
@@ -22,12 +24,12 @@ if TYPE_CHECKING:
 
 _struct_timetz = struct.Struct("!qi")  # microseconds, sec tz offset
 _pack_timetz = cast(Callable[[int, int], bytes], _struct_timetz.pack)
-_unpack_timetz = cast(Callable[[Buffer], Tuple[int, int]], _struct_timetz.unpack)
+_unpack_timetz = cast(Callable[[Buffer], "tuple[int, int]"], _struct_timetz.unpack)
 
 _struct_interval = struct.Struct("!qii")  # microseconds, days, months
 _pack_interval = cast(Callable[[int, int, int], bytes], _struct_interval.pack)
 _unpack_interval = cast(
-    Callable[[Buffer], Tuple[int, int, int]], _struct_interval.unpack
+    Callable[[Buffer], "tuple[int, int, int]"], _struct_interval.unpack
 )
 
 utc = timezone.utc
@@ -40,7 +42,7 @@ _py_date_min_days = date.min.toordinal()
 class DateDumper(Dumper):
     oid = _oids.DATE_OID
 
-    def dump(self, obj: date) -> Optional[Buffer]:
+    def dump(self, obj: date) -> Buffer | None:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode()
@@ -50,7 +52,7 @@ class DateBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.DATE_OID
 
-    def dump(self, obj: date) -> Optional[Buffer]:
+    def dump(self, obj: date) -> Buffer | None:
         days = obj.toordinal() - _pg_date_epoch_days
         return pack_int4(days)
 
@@ -77,7 +79,7 @@ class _BaseTimeDumper(Dumper):
 
 
 class _BaseTimeTextDumper(_BaseTimeDumper):
-    def dump(self, obj: time) -> Optional[Buffer]:
+    def dump(self, obj: time) -> Buffer | None:
         return str(obj).encode()
 
 
@@ -94,7 +96,7 @@ class TimeDumper(_BaseTimeTextDumper):
 class TimeTzDumper(_BaseTimeTextDumper):
     oid = _oids.TIMETZ_OID
 
-    def dump(self, obj: time) -> Optional[Buffer]:
+    def dump(self, obj: time) -> Buffer | None:
         self._get_offset(obj)
         return super().dump(obj)
 
@@ -103,7 +105,7 @@ class TimeBinaryDumper(_BaseTimeDumper):
     format = Format.BINARY
     oid = _oids.TIME_OID
 
-    def dump(self, obj: time) -> Optional[Buffer]:
+    def dump(self, obj: time) -> Buffer | None:
         us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
@@ -120,7 +122,7 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
     format = Format.BINARY
     oid = _oids.TIMETZ_OID
 
-    def dump(self, obj: time) -> Optional[Buffer]:
+    def dump(self, obj: time) -> Buffer | None:
         us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
@@ -142,7 +144,7 @@ class _BaseDatetimeDumper(Dumper):
 
 
 class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
-    def dump(self, obj: datetime) -> Optional[Buffer]:
+    def dump(self, obj: datetime) -> Buffer | None:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode()
@@ -166,7 +168,7 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
     format = Format.BINARY
     oid = _oids.TIMESTAMPTZ_OID
 
-    def dump(self, obj: datetime) -> Optional[Buffer]:
+    def dump(self, obj: datetime) -> Buffer | None:
         delta = obj - _pg_datetimetz_epoch
         micros = delta.microseconds + 1_000_000 * (86_400 * delta.days + delta.seconds)
         return pack_int8(micros)
@@ -182,7 +184,7 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
     format = Format.BINARY
     oid = _oids.TIMESTAMP_OID
 
-    def dump(self, obj: datetime) -> Optional[Buffer]:
+    def dump(self, obj: datetime) -> Buffer | None:
         delta = obj - _pg_datetime_epoch
         micros = delta.microseconds + 1_000_000 * (86_400 * delta.days + delta.seconds)
         return pack_int8(micros)
@@ -191,14 +193,14 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 class TimedeltaDumper(Dumper):
     oid = _oids.INTERVAL_OID
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         if _get_intervalstyle(self.connection) == b"sql_standard":
             self._dump_method = self._dump_sql
         else:
             self._dump_method = self._dump_any
 
-    def dump(self, obj: timedelta) -> Optional[Buffer]:
+    def dump(self, obj: timedelta) -> Buffer | None:
         return self._dump_method(self, obj)
 
     @staticmethod
@@ -222,7 +224,7 @@ class TimedeltaBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.INTERVAL_OID
 
-    def dump(self, obj: timedelta) -> Optional[Buffer]:
+    def dump(self, obj: timedelta) -> Buffer | None:
         micros = 1_000_000 * obj.seconds + obj.microseconds
         return _pack_interval(micros, obj.days, 0)
 
@@ -232,7 +234,7 @@ class DateLoader(Loader):
     _ORDER_DMY = 1
     _ORDER_MDY = 2
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         ds = _get_datestyle(self.connection)
         if ds.startswith(b"I"):  # ISO
@@ -411,7 +413,7 @@ class TimestampLoader(Loader):
     _ORDER_PGDM = 3
     _ORDER_PGMD = 4
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
 
         ds = _get_datestyle(self.connection)
@@ -493,7 +495,7 @@ class TimestamptzLoader(Loader):
         """
     )
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._timezone = get_tzinfo(self.connection.pgconn if self.connection else None)
 
@@ -565,7 +567,7 @@ class TimestamptzLoader(Loader):
 class TimestamptzBinaryLoader(Loader):
     format = Format.BINARY
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._timezone = get_tzinfo(self.connection.pgconn if self.connection else None)
 
@@ -610,7 +612,7 @@ class IntervalLoader(Loader):
         re.VERBOSE,
     )
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         if _get_intervalstyle(self.connection) == b"postgres":
             self._load_method = self._load_postgres
@@ -676,7 +678,7 @@ class IntervalBinaryLoader(Loader):
             raise DataError(f"can't parse interval: {e}") from None
 
 
-def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
+def _get_datestyle(conn: BaseConnection[Any] | None) -> bytes:
     if conn:
         ds = conn.pgconn.parameter_status(b"DateStyle")
         if ds:
@@ -685,7 +687,7 @@ def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
     return b"ISO, DMY"
 
 
-def _get_intervalstyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
+def _get_intervalstyle(conn: BaseConnection[Any] | None) -> bytes:
     if conn:
         ints = conn.pgconn.parameter_status(b"IntervalStyle")
         if ints:
@@ -695,7 +697,7 @@ def _get_intervalstyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
 
 
 def _get_timestamp_load_error(
-    conn: Optional["BaseConnection[Any]"], data: Buffer, ex: Optional[Exception] = None
+    conn: BaseConnection[Any] | None, data: Buffer, ex: Exception | None = None
 ) -> Exception:
     s = bytes(data).decode("utf8", "replace")
 

@@ -4,7 +4,9 @@ psycopg client-side binding cursors
 
 # Copyright (C) 2022 The Psycopg Team
 
-from typing import Optional, Tuple, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
@@ -31,7 +33,7 @@ BINARY = pq.Format.BINARY
 class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
     _query_cls = PostgresClientQuery
 
-    def mogrify(self, query: Query, params: Optional[Params] = None) -> str:
+    def mogrify(self, query: Query, params: Params | None = None) -> str:
         """
         Return the query and parameters merged.
 
@@ -48,7 +50,7 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         query: PostgresQuery,
         *,
         force_extended: bool = False,
-        binary: Optional[bool] = None,
+        binary: bool | None = None,
     ) -> None:
         if binary is None:
             fmt = self.format
@@ -76,8 +78,8 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
             self._pgconn.send_query(query.query)
 
     def _get_prepared(
-        self, pgq: PostgresQuery, prepare: Optional[bool] = None
-    ) -> Tuple[Prepare, bytes]:
+        self, pgq: PostgresQuery, prepare: bool | None = None
+    ) -> tuple[Prepare, bytes]:
         return (Prepare.NO, b"")
 
 

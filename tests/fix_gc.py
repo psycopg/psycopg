@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import gc
 import sys
-from typing import Tuple
 
 import pytest
 
@@ -18,7 +19,7 @@ def pytest_configure(config):
     )
 
 
-NO_COUNT_TYPES: Tuple[type, ...] = ()
+NO_COUNT_TYPES: tuple[type, ...] = ()
 
 if sys.version_info[:2] == (3, 10):
     # On my laptop there are occasional creations of a single one of these objects

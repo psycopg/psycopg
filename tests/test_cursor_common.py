@@ -7,7 +7,7 @@ Tests common to psycopg.Cursor and its subclasses.
 
 import weakref
 import datetime as dt
-from typing import Any, List
+from typing import Any
 from packaging.version import parse as ver
 
 import pytest
@@ -484,7 +484,7 @@ def test_rownumber(conn):
     assert cur.rownumber == 2
     cur.fetchmany(10)
     assert cur.rownumber == 12
-    rns: List[int] = []
+    rns: list[int] = []
     for i in cur:
         assert cur.rownumber
         rns.append(cur.rownumber)

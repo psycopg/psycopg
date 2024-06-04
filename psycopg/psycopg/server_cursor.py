@@ -4,8 +4,9 @@ psycopg server-side cursor objects.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, AsyncIterator, List, Iterable, Iterator
-from typing import Optional, TYPE_CHECKING, overload
+from __future__ import annotations
+
+from typing import Any, AsyncIterator, Iterable, Iterator, TYPE_CHECKING, overload
 from warnings import warn
 
 from . import pq
@@ -43,7 +44,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     def __init__(
         self,
         name: str,
-        scrollable: Optional[bool],
+        scrollable: bool | None,
         withhold: bool,
     ):
         self._name = name
@@ -65,7 +66,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return self._name
 
     @property
-    def scrollable(self) -> Optional[bool]:
+    def scrollable(self) -> bool | None:
         """
         Whether the cursor is scrollable or not.
 
@@ -82,7 +83,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return self._withhold
 
     @property
-    def rownumber(self) -> Optional[int]:
+    def rownumber(self) -> int | None:
         """Index of the next row to fetch in the current result.
 
         `!None` if there is no result to fetch.
@@ -97,8 +98,8 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     def _declare_gen(
         self,
         query: Query,
-        params: Optional[Params] = None,
-        binary: Optional[bool] = None,
+        params: Params | None = None,
+        binary: bool | None = None,
     ) -> PQGen[None]:
         """Generator implementing `ServerCursor.execute()`."""
 
@@ -159,7 +160,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         query = sql.SQL("CLOSE {}").format(sql.Identifier(self._name))
         yield from self._conn._exec_command(query)
 
-    def _fetch_gen(self, num: Optional[int]) -> PQGen[List[Row]]:
+    def _fetch_gen(self, num: int | None) -> PQGen[list[Row]]:
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
         # If we are stealing the cursor, make sure we know its shape
@@ -217,31 +218,31 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     @overload
     def __init__(
         self,
-        connection: "Connection[Row]",
+        connection: Connection[Row],
         name: str,
         *,
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ): ...
 
     @overload
     def __init__(
         self,
-        connection: "Connection[Any]",
+        connection: Connection[Any],
         name: str,
         *,
         row_factory: RowFactory[Row],
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ): ...
 
     def __init__(
         self,
-        connection: "Connection[Any]",
+        connection: Connection[Any],
         name: str,
         *,
-        row_factory: Optional[RowFactory[Row]] = None,
-        scrollable: Optional[bool] = None,
+        row_factory: RowFactory[Row] | None = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ):
         Cursor.__init__(
@@ -271,9 +272,9 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     def execute(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        binary: Optional[bool] = None,
+        binary: bool | None = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -304,7 +305,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         """Method not implemented for server-side cursors."""
         raise e.NotSupportedError("executemany not supported on server-side cursors")
 
-    def fetchone(self) -> Optional[Row]:
+    def fetchone(self) -> Row | None:
         with self._conn.lock:
             recs = self._conn.wait(self._fetch_gen(1))
         if recs:
@@ -313,7 +314,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         else:
             return None
 
-    def fetchmany(self, size: int = 0) -> List[Row]:
+    def fetchmany(self, size: int = 0) -> list[Row]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
@@ -321,7 +322,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         self._pos += len(recs)
         return recs
 
-    def fetchall(self) -> List[Row]:
+    def fetchall(self) -> list[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._fetch_gen(None))
         self._pos += len(recs)
@@ -356,31 +357,31 @@ class AsyncServerCursor(
     @overload
     def __init__(
         self,
-        connection: "AsyncConnection[Row]",
+        connection: AsyncConnection[Row],
         name: str,
         *,
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ): ...
 
     @overload
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         name: str,
         *,
         row_factory: AsyncRowFactory[Row],
-        scrollable: Optional[bool] = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ): ...
 
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         name: str,
         *,
-        row_factory: Optional[AsyncRowFactory[Row]] = None,
-        scrollable: Optional[bool] = None,
+        row_factory: AsyncRowFactory[Row] | None = None,
+        scrollable: bool | None = None,
         withhold: bool = False,
     ):
         AsyncCursor.__init__(
@@ -407,9 +408,9 @@ class AsyncServerCursor(
     async def execute(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        binary: Optional[bool] = None,
+        binary: bool | None = None,
         **kwargs: Any,
     ) -> Self:
         if kwargs:
@@ -436,7 +437,7 @@ class AsyncServerCursor(
     ) -> None:
         raise e.NotSupportedError("executemany not supported on server-side cursors")
 
-    async def fetchone(self) -> Optional[Row]:
+    async def fetchone(self) -> Row | None:
         async with self._conn.lock:
             recs = await self._conn.wait(self._fetch_gen(1))
         if recs:
@@ -445,7 +446,7 @@ class AsyncServerCursor(
         else:
             return None
 
-    async def fetchmany(self, size: int = 0) -> List[Row]:
+    async def fetchmany(self, size: int = 0) -> list[Row]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
@@ -453,7 +454,7 @@ class AsyncServerCursor(
         self._pos += len(recs)
         return recs
 
-    async def fetchall(self) -> List[Row]:
+    async def fetchall(self) -> list[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._fetch_gen(None))
         self._pos += len(recs)

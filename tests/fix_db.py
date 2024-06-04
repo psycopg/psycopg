@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import io
 import os
 import sys
 import pytest
 import logging
 from contextlib import contextmanager
-from typing import Optional
 
 import psycopg
 from psycopg import pq
@@ -17,7 +18,7 @@ from .utils import check_postgres_version
 
 # Set by warm_up_database() the first time the dsn fixture is used
 pg_version: int
-crdb_version: Optional[int]
+crdb_version: int | None
 
 
 def pytest_addoption(parser):

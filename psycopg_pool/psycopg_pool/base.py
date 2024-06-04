@@ -4,9 +4,11 @@ psycopg connection pool base class and functionalities.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 from time import monotonic
 from random import random
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from psycopg import errors as e
 
@@ -44,10 +46,10 @@ class BasePool:
         self,
         conninfo: str = "",
         *,
-        kwargs: Optional[Dict[str, Any]],
+        kwargs: dict[str, Any] | None,
         min_size: int,
-        max_size: Optional[int],
-        name: Optional[str],
+        max_size: int | None,
+        name: str | None,
         timeout: float,
         max_waiting: int,
         max_lifetime: float,
@@ -65,7 +67,7 @@ class BasePool:
             raise ValueError("num_workers must be at least 1")
 
         self.conninfo = conninfo
-        self.kwargs: Dict[str, Any] = kwargs or {}
+        self.kwargs: dict[str, Any] = kwargs or {}
         self.name = name
         self._min_size = min_size
         self._max_size = max_size
@@ -116,7 +118,7 @@ class BasePool:
         """`!True` if the pool is closed."""
         return self._closed
 
-    def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
+    def _check_size(self, min_size: int, max_size: int | None) -> tuple[int, int]:
         if max_size is None:
             max_size = min_size
 
@@ -142,7 +144,7 @@ class BasePool:
             else:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
-    def _check_pool_putconn(self, conn: "BaseConnection[Any]") -> None:
+    def _check_pool_putconn(self, conn: BaseConnection[Any]) -> None:
         pool = getattr(conn, "_pool", None)
         if pool is self:
             return
@@ -155,7 +157,7 @@ class BasePool:
             f"can't return connection to pool {self.name!r}, {msg}: {conn}"
         )
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """
         Return current stats about the pool usage.
         """
@@ -163,7 +165,7 @@ class BasePool:
         rv.update(self._get_measures())
         return rv
 
-    def pop_stats(self) -> Dict[str, int]:
+    def pop_stats(self) -> dict[str, int]:
         """
         Return current stats about the pool usage.
 
@@ -174,7 +176,7 @@ class BasePool:
         rv.update(self._get_measures())
         return rv
 
-    def _get_measures(self) -> Dict[str, int]:
+    def _get_measures(self) -> dict[str, int]:
         """
         Return immediate measures of the pool (not counters).
         """
@@ -192,7 +194,7 @@ class BasePool:
         """
         return value * (1.0 + ((max_pc - min_pc) * random()) + min_pc)
 
-    def _set_connection_expiry_date(self, conn: "BaseConnection[Any]") -> None:
+    def _set_connection_expiry_date(self, conn: BaseConnection[Any]) -> None:
         """Set an expiry date on a connection.
 
         Add some randomness to avoid mass reconnection.

@@ -8,13 +8,13 @@ These functions are designed to consume the generators returned by the
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
 
 import os
 import sys
 import select
 import logging
 import selectors
-from typing import Optional
 from asyncio import get_event_loop, wait_for, Event, TimeoutError
 from selectors import DefaultSelector
 
@@ -34,7 +34,7 @@ READY_RW = Ready.RW
 logger = logging.getLogger(__name__)
 
 
-def wait_selector(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
+def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
     """
     Wait for a generator using the best strategy available.
 
@@ -68,7 +68,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: Optional[float] = None)
         return rv
 
 
-def wait_conn(gen: PQGenConn[RV], interval: Optional[float] = None) -> RV:
+def wait_conn(gen: PQGenConn[RV], interval: float | None = None) -> RV:
     """
     Wait for a connection generator using the best strategy available.
 
@@ -103,9 +103,7 @@ def wait_conn(gen: PQGenConn[RV], interval: Optional[float] = None) -> RV:
         return rv
 
 
-async def wait_async(
-    gen: PQGen[RV], fileno: int, interval: Optional[float] = None
-) -> RV:
+async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -166,7 +164,7 @@ async def wait_async(
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV], interval: Optional[float] = None) -> RV:
+async def wait_conn_async(gen: PQGenConn[RV], interval: float | None = None) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
@@ -227,7 +225,7 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: Optional[float] = None) 
 # Specialised implementation of wait functions.
 
 
-def wait_select(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
+def wait_select(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
     """
     Wait for a generator using select where supported.
 
@@ -272,7 +270,7 @@ else:
     _epoll_evmasks = {}
 
 
-def wait_epoll(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
+def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
     """
     Wait for a generator using epoll where supported.
 
@@ -327,7 +325,7 @@ else:
     _poll_evmasks = {}
 
 
-def wait_poll(gen: PQGen[RV], fileno: int, interval: Optional[float] = None) -> RV:
+def wait_poll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
     """
     Wait for a generator using poll where supported.
 

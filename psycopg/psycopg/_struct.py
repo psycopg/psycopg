@@ -4,21 +4,23 @@ Utility functions to deal with binary structs.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import struct
-from typing import Callable, cast, Optional, Protocol, Tuple
+from typing import Callable, cast, Protocol
 
 from . import errors as e
 from .abc import Buffer
 from ._compat import TypeAlias
 
 PackInt: TypeAlias = Callable[[int], bytes]
-UnpackInt: TypeAlias = Callable[[Buffer], Tuple[int]]
+UnpackInt: TypeAlias = Callable[[Buffer], "tuple[int]"]
 PackFloat: TypeAlias = Callable[[float], bytes]
-UnpackFloat: TypeAlias = Callable[[Buffer], Tuple[float]]
+UnpackFloat: TypeAlias = Callable[[Buffer], "tuple[float]"]
 
 
 class UnpackLen(Protocol):
-    def __call__(self, data: Buffer, start: Optional[int]) -> Tuple[int]: ...
+    def __call__(self, data: Buffer, start: int | None) -> tuple[int]: ...
 
 
 pack_int2 = cast(PackInt, struct.Struct("!h").pack)

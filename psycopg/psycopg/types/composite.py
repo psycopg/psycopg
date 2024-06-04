@@ -4,11 +4,13 @@ Support for composite types adaptation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, cast, Dict, Iterator, List, Optional
-from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import Any, Callable, cast, Iterator
+from typing import NamedTuple, Sequence, TYPE_CHECKING
 
 from .. import pq
 from .. import abc
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
-    Callable[[abc.Buffer, int], Tuple[int, int]], _struct_oidlen.unpack_from
+    Callable[[abc.Buffer, int], "tuple[int, int]"], _struct_oidlen.unpack_from
 )
 
 
@@ -48,10 +50,10 @@ class CompositeInfo(TypeInfo):
         self.field_names = field_names
         self.field_types = field_types
         # Will be set by register() if the `factory` is a type
-        self.python_type: Optional[type] = None
+        self.python_type: type | None = None
 
     @classmethod
-    def _get_info_query(cls, conn: "BaseConnection[Any]") -> abc.Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> abc.Query:
         return sql.SQL(
             """\
 SELECT
@@ -88,7 +90,7 @@ class SequenceDumper(RecursiveDumper):
         if not obj:
             return start + end
 
-        parts: List[abc.Buffer] = [start]
+        parts: list[abc.Buffer] = [start]
 
         for item in obj:
             if item is None:
@@ -119,7 +121,7 @@ class TupleDumper(SequenceDumper):
     # Should be this, but it doesn't work
     # oid = _oids.RECORD_OID
 
-    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
+    def dump(self, obj: tuple[Any, ...]) -> Buffer | None:
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
@@ -127,9 +129,9 @@ class TupleBinaryDumper(Dumper):
     format = pq.Format.BINARY
 
     # Subclasses must set this info
-    _field_types: Tuple[int, ...]
+    _field_types: tuple[int, ...]
 
-    def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
 
         # Note: this class is not a RecursiveDumper because it would use the
@@ -142,7 +144,7 @@ class TupleBinaryDumper(Dumper):
         nfields = len(self._field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
-    def dump(self, obj: Tuple[Any, ...]) -> Optional[Buffer]:
+    def dump(self, obj: tuple[Any, ...]) -> Buffer | None:
         out = bytearray(pack_len(len(obj)))
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
@@ -158,11 +160,11 @@ class TupleBinaryDumper(Dumper):
 
 
 class BaseCompositeLoader(Loader):
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
-    def _parse_record(self, data: abc.Buffer) -> Iterator[Optional[bytes]]:
+    def _parse_record(self, data: abc.Buffer) -> Iterator[bytes | None]:
         """
         Split a non-empty representation of a composite type into components.
 
@@ -194,7 +196,7 @@ class BaseCompositeLoader(Loader):
 
 
 class RecordLoader(BaseCompositeLoader):
-    def load(self, data: abc.Buffer) -> Tuple[Any, ...]:
+    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         if data == b"()":
             return ()
 
@@ -208,16 +210,16 @@ class RecordLoader(BaseCompositeLoader):
 class RecordBinaryLoader(Loader):
     format = pq.Format.BINARY
 
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self._ctx = context
         # Cache a transformer for each sequence of oid found.
         # Usually there will be only one, but if there is more than one
         # row in the same query (in different columns, or even in different
         # records), oids might differ and we'd need separate transformers.
-        self._txs: Dict[Tuple[int, ...], abc.Transformer] = {}
+        self._txs: dict[tuple[int, ...], abc.Transformer] = {}
 
-    def load(self, data: abc.Buffer) -> Tuple[Any, ...]:
+    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         nfields = unpack_len(data, 0)[0]
         offset = 4
         oids = []
@@ -242,7 +244,7 @@ class RecordBinaryLoader(Loader):
 
 class CompositeLoader(RecordLoader):
     factory: Callable[..., Any]
-    fields_types: List[int]
+    fields_types: list[int]
     _types_set = False
 
     def load(self, data: abc.Buffer) -> Any:
@@ -272,8 +274,8 @@ class CompositeBinaryLoader(RecordBinaryLoader):
 
 def register_composite(
     info: CompositeInfo,
-    context: Optional[abc.AdaptContext] = None,
-    factory: Optional[Callable[..., Any]] = None,
+    context: abc.AdaptContext | None = None,
+    factory: Callable[..., Any] | None = None,
 ) -> None:
     """Register the adapters to load and dump a composite type.
 
@@ -305,7 +307,7 @@ def register_composite(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseCompositeLoader]
+    loader: type[BaseCompositeLoader]
     loader = _make_loader(info.name, tuple(info.field_types), factory)
     adapters.register_loader(info.oid, loader)
 
@@ -315,7 +317,7 @@ def register_composite(
 
     # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
-        dumper: Type[Dumper]
+        dumper: type[Dumper]
         dumper = _make_binary_dumper(info.name, info.oid, tuple(info.field_types))
         adapters.register_dumper(factory, dumper)
 
@@ -333,7 +335,7 @@ def register_default_adapters(context: abc.AdaptContext) -> None:
     adapters.register_loader("record", RecordBinaryLoader)
 
 
-def _nt_from_info(info: CompositeInfo) -> Type[NamedTuple]:
+def _nt_from_info(info: CompositeInfo) -> type[NamedTuple]:
     name = _as_python_identifier(info.name)
     fields = tuple(_as_python_identifier(n) for n in info.field_names)
     return _make_nt(name, fields)
@@ -344,14 +346,14 @@ def _nt_from_info(info: CompositeInfo) -> Type[NamedTuple]:
 
 
 @cache
-def _make_nt(name: str, fields: Tuple[str, ...]) -> Type[NamedTuple]:
+def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
     return namedtuple(name, fields)  # type: ignore[return-value]
 
 
 @cache
 def _make_loader(
-    name: str, types: Tuple[int, ...], factory: Callable[..., Any]
-) -> Type[BaseCompositeLoader]:
+    name: str, types: tuple[int, ...], factory: Callable[..., Any]
+) -> type[BaseCompositeLoader]:
     return type(
         f"{name.title()}Loader",
         (CompositeLoader,),
@@ -362,21 +364,21 @@ def _make_loader(
 @cache
 def _make_binary_loader(
     name: str, factory: Callable[..., Any]
-) -> Type[BaseCompositeLoader]:
+) -> type[BaseCompositeLoader]:
     return type(
         f"{name.title()}BinaryLoader", (CompositeBinaryLoader,), {"factory": factory}
     )
 
 
 @cache
-def _make_dumper(name: str, oid: int) -> Type[TupleDumper]:
+def _make_dumper(name: str, oid: int) -> type[TupleDumper]:
     return type(f"{name.title()}Dumper", (TupleDumper,), {"oid": oid})
 
 
 @cache
 def _make_binary_dumper(
-    name: str, oid: int, field_types: Tuple[int, ...]
-) -> Type[TupleBinaryDumper]:
+    name: str, oid: int, field_types: tuple[int, ...]
+) -> type[TupleBinaryDumper]:
     return type(
         f"{name.title()}BinaryDumper",
         (TupleBinaryDumper,),

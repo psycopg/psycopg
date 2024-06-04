@@ -4,10 +4,12 @@ Transaction context managers returned by Connection.transaction()
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, Optional, Type, Union, TYPE_CHECKING
+from typing import Any, Generic, Iterator, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -17,7 +19,6 @@ from ._compat import Self
 from .pq.misc import connection_summary
 
 if TYPE_CHECKING:
-    from typing import Any
     from .connection import Connection
     from .connection_async import AsyncConnection
 
@@ -39,10 +40,7 @@ class Rollback(Exception):
 
     __module__ = "psycopg"
 
-    def __init__(
-        self,
-        transaction: Union["Transaction", "AsyncTransaction", None] = None,
-    ):
+    def __init__(self, transaction: "Transaction" | "AsyncTransaction" | None = None):
         self.transaction = transaction
 
     def __repr__(self) -> str:
@@ -57,7 +55,7 @@ class BaseTransaction(Generic[ConnectionType]):
     def __init__(
         self,
         connection: ConnectionType,
-        savepoint_name: Optional[str] = None,
+        savepoint_name: str | None = None,
         force_rollback: bool = False,
     ):
         self._conn = connection
@@ -69,7 +67,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self._stack_index = -1
 
     @property
-    def savepoint_name(self) -> Optional[str]:
+    def savepoint_name(self) -> str | None:
         """
         The name of the savepoint; `!None` if handling the main transaction.
         """
@@ -101,9 +99,9 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _exit_gen(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> PQGen[bool]:
         if not exc_val and not self.force_rollback:
             yield from self._commit_gen()
@@ -133,7 +131,7 @@ class BaseTransaction(Generic[ConnectionType]):
         for command in self._get_commit_commands():
             yield from self._conn._exec_command(command)
 
-    def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
+    def _rollback_gen(self, exc_val: BaseException | None) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
             logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
 
@@ -214,7 +212,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self._stack_index = self._conn._num_transactions
         self._conn._num_transactions += 1
 
-    def _pop_savepoint(self, action: str) -> Optional[Exception]:
+    def _pop_savepoint(self, action: str) -> Exception | None:
         """
         Pop the transaction from the connection transactions stack.
 
@@ -237,7 +235,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
     __module__ = "psycopg"
 
     @property
-    def connection(self) -> "Connection[Any]":
+    def connection(self) -> Connection[Any]:
         """The connection the object is managing."""
         return self._conn
 
@@ -248,9 +246,9 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> bool:
         if self.pgconn.status == OK:
             with self._conn.lock:
@@ -267,7 +265,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
     __module__ = "psycopg"
 
     @property
-    def connection(self) -> "AsyncConnection[Any]":
+    def connection(self) -> AsyncConnection[Any]:
         return self._conn
 
     async def __aenter__(self) -> Self:
@@ -277,9 +275,9 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> bool:
         if self.pgconn.status == OK:
             async with self._conn.lock:

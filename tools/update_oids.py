@@ -14,10 +14,11 @@ with a specified version tag, and then query it using:
     %(prog)s "host=localhost port=11111 user=postgres password=password"
 """
 
+from __future__ import annotations
+
 import re
 import argparse
 import subprocess as sp
-from typing import List
 from pathlib import Path
 
 import psycopg
@@ -89,7 +90,7 @@ def update_crdb_python_oids(conn: Connection) -> None:
     sp.check_call(["black", "-q", fn])
 
 
-def get_version_comment(conn: Connection) -> List[str]:
+def get_version_comment(conn: Connection) -> list[str]:
     if conn.info.vendor == "PostgreSQL":
         version = version_pretty(conn.info.server_version)
     elif conn.info.vendor == "CockroachDB":
@@ -100,7 +101,7 @@ def get_version_comment(conn: Connection) -> List[str]:
     return ["", f"    # Generated from {conn.info.vendor} {version}", ""]
 
 
-def get_py_oids(conn: Connection) -> List[str]:
+def get_py_oids(conn: Connection) -> list[str]:
     lines = []
     for typname, oid in conn.execute(
         """
@@ -134,7 +135,7 @@ typemods = {
 }
 
 
-def get_py_types(conn: Connection) -> List[str]:
+def get_py_types(conn: Connection) -> list[str]:
     # Note: "record" is a pseudotype but still a useful one to have.
     # "pg_lsn" is a documented public type and useful in streaming replication
     lines = []
@@ -175,7 +176,7 @@ order by typname
     return lines
 
 
-def get_py_ranges(conn: Connection) -> List[str]:
+def get_py_ranges(conn: Connection) -> list[str]:
     lines = []
     for typname, oid, typarray, rngsubtype in conn.execute(
         """
@@ -195,7 +196,7 @@ order by typname
     return lines
 
 
-def get_py_multiranges(conn: Connection) -> List[str]:
+def get_py_multiranges(conn: Connection) -> list[str]:
     lines = []
     for typname, oid, typarray, rngtypid, rngsubtype in conn.execute(
         """
@@ -218,7 +219,7 @@ order by typname
     return lines
 
 
-def get_cython_oids(conn: Connection) -> List[str]:
+def get_cython_oids(conn: Connection) -> list[str]:
     lines = []
     for typname, oid in conn.execute(
         """
@@ -237,7 +238,7 @@ order by typname
     return lines
 
 
-def update_file(fn: Path, new: List[str]) -> None:
+def update_file(fn: Path, new: list[str]) -> None:
     with fn.open("r") as f:
         lines = f.read().splitlines()
     istart, iend = [

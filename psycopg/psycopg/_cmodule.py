@@ -4,11 +4,11 @@ Simplify access to the _psycopg module
 
 # Copyright (C) 2021 The Psycopg Team
 
-from typing import Optional
+from __future__ import annotations
 
 from . import pq
 
-__version__: Optional[str] = None
+__version__: str | None = None
 
 # Note: "c" must the first attempt so that mypy associates the variable the
 # right module interface. It will not result Optional, but hey.

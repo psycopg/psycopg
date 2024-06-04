@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import sys
 import pickle
-from typing import List
 from weakref import ref
 
 import pytest
@@ -50,7 +51,7 @@ def test_diag_right_attr(pgconn, monkeypatch):
     diag = e.Diagnostic(res)
 
     to_check: pq.DiagnosticField
-    checked: List[pq.DiagnosticField] = []
+    checked: list[pq.DiagnosticField] = []
 
     def check_val(self, v):
         nonlocal to_check

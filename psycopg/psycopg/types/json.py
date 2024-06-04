@@ -4,8 +4,10 @@ Adapters for JSON types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import json
-from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
+from typing import Any, Callable
 
 from .. import abc
 from .. import _oids
@@ -13,14 +15,14 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
-from .._compat import cache
+from .._compat import cache, TypeAlias
 
-JsonDumpsFunction = Callable[[Any], Union[str, bytes]]
-JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
+JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
+JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]
 
 
 def set_json_dumps(
-    dumps: JsonDumpsFunction, context: Optional[abc.AdaptContext] = None
+    dumps: JsonDumpsFunction, context: abc.AdaptContext | None = None
 ) -> None:
     """
     Set the JSON serialisation function to store JSON objects in the database.
@@ -59,7 +61,7 @@ def set_json_dumps(
 
 
 def set_json_loads(
-    loads: JsonLoadsFunction, context: Optional[abc.AdaptContext] = None
+    loads: JsonLoadsFunction, context: abc.AdaptContext | None = None
 ) -> None:
     """
     Set the JSON parsing function to fetch JSON objects from the database.
@@ -96,7 +98,7 @@ def set_json_loads(
 
 
 @cache
-def _make_dumper(base: Type[abc.Dumper], dumps: JsonDumpsFunction) -> Type[abc.Dumper]:
+def _make_dumper(base: type[abc.Dumper], dumps: JsonDumpsFunction) -> type[abc.Dumper]:
     name = base.__name__
     if not name.startswith("Custom"):
         name = f"Custom{name}"
@@ -104,7 +106,7 @@ def _make_dumper(base: Type[abc.Dumper], dumps: JsonDumpsFunction) -> Type[abc.D
 
 
 @cache
-def _make_loader(base: Type[Loader], loads: JsonLoadsFunction) -> Type[Loader]:
+def _make_loader(base: type[Loader], loads: JsonLoadsFunction) -> type[Loader]:
     name = base.__name__
     if not name.startswith("Custom"):
         name = f"Custom{name}"
@@ -114,7 +116,7 @@ def _make_loader(base: Type[Loader], loads: JsonLoadsFunction) -> Type[Loader]:
 class _JsonWrapper:
     __slots__ = ("obj", "dumps")
 
-    def __init__(self, obj: Any, dumps: Optional[JsonDumpsFunction] = None):
+    def __init__(self, obj: Any, dumps: JsonDumpsFunction | None = None):
         self.obj = obj
         self.dumps = dumps
 
@@ -138,11 +140,11 @@ class _JsonDumper(Dumper):
     # set_json_dumps) or by a subclass.
     _dumps: JsonDumpsFunction = json.dumps
 
-    def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
 
-    def dump(self, obj: Any) -> Optional[Buffer]:
+    def dump(self, obj: Any) -> Buffer | None:
         if isinstance(obj, _JsonWrapper):
             dumps = obj.dumps or self.dumps
             obj = obj.obj
@@ -171,7 +173,7 @@ class JsonbBinaryDumper(_JsonDumper):
     format = Format.BINARY
     oid = _oids.JSONB_OID
 
-    def dump(self, obj: Any) -> Optional[Buffer]:
+    def dump(self, obj: Any) -> Buffer | None:
         obj_bytes = super().dump(obj)
         if obj_bytes is not None:
             return b"\x01" + obj_bytes
@@ -184,7 +186,7 @@ class _JsonLoader(Loader):
     # set_json_loads) or by a subclass.
     _loads: JsonLoadsFunction = json.loads
 
-    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self.loads = self.__class__._loads
 
@@ -221,14 +223,14 @@ class JsonbBinaryLoader(_JsonLoader):
 
 def _get_current_dumper(
     adapters: AdaptersMap, cls: type, format: PyFormat
-) -> Type[abc.Dumper]:
+) -> type[abc.Dumper]:
     try:
         return adapters.get_dumper(cls, format)
     except e.ProgrammingError:
         return _default_dumpers[cls, format]
 
 
-_default_dumpers: Dict[Tuple[Type[_JsonWrapper], PyFormat], Type[Dumper]] = {
+_default_dumpers: dict[tuple[type[_JsonWrapper], PyFormat], type[Dumper]] = {
     (Json, PyFormat.BINARY): JsonBinaryDumper,
     (Json, PyFormat.TEXT): JsonDumper,
     (Jsonb, PyFormat.BINARY): JsonbBinaryDumper,

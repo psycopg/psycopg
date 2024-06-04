@@ -4,12 +4,14 @@ libpq access using ctypes
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import sys
 import ctypes
 import ctypes.util
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
-from typing import Any, List, NoReturn, Tuple
+from typing import Any, NoReturn
 
 from .misc import find_libpq_full_path, version_pretty
 from ..errors import NotSupportedError
@@ -56,11 +58,11 @@ Oid = c_uint
 
 
 class PGconn_struct(Structure):
-    _fields_: List[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGresult_struct(Structure):
-    _fields_: List[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PQconninfoOption_struct(Structure):
@@ -84,11 +86,11 @@ class PGnotify_struct(Structure):
 
 
 class PGcancelConn_struct(Structure):
-    _fields_: List[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGcancel_struct(Structure):
-    _fields_: List[Tuple[str, type]] = []
+    _fields_: list[tuple[str, type]] = []
 
 
 class PGresAttDesc_struct(Structure):
@@ -769,7 +771,7 @@ def generate_stub() -> None:
             if narg is not None:
                 return "bytes"
             else:
-                return "Optional[bytes]"
+                return "bytes | None"
 
         elif t.__name__ in (
             "LP_PGconn_struct",
@@ -778,7 +780,7 @@ def generate_stub() -> None:
             "LP_PGcancel_struct",
         ):
             if narg is not None:
-                return f"Optional[{t.__name__[3:]}]"
+                return f"{t.__name__[3:]} | None"
             else:
                 return str(t.__name__[3:])
 

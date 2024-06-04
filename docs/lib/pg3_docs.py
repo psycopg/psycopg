@@ -4,11 +4,12 @@ Customisation for docs generation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import os
 import re
 import logging
 import importlib
-from typing import Dict
 from collections import deque
 
 
@@ -48,7 +49,7 @@ def setup(app):
 
 
 # Classes which may have __module__ overwritten
-recovered_classes: Dict[type, str] = {}
+recovered_classes: dict[type, str] = {}
 
 
 def recover_defined_module(m, skip_modules=()):

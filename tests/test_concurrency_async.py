@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import time
 import signal
@@ -6,7 +8,6 @@ import threading
 import subprocess as sp
 from asyncio import create_task
 from asyncio.queues import Queue
-from typing import List
 
 import pytest
 
@@ -74,7 +75,7 @@ async def test_cancel(aconn):
         with pytest.raises(e.QueryCanceled):
             await cur.execute("select pg_sleep(2)")
 
-    errors: List[Exception] = []
+    errors: list[Exception] = []
     workers = [worker(), canceller(aconn, errors)]
 
     t0 = time.time()
@@ -100,7 +101,7 @@ async def test_cancel_stream(aconn):
             async for row in cur.stream("select pg_sleep(2)"):
                 pass
 
-    errors: List[Exception] = []
+    errors: list[Exception] = []
     workers = [worker(), canceller(aconn, errors)]
 
     t0 = time.time()

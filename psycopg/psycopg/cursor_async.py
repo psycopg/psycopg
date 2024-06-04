@@ -7,8 +7,7 @@ Psycopg AsyncCursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List, Optional, Type
-from typing import TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -42,7 +41,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self,
         connection: AsyncConnection[Any],
         *,
-        row_factory: Optional[AsyncRowFactory[Row]] = None,
+        row_factory: AsyncRowFactory[Row] | None = None,
     ):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
@@ -52,9 +51,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         await self.close()
 
@@ -81,10 +80,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def execute(
         self,
         query: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        prepare: Optional[bool] = None,
-        binary: Optional[bool] = None,
+        prepare: bool | None = None,
+        binary: bool | None = None,
     ) -> Self:
         """
         Execute a query or command to the database.
@@ -133,11 +132,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             raise ex.with_traceback(None)
 
     async def stream(
-        self,
-        query: Query,
-        params: Optional[Params] = None,
-        *,
-        binary: Optional[bool] = None,
+        self, query: Query, params: Params | None = None, *, binary: bool | None = None
     ) -> AsyncIterator[Row]:
         """
         Iterate row-by-row on a result from the database.
@@ -180,13 +175,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     except Exception:
                         pass
 
-    async def fetchone(self) -> Optional[Row]:
+    async def fetchone(self) -> Row | None:
         """
         Return the next record from the current recordset.
 
         Return `!None` the recordset is finished.
 
-        :rtype: Optional[Row], with Row defined by `row_factory`
+        :rtype: Row | None, with Row defined by `row_factory`
         """
         await self._fetch_pipeline()
         self._check_result_for_fetch()
@@ -195,7 +190,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             self._pos += 1
         return record
 
-    async def fetchmany(self, size: int = 0) -> List[Row]:
+    async def fetchmany(self, size: int = 0) -> list[Row]:
         """
         Return the next `!size` records from the current recordset.
 
@@ -217,7 +212,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._pos += len(records)
         return records
 
-    async def fetchall(self) -> List[Row]:
+    async def fetchall(self) -> list[Row]:
         """
         Return all the remaining records from the current recordset.
 
@@ -234,7 +229,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         await self._fetch_pipeline()
         self._check_result_for_fetch()
 
-        def load(pos: int) -> Optional[Row]:
+        def load(pos: int) -> Row | None:
             return self._tx.load_row(pos, self._make_row)
 
         while True:
@@ -262,9 +257,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def copy(
         self,
         statement: Query,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         *,
-        writer: Optional[AsyncWriter] = None,
+        writer: AsyncWriter | None = None,
     ) -> AsyncIterator[AsyncCopy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.

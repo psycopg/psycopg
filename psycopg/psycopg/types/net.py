@@ -4,7 +4,9 @@ Adapters for network types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Callable, Optional, Type, Union, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import Callable, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
@@ -15,20 +17,20 @@ from .._compat import TypeAlias
 if TYPE_CHECKING:
     import ipaddress
 
-Address: TypeAlias = Union["ipaddress.IPv4Address", "ipaddress.IPv6Address"]
-Interface: TypeAlias = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
-Network: TypeAlias = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
+Address: TypeAlias = "ipaddress.IPv4Address | ipaddress.IPv6Address"
+Interface: TypeAlias = "ipaddress.IPv4Interface | ipaddress.IPv6Interface"
+Network: TypeAlias = "ipaddress.IPv4Network | ipaddress.IPv6Network"
 
 # These objects will be imported lazily
 ip_address: Callable[[str], Address] = None  # type: ignore[assignment]
 ip_interface: Callable[[str], Interface] = None  # type: ignore[assignment]
 ip_network: Callable[[str], Network] = None  # type: ignore[assignment]
-IPv4Address: "Type[ipaddress.IPv4Address]" = None  # type: ignore[assignment]
-IPv6Address: "Type[ipaddress.IPv6Address]" = None  # type: ignore[assignment]
-IPv4Interface: "Type[ipaddress.IPv4Interface]" = None  # type: ignore[assignment]
-IPv6Interface: "Type[ipaddress.IPv6Interface]" = None  # type: ignore[assignment]
-IPv4Network: "Type[ipaddress.IPv4Network]" = None  # type: ignore[assignment]
-IPv6Network: "Type[ipaddress.IPv6Network]" = None  # type: ignore[assignment]
+IPv4Address: "type[ipaddress.IPv4Address]" = None  # type: ignore[assignment]
+IPv6Address: "type[ipaddress.IPv6Address]" = None  # type: ignore[assignment]
+IPv4Interface: "type[ipaddress.IPv4Interface]" = None  # type: ignore[assignment]
+IPv6Interface: "type[ipaddress.IPv6Interface]" = None  # type: ignore[assignment]
+IPv4Network: "type[ipaddress.IPv4Network]" = None  # type: ignore[assignment]
+IPv6Network: "type[ipaddress.IPv6Network]" = None  # type: ignore[assignment]
 
 PGSQL_AF_INET = 2
 PGSQL_AF_INET6 = 3
@@ -52,14 +54,14 @@ class _LazyIpaddress:
 class InterfaceDumper(Dumper):
     oid = _oids.INET_OID
 
-    def dump(self, obj: Interface) -> Optional[Buffer]:
+    def dump(self, obj: Interface) -> Buffer | None:
         return str(obj).encode()
 
 
 class NetworkDumper(Dumper):
     oid = _oids.CIDR_OID
 
-    def dump(self, obj: Network) -> Optional[Buffer]:
+    def dump(self, obj: Network) -> Buffer | None:
         return str(obj).encode()
 
 
@@ -69,7 +71,7 @@ class _AIBinaryDumper(Dumper):
 
 
 class AddressBinaryDumper(_AIBinaryDumper):
-    def dump(self, obj: Address) -> Optional[Buffer]:
+    def dump(self, obj: Address) -> Buffer | None:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.max_prefixlen, 0, len(packed)))
@@ -77,7 +79,7 @@ class AddressBinaryDumper(_AIBinaryDumper):
 
 
 class InterfaceBinaryDumper(_AIBinaryDumper):
-    def dump(self, obj: Interface) -> Optional[Buffer]:
+    def dump(self, obj: Interface) -> Buffer | None:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.network.prefixlen, 0, len(packed)))
@@ -90,11 +92,11 @@ class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
     Used when looking up by oid.
     """
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         self._ensure_module()
 
-    def dump(self, obj: Union[Address, Interface]) -> Optional[Buffer]:
+    def dump(self, obj: Address | Interface) -> Buffer | None:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         if isinstance(obj, (IPv4Interface, IPv6Interface)):
@@ -110,7 +112,7 @@ class NetworkBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.CIDR_OID
 
-    def dump(self, obj: Network) -> Optional[Buffer]:
+    def dump(self, obj: Network) -> Buffer | None:
         packed = obj.network_address.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.prefixlen, 1, len(packed)))
@@ -118,13 +120,13 @@ class NetworkBinaryDumper(Dumper):
 
 
 class _LazyIpaddressLoader(Loader, _LazyIpaddress):
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
         self._ensure_module()
 
 
 class InetLoader(_LazyIpaddressLoader):
-    def load(self, data: Buffer) -> Union[Address, Interface]:
+    def load(self, data: Buffer) -> Address | Interface:
         if isinstance(data, memoryview):
             data = bytes(data)
 
@@ -137,7 +139,7 @@ class InetLoader(_LazyIpaddressLoader):
 class InetBinaryLoader(_LazyIpaddressLoader):
     format = Format.BINARY
 
-    def load(self, data: Buffer) -> Union[Address, Interface]:
+    def load(self, data: Buffer) -> Address | Interface:
         if isinstance(data, memoryview):
             data = bytes(data)
 

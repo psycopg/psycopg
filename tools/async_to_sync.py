@@ -349,6 +349,14 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         self.generic_visit(node)
         return node
 
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        match node:
+            case ast.Call(func=ast.Name(id="cast")):
+                node.args[0] = self._convert_if_literal_string(node.args[0])
+
+        self.generic_visit(node)
+        return node
+
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         self._fix_docstring(node.body)
         if node.decorator_list:

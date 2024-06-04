@@ -6,12 +6,12 @@ This module exports the requested implementation to the rest of the package.
 
 # Copyright (C) 2023 The Psycopg Team
 
-from typing import Type
+from __future__ import annotations
 
 from . import abc
 from ._cmodule import _psycopg
 
-Transformer: Type[abc.Transformer]
+Transformer: type[abc.Transformer]
 
 if _psycopg:
     Transformer = _psycopg.Transformer

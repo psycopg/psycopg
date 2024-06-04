@@ -4,9 +4,11 @@ commands pipeline management
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from types import TracebackType
-from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -14,21 +16,21 @@ from .abc import PipelineCommand, PQGen
 from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
-from ._preparing import Key, Prepare
 from .generators import pipeline_communicate, fetch_many, send
 from ._capabilities import capabilities
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
-    from ._cursor_base import BaseCursor
     from .connection import Connection
+    from ._preparing import Key, Prepare  # noqa: F401
+    from ._cursor_base import BaseCursor  # noqa: F401
     from ._connection_base import BaseConnection
     from .connection_async import AsyncConnection
 
 
-PendingResult: TypeAlias = Union[
-    None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
-]
+PendingResult: TypeAlias = (
+    "tuple[BaseCursor[Any, Any], tuple[Key, Prepare, bytes] | None] | None"
+)
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
@@ -43,7 +45,7 @@ class BasePipeline:
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
 
-    def __init__(self, conn: "BaseConnection[Any]") -> None:
+    def __init__(self, conn: BaseConnection[Any]) -> None:
         self._conn = conn
         self.pgconn = conn.pgconn
         self.command_queue = Deque[PipelineCommand]()
@@ -78,7 +80,7 @@ class BasePipeline:
             yield from self._sync_gen()
         self.level += 1
 
-    def _exit(self, exc: Optional[BaseException]) -> None:
+    def _exit(self, exc: BaseException | None) -> None:
         self.level -= 1
         if self.level == 0 and self.pgconn.status != BAD:
             try:
@@ -155,9 +157,7 @@ class BasePipeline:
         if exception is not None:
             raise exception
 
-    def _process_results(
-        self, queued: PendingResult, results: List["PGresult"]
-    ) -> None:
+    def _process_results(self, queued: PendingResult, results: list[PGresult]) -> None:
         """Process a results set fetched from the current pipeline.
 
         This matches 'results' with its respective element in the pipeline
@@ -190,9 +190,9 @@ class Pipeline(BasePipeline):
     """Handler for connection in pipeline mode."""
 
     __module__ = "psycopg"
-    _conn: "Connection[Any]"
+    _conn: Connection[Any]
 
-    def __init__(self, conn: "Connection[Any]") -> None:
+    def __init__(self, conn: Connection[Any]) -> None:
         super().__init__(conn)
 
     def sync(self) -> None:
@@ -212,9 +212,9 @@ class Pipeline(BasePipeline):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         try:
             with self._conn.lock:
@@ -233,9 +233,9 @@ class AsyncPipeline(BasePipeline):
     """Handler for async connection in pipeline mode."""
 
     __module__ = "psycopg"
-    _conn: "AsyncConnection[Any]"
+    _conn: AsyncConnection[Any]
 
-    def __init__(self, conn: "AsyncConnection[Any]") -> None:
+    def __init__(self, conn: AsyncConnection[Any]) -> None:
         super().__init__(conn)
 
     async def sync(self) -> None:
@@ -252,9 +252,9 @@ class AsyncPipeline(BasePipeline):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         try:
             async with self._conn.lock:

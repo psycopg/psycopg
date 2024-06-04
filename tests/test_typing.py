@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 import pytest
@@ -233,15 +235,15 @@ obj = {curs}
     [
         (
             "conn.cursor()",
-            "Optional[Tuple[Any, ...]]",
+            "Tuple[Any, ...] | None",
         ),
         (
             "conn.cursor(row_factory=rows.dict_row)",
-            "Optional[Dict[str, Any]]",
+            "Dict[str, Any] | None",
         ),
         (
             "conn.cursor(row_factory=thing_row)",
-            "Optional[Thing]",
+            "Thing | None",
         ),
     ],
 )
@@ -302,15 +304,15 @@ curs = {curs}
     [
         (
             "conn.cursor()",
-            "List[Tuple[Any, ...]]",
+            "list[Tuple[Any, ...]]",
         ),
         (
             "conn.cursor(row_factory=rows.dict_row)",
-            "List[Dict[str, Any]]",
+            "list[Dict[str, Any]]",
         ),
         (
             "conn.cursor(row_factory=thing_row)",
-            "List[Thing]",
+            "list[Thing]",
         ),
     ],
 )
@@ -371,12 +373,13 @@ class MyCursor(psycopg.{cur_base_class}[Row]):
 
 
 def _test_reveal(stmts, type, mypy):
-    ignore = "" if type.startswith("Optional") else "# type: ignore[assignment]"
+    ignore = "" if type.endswith("| None") else "# type: ignore[assignment]"
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence
-from typing import Tuple, Union
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple
 import psycopg
 from psycopg import rows
 
@@ -385,7 +388,7 @@ class Thing:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: Union[psycopg.Cursor[Any], psycopg.AsyncCursor[Any]],
+    cur: psycopg.Cursor[Any] | psycopg.AsyncCursor[Any],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]

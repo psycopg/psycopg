@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import gc
 from math import prod
-from typing import List, Any
+from typing import Any
 from decimal import Decimal
 
 import pytest
@@ -306,7 +308,7 @@ def test_load_array_no_comma_separator(conn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_nested_array(conn, fmt_out):
     dims = [3, 4, 5, 6]
-    a: List[Any] = list(range(prod(dims)))
+    a: list[Any] = list(range(prod(dims)))
     for dim in dims[-1:0:-1]:
         a = [a[i : i + dim] for i in range(0, len(a), dim)]
 

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import os
 import sys
 import ctypes
-from typing import Iterator, List, NamedTuple
+from typing import Iterator, NamedTuple
 from tempfile import TemporaryFile
 
 import pytest
@@ -138,4 +140,4 @@ class TraceEntry(NamedTuple):
     direction: str
     length: int
     type: str
-    content: List[bytes]
+    content: list[bytes]
