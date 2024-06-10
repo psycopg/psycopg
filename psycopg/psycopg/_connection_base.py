@@ -94,10 +94,6 @@ class BaseConnection(Generic[Row]):
     ProgrammingError = e.ProgrammingError
     NotSupportedError = e.NotSupportedError
 
-    # Enums useful for the connection
-    ConnStatus = pq.ConnStatus
-    TransactionStatus = pq.TransactionStatus
-
     def __init__(self, pgconn: PGconn):
         self.pgconn = pgconn
         self._autocommit = False

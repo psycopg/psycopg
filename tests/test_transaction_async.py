@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from psycopg import Rollback
-from psycopg import errors as e
+from psycopg import pq, errors as e
 
 from ._test_transaction import in_transaction, insert_row, inserted, get_exc_info
 from ._test_transaction import ExpectedException, crdb_skip_external_observer
@@ -117,7 +117,7 @@ async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
             async with conn.transaction():
                 conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
                 status = conn.info.transaction_status
-                assert status == conn.TransactionStatus.ACTIVE
+                assert status == pq.TransactionStatus.ACTIVE
                 1 / 0
 
         assert len(caplog.records) == 1

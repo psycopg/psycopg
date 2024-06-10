@@ -4,8 +4,7 @@
 import pytest
 
 import psycopg
-from psycopg import rows, errors as e
-from psycopg.pq import Format
+from psycopg import pq, rows, errors as e
 
 
 pytestmark = pytest.mark.crdb_skip("server-side cursor")
@@ -73,11 +72,11 @@ def test_description(conn):
 
 def test_format(conn):
     cur = conn.cursor("foo")
-    assert cur.format == Format.TEXT
+    assert cur.format == pq.Format.TEXT
     cur.close()
 
     cur = conn.cursor("foo", binary=True)
-    assert cur.format == Format.BINARY
+    assert cur.format == pq.Format.BINARY
     cur.close()
 
 
@@ -138,7 +137,7 @@ def test_binary_cursor_text_override(conn):
 
 
 def test_close(conn, recwarn):
-    if conn.info.transaction_status == conn.TransactionStatus.INTRANS:
+    if conn.info.transaction_status == pq.TransactionStatus.INTRANS:
         # connection dirty from previous failure
         conn.execute("close foo")
     recwarn.clear()
@@ -225,7 +224,7 @@ def test_close_on_error(conn):
     cur.execute("select 1")
     with pytest.raises(e.ProgrammingError):
         conn.execute("wat")
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
     cur.close()
 
 

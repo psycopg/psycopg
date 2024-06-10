@@ -1,8 +1,7 @@
 import pytest
 
 import psycopg
-from psycopg import rows, errors as e
-from psycopg.pq import Format
+from psycopg import pq, rows, errors as e
 
 from .acompat import alist
 
@@ -76,11 +75,11 @@ async def test_description(aconn):
 
 async def test_format(aconn):
     cur = aconn.cursor("foo")
-    assert cur.format == Format.TEXT
+    assert cur.format == pq.Format.TEXT
     await cur.close()
 
     cur = aconn.cursor("foo", binary=True)
-    assert cur.format == Format.BINARY
+    assert cur.format == pq.Format.BINARY
     await cur.close()
 
 
@@ -141,7 +140,7 @@ async def test_binary_cursor_text_override(aconn):
 
 
 async def test_close(aconn, recwarn):
-    if aconn.info.transaction_status == aconn.TransactionStatus.INTRANS:
+    if aconn.info.transaction_status == pq.TransactionStatus.INTRANS:
         # connection dirty from previous failure
         await aconn.execute("close foo")
     recwarn.clear()
@@ -230,7 +229,7 @@ async def test_close_on_error(aconn):
     await cur.execute("select 1")
     with pytest.raises(e.ProgrammingError):
         await aconn.execute("wat")
-    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == pq.TransactionStatus.INERROR
     await cur.close()
 
 

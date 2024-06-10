@@ -13,7 +13,7 @@ from packaging.version import parse as ver
 import pytest
 
 import psycopg
-from psycopg import sql, rows
+from psycopg import pq, sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
@@ -229,7 +229,7 @@ def test_execute_sequence(conn):
 def test_execute_empty_query(conn, query):
     cur = conn.cursor()
     cur.execute(query)
-    assert cur.pgresult.status == cur.ExecStatus.EMPTY_QUERY
+    assert cur.pgresult.status == pq.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg.ProgrammingError):
         cur.fetchone()
 
@@ -744,7 +744,7 @@ def test_stream_error_tx(conn):
     with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream("wat"):
             pass
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
 
 
 def test_stream_error_notx(conn):
@@ -753,7 +753,7 @@ def test_stream_error_notx(conn):
     with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream("wat"):
             pass
-    assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.info.transaction_status == pq.TransactionStatus.IDLE
 
 
 def test_stream_error_python_to_consume(conn):
@@ -763,8 +763,8 @@ def test_stream_error_python_to_consume(conn):
             for rec in gen:
                 1 / 0
     assert conn.info.transaction_status in (
-        conn.TransactionStatus.INTRANS,
-        conn.TransactionStatus.INERROR,
+        pq.TransactionStatus.INTRANS,
+        pq.TransactionStatus.INERROR,
     )
 
 
@@ -776,7 +776,7 @@ def test_stream_error_python_consumed(conn):
             1 / 0
 
     gen.close()
-    assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.info.transaction_status == pq.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("autocommit", [False, True])

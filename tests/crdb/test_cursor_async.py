@@ -38,7 +38,7 @@ async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
                     ):
                         q.put_nowait(row)
                 except e.QueryCanceled:
-                    assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+                    assert conn.info.transaction_status == pq.TransactionStatus.IDLE
                     q.put_nowait(None)
         except Exception as ex:
             q.put_nowait(ex)

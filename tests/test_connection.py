@@ -26,7 +26,7 @@ from .test_adapt import make_bin_dumper, make_dumper
 def test_connect(conn_cls, dsn):
     conn = conn_cls.connect(dsn)
     assert not conn.closed
-    assert conn.pgconn.status == conn.ConnStatus.OK
+    assert conn.pgconn.status == pq.ConnStatus.OK
     conn.close()
 
 
@@ -42,7 +42,7 @@ def test_connect_str_subclass(conn_cls, dsn):
 
     conn = conn_cls.connect(MyString(dsn))
     assert not conn.closed
-    assert conn.pgconn.status == conn.ConnStatus.OK
+    assert conn.pgconn.status == pq.ConnStatus.OK
     conn.close()
 
 
@@ -100,11 +100,11 @@ def test_close(conn):
     conn.close()
     assert conn.closed
     assert not conn.broken
-    assert conn.pgconn.status == conn.ConnStatus.BAD
+    assert conn.pgconn.status == pq.ConnStatus.BAD
 
     conn.close()
     assert conn.closed
-    assert conn.pgconn.status == conn.ConnStatus.BAD
+    assert conn.pgconn.status == pq.ConnStatus.BAD
 
     with pytest.raises(psycopg.OperationalError):
         cur.execute("select 1")
@@ -240,7 +240,7 @@ def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
             conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
             assert not conn.pgconn.error_message
             status = conn.info.transaction_status
-            assert status == conn.TransactionStatus.ACTIVE
+            assert status == pq.TransactionStatus.ACTIVE
             1 / 0
 
     assert len(caplog.records) == 1
@@ -263,10 +263,10 @@ def test_commit(conn):
     conn.pgconn.exec_(b"drop table if exists foo")
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
     conn.pgconn.exec_(b"insert into foo values (1)")
     conn.commit()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) == b"1"
 
@@ -290,7 +290,7 @@ def test_commit_error(conn):
     conn.execute("insert into selfref (y) values (-1)")
     with pytest.raises(e.ForeignKeyViolation):
         conn.commit()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     cur = conn.execute("select 1")
     assert cur.fetchone() == (1,)
 
@@ -299,10 +299,10 @@ def test_rollback(conn):
     conn.pgconn.exec_(b"drop table if exists foo")
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
     conn.pgconn.exec_(b"insert into foo values (1)")
     conn.rollback()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.ntuples == 0
 
@@ -316,16 +316,16 @@ def test_auto_transaction(conn):
     conn.pgconn.exec_(b"create table foo (id int primary key)")
 
     cur = conn.cursor()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     cur.execute("insert into foo values (1)")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
 
     conn.commit()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     cur.execute("select * from foo")
     assert cur.fetchone() == (1,)
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
 
 
 def test_auto_transaction_fail(conn):
@@ -333,23 +333,23 @@ def test_auto_transaction_fail(conn):
     conn.pgconn.exec_(b"create table foo (id int primary key)")
 
     cur = conn.cursor()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     cur.execute("insert into foo values (1)")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
 
     with pytest.raises(psycopg.DatabaseError):
         cur.execute("meh")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INERROR
 
     with pytest.raises(psycopg.errors.InFailedSqlTransaction):
         cur.execute("select 1")
 
     conn.commit()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     cur.execute("select * from foo")
     assert cur.fetchone() is None
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
 
 
 @skip_sync
@@ -366,7 +366,7 @@ def test_autocommit(conn):
     cur = conn.cursor()
     cur.execute("select 1")
     assert cur.fetchone() == (1,)
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     conn.set_autocommit("")
     assert isinstance(conn.autocommit, bool)
@@ -386,7 +386,7 @@ def test_autocommit_property(conn):
     cur = conn.cursor()
     cur.execute("select 1")
     assert cur.fetchone() == (1,)
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     conn.autocommit = ""
     assert isinstance(conn.autocommit, bool)
@@ -407,7 +407,7 @@ def test_autocommit_intrans(conn):
     cur = conn.cursor()
     cur.execute("select 1")
     assert cur.fetchone() == (1,)
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
     with pytest.raises(psycopg.ProgrammingError):
         conn.set_autocommit(True)
     assert not conn.autocommit
@@ -417,7 +417,7 @@ def test_autocommit_inerror(conn):
     cur = conn.cursor()
     with pytest.raises(psycopg.DatabaseError):
         cur.execute("meh")
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INERROR
     with pytest.raises(psycopg.ProgrammingError):
         conn.set_autocommit(True)
     assert not conn.autocommit
@@ -425,7 +425,7 @@ def test_autocommit_inerror(conn):
 
 def test_autocommit_unknown(conn):
     conn.close()
-    assert conn.pgconn.transaction_status == conn.TransactionStatus.UNKNOWN
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
     with pytest.raises(psycopg.OperationalError):
         conn.set_autocommit(True)
     assert not conn.autocommit
