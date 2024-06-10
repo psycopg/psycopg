@@ -1,6 +1,7 @@
 import sys
 import pytest
 import psycopg
+from psycopg import pq
 
 
 # TODOCRDB: is this the expected behaviour?
@@ -50,9 +51,9 @@ def inserted(conn):
 
 
 def in_transaction(conn):
-    if conn.pgconn.transaction_status == conn.TransactionStatus.IDLE:
+    if conn.pgconn.transaction_status == pq.TransactionStatus.IDLE:
         return False
-    elif conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS:
+    elif conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS:
         return True
     else:
         assert False, conn.pgconn.transaction_status

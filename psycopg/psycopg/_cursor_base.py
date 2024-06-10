@@ -51,8 +51,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         __weakref__
         """.split()
 
-    ExecStatus = pq.ExecStatus
-
     _tx: Transformer
     _make_row: RowMaker[Row]
     _pgconn: PGconn

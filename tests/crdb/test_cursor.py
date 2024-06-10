@@ -37,7 +37,7 @@ def test_changefeed(conn_cls, dsn, conn, testfeed, fmt_out):
                     for row in cur.stream(f"experimental changefeed for {testfeed}"):
                         q.put_nowait(row)
                 except e.QueryCanceled:
-                    assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+                    assert conn.info.transaction_status == pq.TransactionStatus.IDLE
                     q.put_nowait(None)
         except Exception as ex:
             q.put_nowait(ex)

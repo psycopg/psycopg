@@ -6,8 +6,7 @@ import string
 from random import randrange, choice
 from typing import Any  # noqa: ignore
 
-from psycopg import sql, errors as e
-from psycopg.pq import Format
+from psycopg import pq, sql, errors as e
 from psycopg.adapt import PyFormat
 from psycopg.types.numeric import Int4
 
@@ -23,7 +22,8 @@ pytestmark = [pytest.mark.crdb]
 
 
 @pytest.mark.parametrize(
-    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+    "format, buffer",
+    [(pq.Format.TEXT, "sample_text"), (pq.Format.BINARY, "sample_binary")],
 )
 def test_copy_in_buffers(conn, format, buffer):
     cur = conn.cursor()
@@ -43,7 +43,7 @@ def test_copy_in_buffers_pg_error(conn):
         with cur.copy("copy copy_in from stdin") as copy:
             copy.write(sample_text)
             copy.write(sample_text)
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
 
 
 def test_copy_in_str(conn):
@@ -65,17 +65,17 @@ def test_copy_in_error(conn):
         with cur.copy("copy copy_in from stdin with binary") as copy:
             copy.write(sample_text.decode())
 
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
 
 
-@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with cur.copy(f"copy copy_in from stdin {copyopt(format)}"):
         pass
 
-    assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+    assert conn.info.transaction_status == pq.TransactionStatus.INTRANS
     assert cur.rowcount == 0
 
 
@@ -112,10 +112,10 @@ def test_copy_in_buffers_with_pg_error(conn):
             copy.write(sample_text)
             copy.write(sample_text)
 
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
 
 
-@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_records(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -123,7 +123,7 @@ def test_copy_in_records(conn, format):
     with cur.copy(f"copy copy_in from stdin {copyopt(format)}") as copy:
         row: "tuple[Any, ...]"
         for row in sample_records:
-            if format == Format.BINARY:
+            if format == pq.Format.BINARY:
                 row = tuple((Int4(i) if isinstance(i, int) else i for i in row))
             copy.write_row(row)
 
@@ -132,7 +132,7 @@ def test_copy_in_records(conn, format):
     assert data == sample_records
 
 
-@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_records_set_types(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -147,7 +147,7 @@ def test_copy_in_records_set_types(conn, format):
     assert data == sample_records
 
 
-@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_records_binary(conn, format):
     cur = conn.cursor()
     ensure_table(cur, "col1 serial primary key, col2 int4, data text")
@@ -171,7 +171,7 @@ def test_copy_in_buffers_with_py_error(conn):
             raise Exception("nuttengoggenio")
 
     assert "nuttengoggenio" in str(exc.value)
-    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    assert conn.info.transaction_status == pq.TransactionStatus.INERROR
 
 
 def test_copy_in_allchars(conn):
@@ -195,7 +195,8 @@ from copy_in group by 1, 2, 3
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "fmt, set_types", [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)]
+    "fmt, set_types",
+    [(pq.Format.TEXT, True), (pq.Format.TEXT, False), (pq.Format.BINARY, True)],
 )
 @pytest.mark.crdb_skip("copy array")
 def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types, gc):
@@ -237,4 +238,4 @@ def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types, gc):
 
 
 def copyopt(format):
-    return "with binary" if format == Format.BINARY else ""
+    return "with binary" if format == pq.Format.BINARY else ""

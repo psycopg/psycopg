@@ -1,6 +1,6 @@
 import struct
 
-from psycopg.pq import Format
+from psycopg import pq
 from psycopg.copy import AsyncWriter
 from psycopg.copy import FileWriter as FileWriter  # noqa: F401
 
@@ -43,7 +43,7 @@ async def ensure_table_async(cur, tabledef, name="copy_in"):
 
 def py_to_raw(item, fmt):
     """Convert from Python type to the expected result from the db"""
-    if fmt == Format.TEXT:
+    if fmt == pq.Format.TEXT:
         if isinstance(item, int):
             return str(item)
     else:
