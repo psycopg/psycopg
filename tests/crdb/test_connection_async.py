@@ -1,13 +1,16 @@
 import time
-import asyncio
+
+import pytest
 
 import psycopg.crdb
 from psycopg import errors as e
 from psycopg.crdb import AsyncCrdbConnection
 
-import pytest
+from ..acompat import asleep, spawn, gather
 
-pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
+pytestmark = [pytest.mark.crdb]
+if True:  # ASYNC
+    pytestmark.append(pytest.mark.anyio)
 
 
 async def test_is_crdb(aconn):
@@ -17,7 +20,11 @@ async def test_is_crdb(aconn):
 
 async def test_connect(dsn):
     async with await AsyncCrdbConnection.connect(dsn) as conn:
-        assert isinstance(conn, psycopg.crdb.AsyncCrdbConnection)
+        assert isinstance(conn, AsyncCrdbConnection)
+
+    if False:  # ASYNC
+        with psycopg.crdb.connect(dsn) as conn:
+            assert isinstance(conn, AsyncCrdbConnection)
 
 
 async def test_xid(dsn):
@@ -65,21 +72,22 @@ async def test_broken(aconn):
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_identify_closure(aconn_cls, dsn):
-    async with await aconn_cls.connect(dsn) as conn:
-        async with await aconn_cls.connect(dsn) as conn2:
+    async with await aconn_cls.connect(dsn, autocommit=True) as conn:
+        async with await aconn_cls.connect(dsn, autocommit=True) as conn2:
             cur = await conn.execute("show session_id")
             (session_id,) = await cur.fetchone()
 
             async def closer():
-                await asyncio.sleep(0.2)
+                await asleep(0.2)
                 await conn2.execute("cancel session %s", [session_id])
 
-            t = asyncio.create_task(closer())
+            t = spawn(closer)
             t0 = time.time()
             try:
                 with pytest.raises(psycopg.OperationalError):
                     await conn.execute("select pg_sleep(3.0)")
                 dt = time.time() - t0
+                # CRDB seems to take not less than 1s
                 assert 0.2 < dt < 2
             finally:
-                await asyncio.gather(t)
+                await gather(t)

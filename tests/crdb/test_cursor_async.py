@@ -1,24 +1,32 @@
+from __future__ import annotations
+
 import json
-import asyncio
-from typing import Any
-from asyncio.queues import Queue
+from uuid import uuid4
 
 import pytest
 from psycopg import pq, errors as e
 from psycopg.rows import namedtuple_row
+from ..acompat import AQueue, spawn, gather
 
-from .test_cursor import testfeed
+pytestmark = [pytest.mark.crdb]
+if True:  # ASYNC
+    pytestmark.append(pytest.mark.anyio)
 
-testfeed  # fixture
 
-pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
+@pytest.fixture
+def testfeed(svcconn):
+    name = f"test_feed_{str(uuid4()).replace('-', '')}"
+    svcconn.execute("set cluster setting kv.rangefeed.enabled to true")
+    svcconn.execute(f"create table {name} (id serial primary key, data text)")
+    yield name
+    svcconn.execute(f"drop table {name}")
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt_out", pq.Format)
 async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     await aconn.set_autocommit(True)
-    q: "Queue[Any]" = Queue()
+    q = AQueue()
 
     async def worker():
         try:
@@ -35,18 +43,18 @@ async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
         except Exception as ex:
             q.put_nowait(ex)
 
-    t = asyncio.create_task(worker())
+    t = spawn(worker)
 
     cur = aconn.cursor()
     await cur.execute(f"insert into {testfeed} (data) values ('hello') returning id")
     (key,) = await cur.fetchone()
-    row = await asyncio.wait_for(q.get(), 1.0)
+    row = await q.get()
     assert row.table == testfeed
     assert json.loads(row.key) == [key]
     assert json.loads(row.value)["after"] == {"id": key, "data": "hello"}
 
     await cur.execute(f"delete from {testfeed} where id = %s", [key])
-    row = await asyncio.wait_for(q.get(), 1.0)
+    row = await q.get()
     assert row.table == testfeed
     assert json.loads(row.key) == [key]
     assert json.loads(row.value)["after"] is None
@@ -59,11 +67,11 @@ async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     # We often find the record with {"after": null} at least another time
     # in the queue. Let's tolerate an extra one.
     for i in range(2):
-        row = await asyncio.wait_for(q.get(), 1.0)
+        row = await q.get()
         if row is None:
             break
         assert json.loads(row.value)["after"] is None, json
     else:
         pytest.fail("keep on receiving messages")
 
-    await asyncio.gather(t)
+    await gather(t)

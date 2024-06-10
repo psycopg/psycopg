@@ -37,6 +37,9 @@ ALL_INPUTS = """
     psycopg_pool/psycopg_pool/null_pool_async.py
     psycopg_pool/psycopg_pool/pool_async.py
     psycopg_pool/psycopg_pool/sched_async.py
+    tests/crdb/test_connection_async.py
+    tests/crdb/test_copy_async.py
+    tests/crdb/test_cursor_async.py
     tests/pool/test_pool_async.py
     tests/pool/test_pool_common_async.py
     tests/pool/test_pool_null_async.py
@@ -277,6 +280,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "AsyncConnectionPool": "ConnectionPool",
         "AsyncCopy": "Copy",
         "AsyncCopyWriter": "CopyWriter",
+        "AsyncCrdbConnection": "CrdbConnection",
         "AsyncCursor": "Cursor",
         "AsyncFileWriter": "FileWriter",
         "AsyncGenerator": "Generator",

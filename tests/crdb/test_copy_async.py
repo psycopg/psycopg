@@ -1,18 +1,24 @@
 import pytest
 import string
 from random import randrange, choice
+from typing import Any  # noqa: ignore
 
-from psycopg.pq import Format
 from psycopg import sql, errors as e
+from psycopg.pq import Format
 from psycopg.adapt import PyFormat
 from psycopg.types.numeric import Int4
 
 from ..utils import eur
 from .._test_copy import sample_text, sample_binary  # noqa
 from .._test_copy import ensure_table_async, sample_records
-from .test_copy import sample_tabledef, copyopt
+from .._test_copy import sample_tabledef as sample_tabledef_pg
 
-pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
+# CRDB int/serial are int8
+sample_tabledef = sample_tabledef_pg.replace("int", "int4").replace("serial", "int4")
+
+pytestmark = [pytest.mark.crdb]
+if True:  # ASYNC
+    pytestmark.append(pytest.mark.anyio)
 
 
 @pytest.mark.parametrize(
@@ -115,11 +121,10 @@ async def test_copy_in_records(aconn, format):
     await ensure_table_async(cur, sample_tabledef)
 
     async with cur.copy(f"copy copy_in from stdin {copyopt(format)}") as copy:
+        row: "tuple[Any, ...]"
         for row in sample_records:
             if format == Format.BINARY:
-                row = tuple(
-                    Int4(i) if isinstance(i, int) else i for i in row
-                )  # type: ignore[assignment]
+                row = tuple(Int4(i) if isinstance(i, int) else i for i in row)
             await copy.write_row(row)
 
     await cur.execute("select * from copy_in order by 1")
@@ -232,3 +237,7 @@ async def test_copy_from_leaks(aconn_cls, dsn, faker, fmt, set_types, gc):
         n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+def copyopt(format):
+    return "with binary" if format == Format.BINARY else ""

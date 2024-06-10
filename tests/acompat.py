@@ -6,8 +6,11 @@ script async_to_sync.py will replace the async names with the sync names
 when generating the sync version.
 """
 
+from __future__ import annotations
+
 import sys
 import time
+import queue
 import asyncio
 import inspect
 import builtins
@@ -113,3 +116,19 @@ class AEvent(asyncio.Event):
 
     async def wait_timeout(self, timeout):
         await asyncio.wait_for(self.wait(), timeout)
+
+
+class Queue(queue.Queue):  # type: ignore[type-arg]  # can be dropped after Python 3.8
+    """
+    A Queue subclass with an interruptible get() method.
+    """
+
+    def get(self, block: bool = True, timeout: float | None = None) -> Any:
+        # Always specify a timeout to make the wait interruptible.
+        if timeout is None:
+            timeout = 24.0 * 60.0 * 60.0
+        return super().get(block=block, timeout=timeout)
+
+
+class AQueue(asyncio.Queue):  # type: ignore[type-arg]
+    pass
