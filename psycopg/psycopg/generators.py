@@ -114,9 +114,8 @@ def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[Non
         elif status == POLL_WRITING:
             yield cancel_conn.socket, WAIT_W
         elif status == POLL_FAILED:
-            raise e.OperationalError(
-                f"cancellation failed: {cancel_conn.error_message}"
-            )
+            msg = cancel_conn.error_message.decode("utf8", "replace")
+            raise e.OperationalError(f"cancellation failed: {msg}")
         else:
             raise e.InternalError(f"unexpected poll status: {status}")
 

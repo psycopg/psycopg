@@ -100,9 +100,8 @@ def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[No
         elif status == libpq.PGRES_POLLING_WRITING:
             yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_W
         elif status == libpq.PGRES_POLLING_FAILED:
-            raise e.OperationalError(
-                f"cancellation failed: {cancel_conn.error_message}"
-            )
+            msg = cancel_conn.error_message.decode("utf8", "replace")
+            raise e.OperationalError(f"cancellation failed: {msg}")
         else:
             raise e.InternalError(f"unexpected poll status: {status}")
 

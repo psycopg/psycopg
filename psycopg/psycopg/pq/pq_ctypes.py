@@ -946,9 +946,8 @@ class PGcancelConn:
         See :pq:`PQcancelStart` for details.
         """
         if not impl.PQcancelStart(self.pgcancelconn_ptr):
-            raise e.OperationalError(
-                f"couldn't start cancellation: {self.error_message}"
-            )
+            msg = self.error_message.decode("utf8", "replace")
+            raise e.OperationalError(f"couldn't start cancellation: {msg}")
 
     def blocking(self) -> None:
         """Requests that the server abandons processing of the current command
@@ -957,9 +956,8 @@ class PGcancelConn:
         See :pq:`PQcancelBlocking` for details.
         """
         if not impl.PQcancelBlocking(self.pgcancelconn_ptr):
-            raise e.OperationalError(
-                f"couldn't start cancellation: {self.error_message}"
-            )
+            msg = self.error_message.decode("utf8", "replace")
+            raise e.OperationalError(f"couldn't start cancellation: {msg}")
 
     def poll(self) -> int:
         self._ensure_pgcancelconn()
@@ -977,8 +975,8 @@ class PGcancelConn:
         return rv
 
     @property
-    def error_message(self) -> str:
-        return impl.PQcancelErrorMessage(self.pgcancelconn_ptr).decode()
+    def error_message(self) -> bytes:
+        return impl.PQcancelErrorMessage(self.pgcancelconn_ptr)
 
     def reset(self) -> None:
         self._ensure_pgcancelconn()

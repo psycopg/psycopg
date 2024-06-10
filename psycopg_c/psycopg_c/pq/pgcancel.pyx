@@ -56,8 +56,8 @@ cdef class PGcancelConn:
         return rv
 
     @property
-    def error_message(self) -> str:
-        return libpq.PQcancelErrorMessage(self.pgcancelconn_ptr).decode()
+    def error_message(self) -> bytes:
+        return libpq.PQcancelErrorMessage(self.pgcancelconn_ptr)
 
     def reset(self) -> None:
         self._ensure_pgcancelconn()
