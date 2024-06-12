@@ -330,6 +330,16 @@ def test_error_message(pgconn):
     assert b"NULL" in pgconn.error_message  # TODO: i10n?
 
 
+def test_get_error_message(pgconn):
+    assert pgconn.get_error_message() == "no error details available"
+    res = pgconn.exec_(b"wat")
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+    msg = pgconn.get_error_message()
+    assert "wat" in msg
+    pgconn.finish()
+    assert "NULL" in pgconn.get_error_message()
+
+
 def test_backend_pid(pgconn):
     assert isinstance(pgconn.backend_pid, int)
     pgconn.finish()
@@ -402,7 +412,7 @@ def cancellable_query(pgconn: PGconn) -> Iterator[None]:
     monitor_conn = pq.PGconn.connect(dsn)
     assert (
         monitor_conn.status == pq.ConnStatus.OK
-    ), f"bad connection: {monitor_conn.error_message.decode('utf8', 'replace')}"
+    ), f"bad connection: {monitor_conn.get_error_message()}"
 
     pgconn.send_query_params(b"SELECT pg_sleep($1)", [b"180"])
 
@@ -490,7 +500,7 @@ def test_cancel_conn_finished(pgconn):
         cancel_conn.poll()
     with pytest.raises(psycopg.OperationalError):
         cancel_conn.reset()
-    assert cancel_conn.error_message.strip() == "connection pointer is NULL"
+    assert cancel_conn.get_error_message() == "connection pointer is NULL"
 
 
 def test_cancel(pgconn):
@@ -639,11 +649,11 @@ def role(pgconn: PGconn) -> Iterator[tuple[bytes, bytes]]:
     user, passwd = "ashesh", "psycopg2"
     r = pgconn.exec_(f"CREATE USER {user} LOGIN PASSWORD '{passwd}'".encode())
     if r.status != pq.ExecStatus.COMMAND_OK:
-        pytest.skip(f"cannot create a PostgreSQL role: {r.error_message.decode()}")
+        pytest.skip(f"cannot create a PostgreSQL role: {r.get_error_message()}")
     yield user.encode(), passwd.encode()
     r = pgconn.exec_(f"DROP USER {user}".encode())
     if r.status != pq.ExecStatus.COMMAND_OK:
-        pytest.fail(f"failed to drop {user} role: {r.error_message.decode()}")
+        pytest.fail(f"failed to drop {user} role: {r.get_error_message()}")
 
 
 @pytest.mark.libpq(">= 17")
@@ -686,7 +696,7 @@ def test_encrypt_password_badalgo(pgconn):
 @pytest.mark.crdb_skip("password_encryption")
 def test_encrypt_password_query(pgconn):
     res = pgconn.exec_(b"set password_encryption to 'md5'")
-    assert res.status == pq.ExecStatus.COMMAND_OK, pgconn.error_message.decode()
+    assert res.status == pq.ExecStatus.COMMAND_OK, pgconn.get_error_message()
     enc = pgconn.encrypt_password(b"psycopg2", b"ashesh")
     assert enc == b"md594839d658c28a357126f105b9cb14cfc"
 

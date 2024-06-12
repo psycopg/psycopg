@@ -26,7 +26,7 @@ cdef class PGcancelConn:
         """
         if not libpq.PQcancelStart(self.pgcancelconn_ptr):
             raise e.OperationalError(
-                f"couldn't send cancellation: {self.error_message}"
+                f"couldn't send cancellation: {self.get_error_message()}"
             )
 
     def blocking(self) -> None:
@@ -37,7 +37,7 @@ cdef class PGcancelConn:
         """
         if not libpq.PQcancelBlocking(self.pgcancelconn_ptr):
             raise e.OperationalError(
-                f"couldn't send cancellation: {self.error_message}"
+                f"couldn't send cancellation: {self.get_error_message()}"
             )
 
     def poll(self) -> int:
@@ -58,6 +58,9 @@ cdef class PGcancelConn:
     @property
     def error_message(self) -> bytes:
         return libpq.PQcancelErrorMessage(self.pgcancelconn_ptr)
+
+    def get_error_message(self, encoding: str = "utf-8") -> str:
+        return _clean_error_message(self.error_message, encoding)
 
     def reset(self) -> None:
         self._ensure_pgcancelconn()

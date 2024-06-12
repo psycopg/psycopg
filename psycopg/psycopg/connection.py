@@ -27,7 +27,6 @@ from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
-from ._encodings import pgconn_encoding
 from .generators import notifies
 from .transaction import Transaction
 from .cursor import Cursor
@@ -344,7 +343,7 @@ class Connection(BaseConnection[Row]):
                 with self.lock:
                     ns = self.wait(notifies(self.pgconn), interval=interval)
                     if ns:
-                        enc = pgconn_encoding(self.pgconn)
+                        enc = self.pgconn._encoding
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
 

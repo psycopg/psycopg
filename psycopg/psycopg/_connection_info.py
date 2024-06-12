@@ -11,7 +11,6 @@ from datetime import tzinfo
 
 from . import pq
 from ._tz import get_tzinfo
-from ._encodings import pgconn_encoding
 from .conninfo import make_conninfo
 
 
@@ -167,7 +166,7 @@ class ConnectionInfo:
     @property
     def encoding(self) -> str:
         """The Python codec name of the connection's client encoding."""
-        return pgconn_encoding(self.pgconn)
+        return self.pgconn._encoding
 
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)

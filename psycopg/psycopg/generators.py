@@ -32,7 +32,7 @@ from .pq.abc import PGcancelConn, PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._cmodule import _psycopg
-from ._encodings import pgconn_encoding, conninfo_encoding
+from ._encodings import conninfo_encoding
 
 OK = pq.ConnStatus.OK
 BAD = pq.ConnStatus.BAD
@@ -69,7 +69,7 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
         if conn.status == BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {pq.error_message(conn, encoding=encoding)}",
+                f"connection is bad: {conn.get_error_message(encoding)}",
                 pgconn=conn,
             )
 
@@ -89,7 +89,7 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
         elif status == POLL_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection failed: {pq.error_message(conn, encoding=encoding)}",
+                f"connection failed: {conn.get_error_message(encoding)}",
                 pgconn=e.finish_pgconn(conn),
             )
         else:
@@ -114,8 +114,9 @@ def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[Non
         elif status == POLL_WRITING:
             yield cancel_conn.socket, WAIT_W
         elif status == POLL_FAILED:
-            msg = cancel_conn.error_message.decode("utf8", "replace")
-            raise e.OperationalError(f"cancellation failed: {msg}")
+            raise e.OperationalError(
+                f"cancellation failed: {cancel_conn.get_error_message()}"
+            )
         else:
             raise e.InternalError(f"unexpected poll status: {status}")
 
@@ -327,8 +328,7 @@ def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
         raise e.ProgrammingError("you cannot mix COPY with other operations")
     result = results[0]
     if result.status != COMMAND_OK:
-        encoding = pgconn_encoding(pgconn)
-        raise e.error_from_result(result, encoding=encoding)
+        raise e.error_from_result(result, encoding=pgconn._encoding)
 
     return result
 
@@ -382,8 +382,7 @@ def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     # Retrieve the final result of copy
     (result,) = yield from _fetch_many(pgconn)
     if result.status != COMMAND_OK:
-        encoding = pgconn_encoding(pgconn)
-        raise e.error_from_result(result, encoding=encoding)
+        raise e.error_from_result(result, encoding=pgconn._encoding)
 
     return result
 

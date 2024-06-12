@@ -24,8 +24,9 @@ from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
 
+from psycopg._encodings import pg2pyenc
 from psycopg.pq import Format as PqFormat, Trace, version_pretty
-from psycopg.pq.misc import PGnotify, connection_summary
+from psycopg.pq.misc import PGnotify, connection_summary, _clean_error_message
 from psycopg.pq._enums import ExecStatus
 from psycopg_c.pq cimport PQBuffer
 
@@ -174,6 +175,20 @@ cdef class PGconn:
     def error_message(self) -> bytes:
         return libpq.PQerrorMessage(self._pgconn_ptr)
 
+    def get_error_message(self, encoding: str = "") -> str:
+        return _clean_error_message(self.error_message, encoding or self._encoding)
+
+    @property
+    def _encoding(self) -> str:
+        cdef const char *pgenc
+        if libpq.PQstatus(self._pgconn_ptr) == libpq.CONNECTION_OK:
+            pgenc = libpq.PQparameterStatus(self._pgconn_ptr, b"client_encoding")
+            if pgenc is NULL:
+                pgenc = b"UTF8"
+            return pg2pyenc(pgenc)
+        else:
+            return "utf-8"
+
     @property
     def protocol_version(self) -> int:
         return _call_int(self, libpq.PQprotocolVersion)
@@ -211,7 +226,7 @@ cdef class PGconn:
         with nogil:
             pgresult = libpq.PQexec(self._pgconn_ptr, command)
         if pgresult is NULL:
-            raise e.OperationalError(f"executing query failed: {error_message(self)}")
+            raise e.OperationalError(f"executing query failed: {self.get_error_message()}")
 
         return PGresult._from_ptr(pgresult)
 
@@ -221,7 +236,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQsendQuery(self._pgconn_ptr, command)
         if not rv:
-            raise e.OperationalError(f"sending query failed: {error_message(self)}")
+            raise e.OperationalError(f"sending query failed: {self.get_error_message()}")
 
     def exec_params(
         self,
@@ -248,7 +263,7 @@ cdef class PGconn:
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
-            raise e.OperationalError(f"executing query failed: {error_message(self)}")
+            raise e.OperationalError(f"executing query failed: {self.get_error_message()}")
         return PGresult._from_ptr(pgresult)
 
     def send_query_params(
@@ -277,7 +292,7 @@ cdef class PGconn:
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise e.OperationalError(
-                f"sending query and params failed: {error_message(self)}"
+                f"sending query and params failed: {self.get_error_message()}"
             )
 
     def send_prepare(
@@ -304,7 +319,7 @@ cdef class PGconn:
         PyMem_Free(atypes)
         if not rv:
             raise e.OperationalError(
-                f"sending query and params failed: {error_message(self)}"
+                f"sending query and params failed: {self.get_error_message()}"
             )
 
     def send_query_prepared(
@@ -332,7 +347,7 @@ cdef class PGconn:
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise e.OperationalError(
-                f"sending prepared query failed: {error_message(self)}"
+                f"sending prepared query failed: {self.get_error_message()}"
             )
 
     def prepare(
@@ -357,7 +372,7 @@ cdef class PGconn:
                 self._pgconn_ptr, name, command, <int>nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
-            raise e.OperationalError(f"preparing query failed: {error_message(self)}")
+            raise e.OperationalError(f"preparing query failed: {self.get_error_message()}")
         return PGresult._from_ptr(rv)
 
     def exec_prepared(
@@ -387,7 +402,7 @@ cdef class PGconn:
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
             raise e.OperationalError(
-                f"executing prepared query failed: {error_message(self)}"
+                f"executing prepared query failed: {self.get_error_message()}"
             )
         return PGresult._from_ptr(rv)
 
@@ -396,7 +411,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self._pgconn_ptr, name)
         if rv is NULL:
             raise e.OperationalError(
-                f"describe prepared failed: {error_message(self)}"
+                f"describe prepared failed: {self.get_error_message()}"
             )
         return PGresult._from_ptr(rv)
 
@@ -405,7 +420,7 @@ cdef class PGconn:
         cdef int rv = libpq.PQsendDescribePrepared(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
-                f"sending describe prepared failed: {error_message(self)}"
+                f"sending describe prepared failed: {self.get_error_message()}"
             )
 
     def describe_portal(self, const char *name) -> PGresult:
@@ -413,7 +428,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv = libpq.PQdescribePortal(self._pgconn_ptr, name)
         if rv is NULL:
             raise e.OperationalError(
-                f"describe prepared failed: {error_message(self)}"
+                f"describe prepared failed: {self.get_error_message()}"
             )
         return PGresult._from_ptr(rv)
 
@@ -422,7 +437,7 @@ cdef class PGconn:
         cdef int rv = libpq.PQsendDescribePortal(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
-                f"sending describe prepared failed: {error_message(self)}"
+                f"sending describe prepared failed: {self.get_error_message()}"
             )
 
     def close_prepared(self, const char *name) -> PGresult:
@@ -431,7 +446,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv = libpq.PQclosePrepared(self._pgconn_ptr, name)
         if rv is NULL:
             raise e.OperationalError(
-                f"close prepared failed: {error_message(self)}"
+                f"close prepared failed: {self.get_error_message()}"
             )
         return PGresult._from_ptr(rv)
 
@@ -441,7 +456,7 @@ cdef class PGconn:
         cdef int rv = libpq.PQsendClosePrepared(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
-                f"sending close prepared failed: {error_message(self)}"
+                f"sending close prepared failed: {self.get_error_message()}"
             )
 
     def close_portal(self, const char *name) -> PGresult:
@@ -450,7 +465,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv = libpq.PQclosePortal(self._pgconn_ptr, name)
         if rv is NULL:
             raise e.OperationalError(
-                f"close prepared failed: {error_message(self)}"
+                f"close prepared failed: {self.get_error_message()}"
             )
         return PGresult._from_ptr(rv)
 
@@ -460,7 +475,7 @@ cdef class PGconn:
         cdef int rv = libpq.PQsendClosePortal(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
-                f"sending close prepared failed: {error_message(self)}"
+                f"sending close prepared failed: {self.get_error_message()}"
             )
 
     def get_result(self) -> "PGresult" | None:
@@ -471,7 +486,7 @@ cdef class PGconn:
 
     def consume_input(self) -> None:
         if 1 != libpq.PQconsumeInput(self._pgconn_ptr):
-            raise e.OperationalError(f"consuming input failed: {error_message(self)}")
+            raise e.OperationalError(f"consuming input failed: {self.get_error_message()}")
 
     def is_busy(self) -> int:
         cdef int rv
@@ -486,14 +501,14 @@ cdef class PGconn:
     @nonblocking.setter
     def nonblocking(self, int arg) -> None:
         if 0 > libpq.PQsetnonblocking(self._pgconn_ptr, arg):
-            raise e.OperationalError(f"setting nonblocking failed: {error_message(self)}")
+            raise e.OperationalError(f"setting nonblocking failed: {self.get_error_message()}")
 
     cpdef int flush(self) except -1:
         if self._pgconn_ptr == NULL:
             raise e.OperationalError(f"flushing failed: the connection is closed")
         cdef int rv = libpq.PQflush(self._pgconn_ptr)
         if rv < 0:
-            raise e.OperationalError(f"flushing failed: {error_message(self)}")
+            raise e.OperationalError(f"flushing failed: {self.get_error_message()}")
         return rv
 
     def set_single_row_mode(self) -> None:
@@ -536,7 +551,7 @@ cdef class PGconn:
         _buffer_as_string_and_size(buffer, &cbuffer, &length)
         rv = libpq.PQputCopyData(self._pgconn_ptr, cbuffer, <int>length)
         if rv < 0:
-            raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
+            raise e.OperationalError(f"sending copy data failed: {self.get_error_message()}")
         return rv
 
     def put_copy_end(self, error: bytes | None = None) -> int:
@@ -546,7 +561,7 @@ cdef class PGconn:
             cerr = PyBytes_AsString(error)
         rv = libpq.PQputCopyEnd(self._pgconn_ptr, cerr)
         if rv < 0:
-            raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
+            raise e.OperationalError(f"sending copy end failed: {self.get_error_message()}")
         return rv
 
     def get_copy_data(self, int async_) -> tuple[int, memoryview]:
@@ -554,7 +569,7 @@ cdef class PGconn:
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self._pgconn_ptr, &buffer_ptr, async_)
         if nbytes == -2:
-            raise e.OperationalError(f"receiving copy data failed: {error_message(self)}")
+            raise e.OperationalError(f"receiving copy data failed: {self.get_error_message()}")
         if buffer_ptr is not NULL:
             data = PyMemoryView_FromObject(
                 PQBuffer._from_buffer(<unsigned char *>buffer_ptr, nbytes))
@@ -587,7 +602,7 @@ cdef class PGconn:
         out = libpq.PQencryptPasswordConn(self._pgconn_ptr, passwd, user, calgo)
         if not out:
             raise e.OperationalError(
-                f"password encryption failed: {error_message(self)}"
+                f"password encryption failed: {self.get_error_message()}"
             )
 
         rv = bytes(out)
@@ -603,7 +618,7 @@ cdef class PGconn:
         res = libpq.PQchangePassword(self._pgconn_ptr, user, passwd)
         if libpq.PQresultStatus(res) != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"password encryption failed: {error_message(self)}"
+                f"password encryption failed: {self.get_error_message()}"
             )
 
     def make_empty_result(self, int exec_status) -> PGresult:
@@ -642,7 +657,7 @@ cdef class PGconn:
         """
         _check_supported("PQexitPipelineMode", 140000)
         if libpq.PQexitPipelineMode(self._pgconn_ptr) != 1:
-            raise e.OperationalError(error_message(self))
+            raise e.OperationalError(self.get_error_message())
 
     def pipeline_sync(self) -> None:
         """Mark a synchronization point in a pipeline.
@@ -665,7 +680,7 @@ cdef class PGconn:
         _check_supported("PQsendFlushRequest ", 140000)
         cdef int rv = libpq.PQsendFlushRequest(self._pgconn_ptr)
         if rv == 0:
-            raise e.OperationalError(f"flush request failed: {error_message(self)}")
+            raise e.OperationalError(f"flush request failed: {self.get_error_message()}")
 
 
 cdef int _ensure_pgconn(PGconn pgconn) except 0:

@@ -26,7 +26,6 @@ from ._enums import IsolationLevel
 from ._compat import LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
-from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from ._connection_info import ConnectionInfo
 
@@ -343,7 +342,7 @@ class BaseConnection(Generic[Row]):
         if not (self and self._notice_handlers):
             return
 
-        diag = e.Diagnostic(res, pgconn_encoding(self.pgconn))
+        diag = e.Diagnostic(res, self.pgconn._encoding)
         for cb in self._notice_handlers:
             try:
                 cb(diag)
@@ -376,7 +375,7 @@ class BaseConnection(Generic[Row]):
         if not (self and self._notify_handlers):
             return
 
-        enc = pgconn_encoding(self.pgconn)
+        enc = self.pgconn._encoding
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
@@ -447,7 +446,7 @@ class BaseConnection(Generic[Row]):
         self._check_connection_ok()
 
         if isinstance(command, str):
-            command = command.encode(pgconn_encoding(self.pgconn))
+            command = command.encode(self.pgconn._encoding)
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
@@ -473,7 +472,7 @@ class BaseConnection(Generic[Row]):
         result = (yield from generators.execute(self.pgconn))[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
-                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
+                raise e.error_from_result(result, encoding=self.pgconn._encoding)
             else:
                 raise e.InterfaceError(
                     f"unexpected result {pq.ExecStatus(result.status).name}"
@@ -513,7 +512,7 @@ class BaseConnection(Generic[Row]):
         result = (yield from generators.execute(self.pgconn))[-1]
         if result.status != COMMAND_OK:
             if result.status == FATAL_ERROR:
-                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
+                raise e.error_from_result(result, encoding=self.pgconn._encoding)
             else:
                 raise e.InterfaceError(
                     f"unexpected result {pq.ExecStatus(result.status).name}"

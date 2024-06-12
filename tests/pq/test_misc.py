@@ -12,12 +12,8 @@ def test_error_message(pgconn):
     assert msg == pq.error_message(res)
     primary = res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
     assert primary.decode("ascii") in msg
-
-    with pytest.raises(TypeError):
-        pq.error_message(None)  # type: ignore[arg-type]
-
     res.clear()
-    assert pq.error_message(res) == "no details available"
+    assert pq.error_message(res) == "no error details available"
     pgconn.finish()
     assert "NULL" in pq.error_message(pgconn)
 

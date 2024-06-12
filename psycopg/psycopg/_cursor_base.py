@@ -18,7 +18,6 @@ from .rows import Row, RowMaker
 from ._column import Column
 from .pq.misc import connection_summary
 from ._queries import PostgresQuery, PostgresClientQuery
-from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 from .generators import execute, fetch, send
 
@@ -615,4 +614,4 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     @property
     def _encoding(self) -> str:
-        return pgconn_encoding(self._pgconn)
+        return self._pgconn._encoding

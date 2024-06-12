@@ -50,6 +50,9 @@ cdef class PGresult:
     def error_message(self) -> bytes:
         return libpq.PQresultErrorMessage(self._pgresult_ptr)
 
+    def get_error_message(self, encoding: str = "utf-8") -> str:
+        return _clean_error_message(self.error_message, encoding)
+
     def error_field(self, int fieldcode) -> bytes | None:
         cdef char * rv = libpq.PQresultErrorField(self._pgresult_ptr, fieldcode)
         if rv is not NULL:
