@@ -323,7 +323,7 @@ if libpq_version >= 170000:
 
 else:
     PQclosePrepared = not_supported_before("PQclosePrepared", 170000)
-    PQclosePortal = not_supported_before("PQclosePrepared", 170000)
+    PQclosePortal = not_supported_before("PQclosePortal", 170000)
 
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
