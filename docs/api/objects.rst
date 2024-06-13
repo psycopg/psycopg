@@ -159,7 +159,6 @@ Libpq capabilities information
 
     .. automethod:: has_stream_chunked
     .. automethod:: has_send_close_prepared
-    .. automethod:: has_pgbouncer_prepared
 
         .. seealso:: :ref:`pgbouncer`
 

@@ -18,7 +18,6 @@ caps = [
     ("has_cancel_safe", "Connection.cancel_safe()", 17),
     ("has_stream_chunked", "Cursor.stream() with 'size' parameter greater than 1", 17),
     ("has_send_close_prepared", "PGconn.send_close_prepared()", 17),
-    ("has_pgbouncer_prepared", "PgBouncer prepared statements compatibility", 17),
 ]
 
 
