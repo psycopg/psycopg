@@ -693,6 +693,35 @@ def test_stream_no_row(conn):
     assert recs == []
 
 
+def test_stream_chunked_invalid_size(conn):
+    cur = conn.cursor()
+    with pytest.raises(ValueError, match="size must be >= 1"):
+        next(cur.stream("select 1", size=0))
+
+
+@pytest.mark.libpq("< 17")
+def test_stream_chunked_not_supported(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg.NotSupportedError):
+        next(cur.stream("select generate_series(1, 4)", size=2))
+
+
+@pytest.mark.libpq(">= 17")
+def test_stream_chunked(conn):
+    cur = conn.cursor()
+    recs = list(cur.stream("select generate_series(1, 5) as a", size=2))
+    assert recs == [(1,), (2,), (3,), (4,), (5,)]
+
+
+@pytest.mark.libpq(">= 17")
+def test_stream_chunked_row_factory(conn):
+    cur = conn.cursor(row_factory=rows.scalar_row)
+    it = cur.stream("select generate_series(1, 5) as a", size=2)
+    for i in range(1, 6):
+        assert next(it) == i
+        assert [c.name for c in cur.description] == ["a"]
+
+
 @pytest.mark.crdb_skip("no col query")
 def test_stream_no_col(conn):
     cur = conn.cursor()

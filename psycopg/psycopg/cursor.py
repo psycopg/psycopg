@@ -128,22 +128,35 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             raise ex.with_traceback(None)
 
     def stream(
-        self, query: Query, params: Params | None = None, *, binary: bool | None = None
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        binary: bool | None = None,
+        size: int = 1,
     ) -> Iterator[Row]:
         """
         Iterate row-by-row on a result from the database.
+
+        :param size: if greater than 1, results will be retrieved by chunks of
+            this size from the server (but still yielded row-by-row); this is only
+            available from version 17 of the libpq.
         """
         if self._pgconn.pipeline_status:
             raise e.ProgrammingError("stream() cannot be used in pipeline mode")
 
         with self._conn.lock:
             try:
-                self._conn.wait(self._stream_send_gen(query, params, binary=binary))
+                self._conn.wait(
+                    self._stream_send_gen(query, params, binary=binary, size=size)
+                )
                 first = True
                 while self._conn.wait(self._stream_fetchone_gen(first)):
-                    # We know that, if we got a result, it has a single row.
-                    rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
-                    yield rec
+                    for pos in range(size):
+                        rec = self._tx.load_row(pos, self._make_row)
+                        if rec is None:
+                            break
+                        yield rec
                     first = False
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
