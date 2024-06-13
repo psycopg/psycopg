@@ -190,3 +190,24 @@ async def test_stop_after_batch(aconn_cls, aconn, dsn):
         assert ns[1].payload == "2"
     finally:
         await gather(worker)
+
+
+@pytest.mark.slow
+async def test_notifies_blocking(aconn):
+    async def listener():
+        async for _ in aconn.notifies(timeout=1):
+            pass
+
+    worker = spawn(listener)
+    try:
+        # Make sure the listener is listening
+        if not aconn.lock.locked():
+            await asleep(0.01)
+
+        t0 = time()
+        await aconn.execute("select 1")
+        dt = time() - t0
+    finally:
+        await gather(worker)
+
+    assert dt > 0.5

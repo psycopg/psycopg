@@ -193,3 +193,25 @@ def test_stop_after_batch(conn_cls, conn, dsn):
         assert ns[1].payload == "2"
     finally:
         gather(worker)
+
+
+@pytest.mark.slow
+def test_notifies_blocking(conn):
+
+    def listener():
+        for _ in conn.notifies(timeout=1):
+            pass
+
+    worker = spawn(listener)
+    try:
+        # Make sure the listener is listening
+        if not conn.lock.locked():
+            sleep(0.01)
+
+        t0 = time()
+        conn.execute("select 1")
+        dt = time() - t0
+    finally:
+        gather(worker)
+
+    assert dt > 0.5

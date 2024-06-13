@@ -346,7 +346,7 @@ class AsyncConnection(BaseConnection[Row]):
             notifications arrives in the same packet.
         """
         # Allow interrupting the wait with a signal by reducing a long timeout
-        # into shorter interval.
+        # into shorter intervals.
         if timeout is not None:
             deadline = monotonic() + timeout
             interval = min(timeout, _WAIT_INTERVAL)
@@ -356,33 +356,32 @@ class AsyncConnection(BaseConnection[Row]):
 
         nreceived = 0
 
-        while True:
-            # Collect notifications. Also get the connection encoding if any
-            # notification is received to makes sure that they are consistent.
-            try:
-                async with self.lock:
+        async with self.lock:
+            enc = self.pgconn._encoding
+            while True:
+                try:
                     ns = await self.wait(notifies(self.pgconn), interval=interval)
-                    if ns:
-                        enc = self.pgconn._encoding
-            except e._NO_TRACEBACK as ex:
-                raise ex.with_traceback(None)
+                except e._NO_TRACEBACK as ex:
+                    raise ex.with_traceback(None)
 
-            # Emit the notifications received.
-            for pgn in ns:
-                n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
-                yield n
-                nreceived += 1
+                # Emit the notifications received.
+                for pgn in ns:
+                    n = Notify(
+                        pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
+                    )
+                    yield n
+                    nreceived += 1
 
-            # Stop if we have received enough notifications.
-            if stop_after is not None and nreceived >= stop_after:
-                break
-
-            # Check the deadline after the loop to ensure that timeout=0
-            # polls at least once.
-            if deadline:
-                interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                if interval < 0.0:
+                # Stop if we have received enough notifications.
+                if stop_after is not None and nreceived >= stop_after:
                     break
+
+                # Check the deadline after the loop to ensure that timeout=0
+                # polls at least once.
+                if deadline:
+                    interval = min(_WAIT_INTERVAL, deadline - monotonic())
+                    if interval < 0.0:
+                        break
 
     @asynccontextmanager
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
