@@ -10,7 +10,6 @@ import logging
 
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.pq.misc import error_message
 
 logger = logging.getLogger("psycopg")
 

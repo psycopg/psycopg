@@ -194,7 +194,7 @@ def pgconn(dsn, request, tracefile):
 
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
-        pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
+        pytest.fail(f"bad connection: {conn.get_error_message()}")
 
     with maybe_trace(conn, tracefile, request.function):
         yield conn

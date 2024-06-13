@@ -59,6 +59,7 @@ class FinishedPGconn:
     pipeline_status: int = PipelineStatus.OFF.value
 
     error_message: bytes = b""
+    _encoding: str = "utf-8"
     server_version: int = 0
 
     backend_pid: int = 0
@@ -91,6 +92,9 @@ class FinishedPGconn:
 
     def reset(self) -> NoReturn:
         self._raise()
+
+    def get_error_message(self, encoding: str = "") -> str:
+        return "the connection is closed"
 
     def reset_start(self) -> NoReturn:
         self._raise()
@@ -544,15 +548,9 @@ def lookup(sqlstate: str) -> type[Error]:
 
 
 def error_from_result(result: PGresult, encoding: str = "utf-8") -> Error:
-    from psycopg import pq
-
     state = result.error_field(DiagnosticField.SQLSTATE) or b""
-    cls = _class_for_state(state.decode("ascii"))
-    return cls(
-        pq.error_message(result, encoding=encoding),
-        info=result,
-        encoding=encoding,
-    )
+    cls = _class_for_state(state.decode("utf-8", "replace"))
+    return cls(result.get_error_message(encoding), info=result, encoding=encoding)
 
 
 def _is_pgresult(info: ErrorInfo) -> TypeGuard[PGresult]:

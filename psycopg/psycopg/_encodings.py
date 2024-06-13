@@ -16,7 +16,6 @@ from .errors import NotSupportedError
 from ._compat import cache
 
 if TYPE_CHECKING:
-    from .pq.abc import PGconn
     from ._connection_base import BaseConnection
 
 OK = ConnStatus.OK
@@ -86,23 +85,7 @@ def conn_encoding(conn: BaseConnection[Any] | None) -> str:
 
     Default to utf8 if the connection has no encoding info.
     """
-    if conn:
-        return pgconn_encoding(conn.pgconn)
-    else:
-        return "utf-8"
-
-
-def pgconn_encoding(pgconn: PGconn) -> str:
-    """
-    Return the Python encoding name of a libpq connection.
-
-    Default to utf8 if the connection has no encoding info.
-    """
-    if pgconn.status == OK:
-        pgenc = pgconn.parameter_status(b"client_encoding") or b"UTF8"
-        return pg2pyenc(pgenc)
-    else:
-        return "utf-8"
+    return conn.pgconn._encoding if conn else "utf-8"
 
 
 def conninfo_encoding(conninfo: str) -> str:

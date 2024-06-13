@@ -24,7 +24,6 @@ from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 from psycopg_c.pq cimport _buffer_as_string_and_size, Escaping
 
 from psycopg import errors as e
-from psycopg.pq.misc import error_message
 
 
 @cython.freelist(8)

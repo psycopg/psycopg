@@ -11,12 +11,11 @@ import os
 import sys
 import logging
 import ctypes.util
-from typing import cast, NamedTuple
+from typing import NamedTuple
 
-from .abc import PGconn, PGresult
+from . import abc
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
 from .._compat import cache
-from .._encodings import pgconn_encoding
 
 logger = logging.getLogger("psycopg.pq")
 
@@ -76,38 +75,23 @@ def find_libpq_full_path() -> str | None:
     return libname
 
 
-def error_message(obj: PGconn | PGresult, encoding: str = "utf8") -> str:
+def error_message(
+    obj: abc.PGconn | abc.PGresult | abc.PGcancelConn, encoding: str = ""
+) -> str:
     """
-    Return an error message from a `PGconn` or `PGresult`.
+    Return an error message from a `PGconn`, `PGresult`, `PGcancelConn`.
 
     The return value is a `!str` (unlike pq data which is usually `!bytes`):
     use the connection encoding if available, otherwise the `!encoding`
     parameter as a fallback for decoding. Don't raise exceptions on decoding
     errors.
-
     """
-    bmsg: bytes
+    # Note: this function is exposed by the pq module and was documented, therefore
+    # we are not going to remove it, but we don't use it internally.
 
-    if hasattr(obj, "error_field"):
-        # obj is a PGresult
-        obj = cast(PGresult, obj)
-        bmsg = obj.error_message
-
-    elif hasattr(obj, "error_message"):
-        # obj is a PGconn
-        if obj.status == OK:
-            encoding = pgconn_encoding(obj)
-        bmsg = obj.error_message
-
-    else:
-        raise TypeError(f"PGconn or PGresult expected, got {type(obj).__name__}")
-
-    if bmsg:
-        msg = strip_severity(bmsg.decode(encoding, "replace"))
-    else:
-        msg = "no details available"
-
-    return msg
+    # Don't pass the encoding if not specified, because different classes have
+    # different defaults (conn has its own encoding. others default to utf8).
+    return obj.get_error_message(encoding) if encoding else obj.get_error_message()
 
 
 # Possible prefixes to strip for error messages, in the known localizations.
@@ -148,7 +132,15 @@ def strip_severity(msg: str) -> str:
     return msg.strip()
 
 
-def connection_summary(pgconn: PGconn) -> str:
+def _clean_error_message(msg: bytes, encoding: str) -> str:
+    smsg = msg.decode(encoding, "replace")
+    if smsg:
+        return strip_severity(smsg)
+    else:
+        return "no error details available"
+
+
+def connection_summary(pgconn: abc.PGconn) -> str:
     """
     Return summary information on a connection.
 

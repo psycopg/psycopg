@@ -18,7 +18,6 @@ from . import errors as e
 from .abc import Buffer, ConnectionType, PQGen, Transformer
 from .pq.misc import connection_summary
 from ._cmodule import _psycopg
-from ._encodings import pgconn_encoding
 from .generators import copy_from
 
 if TYPE_CHECKING:
@@ -101,7 +100,7 @@ class BaseCopy(Generic[ConnectionType]):
         if binary:
             self.formatter = BinaryFormatter(tx)
         else:
-            self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
+            self.formatter = TextFormatter(tx, encoding=self._pgconn._encoding)
 
         self._finished = False
 

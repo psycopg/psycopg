@@ -15,7 +15,6 @@ from . import errors as e
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
-from ._encodings import pgconn_encoding
 from .generators import pipeline_communicate, fetch_many, send
 from ._capabilities import capabilities
 
@@ -168,7 +167,7 @@ class BasePipeline:
         if queued is None:
             (result,) = results
             if result.status == FATAL_ERROR:
-                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
+                raise e.error_from_result(result, encoding=self.pgconn._encoding)
             elif result.status == PIPELINE_ABORTED:
                 raise e.PipelineAborted("pipeline aborted")
         else:

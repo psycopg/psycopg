@@ -27,7 +27,7 @@ cdef class Escaping:
         out = libpq.PQescapeLiteral(self.conn._pgconn_ptr, ptr, length)
         if out is NULL:
             raise e.OperationalError(
-                f"escape_literal failed: {error_message(self.conn)}"
+                f"escape_literal failed: {self.conn.get_error_message())}"
             )
 
         rv = out[:strlen(out)]
@@ -49,7 +49,7 @@ cdef class Escaping:
         out = libpq.PQescapeIdentifier(self.conn._pgconn_ptr, ptr, length)
         if out is NULL:
             raise e.OperationalError(
-                f"escape_identifier failed: {error_message(self.conn)}"
+                f"escape_identifier failed: {self.conn.get_error_message()}"
             )
 
         rv = out[:strlen(out)]
@@ -76,7 +76,7 @@ cdef class Escaping:
             if error:
                 PyMem_Free(buf_out)
                 raise e.OperationalError(
-                    f"escape_string failed: {error_message(self.conn)}"
+                    f"escape_string failed: {self.conn.get_error_message()}"
                 )
 
         else:

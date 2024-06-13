@@ -9,7 +9,7 @@ from cpython.object cimport PyObject_CallFunctionObjArgs
 from time import monotonic
 
 from psycopg import errors as e
-from psycopg.pq import abc, error_message
+from psycopg.pq import abc
 from psycopg.abc import PipelineCommand, PQGen
 from psycopg._enums import Wait, Ready
 from psycopg._compat import Deque
@@ -45,7 +45,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
         if conn_status == libpq.CONNECTION_BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {error_message(conn, encoding=encoding)}",
+                f"connection is bad: {conn.get_error_message(encoding)}",
                 pgconn=conn
             )
 
@@ -67,7 +67,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection failed: {error_message(conn, encoding=encoding)}",
+                f"connection failed: {conn.get_error_message(encoding)}",
                 pgconn=e.finish_pgconn(conn),
             )
         else:
@@ -101,7 +101,7 @@ def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[No
             yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_W
         elif status == libpq.PGRES_POLLING_FAILED:
             raise e.OperationalError(
-                f"cancellation failed: {cancel_conn.error_message}"
+                f"cancellation failed: {cancel_conn.get_error_message()}"
             )
         else:
             raise e.InternalError(f"unexpected poll status: {status}")
@@ -154,7 +154,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
                 raise e.OperationalError(
-                    f"consuming input failed: {error_message(pgconn)}")
+                    f"consuming input failed: {pgconn.get_error_message()}")
 
 
 def fetch_many(pq.PGconn pgconn) -> PQGen[list[PGresult]]:
@@ -227,7 +227,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[PGresult | None]:
 
             if 1 != cires:
                 raise e.OperationalError(
-                    f"consuming input failed: {error_message(pgconn)}")
+                    f"consuming input failed: {pgconn.get_error_message()}")
             if not ibres:
                 break
             while True:
@@ -272,7 +272,7 @@ def pipeline_communicate(
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
                 raise e.OperationalError(
-                    f"consuming input failed: {error_message(pgconn)}")
+                    f"consuming input failed: {pgconn.get_error_message()}")
 
             _consume_notifies(pgconn)
 
