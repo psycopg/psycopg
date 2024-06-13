@@ -94,7 +94,7 @@ class FinishedPGconn:
         self._raise()
 
     def get_error_message(self, encoding: str = "") -> str:
-        return "the conenection is closed"
+        return "the connection is closed"
 
     def reset_start(self) -> NoReturn:
         self._raise()
