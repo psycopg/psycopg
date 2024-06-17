@@ -64,14 +64,12 @@ class Capabilities:
             "Cursor.stream() with 'size' parameter greater than 1", 170000, check=check
         )
 
-    def has_pgbouncer_prepared(self, check: bool = False) -> bool:
-        """Check if prepared statements in PgBouncer are supported.
+    def has_send_close_prepared(self, check: bool = False) -> bool:
+        """Check if the `pq.PGconn.send_closed_prepared()` method is implemented.
 
         The feature requires libpq 17.0 and greater.
         """
-        return self._has_feature(
-            "PgBouncer prepared statements compatibility", 170000, check=check
-        )
+        return self._has_feature("PGconn.send_close_prepared()", 170000, check=check)
 
     def _has_feature(self, feature: str, want_version: int, check: bool) -> bool:
         """

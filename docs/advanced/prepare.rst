@@ -68,8 +68,8 @@ PgBouncer__ middleware, using the following caveats:
 - PgBouncer version must be version `1.22`__ or newer.
 - PgBouncer `max_prepared_statements`__ must be greater than 0.
 - The libpq version on the client must be from PostgreSQL 17 or newer
-  (you can check the `~Capabilities.has_pgbouncer_prepared` capability to
-  verify it).
+  (you can check the `~Capabilities.has_send_close_prepared()` capability to
+  verify that the libpq implements the features required by PgBouncer).
 
 .. __: https://www.pgbouncer.org/
 .. __: https://www.pgbouncer.org/2024/01/pgbouncer-1-22-0

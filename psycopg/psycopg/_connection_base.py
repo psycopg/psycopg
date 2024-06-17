@@ -27,6 +27,7 @@ from ._compat import LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
 from ._preparing import PrepareManager
+from ._capabilities import capabilities
 from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
 
-_HAS_SEND_CLOSE = pq.__build_version__ >= 170000
+_HAS_SEND_CLOSE = capabilities.has_send_close_prepared()
 
 logger = logging.getLogger("psycopg")
 

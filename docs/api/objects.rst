@@ -158,7 +158,7 @@ Libpq capabilities information
             the legacy :pq:`PQcancel` implementation.
 
     .. automethod:: has_stream_chunked
-    .. automethod:: has_pgbouncer_prepared
+    .. automethod:: has_send_close_prepared
 
         .. seealso:: :ref:`pgbouncer`
 
