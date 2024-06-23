@@ -42,6 +42,7 @@ Class             Binding     Storage     Placeholders         See also
 `ClientCursor`    cient-side  client-side ``%s``, ``%(name)s`` :ref:`client-side-binding-cursors`
 `ServerCursor`    server-side server-side ``%s``, ``%(name)s`` :ref:`server-side-cursors`
 `RawCursor`       server-side client-side ``$1``               :ref:`raw-query-cursors`
+`RawServerCursor` server-side server-side ``$1``               :ref:`raw-query-cursors`
 ================= =========== =========== ==================== ==================================
 
 If not specified by a `~Connection.cursor_factory`, `~Connection.cursor()`
@@ -291,6 +292,10 @@ functionality, such as when dealing with a very complex query containing
 One important note is that raw query cursors only accept positional arguments
 in the form of a list or tuple. This means you cannot use named arguments
 (i.e., dictionaries).
+
+`!RawCursor` behaves like `Cursor`, in returning the complete result from the
+server to the client. The `RawServerCursor` and `AsyncRawServerCursor`
+implement :ref:`server-side-cursors` with raw PostgreSQL placeholders.
 
 There are two ways to use raw query cursors:
 

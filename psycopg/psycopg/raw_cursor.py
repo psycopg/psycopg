@@ -13,6 +13,7 @@ from .rows import Row
 from ._enums import PyFormat
 from .cursor import Cursor
 from .cursor_async import AsyncCursor
+from .server_cursor import ServerCursor, AsyncServerCursor
 from ._queries import PostgresQuery
 from ._cursor_base import BaseCursor
 
@@ -59,4 +60,14 @@ class RawCursor(RawCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
 
 class AsyncRawCursor(RawCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]):
+    __module__ = "psycopg"
+
+
+class RawServerCursor(RawCursorMixin["Connection[Any]", Row], ServerCursor[Row]):
+    __module__ = "psycopg"
+
+
+class AsyncRawServerCursor(
+    RawCursorMixin["AsyncConnection[Any]", Row], AsyncServerCursor[Row]
+):
     __module__ = "psycopg"
