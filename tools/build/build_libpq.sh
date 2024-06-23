@@ -8,7 +8,7 @@ postgres_version="${LIBPQ_VERSION}"
 openssl_version="${OPENSSL_VERSION}"
 
 # Latest release: https://openldap.org/software/download/
-ldap_version="2.6.6"
+ldap_version="2.6.8"
 
 # Latest release: https://github.com/cyrusimap/cyrus-sasl/releases
 sasl_version="2.1.28"
