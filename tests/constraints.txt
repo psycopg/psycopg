@@ -38,6 +38,6 @@ tomli == 2.0.1
 # Undeclared extras to "unblock" extra features
 
 shapely == 1.7.0
-# Warning: binary package only available up to python < 3.9.
+# Warning: binary package only available up to python <= 3.8.
 # Bump to a higher version when min supported python version increases past it.
-numpy == 1.20.0
+numpy == 1.18.0
