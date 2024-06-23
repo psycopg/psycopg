@@ -46,6 +46,9 @@ jobs:
           - {impl: c, python: "3.11", ext: numpy, postgres: "postgres:15"}
 
           # Test with minimum dependencies versions
+          # WARNING: when bumping min version, make sure that the dependencies
+          # # in tests/constraints.txt are updated and that binary packages
+          # are available for such version.
           - {impl: c, python: "3.8", ext: min, postgres: "postgres:15"}
 
           # Test memory alignment

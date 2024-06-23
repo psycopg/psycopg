@@ -1,6 +1,8 @@
 from math import isnan
 
 import pytest
+from packaging.version import parse as ver  # noqa: F401  # used in skipif
+
 from psycopg.adapt import PyFormat
 from psycopg.pq import Format
 
@@ -12,6 +14,10 @@ except ImportError:
 pytest.importorskip("numpy")
 
 pytestmark = [pytest.mark.numpy]
+
+skip_numpy2 = pytest.mark.skipif(
+    "ver(np.__version__) >= ver('2.0.0')", reason="not available since numpy >= 2"
+)
 
 
 def test_classes_identities():
@@ -31,13 +37,13 @@ def test_classes_identities():
     "name, equiv",
     [
         ("inf", "inf"),
-        ("infty", "inf"),
-        ("NINF", "-inf"),
+        pytest.param("infty", "inf", marks=skip_numpy2),
+        pytest.param("NINF", "-inf", marks=skip_numpy2),
         ("nan", "nan"),
-        ("NaN", "nan"),
-        ("NAN", "nan"),
-        ("PZERO", "0.0"),
-        ("NZERO", "-0.0"),
+        pytest.param("NaN", "nan", marks=skip_numpy2),
+        pytest.param("NAN", "nan", marks=skip_numpy2),
+        pytest.param("PZERO", "0.0", marks=skip_numpy2),
+        pytest.param("NZERO", "-0.0", marks=skip_numpy2),
     ],
 )
 def test_special_values(name, equiv):

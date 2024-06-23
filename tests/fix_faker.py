@@ -230,6 +230,10 @@ class Faker:
         rv = set()
         for cls in dumpers.keys():
             if isinstance(cls, str):
+                if cls == "numpy.bool":
+                    # An alias of numpy.bool_ for numpy > 2.
+                    # Raises a warning in numpy > 1.20.
+                    continue
                 try:
                     cls = deep_import(cls)
                 except ImportError:
