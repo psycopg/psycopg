@@ -4,14 +4,8 @@
 
 set -euo pipefail
 
-# WARNING: the version used in CI are defined in .github/workflows/packages-bin.yml
-
-# Latest release: https://www.postgresql.org/ftp/source/
-# IMPORTANT! Change the cache key in packages.yml when upgrading libraries
-postgres_version="${LIBPQ_VERSION:-16.0}"
-
-# Latest release: https://www.openssl.org/source/
-openssl_version="${OPENSSL_VERSION:-1.1.1v}"
+postgres_version="${LIBPQ_VERSION}"
+openssl_version="${OPENSSL_VERSION}"
 
 # Latest release: https://openldap.org/software/download/
 ldap_version="2.6.6"
@@ -31,7 +25,7 @@ source /etc/os-release
 case "$ID" in
     centos)
         yum update -y
-        yum install -y zlib-devel krb5-devel pam-devel
+        yum install -y zlib-devel krb5-devel pam-devel perl-IPC-Cmd
         ;;
 
     alpine)
@@ -49,7 +43,7 @@ if [ "$ID" == "centos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/openssl.cnf" ]]; then
 
     # Build openssl if needed
-    openssl_tag="OpenSSL_${openssl_version//./_}"
+    openssl_tag="openssl-${openssl_version}"
     openssl_dir="openssl-${openssl_tag}"
     if [ ! -d "${openssl_dir}" ]; then
         curl -fsSL \
@@ -159,13 +153,13 @@ if [ ! -d "${postgres_dir}" ]; then
 '|#define DEFAULT_PGSOCKET_DIR "/var/run/postgresql"|' \
         src/include/pg_config_manual.h
 
-    # Often needed, but currently set by the workflow
-    # export LD_LIBRARY_PATH="${LIBPQ_BUILD_PREFIX}/lib"
+    export LD_LIBRARY_PATH="${LIBPQ_BUILD_PREFIX}/lib:${LIBPQ_BUILD_PREFIX}/lib64"
 
     ./configure --prefix=${LIBPQ_BUILD_PREFIX} --sysconfdir=/etc/postgresql-common \
         --without-readline --without-icu \
         --with-gssapi --with-openssl --with-pam --with-ldap \
-        CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ LDFLAGS=-L${LIBPQ_BUILD_PREFIX}/lib
+        CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ \
+        LDFLAGS="-L${LIBPQ_BUILD_PREFIX}/lib -L${LIBPQ_BUILD_PREFIX}/lib64"
     make -C src/interfaces/libpq
     make -C src/bin/pg_config
     make -C src/include

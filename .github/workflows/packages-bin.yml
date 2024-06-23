@@ -12,8 +12,10 @@ jobs:
     if: true
 
     env:
+      # Latest release: https://www.postgresql.org/ftp/source/
       LIBPQ_VERSION: "16.3"
-      OPENSSL_VERSION: "1.1.1w"
+      # Latest release: https://www.openssl.org/source/
+      OPENSSL_VERSION: "3.3.1"
 
     strategy:
       fail-fast: false
@@ -67,7 +69,7 @@ jobs:
             PGPASSWORD=password
             LIBPQ_BUILD_PREFIX=/host/tmp/libpq.build
             PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
-            LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib"
+            LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib:$LIBPQ_BUILD_PREFIX/lib64"
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
