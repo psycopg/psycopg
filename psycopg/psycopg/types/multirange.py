@@ -206,7 +206,7 @@ class BaseMultirangeDumper(RecursiveDumper):
 
         item = self._get_item(obj)
         if item is None:
-            return MultirangeDumper(self.cls)
+            return self
 
         dumper: BaseMultirangeDumper
         if type(item) is int:

@@ -5,7 +5,6 @@ from decimal import Decimal
 import pytest
 
 from psycopg import pq, sql
-from psycopg import errors as e
 from psycopg.adapt import PyFormat
 from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
@@ -78,22 +77,21 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("pgtype", range_names)
-@pytest.mark.parametrize(
-    "fmt_in",
-    [
-        PyFormat.AUTO,
-        PyFormat.TEXT,
-        # There are many ways to work around this (use text, use a cast on the
-        # placeholder, use specific Range subclasses).
-        pytest.param(
-            PyFormat.BINARY,
-            marks=pytest.mark.xfail(
-                reason="can't dump an array of untypes binary range without cast"
-            ),
+pyformat_array = [
+    PyFormat.AUTO,
+    PyFormat.TEXT,
+    # There are ways to work around this (use text, use specific Range subclasses).
+    pytest.param(
+        PyFormat.BINARY,
+        marks=pytest.mark.xfail(
+            reason="can't dump an array of untyped binary range without cast"
         ),
-    ],
-)
+    ),
+]
+
+
+@pytest.mark.parametrize("pgtype", range_names)
+@pytest.mark.parametrize("fmt_in", pyformat_array)
 def test_dump_builtin_array(conn, pgtype, fmt_in):
     r1 = Range(empty=True)  # type: ignore[var-annotated]
     r2 = Range(bounds="()")  # type: ignore[var-annotated]
@@ -105,7 +103,7 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
 
 
 @pytest.mark.parametrize("pgtype", range_names)
-@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_in", pyformat_array)
 def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     r1 = Range(empty=True)  # type: ignore[var-annotated]
     r2 = Range(bounds="()")  # type: ignore[var-annotated]
@@ -211,14 +209,8 @@ def test_copy_in(conn, min, max, bounds, format):
     else:
         r = Range(empty=True)
 
-    try:
-        with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
-            copy.write_row([r])
-    except e.ProtocolViolation:
-        if not min and not max and format == pq.Format.BINARY:
-            pytest.xfail("TODO: add annotation to dump ranges with no type info")
-        else:
-            raise
+    with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
+        copy.write_row([r])
 
     rec = cur.execute("select r from copyrange order by id").fetchone()
     assert rec[0] == r

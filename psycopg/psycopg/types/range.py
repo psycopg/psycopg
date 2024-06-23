@@ -310,7 +310,7 @@ class BaseRangeDumper(RecursiveDumper):
 
         item = self._get_item(obj)
         if item is None:
-            return RangeDumper(self.cls)
+            return self
 
         dumper: BaseRangeDumper
         if type(item) is int:
