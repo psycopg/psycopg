@@ -153,7 +153,7 @@ jobs:
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
-        pyver: [cp37, cp38, cp39, cp310, cp311, cp312]
+        pyver: [cp38, cp39, cp310, cp311, cp312]
 
     env:
       PG_VERSION: "16"
