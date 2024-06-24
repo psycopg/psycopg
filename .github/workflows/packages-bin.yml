@@ -12,7 +12,7 @@ jobs:
     if: true
 
     env:
-      LIBPQ_VERSION: "16.0"
+      LIBPQ_VERSION: "16.3"
       OPENSSL_VERSION: "1.1.1w"
 
     strategy:
@@ -43,7 +43,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           package-dir: psycopg_binary
         env:
@@ -119,7 +119,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           package-dir: psycopg_binary
         env:
@@ -129,6 +129,7 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
+            MACOSX_DEPLOYMENT_TARGET=14.0
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
             PATH="/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH"
@@ -170,7 +171,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           package-dir: psycopg_binary
         env:
@@ -180,6 +181,7 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
+            MACOSX_DEPLOYMENT_TARGET=12.0
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
             PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
@@ -218,7 +220,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           package-dir: psycopg_binary
         env:
