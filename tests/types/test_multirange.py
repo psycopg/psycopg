@@ -411,7 +411,7 @@ def test_dump_custom_empty(conn, testmr):
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_custom_none(conn, fmt_in):
+def test_dump_custom_none(conn, testmr, fmt_in):
     info = MultirangeInfo.fetch(conn, "testmultirange")
     register_multirange(info, conn)
     conn.adapters.register_dumper(str, StrNoneDumper)
