@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 49.2.0", "wheel >= 0.37", "tomli >= 2.0.1"]
+requires = ["setuptools >= 49.2.0", "wheel >= 0.37", "tomli >= 2.0.1 ; python_version<'3.11'"]
 
 # The cython_backend is a build backend adding a Cython dependency if the c
 # source must be build from pxd files (when building from git checkout), and
