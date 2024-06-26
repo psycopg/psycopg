@@ -59,6 +59,7 @@ Psycopg 3.1.20 (unreleased)
   (:ticket:`#820`).
 - Avoid unneeded escaping checks and memory over-allocation in text copy
   (:ticket:`#829`).
+- Bundle binary package with OpenSSL 3.3.x (:ticket:`#847`).
 
 
 Current release
