@@ -27,7 +27,7 @@ case "$ID" in
             # TODO: On 2021-11-09 curl fails on 'ppc64le' with:
             #   curl: (60) SSL certificate problem: certificate has expired
             # Test again later if -k can be removed.
-            curl -skf https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            curl -fsSLk https://www.postgresql.org/media/keys/ACCC4CF8.asc \
                 > /etc/apt/trusted.gpg.d/postgresql.asc
         fi
 
