@@ -10,10 +10,15 @@ otherwise it only relies on the c files to have been precompiled.
 from __future__ import annotations
 
 import os
+import sys
 from typing import Any
 
-import tomli
 from setuptools import build_meta
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 def get_requires_for_build_wheel(config_settings: Any = None) -> list[str]:
@@ -26,7 +31,7 @@ def get_requires_for_build_wheel(config_settings: Any = None) -> list[str]:
     # to build. Get the version from the pyproject itself to keep things in the
     # same place.
     with open("pyproject.toml", "rb") as f:
-        pyprj = tomli.load(f)
+        pyprj = tomllib.load(f)
 
     rv: list[str] = pyprj["cython-backend"]["cython-requires"]
     return rv
