@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.20 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.20
+^^^^^^^^^^^^^^
 
 - Use the simple query protocol to execute COMMIT/ROLLBACK when possible.
   This should make easier to connect the PgBouncer admin database
@@ -20,9 +20,6 @@ Psycopg 3.1.20 (unreleased)
   (:ticket:`#829`).
 - Bundle binary package with OpenSSL 3.3.x (:ticket:`#847`).
 
-
-Current release
----------------
 
 Psycopg 3.1.19
 ^^^^^^^^^^^^^^
