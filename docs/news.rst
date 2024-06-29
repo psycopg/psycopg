@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.2 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2
+^^^^^^^^^^^
 
 - Add support for integer, floating point, boolean `NumPy scalar types`__
   (:ticket:`#332`).
@@ -50,9 +50,6 @@ Psycopg 3.2 (unreleased)
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
-
-Current release
----------------
 
 Psycopg 3.1.20
 ^^^^^^^^^^^^^^
