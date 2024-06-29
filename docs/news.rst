@@ -51,8 +51,11 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.20 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.20
+^^^^^^^^^^^^^^
 
 - Use the simple query protocol to execute COMMIT/ROLLBACK when possible.
   This should make querying the PgBouncer admin database easier
@@ -61,9 +64,6 @@ Psycopg 3.1.20 (unreleased)
   (:ticket:`#829`).
 - Bundle binary package with OpenSSL 3.3.x (:ticket:`#847`).
 
-
-Current release
----------------
 
 Psycopg 3.1.19
 ^^^^^^^^^^^^^^
