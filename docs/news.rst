@@ -13,6 +13,8 @@ Current release
 Psycopg 3.2
 ^^^^^^^^^^^
 
+.. rubric:: New top-level features
+
 - Add support for integer, floating point, boolean `NumPy scalar types`__
   (:ticket:`#332`).
 - Add `!timeout` and `!stop_after` parameters to `Connection.notifies()`
@@ -20,33 +22,39 @@ Psycopg 3.2
 - Allow dumpers to return `!None`, to be converted to NULL (:ticket:`#377`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:tickets:`#560, #839`).
-- Add `psycopg.capabilities` object to :ref:`inspect the libpq capabilities
+- Add `capabilities` object to :ref:`inspect the libpq capabilities
   <capabilities>` (:ticket:`#772`).
 - Add `~rows.scalar_row` to return scalar values from a query (:ticket:`#723`).
-- Prepared statements are now :ref:`compatible with PgBouncer <pgbouncer>`.
-  (:ticket:`#589`).
+- Add `~Connection.cancel_safe()` for encrypted and non-blocking cancellation
+  when using libpq v17. Use such method internally to implement
+  `!KeyboardInterrupt` and `~cursor.copy` termination (:ticket:`#754`).
+- The `!context` parameter of `sql` objects `~sql.Composable.as_string()` and
+  `~sql.Composable.as_bytes()` methods is now optional (:ticket:`#716`).
 - Add `~Connection.set_autocommit()` on sync connections, and similar
   transaction control methods available on the async connections.
+- Add a `size` parameter to `~Cursor.stream()` to enable results retrieval in
+  chunks instead of row-by-row (:ticket:`#794`).
+
+.. rubric:: New libpq wrapper features
+
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
 - Add support for libpq encrypted and non-blocking query cancellation
   functions introduced in libpq v17 (:ticket:`#754`).
-- The `!context` parameter of `sql` objects `~sql.Composable.as_string()` and
-  `~sql.Composable.as_bytes()` methods is now optional (:ticket:`#716`).
+- Add support for libpq function to retrieve results in chunks introduced in
+  libpq v17 (:ticket:`#793`).
+- Add support for libpq function to change role passwords introduced in
+  libpq v17 (:ticket:`#818`).
+
+.. rubric:: Other changes
+
+- Prepared statements are now :ref:`compatible with PgBouncer <pgbouncer>`.
+  (:ticket:`#589`).
 - Disable receiving more than one result on the same cursor in pipeline mode,
   to iterate through `~Cursor.nextset()`. The behaviour was different than
   in non-pipeline mode and not totally reliable (:ticket:`#604`).
   The `Cursor` now only preserves the results set of the last
   `~Cursor.execute()`, consistently with non-pipeline mode.
-- Add `~Connection.cancel_safe()` for encrypted and non-blocking cancellation
-  If possible, use such method internally upon `KeyboardInterrupt` and `Copy`
-  termination (:ticket:`#754`).
-- Add support for libpq function to retrieve results in chunks introduced in
-  libpq v17 (:ticket:`#793`).
-- Add a `size` parameter to `~Cursor.stream()` to enable results retrieval by
-  chunks instead of row-by-row (:ticket:`#794`).
-- Add support for libpq function to change role passwords introduced in
-  libpq v17 (:ticket:`#818`).
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
