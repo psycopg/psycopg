@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 from typing import Any, Callable, NamedTuple, NoReturn
 from typing import TYPE_CHECKING, Protocol, Sequence
+from typing import Dict, Tuple  # drop with Python 3.8
 from collections import namedtuple
 
 from . import pq
@@ -82,13 +83,13 @@ class BaseRowFactory(Protocol[Row]):
     def __call__(self, __cursor: BaseCursor[Any, Any]) -> RowMaker[Row]: ...
 
 
-TupleRow: TypeAlias = "tuple[Any, ...]"
+TupleRow: TypeAlias = Tuple[Any, ...]
 """
 An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
 
 
-DictRow: TypeAlias = "dict[str, Any]"
+DictRow: TypeAlias = Dict[str, Any]
 """
 An alias for the type returned by `dict_row()`
 

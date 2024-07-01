@@ -8,32 +8,32 @@ from __future__ import annotations
 
 from typing import Any, Callable, Generator, Mapping
 from typing import Protocol, Sequence, TYPE_CHECKING
+from typing import Dict, Union  # drop with Python 3.8
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import TypeAlias, TypeVar
+from ._compat import LiteralString, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from . import sql  # noqa: F401
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready  # noqa: F401
-    from ._compat import LiteralString  # noqa: F401
     from ._adapters_map import AdaptersMap
     from ._connection_base import BaseConnection
 
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer: TypeAlias = "bytes | bytearray | memoryview"
+Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
-Query: TypeAlias = "LiteralString | bytes | sql.SQL | sql.Composed"
-Params: TypeAlias = "Sequence[Any] | Mapping[str, Any]"
+Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
+Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = "type | tuple[DumperKey, ...]"
-ConnParam: TypeAlias = "str | int | None"
-ConnDict: TypeAlias = "dict[str, ConnParam]"
+DumperKey: TypeAlias = Union[type, "tuple[DumperKey, ...]"]
+ConnParam: TypeAlias = Union[str, int, None]
+ConnDict: TypeAlias = Dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 
