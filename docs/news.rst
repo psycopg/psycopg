@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2.2 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Drop `!TypeDef` specifications as string from public modules, as they cannot
+  be composed by users as `!typing` objects previously could (:ticket:`#860`).
+
+
 Current release
 ---------------
 
