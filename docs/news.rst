@@ -10,6 +10,13 @@
 Current release
 ---------------
 
+Psycopg 3.2.1 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix packaging metadata breaking ``[c]``, ``[binary]`` dependencies
+  (:ticket:`#853`).
+
+
 Psycopg 3.2
 -----------
 
