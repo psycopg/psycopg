@@ -11,7 +11,7 @@ Current release
 ---------------
 
 Psycopg 3.2
-^^^^^^^^^^^
+-----------
 
 .. rubric:: New top-level features
 

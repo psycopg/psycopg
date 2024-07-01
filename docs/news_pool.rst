@@ -31,7 +31,7 @@ psycopg_pool 3.2.1
 
 
 psycopg_pool 3.2.0
-^^^^^^^^^^^^^^^^^^
+------------------
 
 - Add support for async `!reconnect_failed` callbacks in `AsyncConnectionPool`
   (:ticket:`#520`).
