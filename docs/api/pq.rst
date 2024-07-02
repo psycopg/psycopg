@@ -87,6 +87,7 @@ Objects wrapping libpq structures and functions
 .. autoclass:: PGconn()
 
     .. autoattribute:: pgconn_ptr
+    .. automethod:: cancel_conn
     .. automethod:: get_cancel
     .. autoattribute:: needs_password
     .. autoattribute:: used_password
@@ -99,7 +100,7 @@ Objects wrapping libpq structures and functions
            >>> encrypted = conn.pgconn.encrypt_password(password.encode(enc), rolename.encode(enc))
            b'SCRAM-SHA-256$4096:...
 
-    .. .. automethod:: change_password FIXME: needs libpq 17's docs
+    .. automethod:: change_password
 
     .. automethod:: trace
     .. automethod:: set_trace_flags
@@ -137,9 +138,11 @@ Objects wrapping libpq structures and functions
 .. autoclass:: Conninfo
 .. autoclass:: Escaping
 
-.. autoclass:: PGcancel()
+.. autoclass:: PGcancelConn()
     :members:
 
+.. autoclass:: PGcancel()
+    :members:
 
 Enumerations
 ------------
@@ -152,7 +155,7 @@ Enumerations
     during the connection phase and are considered internal.
     `ALLOCATED` is only expected to be returned by `PGcancelConn.status`.
 
-    .. seealso:: :pq:`PQstatus()` and `PQcancelStatus()` return this value.
+    .. seealso:: :pq:`PQstatus()` and :pq:`PQcancelStatus()` return this value.
 
 
 .. autoclass:: PollingStatus

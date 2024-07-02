@@ -183,6 +183,6 @@ def pq_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
 
 
 def setup(app):
-    app.add_config_value("libpq_docs_version", "14", "html")
+    app.add_config_value("libpq_docs_version", "17", "html")
     roles.register_local_role("pq", pq_role)
     get_reader().app = app
