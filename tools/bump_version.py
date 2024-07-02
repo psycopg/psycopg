@@ -77,7 +77,7 @@ class Bumper:
             (?P<package> [^\s]+)
             (?P<op> \s* == \s*)
             (?P<ver> [^\s]+)
-            (?P<post> \s*)
+            (?P<post> \s* (?:;.* \s*))
             \s* $
             """
         )
