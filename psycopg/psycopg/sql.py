@@ -39,15 +39,15 @@ class Composable(ABC):
     """
     Abstract base class for objects that can be used to compose an SQL string.
 
-    `!Composable` objects can be passed directly to
-    `~psycopg.Cursor.execute()`, `~psycopg.Cursor.executemany()`,
-    `~psycopg.Cursor.copy()` in place of the query string.
-
     `!Composable` objects can be joined using the ``+`` operator: the result
     will be a `Composed` instance containing the objects joined. The operator
     ``*`` is also supported with an integer argument: the result is a
     `!Composed` instance containing the left argument repeated as many times as
     requested.
+
+    `!SQL` and `!Composed` objects can be passed directly to
+    `~psycopg.Cursor.execute()`, `~psycopg.Cursor.executemany()`,
+    `~psycopg.Cursor.copy()` in place of the query string.
     """
 
     def __init__(self, obj: Any):
@@ -110,10 +110,14 @@ class Composed(Composable):
     """
     A `Composable` object made of a sequence of `!Composable`.
 
-    The object is usually created using `!Composable` operators and methods.
-    However it is possible to create a `!Composed` directly specifying a
-    sequence of objects as arguments: if they are not `!Composable` they will
-    be wrapped in a `Literal`.
+    The object is usually created using `!Composable` operators and methods
+    (such as the `SQL.format()` method). `!Composed` objects can be passed
+    directly to `~psycopg.Cursor.execute()`, `~psycopg.Cursor.executemany()`,
+    `~psycopg.Cursor.copy()` in place of the query string.
+
+    It is also possible to create a `!Composed` directly specifying a sequence
+    of objects as arguments: if they are not `!Composable` they will be wrapped
+    in a `Literal`.
 
     Example::
 
@@ -184,6 +188,10 @@ class SQL(Composable):
     it to pass constant strings representing templates or snippets of SQL
     statements; use other objects such as `Identifier` or `Literal` to
     represent variable parts.
+
+    `!SQL` objects can be passed directly to `~psycopg.Cursor.execute()`,
+    `~psycopg.Cursor.executemany()`, `~psycopg.Cursor.copy()` in place of the
+    query string.
 
     Example::
 
