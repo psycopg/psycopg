@@ -65,7 +65,7 @@ to update it beforehand.
 .. note::
 
     Binary packages are produced on a best-effort basis; the supported
-    platforms depends on the support of adequate CI runners to build the
+    platforms depend on the CI runners available to build the
     packages. You can check the `psycopg-binary PyPI files`__ to verify
     that your platform is supported.
 
