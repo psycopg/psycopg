@@ -327,7 +327,7 @@ of communication.
 .. |NOTIFY| replace:: :sql:`NOTIFY`
 .. _NOTIFY: https://www.postgresql.org/docs/current/sql-notify.html
 
-Because of the way sessions interact with notifications (see |NOTIFY|_
+Because of the way transactions interact with notifications (see |NOTIFY|_
 documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
