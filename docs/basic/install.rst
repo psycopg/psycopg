@@ -62,8 +62,22 @@ This will install a self-contained package with all the libraries needed.
 **You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
 to update it beforehand.
 
-The above package should work in most situations. It **will not work** in
-some cases though.
+.. note::
+
+    Binary packages are produced on a best-effort basis; the supported
+    platforms depends on the support of adequate CI runners to build the
+    packages. You can check the `psycopg-binary PyPI files`__ to verify
+    that your platform is supported.
+
+    .. __: https://pypi.org/project/psycopg-binary/#files
+
+.. warning::
+
+    Starting from Psycopg 3.1.20, ARM64 macOS binary packages (i.e. for
+    Apple M1 machines) are no more available for macOS versions before 14.0.
+    Please upgrade your OS to at least 14.0 or use a :ref:`local
+    <local-installation>` or a :ref:`Python <pure-python-installation>`
+    installation.
 
 If your platform is not supported you should proceed to a :ref:`local
 installation <local-installation>` or a :ref:`pure Python installation

@@ -86,6 +86,9 @@ Psycopg 3.1.20
 - Avoid unneeded escaping checks and memory over-allocation in text copy
   (:ticket:`#829`).
 - Bundle binary package with OpenSSL 3.3.x (:ticket:`#847`).
+- Drop macOS ARM64 binary packages for macOS versions before 14.0 and Python
+  before 3.10 (not for our choice but for the lack of available CI runners;
+  :ticket:`#858`)
 
 
 Psycopg 3.1.19
