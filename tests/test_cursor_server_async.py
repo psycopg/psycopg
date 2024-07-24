@@ -38,7 +38,7 @@ async def test_init_row_factory(aconn):
         aconn, "baz", row_factory=rows.namedtuple_row
     ) as cur:
         assert cur.name == "baz"
-        assert cur.row_factory is rows.namedtuple_row  # type: ignore
+        assert cur.row_factory is rows.namedtuple_row
 
 
 async def test_init_params(aconn):

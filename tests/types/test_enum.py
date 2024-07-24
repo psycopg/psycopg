@@ -306,7 +306,8 @@ def test_remap(conn, fmt_in, fmt_out, mapping):
 
 
 def test_remap_rename(conn):
-    enum = Enum("RenamedEnum", "FOO BAR QUX")
+    RenamedEnum = Enum("RenamedEnum", "FOO BAR QUX")
+    enum = RenamedEnum
     info = EnumInfo.fetch(conn, "puretestenum")
     register_enum(info, conn, enum, mapping={enum.QUX: "BAZ"})
 
@@ -318,7 +319,8 @@ def test_remap_rename(conn):
 
 
 def test_remap_more_python(conn):
-    enum = Enum("LargerEnum", "FOO BAR BAZ QUX QUUX QUUUX")
+    LargerEnum = Enum("LargerEnum", "FOO BAR BAZ QUX QUUX QUUUX")
+    enum = LargerEnum
     info = EnumInfo.fetch(conn, "puretestenum")
     mapping = {enum[m]: "BAZ" for m in ["QUX", "QUUX", "QUUUX"]}
     register_enum(info, conn, enum, mapping=mapping)
@@ -333,7 +335,8 @@ def test_remap_more_python(conn):
 
 
 def test_remap_more_postgres(conn):
-    enum = Enum("SmallerEnum", "FOO")
+    SmallerEnum = Enum("SmallerEnum", "FOO")
+    enum = SmallerEnum
     info = EnumInfo.fetch(conn, "puretestenum")
     mapping = [(enum.FOO, "BAR"), (enum.FOO, "BAZ")]
     register_enum(info, conn, enum, mapping=mapping)
