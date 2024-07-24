@@ -710,7 +710,7 @@ cdef int _call_int(PGconn pgconn, conn_int_f func) except -2:
     return func(pgconn._pgconn_ptr)
 
 
-cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
+cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) noexcept with gil:
     cdef PGconn pgconn = <object>arg
     if pgconn.notice_handler is None:
         return
