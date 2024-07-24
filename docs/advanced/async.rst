@@ -335,7 +335,7 @@ Notifications are received as instances of `Notify`. If you are reserving a
 connection only to receive notifications, the simplest way is to consume the
 `Connection.notifies` generator. The generator can be stopped using
 `!close()`. Starting from Psycopg 3.2, the method supports options to receive
-notifications only for a certain time or up to a certain number.
+notifications only for a certain time and/or up to a certain number.
 
 .. note::
 
@@ -392,6 +392,45 @@ received immediately, but only during a connection operation, such as a query.
     print(conn.execute("SELECT 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
+
+If you need to use the connection to handle :sql:`NOTIFY` in a timely manner
+you can combine the two methods.
+
+.. code:: python
+
+    class Listener:
+        def __init__(self, conn, channel, timeout=None):
+            self.conn = conn
+            self.deck = collections.deque()
+            self.timeout = timeout
+    
+            conn.execute(sql.SQL("LISTEN {};").format(sql.Identifier(channel)))
+            conn.add_notify_handler(self.deck.append)
+    
+        def listen(self):
+            while True:
+                # notifies can yield more than one Notify!
+                self.deck.extend(
+                    self.conn.notifies(timeout=self.timeout, stop_after=1)
+                )
+                while self.deck:
+                    yield self.deck.popleft()
+
+
+    def register_handler(conn, channel, handler):
+        l = Listener(conn, channel)
+        for notify in l.listen():
+            handler(notify)
+    
+    
+    if __name__ == '__main__':
+        with psycopg.connect("dbname=pg-test", autocommit=True) as _c:
+            def example_handler(n):
+                print(n)
+                _c.execute('SELECT 1;')
+                time.sleep(3)   # fake long transaction
+                _c.execute('SELECT 2;')
+            register_handler(_c, 'mychan', handler=example_handler)
 
 
 .. index:: disconnections
