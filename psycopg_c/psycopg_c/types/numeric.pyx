@@ -393,10 +393,9 @@ cdef class Float4BinaryLoader(CLoader):
         cdef uint32_t bedata
         memcpy(&bedata, data, sizeof(bedata))
         cdef uint32_t asint = endian.be32toh(bedata)
-        # avoid warning:
-        # dereferencing type-punned pointer will break strict-aliasing rules
-        cdef char *swp = <char *>&asint
-        return PyFloat_FromDouble((<float *>swp)[0])
+        cdef float f
+        memcpy(&f, &asint, sizeof(asint))
+        return PyFloat_FromDouble(f)
 
 
 @cython.final
@@ -408,8 +407,9 @@ cdef class Float8BinaryLoader(CLoader):
         cdef uint64_t bedata
         memcpy(&bedata, data, sizeof(bedata))
         cdef uint64_t asint = endian.be64toh(bedata)
-        cdef char *swp = <char *>&asint
-        return PyFloat_FromDouble((<double *>swp)[0])
+        cdef double d
+        memcpy(&d, &asint, sizeof(asint))
+        return PyFloat_FromDouble(d)
 
 
 @cython.final
