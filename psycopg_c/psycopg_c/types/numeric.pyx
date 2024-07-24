@@ -346,7 +346,9 @@ cdef class FloatBinaryDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef double d = PyFloat_AsDouble(obj)
-        cdef uint64_t beval = endian.htobe64((<uint64_t *>&d)[0])
+        cdef uint64_t ival
+        memcpy(&ival, &d, sizeof(ival))
+        cdef uint64_t beval = endian.htobe64(ival)
         cdef uint64_t *buf = <uint64_t *>CDumper.ensure_size(
             rv, offset, sizeof(beval))
         memcpy(buf, &beval, sizeof(beval))
@@ -361,7 +363,9 @@ cdef class Float4BinaryDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef float f = <float>PyFloat_AsDouble(obj)
-        cdef uint32_t beval = endian.htobe32((<uint32_t *>&f)[0])
+        cdef uint32_t ival
+        memcpy(&ival, &f, sizeof(ival))
+        cdef uint32_t beval = endian.htobe32(ival)
         cdef uint32_t *buf = <uint32_t *>CDumper.ensure_size(
             rv, offset, sizeof(beval))
         memcpy(buf, &beval, sizeof(beval))
