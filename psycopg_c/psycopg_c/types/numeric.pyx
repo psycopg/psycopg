@@ -471,7 +471,7 @@ cdef class NumericBinaryLoader(CLoader):
         cdef int i
         cdef PyObject *pctx
         cdef object key
-        cdef char *digitptr
+        cdef const char *digitptr
         cdef uint16_t bedigit
 
         if sign == NUMERIC_POS or sign == NUMERIC_NEG:

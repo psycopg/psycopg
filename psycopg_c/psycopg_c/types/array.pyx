@@ -232,7 +232,7 @@ cdef object _array_load_binary(
     cdef Py_ssize_t[MAXDIM] dims
     cdef int i
     cdef uint32_t bedata
-    cdef char *dimptr = buf + 3 * sizeof(uint32_t)
+    cdef const char *dimptr = buf + 3 * sizeof(uint32_t)
     for i in range(ndims):
         # Every dimension is dim, lower bound
         memcpy(&bedata, dimptr, sizeof(bedata))
