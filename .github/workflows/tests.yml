@@ -126,7 +126,7 @@ jobs:
       - name: Configure memory alignment tests
         if: ${{ matrix.ext == 'align' }}
         run: |
-          echo "CFLAGS=-fsanitize=undefined" >> $GITHUB_ENV
+          echo "CFLAGS=-fsanitize=undefined -Werror=strict-aliasing -Werror=odr -Werror=lto-type-mismatch" >> $GITHUB_ENV
           echo "UBSAN_OPTIONS=halt_on_error=1" >> $GITHUB_ENV
           echo "PYTEST_ADDOPTS=-v" >> $GITHUB_ENV
 
