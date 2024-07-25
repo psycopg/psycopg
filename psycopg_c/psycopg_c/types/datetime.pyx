@@ -971,11 +971,13 @@ cdef class IntervalBinaryLoader(CLoader):
     format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef int64_t bedata[2]
-        memcpy(&bedata, data, sizeof(bedata))
-        cdef int64_t val = endian.be64toh(bedata[0])
-        cdef int32_t days = endian.be32toh((<uint32_t *>bedata)[2])
-        cdef int32_t months = endian.be32toh((<uint32_t *>bedata)[3])
+        cdef int64_t beval
+        cdef int32_t bedm[2]
+        memcpy(&beval, data, sizeof(beval))
+        memcpy(bedm, data + sizeof(beval), sizeof(bedm))
+        cdef int64_t val = endian.be64toh(beval)
+        cdef int32_t days = endian.be32toh(bedm[0])
+        cdef int32_t months = endian.be32toh(bedm[1])
 
         cdef int years
         with cython.cdivision(True):
