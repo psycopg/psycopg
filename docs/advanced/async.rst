@@ -332,10 +332,14 @@ documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
 Notifications are received as instances of `Notify`. If you are reserving a
-connection only to receive notifications, the simplest way is to consume the
-`Connection.notifies` generator. The generator can be stopped using
-`!close()`. Starting from Psycopg 3.2, the method supports options to receive
-notifications only for a certain time and/or up to a certain number.
+connection **only** to receive notifications, the simplest way is to consume 
+the `Connection.notifies` generator. The generator can be stopped using
+`!close()`. 
+
+Starting from Psycopg 3.2, the method supports options to receive 
+notifications only for a certain time (``timeout``) and/or up to a certain 
+number (``stop_after``, you might actually receive more than this number if 
+more than one notifications arrives in the same packet).
 
 .. note::
 
@@ -409,28 +413,25 @@ you can combine the two methods.
     
         def listen(self):
             while True:
-                # notifies can yield more than one Notify!
                 self.deck.extend(
                     self.conn.notifies(timeout=self.timeout, stop_after=1)
                 )
                 while self.deck:
                     yield self.deck.popleft()
-
-
-    def register_handler(conn, channel, handler):
-        l = Listener(conn, channel)
-        for notify in l.listen():
-            handler(notify)
+    
+    
+    def example_handler(conn, notify):
+        print(f"Fake long transaction for {notify}")
+        _c.execute('BEGIN;')
+        time.sleep(3)
+        _c.execute('COMMIT;')
     
     
     if __name__ == '__main__':
-        with psycopg.connect("dbname=pg-test", autocommit=True) as _c:
-            def example_handler(n):
-                print(n)
-                _c.execute('SELECT 1;')
-                time.sleep(3)   # fake long transaction
-                _c.execute('SELECT 2;')
-            register_handler(_c, 'mychan', handler=example_handler)
+        with psycopg.connect("", autocommit=True) as _c:
+            l = Listener(conn=_c, channel="mychan")
+            for n in l.listen():
+                example_handler(conn=_c, notify=n)
 
 
 .. index:: disconnections
