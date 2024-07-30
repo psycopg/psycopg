@@ -397,8 +397,9 @@ received immediately, but only during a connection operation, such as a query.
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
 
-If you need to use the connection to handle :sql:`NOTIFY` in a timely manner
-you can combine the two methods.
+It's possible to combine the two methods. Which allows you to use the generator
+to receive notifications as soon as possible. But you won't be losing 
+notifications while performing connection operations in the handler.
 
 .. code:: python
 
@@ -422,9 +423,9 @@ you can combine the two methods.
     
     def example_handler(conn, notify):
         print(f"Fake long transaction for {notify}")
-        _c.execute('BEGIN;')
+        conn.execute('BEGIN;')
         time.sleep(3)
-        _c.execute('COMMIT;')
+        conn.execute('COMMIT;')
     
     
     if __name__ == '__main__':
