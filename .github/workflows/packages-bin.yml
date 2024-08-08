@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, i686, ppc64le, aarch64]
-        pyver: [cp38, cp39, cp310, cp311, cp312]
+        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
         platform: [manylinux, musllinux]
 
     steps:
@@ -45,7 +45,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.20.0
         with:
           package-dir: psycopg_binary
         env:
@@ -103,7 +103,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [arm64]
-        pyver: [cp310, cp311, cp312]
+        pyver: [cp310, cp311, cp312, cp313]
 
     env:
       PG_VERSION: "16"
@@ -121,7 +121,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.20.0
         with:
           package-dir: psycopg_binary
         env:
@@ -155,7 +155,7 @@ jobs:
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
-        pyver: [cp38, cp39, cp310, cp311, cp312]
+        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
 
     env:
       PG_VERSION: "16"
@@ -173,7 +173,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.20.0
         with:
           package-dir: psycopg_binary
         env:
@@ -207,7 +207,7 @@ jobs:
       matrix:
         # Might want to add win32, untested at the moment.
         arch: [win_amd64]
-        pyver: [cp38, cp39, cp310, cp311, cp312]
+        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
 
     steps:
       - uses: actions/checkout@v4
@@ -222,7 +222,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.20.0
         with:
           package-dir: psycopg_binary
         env:
