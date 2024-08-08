@@ -66,7 +66,6 @@ def import_from_libpq() -> None:
     def handle_error(name: str, e: Exception) -> None:
         if not impl:
             msg = f"couldn't import psycopg '{name}' implementation: {e}"
-            logger.debug(msg)
             attempts.append(msg)
         else:
             msg = f"couldn't import requested psycopg '{name}' implementation: {e}"
