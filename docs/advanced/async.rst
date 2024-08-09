@@ -332,10 +332,14 @@ documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
 Notifications are received as instances of `Notify`. If you are reserving a
-connection only to receive notifications, the simplest way is to consume the
-`Connection.notifies` generator. The generator can be stopped using
-`!close()`. Starting from Psycopg 3.2, the method supports options to receive
-notifications only for a certain time or up to a certain number.
+connection **only** to receive notifications, the simplest way is to consume 
+the `Connection.notifies` generator. The generator can be stopped using
+`!close()`. 
+
+Starting from Psycopg 3.2, the method supports options to receive 
+notifications only for a certain time (``timeout``) and/or up to a certain 
+number (``stop_after``, you might actually receive more than this number if 
+more than one notifications arrives in the same packet).
 
 .. note::
 
@@ -392,6 +396,43 @@ received immediately, but only during a connection operation, such as a query.
     print(conn.execute("SELECT 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
+
+It's possible to combine the two methods. Which allows you to use the generator
+to receive notifications as soon as possible. But you won't be losing 
+notifications while performing connection operations in the handler.
+
+.. code:: python
+
+    class Listener:
+        def __init__(self, conn, channel, timeout=None):
+            self.conn = conn
+            self.deck = collections.deque()
+            self.timeout = timeout
+    
+            conn.execute(sql.SQL("LISTEN {};").format(sql.Identifier(channel)))
+            conn.add_notify_handler(self.deck.append)
+    
+        def listen(self):
+            while True:
+                self.deck.extend(
+                    self.conn.notifies(timeout=self.timeout, stop_after=1)
+                )
+                while self.deck:
+                    yield self.deck.popleft()
+    
+    
+    def example_handler(conn, notify):
+        print(f"Fake long transaction for {notify}")
+        conn.execute('BEGIN;')
+        time.sleep(3)
+        conn.execute('COMMIT;')
+    
+    
+    if __name__ == '__main__':
+        with psycopg.connect("", autocommit=True) as _c:
+            l = Listener(conn=_c, channel="mychan")
+            for n in l.listen():
+                example_handler(conn=_c, notify=n)
 
 
 .. index:: disconnections
