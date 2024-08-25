@@ -39,7 +39,7 @@ with `AsyncConnection` in `asyncio` programs.
 Class             Binding     Storage     Placeholders         See also
 ================= =========== =========== ==================== ==================================
 `Cursor`          server-side client-side ``%s``, ``%(name)s`` :ref:`client-side-cursors`
-`ClientCursor`    cient-side  client-side ``%s``, ``%(name)s`` :ref:`client-side-binding-cursors`
+`ClientCursor`    client-side client-side ``%s``, ``%(name)s`` :ref:`client-side-binding-cursors`
 `ServerCursor`    server-side server-side ``%s``, ``%(name)s`` :ref:`server-side-cursors`
 `RawCursor`       server-side client-side ``$1``               :ref:`raw-query-cursors`
 `RawServerCursor` server-side server-side ``$1``               :ref:`raw-query-cursors`
