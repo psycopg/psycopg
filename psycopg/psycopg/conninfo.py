@@ -25,7 +25,7 @@ conninfo_attempts_async = _conninfo_attempts_async.conninfo_attempts_async
 _DEFAULT_CONNECT_TIMEOUT = 130
 
 
-def make_conninfo(conninfo: str = "", **kwargs: ConnParam) -> str:
+def make_conninfo(conninfo: str = "", /, **kwargs: ConnParam) -> str:
     """
     Merge a string and keyword params into a single conninfo string.
 

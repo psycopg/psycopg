@@ -39,6 +39,17 @@ def test_make_conninfo(conninfo, kwargs, exp):
     assert conninfo_to_dict(out) == conninfo_to_dict(exp)
 
 
+def test_make_conninfo_kwargs_only():
+    """Check that typing is correct when calling with kwargs only."""
+    kwargs: dict[str, str | int] = {"dbname": "foo", "port": 15432}
+    assert make_conninfo(**kwargs) == "dbname=foo port=15432"
+
+
+def test_make_conninfo_conninfo_postitional_only():
+    with pytest.raises(ProgrammingError, match="invalid connection option"):
+        make_conninfo(conninfo="")
+
+
 @pytest.mark.parametrize(
     "conninfo, kwargs",
     [
