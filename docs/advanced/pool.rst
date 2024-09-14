@@ -160,19 +160,19 @@ import time. If that's too early, and you want to delay opening connections
 until the application is ready, you can specify to create a closed pool and
 call the `~ConnectionPool.open()` method (and optionally the
 `~ClonnectionPool.close()` method) at application startup/shutdown. For
-example, in FastAPI, you can use `startup/shutdown events`__::
+example, in FastAPI, you can use a `Lifespan`__::
 
     pool = AsyncConnectionPool(..., open=False, ...)
 
-    @app.on_event("startup")
-    async def open_pool():
+    @asynccontextmanager
+    async def lifespan(instance: FastAPI):
         await pool.open()
-
-    @app.on_event("shutdown")
-    async def close_pool():
+        yield
         await pool.close()
 
-.. __: https://fastapi.tiangolo.com/advanced/events/#events-startup-shutdown
+    app = FastAPI(lifespan=lifespan)
+
+.. __: https://fastapi.tiangolo.com/advanced/events/#lifespan
 
 .. warning::
     The current default for the `!open` parameter is `!True`. However this
