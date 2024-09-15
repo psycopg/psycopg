@@ -37,7 +37,7 @@ jobs:
           - python
         include:
           - sqlalchemy_label: git_main
-            pip_sqlalchemy: git+https://github.com/sqlalchemy/sqlalchemy.git#egg=SQLAlchemy
+            pip_sqlalchemy: git+https://github.com/sqlalchemy/sqlalchemy.git#egg=sqlalchemy
           - sqlalchemy_label: release
             pip_sqlalchemy: sqlalchemy>=2
 
@@ -90,15 +90,15 @@ jobs:
         run: |
           pip download --no-deps --no-binary :all: ${{ matrix.pip_sqlalchemy }}
           mkdir sa_home
-          case $(file --brief --mime-type SQLAlchemy*) in
+          case $(file --brief --mime-type sqlalchemy*) in
             application/gzip)
-              tar -C sa_home -xzf SQLAlchemy*
+              tar -C sa_home -xzf sqlalchemy*
               ;;
             application/zip)
-              unzip -d sa_home -q SQLAlchemy*
+              unzip -d sa_home -q sqlalchemy*
               ;;
             *)
-              echo "Unexpected format for $(file --mime-type SQLAlchemy*)" >&2
+              echo "Unexpected format for $(file --mime-type sqlalchemy*)" >&2
               exit 1
               ;;
           esac
