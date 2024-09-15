@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-python_versions="3.8.10 3.9.13 3.10.11 3.11.6 3.12.0"
+python_versions="3.8.19 3.9.19 3.10.14 3.11.9 3.12.5 3.13.0rc1"
 pg_version=16
 
 function log {
@@ -62,14 +62,19 @@ fi
 
 
 # Install the Python versions we want to build
-for ver3 in $python_versions; do
+for ver_full in $python_versions; do
+    # Get the major.minor.patch version, without pre-release markers
+    ver3=$(echo $ver_full | sed 's/\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/')
+
+    # Get the major.minor version
     ver2=$(echo $ver3 | sed 's/\([^\.]*\)\(\.[^\.]*\)\(.*\)/\1\2/')
+
     command -v python${ver2} > /dev/null || (
-        log "installing Python $ver3"
+        log "installing Python $ver_full"
         (cd /tmp &&
             curl -fsSl -O \
-                https://www.python.org/ftp/python/${ver3}/python-${ver3}-macos11.pkg)
-        sudo installer -pkg /tmp/python-${ver3}-macos11.pkg -target /
+                https://www.python.org/ftp/python/${ver3}/python-${ver_full}-macos11.pkg)
+        sudo installer -pkg /tmp/python-${ver_full}-macos11.pkg -target /
     )
 done
 
@@ -92,7 +97,7 @@ python tools/build/copy_to_binary.py
 # Build the binary packages
 export CIBW_PLATFORM=macos
 export CIBW_ARCHS=arm64
-export CIBW_BUILD='cp{38,39,310,311,312}-*'
+export CIBW_BUILD='cp{38,39,310,311,312,313}-*'
 export CIBW_TEST_REQUIRES="./psycopg[test] ./psycopg_pool"
 export CIBW_TEST_COMMAND="pytest {project}/tests -m 'not slow and not flakey' --color yes"
 

@@ -87,3 +87,19 @@ When a new PostgreSQL major version is released
 
   - ``docs/basic/install.rst``;
   - ``content/features/contents.lr`` in the psycopg-website repository.
+
+When a new Python major version is released
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Add the new version to the relevant test matrices in
+  ``.github/workflows/tests.yml`` and ``.github/workflows/packages-bin.yml``.
+
+- Update ``docs/basic/install.rst`` with the correct range of supported Python
+  versions.
+
+- Add the ``Programming Language :: Python :: 3.<X>`` classifier to
+  ``psycopg/setup.cfg``, ``psycopg_c/setup.cfg`` and ``psycopg_pool/setup.cfg``.
+
+- Update the list of versions in ``tools/build/build_macos_arm64.sh`` to include
+  the new version. Look for both the ``python_versions`` variable and the
+  ``CIBW_BUILD`` environment variable.

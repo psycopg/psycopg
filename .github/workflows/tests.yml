@@ -31,12 +31,14 @@ jobs:
           - {impl: python, python: "3.10", postgres: "postgres:14"}
           - {impl: python, python: "3.11", postgres: "postgres:15", libpq: master}
           - {impl: python, python: "3.12", postgres: "postgres:16", libpq: oldest}
+          - {impl: python, python: "3.13", postgres: "postgres:16"}
 
           - {impl: c, python: "3.8", postgres: "postgres:16", libpq: newest}
           - {impl: c, python: "3.9", postgres: "postgres:14", libpq: master}
           - {impl: c, python: "3.10", postgres: "postgres:15"}
           - {impl: c, python: "3.11", postgres: "postgres:12", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:11", libpq: newest}
+          - {impl: c, python: "3.13", postgres: "postgres:15"}
 
           - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:16"}
           - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}
@@ -70,6 +72,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          allow-prereleases: true
 
       - name: Start PostgreSQL service
         # Note: this would love to be a service, but I don't see a way to pass
@@ -150,9 +153,11 @@ jobs:
           - {impl: python, python: "3.10"}
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
+          - {impl: python, python: "3.13"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
+          - {impl: c, python: "3.13"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -170,6 +175,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          allow-prereleases: true
 
       - name: Install PostgreSQL on the runner
         run: brew install postgresql@${PG_VERSION}
@@ -260,11 +266,13 @@ jobs:
           - {impl: python, python: "3.10"}
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
+          - {impl: python, python: "3.13"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
+          - {impl: c, python: "3.13"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -283,6 +291,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          allow-prereleases: true
 
       - name: Start PostgreSQL service
         run: |
