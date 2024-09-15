@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+psycopg_pool 3.2.3
+^^^^^^^^^^^^^^^^^^
+
+- Add metadata to declare compatibility with Python 3.13.
+
+
 psycopg_pool 3.2.2
 ^^^^^^^^^^^^^^^^^^
 
