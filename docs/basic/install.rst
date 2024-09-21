@@ -62,6 +62,21 @@ This will install a self-contained package with all the libraries needed.
 **You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
 to update it beforehand.
 
+.. seealso::
+
+    Did Psycopg 3 install ok? Great! You can now move on to the :ref:`basic
+    module usage <module-usage>` to learn how it works.
+
+    Keep on reading if the above method didn't work and you need a different
+    way to install Psycopg 3.
+
+    For further information about the differences between the packages see
+    :ref:`pq-impl`.
+
+If your platform is not supported, or if the libpq packaged is not suitable,
+you should proceed to a :ref:`local installation <local-installation>` or a
+:ref:`pure Python installation <pure-python-installation>`.
+
 .. note::
 
     Binary packages are produced on a best-effort basis; the supported
@@ -83,30 +98,14 @@ to update it beforehand.
 
 .. warning::
 
-    Starting from Psycopg 3.1.20, ARM64 macOS binary packages (i.e. for
-    Apple M1 machines) are no more available for macOS versions before 14.0.
-    Please upgrade your OS to at least 14.0 or use a :ref:`local
-    <local-installation>` or a :ref:`Python <pure-python-installation>`
-    installation.
+    - Starting from Psycopg 3.1.20, ARM64 macOS binary packages (i.e. for
+      Apple M1 machines) are no more available for macOS versions before 14.0.
+      Please upgrade your OS to at least 14.0 or use a :ref:`local
+      <local-installation>` or a :ref:`Python <pure-python-installation>`
+      installation.
 
-If your platform is not supported, or if the libpq packaged is not suitable,
-you should proceed to a :ref:`local installation <local-installation>` or a
-:ref:`pure Python installation <pure-python-installation>`.
+    - The binary installation is not supported by PyPy.
 
-.. seealso::
-
-    Did Psycopg 3 install ok? Great! You can now move on to the :ref:`basic
-    module usage <module-usage>` to learn how it works.
-
-    Keep on reading if the above method didn't work and you need a different
-    way to install Psycopg 3.
-
-    For further information about the differences between the packages see
-    :ref:`pq-impl`.
-
-.. warning::
-
-   The binary installation is not supported by PyPy.
 
 
 .. _local-installation:
