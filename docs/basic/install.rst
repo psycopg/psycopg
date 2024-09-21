@@ -66,10 +66,20 @@ to update it beforehand.
 
     Binary packages are produced on a best-effort basis; the supported
     platforms depend on the CI runners available to build the
-    packages. You can check the `psycopg-binary PyPI files`__ to verify
-    that your platform is supported.
+    packages. This means that:
+
+    - binary packages for a new version of Python will be made available once
+      the runners used for the build support it; you can check the
+      `psycopg-binary PyPI files`__ to verify whether your platform is
+      supported.
+
+    - the libpq version included in the binary package depend on the version
+      available on the runners. You can use the `psycopg.pq.version()`
+      function and the `psycopg.pq.__build_version__` constant to infer the
+      features available.
 
     .. __: https://pypi.org/project/psycopg-binary/#files
+
 
 .. warning::
 
@@ -79,9 +89,9 @@ to update it beforehand.
     <local-installation>` or a :ref:`Python <pure-python-installation>`
     installation.
 
-If your platform is not supported you should proceed to a :ref:`local
-installation <local-installation>` or a :ref:`pure Python installation
-<pure-python-installation>`.
+If your platform is not supported, or if the libpq packaged is not suitable,
+you should proceed to a :ref:`local installation <local-installation>` or a
+:ref:`pure Python installation <pure-python-installation>`.
 
 .. seealso::
 
