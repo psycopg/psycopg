@@ -68,14 +68,14 @@ to update it beforehand.
     platforms depend on the CI runners available to build the
     packages. This means that:
 
-    - binary packages for a new version of Python will be made available once
-      the runners used for the build support it; you can check the
+    - binary packages for a new version of Python are made available once
+      the runners used for the build support it. You can check the
       `psycopg-binary PyPI files`__ to verify whether your platform is
-      supported.
+      supported;
 
-    - the libpq version included in the binary package depend on the version
+    - the libpq version included in the binary packages depends on the version
       available on the runners. You can use the `psycopg.pq.version()`
-      function and the `psycopg.pq.__build_version__` constant to infer the
+      function and `~psycopg.pq.__build_version__` constant to infer the
       features available.
 
     .. __: https://pypi.org/project/psycopg-binary/#files
