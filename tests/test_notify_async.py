@@ -130,6 +130,7 @@ async def test_notify_timeout(aconn_cls, aconn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_notify_timeout_0(aconn_cls, aconn, dsn):
     await aconn.set_autocommit(True)
     await aconn.execute("listen foo")
@@ -146,6 +147,7 @@ async def test_notify_timeout_0(aconn_cls, aconn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_stop_after(aconn_cls, aconn, dsn):
     await aconn.set_autocommit(True)
     await aconn.execute("listen foo")
@@ -172,6 +174,7 @@ async def test_stop_after(aconn_cls, aconn, dsn):
     assert ns[0].payload == "3"
 
 
+@pytest.mark.timing
 async def test_stop_after_batch(aconn_cls, aconn, dsn):
     await aconn.set_autocommit(True)
     await aconn.execute("listen foo")
@@ -193,6 +196,7 @@ async def test_stop_after_batch(aconn_cls, aconn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_notifies_blocking(aconn):
     async def listener():
         async for _ in aconn.notifies(timeout=1):
