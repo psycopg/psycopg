@@ -133,6 +133,7 @@ def test_notify_timeout(conn_cls, conn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_notify_timeout_0(conn_cls, conn, dsn):
     conn.set_autocommit(True)
     conn.execute("listen foo")
@@ -149,6 +150,7 @@ def test_notify_timeout_0(conn_cls, conn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_stop_after(conn_cls, conn, dsn):
     conn.set_autocommit(True)
     conn.execute("listen foo")
@@ -175,6 +177,7 @@ def test_stop_after(conn_cls, conn, dsn):
     assert ns[0].payload == "3"
 
 
+@pytest.mark.timing
 def test_stop_after_batch(conn_cls, conn, dsn):
     conn.set_autocommit(True)
     conn.execute("listen foo")
@@ -196,6 +199,7 @@ def test_stop_after_batch(conn_cls, conn, dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_notifies_blocking(conn):
 
     def listener():
