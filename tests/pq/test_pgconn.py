@@ -660,11 +660,7 @@ def role(pgconn: PGconn) -> Iterator[tuple[bytes, bytes]]:
 def test_change_password(pgconn, dsn, role):
     user, passwd = role
     conninfo = {e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val}
-    conninfo |= {
-        b"dbname": b"postgres",
-        b"user": user,
-        b"password": passwd,
-    }
+    conninfo.update({b"dbname": b"postgres", b"user": user, b"password": passwd})
     conn = pq.PGconn.connect(b" ".join(b"%s='%s'" % item for item in conninfo.items()))
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
