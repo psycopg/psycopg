@@ -129,7 +129,8 @@ jobs:
       - name: Configure memory alignment tests
         if: ${{ matrix.ext == 'align' }}
         run: |
-          echo "CFLAGS=-fsanitize=undefined -Werror=strict-aliasing -Werror=odr -Werror=lto-type-mismatch" >> $GITHUB_ENV
+          echo "CFLAGS=-fsanitize=undefined -Werror=strict-aliasing -Werror=odr -Werror=lto-type-mismatch"
+            >> $GITHUB_ENV
           echo "UBSAN_OPTIONS=halt_on_error=1" >> $GITHUB_ENV
           echo "PYTEST_ADDOPTS=-v" >> $GITHUB_ENV
 
@@ -189,8 +190,12 @@ jobs:
 
       - name: Find the libpq
         if: ${{ matrix.impl == 'python' }}
+        # NOTE: the libpq was found in:
+        # /opt/homebrew/opt/postgresql@${PG_VERSION}/lib before PG 17
+        # /opt/homebrew/opt/postgresql@${PG_VERSION}/lib/postgresql on PG 17
         run: |
-          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib/postgresql:/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" \
+              >> $GITHUB_ENV
 
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}
