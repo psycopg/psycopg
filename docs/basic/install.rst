@@ -31,8 +31,16 @@ The Psycopg version documented here has *official and tested* support for:
 
   - **Note:** Only the pure Python version is supported.
 
-- PostgreSQL: from version 10 to 16
+- PostgreSQL: from version 10 to 17
+
+  - **Note:** PostgreSQL `currently supported release`__ are actively tested
+    in the CI. Out-of-support releases are supported on a best-effort basis.
+
+  Only the pure Python version is supported.
+
 - OS: Linux, macOS, Windows
+
+.. __: https://www.postgresql.org/support/versioning/
 
 The tests to verify the supported systems run in `Github workflows`__:
 anything that is not tested there is not officially supported. This includes:
