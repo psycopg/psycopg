@@ -178,7 +178,11 @@ jobs:
           allow-prereleases: true
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@${PG_VERSION}
+        # On 2024-09-28 postgresql@17 installation failed but the package is
+        # available. So, in a few days, we might be able to drop "brew update".
+        run: |
+          brew update
+          brew install postgresql@${PG_VERSION}
 
       - name: Start PostgreSQL service
         run: brew services start postgresql@${PG_VERSION}
@@ -234,7 +238,11 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@${PG_VERSION}
+        # On 2024-09-28 postgresql@17 installation failed but the package is
+        # available. So, in a few days, we might be able to drop "brew update".
+        run: |
+          brew update
+          brew install gnu-sed postgresql@${PG_VERSION}
 
       - name: Start PostgreSQL service
         run: brew services start postgresql@${PG_VERSION}
