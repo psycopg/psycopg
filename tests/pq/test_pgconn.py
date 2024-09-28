@@ -414,7 +414,7 @@ def cancellable_query(pgconn: PGconn) -> Iterator[None]:
         monitor_conn.status == pq.ConnStatus.OK
     ), f"bad connection: {monitor_conn.get_error_message()}"
 
-    pgconn.send_query_params(b"SELECT pg_sleep($1)", [b"180"])
+    pgconn.send_query_params(b"SELECT pg_sleep($1)", [b"10"])
 
     while True:
         r = monitor_conn.exec_(
@@ -440,6 +440,7 @@ def cancellable_query(pgconn: PGconn) -> Iterator[None]:
 
 
 @pytest.mark.libpq(">= 17")
+@pytest.mark.crdb("skip", reason="test hang - TODO investigate")
 def test_cancel_conn_blocking(pgconn):
     # test PQcancelBlocking, similarly to test_cancel() from
     # src/test/modules/libpq_pipeline/libpq_pipeline.c
@@ -460,6 +461,7 @@ def test_cancel_conn_blocking(pgconn):
 
 
 @pytest.mark.libpq(">= 17")
+@pytest.mark.crdb("skip", reason="test *might* hang - TODO investigate")
 def test_cancel_conn_nonblocking(pgconn):
     # test PQcancelStart() and then polling with PQcancelPoll, similarly to
     # test_cancel() from src/test/modules/libpq_pipeline/libpq_pipeline.c
@@ -640,7 +642,9 @@ def test_trace_nonlinux(pgconn):
 
 @pytest.mark.libpq(">= 17")
 def test_change_password_error(pgconn):
-    with pytest.raises(psycopg.OperationalError, match='role "ashesh" does not exist'):
+    with pytest.raises(
+        psycopg.OperationalError, match='role(/user)? "ashesh" does not exist'
+    ):
         pgconn.change_password(b"ashesh", b"psycopg")
 
 

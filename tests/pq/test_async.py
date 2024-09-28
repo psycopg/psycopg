@@ -260,8 +260,8 @@ def test_send_describe_portal(pgconn):
         pgconn.send_describe_portal(b"cur")
 
 
-@pytest.mark.crdb_skip("server-side cursor")
 @pytest.mark.libpq(">= 17")
+@pytest.mark.crdb_skip("close portal")
 def test_send_close_portal(pgconn):
     res = pgconn.exec_(
         b"""
