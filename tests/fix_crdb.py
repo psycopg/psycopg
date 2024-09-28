@@ -95,6 +95,7 @@ _crdb_reasons = {
     "cancel": 41335,
     "cast adds tz": 51692,
     "cidr": 18846,
+    "close portal": None,
     "composite": 27792,
     "copy array": 82792,
     "copy canceled": 81559,
