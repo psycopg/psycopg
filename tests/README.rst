@@ -4,8 +4,8 @@ psycopg test suite
 Quick version
 -------------
 
-To run tests on the current code you can install the `test` extra of the
-package, specify a connection string  in the `PSYCOPG_TEST_DSN` env var to
+To run tests on the current code you can install the ``test`` extra of the
+package, specify a connection string  in the ``PSYCOPG_TEST_DSN`` env var to
 connect to a test database, and run ``pytest``::
 
     $ pip install -e "psycopg[test]"
@@ -38,7 +38,7 @@ Test options
       libpq available: 130002
       libpq wrapper implementation: python
 
-  .. __: https://www.psycopg.org/psycopg/docs/api/pq.html#pq-module-implementations
+  .. __: https://www.psycopg.org/psycopg3/docs/api/pq.html#pq-module-implementations
 
 
 - Slow tests have a ``slow`` marker which can be selected to reduce test
@@ -87,7 +87,7 @@ a set of env vars working for your setup::
 
 
 Testing with CockroachDB
-========================
+------------------------
 
 You can run CRDB in a docker container using::
 
