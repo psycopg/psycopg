@@ -13,8 +13,10 @@ jobs:
 
     env:
       # Latest release: https://www.postgresql.org/ftp/source/
-      LIBPQ_VERSION: "16.3"
+      LIBPQ_VERSION: "17.0"
       # Latest release: https://www.openssl.org/source/
+      # Note: 3.3.2 is broken:
+      # https://github.com/openssl/openssl/issues/25366
       OPENSSL_VERSION: "3.3.1"
 
     strategy:
@@ -45,7 +47,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20.0
+        uses: pypa/cibuildwheel@v2.21.1
         with:
           package-dir: psycopg_binary
         env:
@@ -106,7 +108,7 @@ jobs:
         pyver: [cp310, cp311, cp312, cp313]
 
     env:
-      PG_VERSION: "16"
+      PG_VERSION: "17"
 
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +123,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20.0
+        uses: pypa/cibuildwheel@v2.21.1
         with:
           package-dir: psycopg_binary
         env:
@@ -158,7 +160,7 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
 
     env:
-      PG_VERSION: "16"
+      PG_VERSION: "17"
 
     steps:
       - uses: actions/checkout@v4
@@ -173,7 +175,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20.0
+        uses: pypa/cibuildwheel@v2.21.1
         with:
           package-dir: psycopg_binary
         env:
@@ -222,7 +224,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20.0
+        uses: pypa/cibuildwheel@v2.21.1
         with:
           package-dir: psycopg_binary
         env:
