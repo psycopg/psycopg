@@ -6,6 +6,8 @@ libpq enum definitions for psycopg
 
 from enum import IntEnum, IntFlag, auto
 
+# Check in src/interfaces/libpq/libpq-fe.h for updates.
+
 
 class ConnStatus(IntEnum):
     """
@@ -205,7 +207,8 @@ class DiagnosticField(IntEnum):
 
     __module__ = "psycopg.pq"
 
-    # from postgres_ext.h
+    # from src/include/postgres_ext.h
+
     SEVERITY = ord("S")
     SEVERITY_NONLOCALIZED = ord("V")
     SQLSTATE = ord("C")

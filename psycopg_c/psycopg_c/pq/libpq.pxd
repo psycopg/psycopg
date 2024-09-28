@@ -57,6 +57,8 @@ cdef extern from "libpq-fe.h":
 
     # enums
 
+    # Check in src/interfaces/libpq/libpq-fe.h for updates.
+
     ctypedef enum PostgresPollingStatusType:
         PGRES_POLLING_FAILED = 0
         PGRES_POLLING_READING
@@ -107,7 +109,7 @@ cdef extern from "libpq-fe.h":
         PGRES_COPY_BOTH
         PGRES_SINGLE_TUPLE
         PGRES_PIPELINE_SYNC
-        PGRES_PIPELINE_ABORT
+        PGRES_PIPELINE_ABORTED
         PGRES_TUPLES_CHUNK
 
     # 33.1. Database Connection Control Functions
