@@ -13,8 +13,6 @@ source /etc/os-release
 case "$ID" in
     alpine)
         # tzdata is required for datetime tests.
-        apk update
-        apk add --no-cache tzdata
         "${dir}/build_libpq.sh" > /dev/null
         ;;
 
@@ -33,7 +31,7 @@ case "$ID" in
 
         apt-get update
         apt-get -y upgrade
-        apt-get -y install libpq-dev
+        apt-get -y install libpq-dev flex
         ;;
 
     centos)
