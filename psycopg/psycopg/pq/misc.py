@@ -12,6 +12,7 @@ import sys
 import logging
 import ctypes.util
 from typing import NamedTuple
+from pathlib import Path
 
 from . import abc
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
@@ -52,6 +53,7 @@ class PGresAttDesc(NamedTuple):
 def find_libpq_full_path() -> str | None:
     if sys.platform == "win32":
         libname = ctypes.util.find_library("libpq.dll")
+        libname = str(Path(libname).resolve())
 
     elif sys.platform == "darwin":
         libname = ctypes.util.find_library("libpq.dylib")
