@@ -1103,6 +1103,10 @@ class IdleInTransactionSessionTimeout(InternalError,
     code='25P03', name='IDLE_IN_TRANSACTION_SESSION_TIMEOUT'):
     pass
 
+class TransactionTimeout(InternalError,
+    code='25P04', name='TRANSACTION_TIMEOUT'):
+    pass
+
 
 # Class 26 - Invalid SQL Statement Name
 
