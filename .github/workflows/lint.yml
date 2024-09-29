@@ -15,7 +15,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     steps:
       - uses: actions/checkout@v4

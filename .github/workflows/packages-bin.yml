@@ -1,15 +1,13 @@
 name: Build binary packages
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '28 7 * * sun'
+  push:
 
 jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     env:
       # Latest release: https://www.postgresql.org/ftp/source/
@@ -99,7 +97,7 @@ jobs:
 
   macos-14:  # {{{
     runs-on: macos-14
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -154,7 +152,7 @@ jobs:
 
   macos-12:  # {{{
     runs-on: macos-12
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
