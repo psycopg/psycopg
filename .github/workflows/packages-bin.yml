@@ -227,6 +227,18 @@ jobs:
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
 
+      # Just a draft to check if the library can be built.
+      # We can then prepare a much smaller package.
+      - name: Download and unpack the Postgres distribution file
+        run: |
+          pip install httpx[cli]
+          httpx https://get.enterprisedb.com/postgresql/postgresql-17.0-1-windows-x64.exe --download  ./package.exe
+          ls
+
+          echo "unpacking"
+          .\package.exe --mode unattended --enable-components commandlinetools,server,pgAdmin,stackbuilder --extract-only 1 --prefix d:\postgres
+          d:\postgres\bin\pg_config.exe
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.1
         with:
@@ -234,7 +246,7 @@ jobs:
         env:
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
           CIBW_ARCHS_WINDOWS: AMD64 x86
-          CIBW_BEFORE_BUILD_WINDOWS: '.\tools\build\wheel_win32_before_build.bat'
+          # CIBW_BEFORE_BUILD_WINDOWS: '.\tools\build\wheel_win32_before_build.bat'
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir}
             --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
@@ -243,10 +255,10 @@ jobs:
             pytest {project}/tests -m "not slow and not flakey" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
+            PATH="C:\\postgres\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 17"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 17"
 
       - uses: actions/upload-artifact@v4
         with:
