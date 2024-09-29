@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+Psycopg 3.2.3
+^^^^^^^^^^^^^
+
+- Release binary packages including PostgreSQL 17 libpq (:ticket:`#852`).
+
+
 Psycopg 3.2.2
 ^^^^^^^^^^^^^
 

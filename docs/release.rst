@@ -77,7 +77,9 @@ When a new PostgreSQL major version is released
 - Include the new version in GitHub Actions test and package grids.
 
 - Bump ``PG_VERSION`` in the ``macos`` job of
-  ``.github/workflows/packages-bin.yml``.
+
+  -  ``.github/workflows/packages-bin.yml``.
+  -  ``.github/workflows/tests.yml``.
 
 - Bump ``pg_version`` in ``tools/build/build_macos_arm64.sh``.
 
@@ -88,8 +90,9 @@ When a new PostgreSQL major version is released
   - ``docs/basic/install.rst``;
   - ``content/features/contents.lr`` in the psycopg-website repository.
 
+
 When a new Python major version is released
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add the new version to the relevant test matrices in
   ``.github/workflows/tests.yml`` and ``.github/workflows/packages-bin.yml``.

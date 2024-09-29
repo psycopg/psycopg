@@ -343,6 +343,7 @@ SQLSTATE  Exception                                          Base exception
 ``25P01`` `!NoActiveSqlTransaction`                          `!InternalError`
 ``25P02`` `!InFailedSqlTransaction`                          `!InternalError`
 ``25P03`` `!IdleInTransactionSessionTimeout`                 `!InternalError`
+``25P04`` `!TransactionTimeout`                              `!InternalError`
 **Class 26** - Invalid SQL Statement Name
 ---------------------------------------------------------------------------------
 ``26000`` `!InvalidSqlStatementName`                         `!ProgrammingError`

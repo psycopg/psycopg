@@ -10,7 +10,7 @@
 set -euo pipefail
 
 python_versions="3.8.19 3.9.19 3.10.14 3.11.9 3.12.5 3.13.0rc1"
-pg_version=16
+pg_version=17
 
 function log {
     echo "$@" >&2

@@ -26,21 +26,21 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.8", postgres: "postgres:11", libpq: newest}
-          - {impl: python, python: "3.9", postgres: "postgres:13"}
-          - {impl: python, python: "3.10", postgres: "postgres:14"}
-          - {impl: python, python: "3.11", postgres: "postgres:15", libpq: master}
-          - {impl: python, python: "3.12", postgres: "postgres:16", libpq: oldest}
-          - {impl: python, python: "3.13", postgres: "postgres:16"}
+          - {impl: python, python: "3.8", postgres: "postgres:17", libpq: oldest}
+          - {impl: python, python: "3.9", postgres: "postgres:16", libpq: master}
+          - {impl: python, python: "3.10", postgres: "postgres:15"}
+          - {impl: python, python: "3.11", postgres: "postgres:14"}
+          - {impl: python, python: "3.12", postgres: "postgres:13", libpq: newest}
+          - {impl: python, python: "3.13", postgres: "postgres:12"}
 
-          - {impl: c, python: "3.8", postgres: "postgres:16", libpq: newest}
-          - {impl: c, python: "3.9", postgres: "postgres:14", libpq: master}
-          - {impl: c, python: "3.10", postgres: "postgres:15"}
-          - {impl: c, python: "3.11", postgres: "postgres:12", libpq: oldest}
-          - {impl: c, python: "3.12", postgres: "postgres:11", libpq: newest}
-          - {impl: c, python: "3.13", postgres: "postgres:15"}
+          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: master}
+          - {impl: c, python: "3.9", postgres: "postgres:13"}
+          - {impl: c, python: "3.10", postgres: "postgres:14"}
+          - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
+          - {impl: c, python: "3.12", postgres: "postgres:16", libpq: newest}
+          - {impl: c, python: "3.13", postgres: "postgres:17"}
 
-          - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:16"}
+          - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:17"}
           - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
@@ -129,7 +129,8 @@ jobs:
       - name: Configure memory alignment tests
         if: ${{ matrix.ext == 'align' }}
         run: |
-          echo "CFLAGS=-fsanitize=undefined -Werror=strict-aliasing -Werror=odr -Werror=lto-type-mismatch" >> $GITHUB_ENV
+          echo "CFLAGS=-fsanitize=undefined -Werror=strict-aliasing -Werror=odr -Werror=lto-type-mismatch"
+            >> $GITHUB_ENV
           echo "UBSAN_OPTIONS=halt_on_error=1" >> $GITHUB_ENV
           echo "PYTEST_ADDOPTS=-v" >> $GITHUB_ENV
 
@@ -167,7 +168,7 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       NOT_MARKERS: "timing proxy mypy"
-      PG_VERSION: "16"
+      PG_VERSION: "17"
 
     steps:
       - uses: actions/checkout@v4
@@ -178,15 +179,23 @@ jobs:
           allow-prereleases: true
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@${PG_VERSION}
+        # On 2024-09-28 postgresql@17 installation failed but the package is
+        # available. So, in a few days, we might be able to drop "brew update".
+        run: |
+          brew update
+          brew install postgresql@${PG_VERSION}
 
       - name: Start PostgreSQL service
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Find the libpq
         if: ${{ matrix.impl == 'python' }}
+        # NOTE: the libpq was found in:
+        # /opt/homebrew/opt/postgresql@${PG_VERSION}/lib before PG 17
+        # /opt/homebrew/opt/postgresql@${PG_VERSION}/lib/postgresql on PG 17
         run: |
-          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib/postgresql:/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" \
+              >> $GITHUB_ENV
 
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}
@@ -224,7 +233,7 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       NOT_MARKERS: "timing proxy mypy"
-      PG_VERSION: "16"
+      PG_VERSION: "17"
 
     steps:
       - uses: actions/checkout@v4
@@ -234,7 +243,11 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@${PG_VERSION}
+        # On 2024-09-28 postgresql@17 installation failed but the package is
+        # available. So, in a few days, we might be able to drop "brew update".
+        run: |
+          brew update
+          brew install gnu-sed postgresql@${PG_VERSION}
 
       - name: Start PostgreSQL service
         run: brew services start postgresql@${PG_VERSION}
