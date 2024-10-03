@@ -7,11 +7,20 @@ PostgreSQL database adapter for Python - optimisation package
 
 import os
 import sys
+import sysconfig
 import subprocess as sp
 
 from setuptools import setup, Extension
 from distutils.command.build_ext import build_ext
 from distutils import log
+
+# For macos to be the version we specify in the environment
+# this is a bit of a dirty hack, but it works
+if "MACOSX_DEPLOYMENT_TARGET" in os.environ:
+    sysconfig.get_config_vars()["MACOSX_DEPLOYMENT_TARGET"] = os.environ[
+        "MACOSX_DEPLOYMENT_TARGET"
+    ]
+
 
 # Move to the directory of setup.py: executing this file from another location
 # (e.g. from the project root) will fail
