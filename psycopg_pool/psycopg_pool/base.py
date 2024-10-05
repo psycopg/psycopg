@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from time import monotonic
 from random import random
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, TypedDict, cast
 
 from psycopg import errors as e
 
@@ -18,6 +18,23 @@ from ._compat import Counter, Deque
 if TYPE_CHECKING:
     from psycopg._connection_base import BaseConnection
 
+
+class _PoolStats(TypedDict):
+    pool_min: int
+    pool_max: int
+    pool_size: int
+    pool_available: int
+    requests_waiting: int
+    requests_num: int
+    requests_queued: int
+    requests_wait_ms: int
+    requests_errors: int
+    usage_ms: int
+    returns_bad: int
+    connections_num: int
+    connections_ms: int
+    connections_errors: int
+    connections_lost: int
 
 class BasePool:
     # Used to generate pool names
@@ -157,15 +174,15 @@ class BasePool:
             f"can't return connection to pool {self.name!r}, {msg}: {conn}"
         )
 
-    def get_stats(self) -> dict[str, int]:
+    def get_stats(self) -> _PoolStats:
         """
         Return current stats about the pool usage.
         """
         rv = dict(self._stats)
         rv.update(self._get_measures())
-        return rv
+        return cast(_PoolStats, rv)
 
-    def pop_stats(self) -> dict[str, int]:
+    def pop_stats(self) -> _PoolStats:
         """
         Return current stats about the pool usage.
 
