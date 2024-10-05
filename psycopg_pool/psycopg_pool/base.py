@@ -36,6 +36,7 @@ class _PoolStats(TypedDict):
     connections_errors: int
     connections_lost: int
 
+
 class BasePool:
     # Used to generate pool names
     _num_pool = 0
