@@ -192,7 +192,7 @@ class BasePool:
         stats, self._stats = self._stats, Counter()
         rv = dict(stats)
         rv.update(self._get_measures())
-        return rv
+        return cast(_PoolStats, rv)
 
     def _get_measures(self) -> dict[str, int]:
         """
