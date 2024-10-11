@@ -66,6 +66,9 @@ When a new PostgreSQL major version is released
 - Add the new version to ``tools/update_errors.py`` and run the script to add
   new error classes.
 
+- If the script above found any change, document the version added at the
+  bottom of ``docs/api/errors.rst``.
+
 - Run the script ``tools/update_oids.py`` to add new oids. Use ``-h`` to get
   an example docker command line to run a server locally.
 
