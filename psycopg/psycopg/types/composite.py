@@ -263,6 +263,25 @@ class CompositeLoader(RecordLoader):
         self._tx.set_loader_types(self.fields_types, self.format)
 
 
+class KeywordCompositeLoader(CompositeLoader):
+    fields_names: list[str]
+
+    def load(self, data: abc.Buffer) -> Any:
+        if not self._types_set:
+            self._config_types(data)
+            self._types_set = True
+
+        if data == b"()":
+            return type(self).factory()
+
+        parsed = self._tx.load_sequence(tuple(self._parse_record(data[1:-1])))
+        mapped = dict(zip(self.fields_names, parsed))
+        return type(self).factory(**mapped)
+
+    def _config_types(self, data: abc.Buffer) -> None:
+        self._tx.set_loader_types(self.fields_types, self.format)
+
+
 class CompositeBinaryLoader(RecordBinaryLoader):
     format = pq.Format.BINARY
     factory: Callable[..., Any]
@@ -272,10 +291,22 @@ class CompositeBinaryLoader(RecordBinaryLoader):
         return type(self).factory(*r)
 
 
+class KeywordCompositeBinaryLoader(RecordBinaryLoader):
+    format = pq.Format.BINARY
+    factory: Callable[..., Any]
+    fields_names: list[str]
+
+    def load(self, data: abc.Buffer) -> Any:
+        r = super().load(data)
+        mapped = dict(zip(self.fields_names, r))
+        return type(self).factory(**mapped)
+
+
 def register_composite(
     info: CompositeInfo,
     context: abc.AdaptContext | None = None,
     factory: Callable[..., Any] | None = None,
+    use_keywords: bool = False,
 ) -> None:
     """Register the adapters to load and dump a composite type.
 
@@ -284,6 +315,8 @@ def register_composite(
         register it globally.
     :param factory: Callable to convert the sequence of attributes read from
         the composite into a Python object.
+    :param use_keywords: If `True`, load composite types using field names as keyword
+        arguments.
 
     .. note::
 
@@ -306,13 +339,25 @@ def register_composite(
 
     adapters = context.adapters if context else postgres.adapters
 
+    fields = tuple(_as_python_identifier(n) for n in info.field_names)
     # generate and register a customized text loader
     loader: type[BaseCompositeLoader]
-    loader = _make_loader(info.name, tuple(info.field_types), factory)
+    loader = _make_loader(
+        info.name,
+        tuple(info.field_types),
+        factory,
+        fields,
+        use_keywords,
+    )
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    loader = _make_binary_loader(info.name, factory)
+    loader = _make_binary_loader(
+        info.name,
+        factory,
+        fields,
+        use_keywords,
+    )
     adapters.register_loader(info.oid, loader)
 
     # If the factory is a type, create and register dumpers for it
@@ -352,21 +397,29 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 
 @cache
 def _make_loader(
-    name: str, types: tuple[int, ...], factory: Callable[..., Any]
+    name: str,
+    types: tuple[int, ...],
+    factory: Callable[..., Any],
+    fields: tuple[str, ...],
+    use_keywords: bool,
 ) -> type[BaseCompositeLoader]:
+    base_cls = KeywordCompositeLoader if use_keywords else CompositeLoader
     return type(
         f"{name.title()}Loader",
-        (CompositeLoader,),
-        {"factory": factory, "fields_types": list(types)},
+        (base_cls,),
+        {"factory": factory, "fields_types": list(types), "fields_names": list(fields)},
     )
 
 
 @cache
 def _make_binary_loader(
-    name: str, factory: Callable[..., Any]
+    name: str, factory: Callable[..., Any], fields: tuple[str, ...], use_keywords: bool
 ) -> type[BaseCompositeLoader]:
+    base_cls = KeywordCompositeBinaryLoader if use_keywords else CompositeBinaryLoader
     return type(
-        f"{name.title()}BinaryLoader", (CompositeBinaryLoader,), {"factory": factory}
+        f"{name.title()}BinaryLoader",
+        (base_cls,),
+        {"factory": factory, "fields_names": list(fields)},
     )
 
 
