@@ -345,6 +345,29 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
     assert isinstance(res[0].baz, float)
 
 
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_keyword_composite_factory(conn, testcomp, fmt_out):
+    info = CompositeInfo.fetch(conn, "testcomp")
+
+    class MyKeywordThing:
+        def __init__(self, *, foo, bar, baz):
+            self.foo, self.bar, self.baz = foo, bar, baz
+
+    register_composite(info, conn, factory=MyKeywordThing, use_keywords=True)
+    assert info.python_type is MyKeywordThing
+
+    cur = conn.cursor(binary=fmt_out)
+    res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
+    assert isinstance(res, MyKeywordThing)
+    assert res.baz == 20.0
+    assert isinstance(res.baz, float)
+
+    res = cur.execute("select array[row('hello', 10, 30)::testcomp]").fetchone()[0]
+    assert len(res) == 1
+    assert res[0].baz == 30.0
+    assert isinstance(res[0].baz, float)
+
+
 def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
     register_composite(info)
