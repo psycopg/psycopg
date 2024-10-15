@@ -11,6 +11,8 @@ from __future__ import annotations
 from . import abc
 from ._cmodule import _psycopg
 
+__all__ = ("Transformer",)
+
 Transformer: type[abc.Transformer]
 
 if _psycopg:
