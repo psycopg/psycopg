@@ -143,8 +143,8 @@ jobs:
 
   # }}}
 
-  macos-14:  # {{{
-    runs-on: macos-14
+  macos-arm:  # {{{
+    runs-on: macos-arm
     if: true
 
     strategy:
@@ -212,7 +212,7 @@ jobs:
 
   # }}}
 
-  macos-12:  # {{{
+  macos-x86:  # {{{
     runs-on: macos-12
     if: true
 
