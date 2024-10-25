@@ -282,8 +282,8 @@ Testing in psql:
     LINE 1: select 10 is 10;
                          ^
 
-What you can do instead is to use the `IS DISTINCT FROM operator`__, which
-will gladly accept a placeholder::
+What you can do instead is to use :sql:`IS NOT DISTINCT FROM %s` in place of
+:sql:`IS %s` (please pay attention to the awkwardly reversed :sql:`NOT`)::
 
     >>> conn.execute("SELECT * FROM foo WHERE field IS NOT DISTINCT FROM %s", [None])
 
