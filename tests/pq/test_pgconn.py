@@ -665,6 +665,9 @@ def test_change_password(pgconn, dsn, role):
     user, passwd = role
     conninfo = {e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val}
     conninfo.update({b"dbname": b"postgres", b"user": user, b"password": passwd})
+    # Avoid peer authentication
+    if b"host" not in conninfo:
+        conninfo[b"host"] = b"localhost"
     conn = pq.PGconn.connect(b" ".join(b"%s='%s'" % item for item in conninfo.items()))
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
