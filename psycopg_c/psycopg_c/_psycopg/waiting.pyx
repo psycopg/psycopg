@@ -213,5 +213,5 @@ def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
             wait = PyObject_CallFunctionObjArgs(send, pyready, NULL)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None
+        rv: RV = ex.value
         return rv

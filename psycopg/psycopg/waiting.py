@@ -64,8 +64,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) ->
                 sel.register(fileno, s)
 
     except StopIteration as ex:
-        # https://github.com/python/mypy/issues/18073
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -100,7 +99,7 @@ def wait_conn(gen: PQGenConn[RV], interval: float | None = None) -> RV:
                 sel.register(fileno, s)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -161,7 +160,7 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None)
         # Assume the connection was closed
         raise e.OperationalError(str(ex))
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -219,7 +218,7 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float | None = None) -> 
             fileno, s = gen.send(ready)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -256,7 +255,7 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float | None = None) -> R
             s = gen.send(ready)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -312,7 +311,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV
                 epoll.modify(fileno, evmask)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
@@ -360,7 +359,7 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
             poll.modify(fileno, evmask)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None  # type: ignore[assignment]
+        rv: RV = ex.value
         return rv
 
 
