@@ -270,8 +270,8 @@ You cannot use :sql:`IS %s` or :sql:`IS NOT %s`::
     LINE 1: SELECT * FROM foo WHERE field IS $1
                                          ^
 
-This is probably caused by the fact that :sql:`IS` is not a binary operator in
-PostgreSQL; rather, :sql:`IS NULL` and :sql:`IS NOT NULL` are unary operators
+This is probably caused by the fact that :sql:`IS` is not a binary predicate in
+PostgreSQL; rather, :sql:`IS NULL` and :sql:`IS NOT NULL` are unary predicates
 and you cannot use :sql:`IS` with anything else on the right hand side.
 Testing in psql:
 
@@ -279,11 +279,12 @@ Testing in psql:
 
     =# SELECT 10 IS 10;
     ERROR:  syntax error at or near "10"
-    LINE 1: select 10 is 10;
+    LINE 1: SELECT 10 IS 10;
                          ^
 
-What you can do instead is to use :sql:`IS NOT DISTINCT FROM %s` in place of
-:sql:`IS %s` (please pay attention to the awkwardly reversed :sql:`NOT`)::
+What you can do is to use `IS [NOT] DISTINCT FROM`__ predicate instead:
+:sql:`IS NOT DISTINCT FROM %s` can be used in place of :sql:`IS %s` (please
+pay attention to the awkwardly reversed :sql:`NOT`)::
 
     >>> conn.execute("SELECT * FROM foo WHERE field IS NOT DISTINCT FROM %s", [None])
 
