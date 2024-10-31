@@ -1,3 +1,4 @@
+import struct
 from math import isnan
 
 import pytest
@@ -20,17 +21,32 @@ skip_numpy2 = pytest.mark.skipif(
 )
 
 
+def _get_arch_size() -> int:
+    psize = struct.calcsize("P") * 8
+    if psize not in (32, 64):
+        msg = f"the pointer size {psize} is unusual"
+        raise ValueError(msg)
+    return psize
+
+
 def test_classes_identities():
     # Check if we know the class identities correctly. Maybe on different
     # platforms they are different.
-    assert np.ubyte is np.uint8
-    assert np.ushort is np.uint16
-    assert np.uint is np.uint64
-    assert np.uintc is np.uint32
+    size = _get_arch_size()
+
     assert np.byte is np.int8
+    assert np.ubyte is np.uint8
+
     assert np.short is np.int16
-    assert np.intc is np.int32
-    assert np.int_ is np.int64
+    assert np.ushort is np.uint16
+
+    if size == 32:
+        assert np.uint is np.uint32
+        assert np.uintc is np.uint32
+        assert np.intc is np.int32
+    else:
+        assert np.uint is np.uint64
+        assert np.int_ is np.int64
 
 
 @pytest.mark.parametrize(
