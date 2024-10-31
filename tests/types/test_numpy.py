@@ -21,7 +21,7 @@ skip_numpy2 = pytest.mark.skipif(
 )
 
 
-def _get_oarch() -> int:
+def _get_arch_size() -> int:
     psize = struct.calcsize("P") * 8
     if psize not in (32, 64):
         msg = f"the pointer size {psize} is unusual"
@@ -32,7 +32,7 @@ def _get_oarch() -> int:
 def test_classes_identities():
     # Check if we know the class identities correctly. Maybe on different
     # platforms they are different.
-    size = _get_oarch()
+    size = _get_arch_size()
 
     assert np.byte is np.int8
     assert np.ubyte is np.uint8
