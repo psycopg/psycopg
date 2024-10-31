@@ -41,7 +41,7 @@ def test_classes_identities():
     assert np.ushort is np.uint16
 
     if size == 32:
-        np.uint is np.uint32
+        assert np.uint is np.uint32
         assert np.uintc is np.uint32
         assert np.intc is np.int32
     else:
