@@ -29,24 +29,26 @@ def _get_arch_size() -> int:
     return psize
 
 
-def test_classes_identities():
-    # Check if we know the class identities correctly. Maybe on different
+def test_integer_types():
+    # Check if we know the integer types correctly. Maybe on different
     # platforms they are different.
     size = _get_arch_size()
 
-    assert np.byte is np.int8
-    assert np.ubyte is np.uint8
+    assert np.byte(0).dtype == np.int8(0).dtype
+    assert np.ubyte(0).dtype == np.uint8(0).dtype
 
-    assert np.short is np.int16
-    assert np.ushort is np.uint16
+    assert np.short(0).dtype == np.int16(0).dtype
+    assert np.ushort(0).dtype == np.uint16(0).dtype
+
+    assert np.uintc(0).dtype == np.uint32(0).dtype
+    assert np.intc(0).dtype == np.int32(0).dtype
 
     if size == 32:
-        assert np.uint is np.uint32
-        assert np.uintc is np.uint32
-        assert np.intc is np.int32
+        assert np.uint(0).dtype == np.uint32(0).dtype
+        assert np.int_(0).dtype == np.int32(0).dtype
     else:
-        assert np.uint is np.uint64
-        assert np.int_ is np.int64
+        assert np.uint(0).dtype == np.uint64(0).dtype
+        assert np.int_(0).dtype == np.int64(0).dtype
 
 
 @pytest.mark.parametrize(
