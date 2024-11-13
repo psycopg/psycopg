@@ -29,6 +29,7 @@ from .raw_cursor import AsyncRawServerCursor, RawServerCursor
 from ._connection_base import BaseConnection, Notify
 from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
+from .connection_prepared import PreparedConnection
 
 from . import dbapi20
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
@@ -84,6 +85,7 @@ __all__ = [
     "IsolationLevel",
     "Notify",
     "Pipeline",
+    "PreparedConnection",
     "RawCursor",
     "RawServerCursor",
     "Rollback",
