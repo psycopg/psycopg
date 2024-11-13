@@ -25,8 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.12"
-          - "3.8"
+          - "3.13"
+          - "3.9"
         sqlalchemy_label:
           # what version of sqlalchemy to download is defined in the "include" section below,
           # in the variable pip_sqlalchemy
