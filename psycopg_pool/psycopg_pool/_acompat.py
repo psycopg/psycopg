@@ -130,7 +130,9 @@ def spawn(
     return t
 
 
-async def agather(*tasks: asyncio.Task[Any], timeout: float | None = None) -> None:
+async def agather(
+    *tasks: asyncio.Task[Any], timeout: float | None = None, timeout_hint: str = ""
+) -> None:
     """
     Equivalent to asyncio.gather or Thread.join()
     """
@@ -149,9 +151,13 @@ async def agather(*tasks: asyncio.Task[Any], timeout: float | None = None) -> No
         if t.done():
             continue
         logger.warning("couldn't stop task %r within %s seconds", t.get_name(), timeout)
+        if timeout_hint:
+            logger.warning("hint: %s", timeout_hint)
 
 
-def gather(*tasks: threading.Thread, timeout: float | None = None) -> None:
+def gather(
+    *tasks: threading.Thread, timeout: float | None = None, timeout_hint: str = ""
+) -> None:
     """
     Equivalent to asyncio.gather or Thread.join()
     """
@@ -162,6 +168,8 @@ def gather(*tasks: threading.Thread, timeout: float | None = None) -> None:
         if not t.is_alive():
             continue
         logger.warning("couldn't stop thread %r within %s seconds", t.name, timeout)
+        if timeout_hint:
+            logger.warning("hint: %s", timeout_hint)
 
 
 def asleep(seconds: float) -> Coroutine[Any, Any, None]:

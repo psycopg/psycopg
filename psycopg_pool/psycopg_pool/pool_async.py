@@ -112,7 +112,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 return
 
             workers = self._signal_stop_worker()
-            agather(*workers, timeout=5.0)
+            hint = (
+                "you can try to call 'close()' explicitly "
+                "or to use the pool as context manager"
+            )
+            agather(*workers, timeout=5.0, timeout_hint=hint)
 
     def _check_open_getconn(self) -> None:
         super()._check_open_getconn()
