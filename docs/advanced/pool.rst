@@ -158,9 +158,17 @@ global object and use it from the rest of your code::
 Using this pattern, the pool will start the connection process already at
 import time. If that's too early, and you want to delay opening connections
 until the application is ready, you can specify to create a closed pool and
-call the `~ConnectionPool.open()` method (and optionally the
-`~ClonnectionPool.close()` method) at application startup/shutdown. For
-example, in FastAPI, you can use a `Lifespan`__::
+call the `~ConnectionPool.open()` method.
+
+If you are not using the pool as context manager, you are advised to call the
+`~ConnectionPool.close()` method on program exit: on some Python versions this
+might cause a program exit delay. How to ensure it depends on the way you are
+writing your program. One simple method is to use the `atexit` module::
+
+    atexit.register(pool.close)
+
+Other frameworks might provide suitable hooks. For example, in FastAPI, you
+can use a `lifespan`__ function::
 
     pool = AsyncConnectionPool(..., open=False, ...)
 
