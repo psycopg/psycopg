@@ -90,6 +90,6 @@ Cross-compiling
 
 To use cross-platform zipapps created with `shiv`__ that include Psycopg
 as a dependency you must also have ``libpq`` installed. See
-:ref:`the section above <Hacking>` for install instructions.
+`the section above <Hacking_>`_ for install instructions.
 
 .. __: https://github.com/linkedin/shiv
