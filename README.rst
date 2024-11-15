@@ -17,16 +17,27 @@ For further information about installation please check `the documentation`__.
 .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
 
 
+.. _Hacking:
+
 Hacking
 -------
 
-In order to work on the Psycopg source code you need to have the ``libpq``
-PostgreSQL client library installed in the system. For instance, on Debian
-systems, you can obtain it by running::
+In order to work on the Psycopg source code, you must have the
+``libpq`` PostgreSQL client library installed on the system. For instance, on
+Debian systems, you can obtain it by running::
 
     sudo apt install libpq5
 
-After which you can clone this repository::
+On macOS, run::
+
+    brew install libpq
+
+On Windows you can use EnterpriseDB's `installers`__ to obtain ``libpq``
+which is included in the Command Line Tools.
+
+.. __: https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+
+You can then clone this repository to develop Psycopg::
 
     git clone https://github.com/psycopg/psycopg.git
     cd psycopg
@@ -72,3 +83,13 @@ Now hack away! You can run the tests using::
     psql -c 'create database psycopg_test'
     export PSYCOPG_TEST_DSN="dbname=psycopg_test"
     pytest
+
+
+Cross-compiling
+---------------
+
+To use cross-platform zipapps created with `shiv`__ that include Psycopg
+as a dependency you must also have ``libpq`` installed. See
+`the section above <Hacking_>`_ for install instructions.
+
+.. __: https://github.com/linkedin/shiv
