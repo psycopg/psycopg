@@ -12,7 +12,7 @@ psycopg_pool 3.2.4
 
 - Add a hint to the warning printed if threads fail to stop during
   ``__del__``, which has been reported happening during interpreter shutdown
-  on Python 3.13 (see #954).
+  on Python 3.13 (see :ticket:`#954`).
 
 
 Current release
