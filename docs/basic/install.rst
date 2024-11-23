@@ -36,8 +36,6 @@ The Psycopg version documented here has *official and tested* support for:
   - **Note:** PostgreSQL `currently supported release`__ are actively tested
     in the CI. Out-of-support releases are supported on a best-effort basis.
 
-  Only the pure Python version is supported.
-
 - OS: Linux, macOS, Windows
 
 .. __: https://www.postgresql.org/support/versioning/
