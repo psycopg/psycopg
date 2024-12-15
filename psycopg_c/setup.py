@@ -6,6 +6,8 @@ PostgreSQL database adapter for Python - optimisation package
 # Copyright (C) 2020 The Psycopg Team
 
 import os
+import pathlib
+import platform
 import sys
 import subprocess as sp
 
@@ -21,6 +23,30 @@ if os.path.abspath(os.getcwd()) != here:
 
 
 def get_config(what: str) -> str:
+    # only x64-windows
+    if sys.platform == "win32" and platform.machine() == "AMD64":
+        # on github actions it's `VCPKG_INSTALLATION_ROOT`
+        if "VCPKG_ROOT" in os.environ or "VCPKG_INSTALLATION_ROOT" in os.environ:
+            vcpkg_root = (
+                os.environ.get("VCPKG_ROOT") or os.environ["VCPKG_INSTALLATION_ROOT"]
+            )
+            for target in [
+                "x64-windows-release",
+                "x64-windows",
+            ]:
+                vcpkg_platform_root = pathlib.Path(
+                    vcpkg_root, "installed", target
+                ).resolve()
+                if vcpkg_platform_root.exists():
+                    if what == "libdir":
+                        if vcpkg_platform_root.joinpath("lib/libpq.lib").exists():
+                            print("using vcpkg", target, "from", vcpkg_root)
+                            return str(vcpkg_platform_root.joinpath("lib"))
+                    if what == "includedir":
+                        if vcpkg_platform_root.joinpath("include/libpq").exists():
+                            print("using vcpkg", target, "from", vcpkg_root)
+                            return str(vcpkg_platform_root.joinpath("include"))
+
     pg_config = "pg_config"
     try:
         out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
