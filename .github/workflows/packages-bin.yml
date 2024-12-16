@@ -247,8 +247,8 @@ jobs:
             PSYCOPG_IMPL=binary
             PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 16"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
 
       - uses: actions/upload-artifact@v4
         with:
