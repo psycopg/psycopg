@@ -236,12 +236,6 @@ jobs:
             core.exportVariable('VCPKG_ROOT', process.env.VCPKG_INSTALLATION_ROOT || '');
             core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
 
-      - name: Install libpq from vcpkg
-        run: vcpkg install libpq:x64-windows-release
-        env:
-          # cache vcpkg
-          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
 
@@ -250,6 +244,7 @@ jobs:
         with:
           package-dir: psycopg_binary
         env:
+          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite" # cache vcpkg
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
           CIBW_ARCHS_WINDOWS: AMD64 x86
           CIBW_BEFORE_BUILD_WINDOWS: '.\tools\build\wheel_win32_before_build.bat'
