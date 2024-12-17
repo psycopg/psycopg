@@ -340,8 +340,7 @@ jobs:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
       - name: Build the C wheel
-#        if: ${{ matrix.impl == 'c' }}
-        if: false
+        if: ${{ matrix.impl == 'c' }}
         run: |
           pip install delvewheel wheel
 
