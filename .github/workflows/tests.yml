@@ -334,7 +334,7 @@ jobs:
             core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
 
       - name: Install libpq from vcpkg
-        run: vcpkg install libpq[client]:x64-windows-release
+        run: vcpkg install libpq:x64-windows-release
         env:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
