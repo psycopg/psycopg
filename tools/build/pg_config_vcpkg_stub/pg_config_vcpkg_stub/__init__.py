@@ -3,8 +3,8 @@ We use vcpkg in github actions to build psycopg-binary.
 
 This is a stub to work as `pg_config --libdir` or `pg_config --includedir` to make it work with vcpkg.
 
-You will need install vcpkg and set `VCPKG_ROOT `env and run `vcpkg install libpq[client]:x64-windows-release`
-before you use this script
+You will need install vcpkg and set `VCPKG_ROOT `env
+and run `vcpkg install libpq:x64-windows-release` before you use this script
 """
 
 import os

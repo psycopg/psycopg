@@ -335,16 +335,12 @@ jobs:
             core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
             core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
 
-      - name: Install libpq from vcpkg
-        run: vcpkg install libpq:x64-windows-release
+      - name: Install libpq from vcpkg and install pg_config.exe stub
+        run: .\tools\build\wheel_win32_before_build.bat
+        shell: powershell
         env:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-
-      - name: Install pg_config stub for vcpkg
-        run: pip install ./tools/build/pg_config_vcpkg_stub/
-
-      - run: pg_config.exe --help # see if our stub works.
 
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}

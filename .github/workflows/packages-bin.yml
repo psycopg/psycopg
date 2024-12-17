@@ -1,6 +1,7 @@
 name: Build binary packages
 
 on:
+  push: # debug for PR
   workflow_dispatch:
   schedule:
     - cron: '28 7 * * sun'
@@ -9,7 +10,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     env:
       # Latest release: https://www.postgresql.org/ftp/source/
@@ -99,7 +100,7 @@ jobs:
 
   macos-14:  # {{{
     runs-on: macos-14
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -154,7 +155,7 @@ jobs:
 
   macos-12:  # {{{
     runs-on: macos-12
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -273,16 +274,16 @@ jobs:
 
   # }}}
 
-  merge:
-    runs-on: ubuntu-latest
-    needs:
-      - linux
-      - macos-14
-      - macos-12
-      - windows
-    steps:
-      - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: psycopg-binary-artifact
-          delete-merged: true
+  # merge:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - linux
+  #     - macos-14
+  #     - macos-12
+  #     - windows
+  #   steps:
+  #     - name: Merge Artifacts
+  #       uses: actions/upload-artifact/merge@v4
+  #       with:
+  #         name: psycopg-binary-artifact
+  #         delete-merged: true
