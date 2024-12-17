@@ -337,7 +337,6 @@ jobs:
 
       - name: Install libpq from vcpkg
         run: vcpkg install libpq:x64-windows-release
-        if: ${{ matrix.impl == 'c' }}
         env:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
