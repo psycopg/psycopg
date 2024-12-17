@@ -313,9 +313,6 @@ jobs:
           $PgSvc.Start()
         shell: pwsh
 
-      # remove default libpq from runner so we can use libpq from vcpkg
-      - run: python .github/scripts/remove_default_libpq.py
-
       # Refcount tests are flakey on windows, often they fail with the likes of:
       #
       #   AssertionError: objects leaked: 0, -2
@@ -341,10 +338,6 @@ jobs:
         env:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-
-      - run: python .github/scripts/remove_default_libpq.py
-        env:
-          CI: ''
 
       - name: Build the C wheel
 #        if: ${{ matrix.impl == 'c' }}
