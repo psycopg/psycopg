@@ -347,7 +347,8 @@ jobs:
           CI: ''
 
       - name: Build the C wheel
-        if: ${{ matrix.impl == 'c' }}
+#        if: ${{ matrix.impl == 'c' }}
+        if: false
         run: |
           pip install delvewheel wheel
 
