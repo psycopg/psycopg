@@ -341,6 +341,9 @@ jobs:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
+      - name: Install pg_config stub for vcpkg
+        run: pip install ./tools/build/pg_config_stub/
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
