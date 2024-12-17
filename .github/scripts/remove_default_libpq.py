@@ -13,13 +13,3 @@ while libname := ctypes.util.find_library("libpq.dll"):
             dll_file.unlink()
         else:
             break
-
-# github actions default pg
-p = Path(r"C:\Program Files\PostgreSQL\14\bin")
-
-if p.exists():
-    for file in p.iterdir():
-        if file.name == "libpq.dll":
-            print("find libpq.dll", file)
-            if IS_CI:
-                file.unlink()
