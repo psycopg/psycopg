@@ -344,6 +344,8 @@ jobs:
       - name: Install pg_config stub for vcpkg
         run: pip install ./tools/build/pg_config_vcpkg_stub/
 
+      - run: pg_config.exe --help # see if our stub works.
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
