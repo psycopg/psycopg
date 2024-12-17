@@ -313,6 +313,9 @@ jobs:
           $PgSvc.Start()
         shell: pwsh
 
+      # remove default libpq from runner so we can use libpq from vcpkg
+      - run: python .github/scripts/remove_default_libpq.py
+
       # Refcount tests are flakey on windows, often they fail with the likes of:
       #
       #   AssertionError: objects leaked: 0, -2
@@ -323,7 +326,6 @@ jobs:
         run: echo "NOT_MARKERS=$NOT_MARKERS refcount" >> $GITHUB_ENV
 
       - name: Export GitHub Actions cache environment variables
-        if: ${{ matrix.impl == 'c' }}
         uses: actions/github-script@v7
         with:
           script: |
