@@ -130,10 +130,7 @@ In order to perform a local installation you need some prerequisites:
 - a C compiler,
 - Python development headers (e.g. the ``python3-dev`` package).
 - PostgreSQL client development headers (e.g. the ``libpq-dev`` package).
-- The :program:`pg_config` program available in the :envvar:`PATH`,
-- On Windows, you can also install libpq with vcpkg.
-  For example, ``vcpkg install libpq:x64-windows-release``  or ``vcpkg install libpq:x64-windows``,
-  ``psycopg[c]`` will prefer vcpkg installed libpq when it's available.
+- The :program:`pg_config` program available in the :envvar:`PATH`.
 
 You **must be able** to troubleshoot an extension build, for instance you must
 be able to read your compiler's error message. If you are not, please don't
