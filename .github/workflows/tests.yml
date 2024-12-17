@@ -333,8 +333,8 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             core.exportVariable('VCPKG_ROOT', process.env.VCPKG_INSTALLATION_ROOT || '');
-            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
             core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
 
       - name: Install libpq from vcpkg
         run: vcpkg install libpq[client]:x64-windows-release
@@ -350,11 +350,6 @@ jobs:
         if: ${{ matrix.impl == 'c' }}
         run: |
           pip install delvewheel wheel
-
-          # The windows runner is a total mess, with random copies of the libpq
-          # scattered all over the places. Give precedence to the one under our
-          # control (or the illusion of it).
-          export PATH="/c/Program Files/PostgreSQL/14/bin/:$PATH"
 
           # If the wheel is not delocated, import fails with some dll not found
           # (but it won't tell which one).
