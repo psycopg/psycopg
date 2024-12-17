@@ -220,6 +220,7 @@ jobs:
     steps:
       # there is a c:\tools\php\libpq.dll in PATH
       - run: rm c:/tools/php -rf
+        shell: bash
 
       - uses: actions/checkout@v4
 
