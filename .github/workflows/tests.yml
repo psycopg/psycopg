@@ -354,9 +354,6 @@ jobs:
       - name: Install Python packages
         run: pip install $DEPS
 
-      # debug command to show path on ci
-      - run: env
-
       - name: Run tests
         run: ./tools/build/ci_test.sh
 
