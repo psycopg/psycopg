@@ -31,6 +31,8 @@ def get_config(what: str) -> str:
                 os.environ.get("VCPKG_ROOT") or os.environ["VCPKG_INSTALLATION_ROOT"]
             )
             for target in [
+                # "x64-windows-static-md-release",
+                # "x64-windows-static-md",
                 "x64-windows-release",
                 "x64-windows",
             ]:
