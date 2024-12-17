@@ -20,6 +20,10 @@ def main():
 
     what = sys.argv[1]
 
+    if what == "--help":
+        print(__doc__)
+        return
+
     # on github actions it's `VCPKG_INSTALLATION_ROOT`
     if "VCPKG_ROOT" in os.environ or "VCPKG_INSTALLATION_ROOT" in os.environ:
         vcpkg_root = pathlib.Path(

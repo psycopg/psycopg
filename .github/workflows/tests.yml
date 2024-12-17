@@ -342,7 +342,7 @@ jobs:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
       - name: Install pg_config stub for vcpkg
-        run: pip install ./tools/build/pg_config_stub/
+        run: pip install ./tools/build/pg_config_vcpkg_stub/
 
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
