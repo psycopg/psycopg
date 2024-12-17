@@ -15,7 +15,7 @@ while libname := ctypes.util.find_library("libpq.dll"):
             break
 
 # github actions default pg
-p = Path("C:Program Files/PostgreSQL/14/bin/")
+p = Path(r"C:\Program Files\PostgreSQL\14\bin")
 
 if p.exists():
     for file in p.iterdir():
