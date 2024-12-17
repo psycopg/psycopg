@@ -299,6 +299,8 @@ jobs:
         shell: bash
 
     steps:
+      # there is a c:\tools\php\libpq.dll in PATH
+      - run: rm c:/tools/php -rf
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5

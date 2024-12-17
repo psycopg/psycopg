@@ -218,6 +218,9 @@ jobs:
         pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
 
     steps:
+      # there is a c:\tools\php\libpq.dll in PATH
+      - run: rm c:/tools/php -rf
+
       - uses: actions/checkout@v4
 
       - name: Start PostgreSQL service for test
