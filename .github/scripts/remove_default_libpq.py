@@ -11,3 +11,5 @@ while libname := ctypes.util.find_library("libpq.dll"):
         # only remove this in CI to avoid someone run it on their machine
         if IS_CI:
             dll_file.unlink()
+        else:
+            break

@@ -341,6 +341,10 @@ jobs:
           # cache vcpkg
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
+      - run: python .github/scripts/remove_default_libpq.py
+        env:
+          CI: ''
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
