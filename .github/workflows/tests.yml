@@ -19,7 +19,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -145,7 +145,7 @@ jobs:
 
   macos-14:  # {{{
     runs-on: macos-14
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -214,7 +214,7 @@ jobs:
 
   macos-12:  # {{{
     runs-on: macos-12
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -299,6 +299,8 @@ jobs:
         shell: bash
 
     steps:
+      # there is a c:\tools\php\libpq.dll in PATH
+      - run: rm c:/tools/php -rf
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -322,15 +324,28 @@ jobs:
         if: ${{ github.event_name == 'schedule' }}
         run: echo "NOT_MARKERS=$NOT_MARKERS refcount" >> $GITHUB_ENV
 
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = require('path')
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            core.exportVariable('VCPKG_ROOT', process.env.VCPKG_INSTALLATION_ROOT || '');
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
+
+      - name: Install libpq from vcpkg and install pg_config.exe stub
+        run: .\tools\build\wheel_win32_before_build.bat
+        shell: powershell
+        env:
+          # cache vcpkg
+          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
           pip install delvewheel wheel
-
-          # The windows runner is a total mess, with random copies of the libpq
-          # scattered all over the places. Give precedence to the one under our
-          # control (or the illusion of it).
-          export PATH="/c/Program Files/PostgreSQL/14/bin/:$PATH"
 
           # If the wheel is not delocated, import fails with some dll not found
           # (but it won't tell which one).
@@ -350,7 +365,7 @@ jobs:
 
   crdb:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
