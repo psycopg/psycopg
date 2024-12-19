@@ -1,7 +1,7 @@
 name: Build binary packages
 
 on:
-  push: # debug for PR
+  pull_request: # debug for PR
   workflow_dispatch:
   schedule:
     - cron: '28 7 * * sun'
