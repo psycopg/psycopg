@@ -215,3 +215,38 @@ async def test_notifies_blocking(aconn):
         await gather(worker)
 
     assert dt > 0.5
+
+
+@pytest.mark.slow
+async def test_generator_and_handler(aconn, aconn_cls, dsn):
+    await aconn.set_autocommit(True)
+    await aconn.execute("listen foo")
+
+    n1 = None
+    n2 = None
+
+    def set_n2(n):
+        nonlocal n2
+        n2 = n
+
+    aconn.add_notify_handler(set_n2)
+
+    async def listener():
+        nonlocal n1
+        async for n1 in aconn.notifies(timeout=1, stop_after=1):
+            pass
+
+    worker = spawn(listener)
+    try:
+        # Make sure the listener is listening
+        if not aconn.lock.locked():
+            await asleep(0.01)
+
+        async with await aconn_cls.connect(dsn, autocommit=True) as nconn:
+            await nconn.execute("notify foo, '1'")
+
+    finally:
+        await gather(worker)
+
+    assert n1
+    assert n2

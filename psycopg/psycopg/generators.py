@@ -298,6 +298,8 @@ def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
         n = pgconn.notifies()
         if n:
             ns.append(n)
+            if pgconn.notify_handler:
+                pgconn.notify_handler(n)
         else:
             break
 

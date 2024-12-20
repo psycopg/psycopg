@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2.4 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Make sure that the notifies callback is called during the use of the
+  `~Connection.notifies()` generator (:ticket:`#972`).
+
+
 Current release
 ---------------
 

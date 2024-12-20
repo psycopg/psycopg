@@ -219,3 +219,37 @@ def test_notifies_blocking(conn):
         gather(worker)
 
     assert dt > 0.5
+
+
+@pytest.mark.slow
+def test_generator_and_handler(conn, conn_cls, dsn):
+    conn.set_autocommit(True)
+    conn.execute("listen foo")
+
+    n1 = None
+    n2 = None
+
+    def set_n2(n):
+        nonlocal n2
+        n2 = n
+
+    conn.add_notify_handler(set_n2)
+
+    def listener():
+        nonlocal n1
+        for n1 in conn.notifies(timeout=1, stop_after=1):
+            pass
+
+    worker = spawn(listener)
+    try:
+        # Make sure the listener is listening
+        if not conn.lock.locked():
+            sleep(0.01)
+
+        with conn_cls.connect(dsn, autocommit=True) as nconn:
+            nconn.execute("notify foo, '1'")
+    finally:
+        gather(worker)
+
+    assert n1
+    assert n2
