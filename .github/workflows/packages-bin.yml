@@ -152,8 +152,8 @@ jobs:
 
   # }}}
 
-  macos-12:  # {{{
-    runs-on: macos-12
+  macos-13:  # {{{
+    runs-on: macos-13
     if: true
 
     strategy:
@@ -191,7 +191,7 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
-            MACOSX_DEPLOYMENT_TARGET=12.0
+            MACOSX_DEPLOYMENT_TARGET=13.0
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
             PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
@@ -200,7 +200,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-12-${{matrix.pyver}}-macosx_${{matrix.arch}}
+          name: macos-13-${{matrix.pyver}}-macosx_${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
@@ -263,7 +263,7 @@ jobs:
     needs:
       - linux
       - macos-14
-      - macos-12
+      - macos-13
       - windows
     steps:
       - name: Merge Artifacts

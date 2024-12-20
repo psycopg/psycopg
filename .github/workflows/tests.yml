@@ -212,8 +212,8 @@ jobs:
 
   # }}}
 
-  macos-12:  # {{{
-    runs-on: macos-12
+  macos-13:  # {{{
+    runs-on: macos-13
     if: true
 
     strategy:
@@ -252,10 +252,17 @@ jobs:
       - name: Start PostgreSQL service
         run: brew services start postgresql@${PG_VERSION}
 
+      - name: Find the libpq
+        if: ${{ matrix.impl == 'python' }}
+        run: |
+          echo "DYLD_LIBRARY_PATH=/usr/local/opt/postgresql@${PG_VERSION}/lib/postgresql:$DYLD_LIBRARY_PATH" \
+              >> $GITHUB_ENV
+
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+          echo "PATH=/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Python packages
         run: pip install $DEPS
