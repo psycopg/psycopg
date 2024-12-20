@@ -27,7 +27,7 @@ if sys.version_info[:2] == (3, 10):
     # Keeping the guard as strict as possible, to be extended if other types
     # or versions are necessary.
     try:
-        from _contextvars import Context  # type: ignore
+        from _contextvars import Context
     except ImportError:
         pass
     else:
