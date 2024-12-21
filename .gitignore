@@ -22,3 +22,4 @@ wheelhouse/
 /psycopg/build/
 /psycopg_c/build/
 /psycopg_pool/build/
+/tools/build/pg_config_vcpkg_stub/build/
