@@ -217,10 +217,13 @@ jobs:
         arch: [win_amd64]
         pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       # there are some other libpq in PATH
       - run: rm -rf c:/tools/php C:/Strawberry/c/bin
-        shell: bash
 
       - uses: actions/checkout@v4
 
@@ -229,6 +232,7 @@ jobs:
           $PgSvc = Get-Service "postgresql*"
           Set-Service $PgSvc.Name -StartupType manual
           $PgSvc.Start()
+        shell: powershell
 
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v7
