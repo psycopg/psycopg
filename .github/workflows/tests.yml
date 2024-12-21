@@ -321,7 +321,7 @@ jobs:
           $PgSvc = Get-Service "postgresql*"
           Set-Service $PgSvc.Name -StartupType manual
           $PgSvc.Start()
-        shell: pwsh
+        shell: powershell
 
       # Refcount tests are flakey on windows, often they fail with the likes of:
       #
