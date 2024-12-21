@@ -47,7 +47,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           package-dir: psycopg_binary
         env:
@@ -127,7 +127,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           package-dir: psycopg_binary
         env:
@@ -181,7 +181,7 @@ jobs:
         run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           package-dir: psycopg_binary
         env:
@@ -244,7 +244,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           package-dir: psycopg_binary
         env:
