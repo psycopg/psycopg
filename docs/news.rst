@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.2.4 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Don't lose notifies received between two `~Connection.notifies()` calls
+  (:ticket:`#962`).
 - Make sure that the notifies callback is called during the use of the
   `~Connection.notifies()` generator (:ticket:`#972`).
 

@@ -23,7 +23,7 @@ from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import Self
+from ._compat import Deque, Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
@@ -338,30 +338,51 @@ class Connection(BaseConnection[Row]):
 
         with self.lock:
             enc = self.pgconn._encoding
-            while True:
-                try:
-                    ns = self.wait(notifies(self.pgconn), interval=interval)
-                except e._NO_TRACEBACK as ex:
-                    raise ex.with_traceback(None)
 
-                # Emit the notifications received.
-                for pgn in ns:
-                    n = Notify(
-                        pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
-                    )
-                    yield n
-                    nreceived += 1
+            # If the backlog is set to not-None, then the handler is also set.
+            # Remove the handler for the duration of this critical section to
+            # avoid reporting notifies twice.
+            if self._notifies_backlog is not None:
+                self.remove_notify_handler(self._notifies_backlog_handler)
 
-                # Stop if we have received enough notifications.
-                if stop_after is not None and nreceived >= stop_after:
-                    break
+            try:
+                while True:
+                    # if notifies were received when the generator was off,
+                    # return them in a first batch.
+                    if self._notifies_backlog:
+                        while self._notifies_backlog:
+                            yield self._notifies_backlog.popleft()
+                            nreceived += 1
+                    else:
+                        try:
+                            pgns = self.wait(notifies(self.pgconn), interval=interval)
+                        except e._NO_TRACEBACK as ex:
+                            raise ex.with_traceback(None)
+                        # Emit the notifications received.
+                        for pgn in pgns:
+                            yield Notify(
+                                pgn.relname.decode(enc),
+                                pgn.extra.decode(enc),
+                                pgn.be_pid,
+                            )
+                            nreceived += 1
 
-                # Check the deadline after the loop to ensure that timeout=0
-                # polls at least once.
-                if deadline:
-                    interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                    if interval < 0.0:
+                    # Stop if we have received enough notifications.
+                    if stop_after is not None and nreceived >= stop_after:
                         break
+
+                    # Check the deadline after the loop to ensure that timeout=0
+                    # polls at least once.
+                    if deadline:
+                        interval = min(_WAIT_INTERVAL, deadline - monotonic())
+                        if interval < 0.0:
+                            break
+            finally:
+                # Install, or re-install, the backlog notify handler
+                # to catch notifications received while the generator was off.
+                if self._notifies_backlog is None:
+                    self._notifies_backlog = Deque()
+                self.add_notify_handler(self._notifies_backlog_handler)
 
     @contextmanager
     def pipeline(self) -> Iterator[Pipeline]:
