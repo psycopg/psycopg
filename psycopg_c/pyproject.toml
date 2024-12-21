@@ -3,6 +3,7 @@ requires = [
     "setuptools >= 49.2.0",
     "wheel >= 0.37",
     "tomli >= 2.0.1; python_version < '3.11'",
+    "delvewheel; sys_platform == 'win32'",
 ]
 
 # The cython_backend is a build backend adding a Cython dependency if the c
