@@ -1,6 +1,6 @@
 @echo on
 
-pip install delvewheel
+pip install delvewheel wheel
 
 vcpkg install libpq:x64-windows-release
 
