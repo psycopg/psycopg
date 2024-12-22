@@ -29,7 +29,8 @@ def sed_i(pattern: str, repl: str, filename: str | Path) -> None:
 shutil.copytree(pdir / "psycopg_c", target)
 shutil.move(str(target / "psycopg_c"), str(target / "psycopg_binary"))
 shutil.move(str(target / "README-binary.rst"), str(target / "README.rst"))
-sed_i("psycopg-c", "psycopg-binary", target / "setup.cfg")
+sed_i("psycopg-c", "psycopg-binary", target / "pyproject.toml")
+sed_i(r'"psycopg_c([\./][^"]+)?"', r'"psycopg_binary\1"', target / "pyproject.toml")
 sed_i(r"__impl__\s*=.*", '__impl__ = "binary"', target / "psycopg_binary/pq.pyx")
 for dirpath, dirnames, filenames in os.walk(target):
     for filename in filenames:

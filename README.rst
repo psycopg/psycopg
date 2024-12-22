@@ -43,8 +43,7 @@ You can then clone this repository to develop Psycopg::
     cd psycopg
 
 Please note that the repository contains the source code of several Python
-packages: that's why you don't see a ``setup.py`` here. The packages may have
-different requirements:
+packages, which may have different requirements:
 
 - The ``psycopg`` directory contains the pure python implementation of
   ``psycopg``. The package has only a runtime dependency on the ``libpq``, the

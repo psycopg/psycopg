@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 @dataclass
 class Package:
     name: str
-    ini_files: list[Path]
+    toml_files: list[Path]
     history_file: Path
     tag_format: str
     extras: list[str]
@@ -38,9 +38,9 @@ packages: dict[str, Package] = {}
 
 Package(
     name="psycopg",
-    ini_files=[
-        PROJECT_DIR / "psycopg/setup.cfg",
-        PROJECT_DIR / "psycopg_c/setup.cfg",
+    toml_files=[
+        PROJECT_DIR / "psycopg/pyproject.toml",
+        PROJECT_DIR / "psycopg_c/pyproject.toml",
     ],
     history_file=PROJECT_DIR / "docs/news.rst",
     tag_format="{version}",
@@ -49,7 +49,7 @@ Package(
 
 Package(
     name="psycopg_pool",
-    ini_files=[PROJECT_DIR / "psycopg_pool/setup.cfg"],
+    toml_files=[PROJECT_DIR / "psycopg_pool/pyproject.toml"],
     history_file=PROJECT_DIR / "docs/news_pool.rst",
     tag_format="pool-{version}",
     extras=[],
@@ -64,16 +64,16 @@ class Bumper:
         self._ini_regex = re.compile(
             r"""(?ix)
             ^
-            (?P<pre> version \s* = \s*)
-            (?P<ver> [^\s]+)
-            (?P<post> \s*)
+            (?P<pre> version \s* = \s* ")
+            (?P<ver> [^\s"]+)
+            (?P<post> " \s*)
             \s* $
             """
         )
         self._extra_regex = re.compile(
             r"""(?ix)
             ^
-            (?P<pre> \s* )
+            (?P<pre> \s* ")
             (?P<package> [^\s]+)
             (?P<op> \s* == \s*)
             (?P<ver> [^\s]+)
@@ -84,11 +84,11 @@ class Bumper:
 
     @cached_property
     def current_version(self) -> Version:
-        versions = {self._parse_version_from_file(f) for f in self.package.ini_files}
+        versions = {self._parse_version_from_file(f) for f in self.package.toml_files}
         if len(versions) > 1:
             raise ValueError(
                 f"inconsistent versions ({', '.join(map(str, sorted(versions)))})"
-                f" in {self.package.ini_files}"
+                f" in {self.package.toml_files}"
             )
 
         return versions.pop()
@@ -134,7 +134,7 @@ class Bumper:
         return Version(".".join(sparts))
 
     def update_files(self) -> None:
-        for f in self.package.ini_files:
+        for f in self.package.toml_files:
             self._update_version_in_file(f, self.want_version)
 
         if self.bump_level != BumpLevel.DEV:
@@ -145,7 +145,7 @@ class Bumper:
         msg = f"""\
 chore: bump {self.package.name} package version to {self.want_version}
 """
-        files = self.package.ini_files + [self.package.history_file]
+        files = self.package.toml_files + [self.package.history_file]
         cmdline = ["git", "commit", "-m", msg] + list(map(str, files))
         sp.check_call(cmdline)
 
