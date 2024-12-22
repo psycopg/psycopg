@@ -1,3 +1,65 @@
 [build-system]
 requires = ["setuptools>=49.2.0", "wheel>=0.37"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "psycopg-pool"
+description = "Connection Pool for Psycopg"
+version = "3.3.0.dev1"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">= 3.8"
+dependencies = [
+    "typing-extensions >= 4.6",
+]
+
+[[project.authors]]
+name = "Daniele Varrazzo"
+email = "daniele.varrazzo@gmail.com"
+
+[project.license]
+text = "GNU Lesser General Public License v3 (LGPLv3)"
+
+[project.urls]
+Homepage = "https://psycopg.org/"
+Documentation = "https://www.psycopg.org/psycopg3/docs/advanced/pool.html"
+Changes = "https://psycopg.org/psycopg3/docs/news_pool.html"
+Code = "https://github.com/psycopg/psycopg"
+"Issue Tracker" = "https://github.com/psycopg/psycopg/issues"
+Download = "https://pypi.org/project/psycopg-pool/"
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[tool.setuptools]
+zip-safe = false
+license-files = ["LICENSE.txt"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+psycopg_pool = [
+    "py.typed",
+]
+
+[tool.setuptools.packages.find]
+namespaces = false
