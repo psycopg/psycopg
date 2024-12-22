@@ -23,7 +23,7 @@ from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import Deque, Self
+from ._compat import Self
 from .conninfo import make_conninfo, conninfo_to_dict
 from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
@@ -339,11 +339,9 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             enc = self.pgconn._encoding
 
-            # If the backlog is set to not-None, then the handler is also set.
             # Remove the handler for the duration of this critical section to
             # avoid reporting notifies twice.
-            if self._notifies_backlog is not None:
-                self.remove_notify_handler(self._notifies_backlog_handler)
+            self.remove_notify_handler(self._notifies_backlog_handler)
 
             try:
                 while True:
@@ -378,10 +376,6 @@ class Connection(BaseConnection[Row]):
                         if interval < 0.0:
                             break
             finally:
-                # Install, or re-install, the backlog notify handler
-                # to catch notifications received while the generator was off.
-                if self._notifies_backlog is None:
-                    self._notifies_backlog = Deque()
                 self.add_notify_handler(self._notifies_backlog_handler)
 
     @contextmanager
