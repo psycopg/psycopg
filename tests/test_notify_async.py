@@ -252,6 +252,23 @@ async def test_generator_and_handler(aconn, aconn_cls, dsn):
     assert n2
 
 
+@pytest.mark.parametrize("query_between", [True, False])
+async def test_first_notify_not_lost(aconn, aconn_cls, dsn, query_between):
+    await aconn.set_autocommit(True)
+    await aconn.execute("listen foo")
+
+    async with await aconn_cls.connect(dsn, autocommit=True) as conn2:
+        await conn2.execute("notify foo, 'hi'")
+
+    if query_between:
+        await aconn.execute("select 1")
+
+    n = None
+    async for n in aconn.notifies(timeout=1, stop_after=1):
+        pass
+    assert n
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.parametrize("sleep_on", ["server", "client"])
