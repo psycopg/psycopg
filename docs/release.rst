@@ -116,10 +116,10 @@ When dropping end-of-life Python versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Update project metadata, ``requires-python`` and (maybe) package dependencies
-in ``pyproject.toml`` files of the corresponding ``psycopg`` directories
+  in ``pyproject.toml`` files of the corresponding ``psycopg`` directories
 
 - Update necessary GitHub Actions workflow files in the ``.github/workflows/`` directory,
-e.g., ``tests.yml`` and ``.3rd-party-tests.yml`` and so forth.
+  e.g., ``tests.yml`` and ``.3rd-party-tests.yml`` and so forth.
 
 - Bump needed versions in the ``tests/constraints.txt`` file.
 
