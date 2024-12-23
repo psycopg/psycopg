@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "psycopg"
 description = "PostgreSQL database adapter for Python"
-version = "3.2.4.dev1"
+version = "3.3.0.dev1"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -54,10 +54,10 @@ content-type = "text/x-rst"
 
 [project.optional-dependencies]
 c = [
-    "psycopg-c == 3.2.4.dev1; implementation_name != \"pypy\"",
+    "psycopg-c == 3.3.0.dev1; implementation_name != \"pypy\"",
 ]
 binary = [
-    "psycopg-binary == 3.2.4.dev1; implementation_name != \"pypy\"",
+    "psycopg-binary == 3.3.0.dev1; implementation_name != \"pypy\"",
 ]
 pool = [
     "psycopg-pool",

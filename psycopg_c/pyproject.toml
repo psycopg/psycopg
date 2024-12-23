@@ -25,7 +25,7 @@ cython-requires = ["Cython >= 3.0.0"]
 [project]
 name = "psycopg-c"
 description = "PostgreSQL database adapter for Python -- C optimisation distribution"
-version = "3.2.4.dev1"
+version = "3.3.0.dev1"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
