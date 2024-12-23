@@ -34,7 +34,7 @@ AWorker: TypeAlias = "asyncio.Task[None]"
 
 # Hack required on Python 3.8 because subclassing Queue[T] fails at runtime.
 # https://stackoverflow.com/questions/45414066/mypy-how-to-define-a-generic-subclass
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # TODO
     _GQueue: TypeAlias = queue.Queue
     _AGQueue: TypeAlias = asyncio.Queue
 

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import Any, Callable, Generator, Mapping
 from typing import Protocol, Sequence, TYPE_CHECKING
-from typing import Dict, Union  # drop with Python 3.8
 
 from . import pq
 from ._enums import PyFormat as PyFormat
@@ -25,15 +24,15 @@ if TYPE_CHECKING:
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = bytes | bytearray | memoryview
 
-Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
-Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
+Query: TypeAlias = LiteralString | bytes | "sql.SQL" | "sql.Composed"
+Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = Union[type, "tuple[DumperKey, ...]"]
-ConnParam: TypeAlias = Union[str, int, None]
-ConnDict: TypeAlias = Dict[str, ConnParam]
+DumperKey: TypeAlias = type | "tuple[DumperKey, ...]"
+ConnParam: TypeAlias = str | int | None
+ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 
