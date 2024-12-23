@@ -118,6 +118,7 @@ class AEvent(asyncio.Event):
         await asyncio.wait_for(self.wait(), timeout)
 
 
+# TODO
 class Queue(queue.Queue):  # type: ignore[type-arg]  # can be dropped after Python 3.8
     """
     A Queue subclass with an interruptible get() method.
