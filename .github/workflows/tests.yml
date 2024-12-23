@@ -87,6 +87,7 @@ jobs:
         if: ${{ matrix.impl == 'c' }}
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+          sudo apt-get install -y libgeos-dev
 
       - name: Include gevent to the packages to install
         if: ${{ matrix.ext == 'gevent' }}
