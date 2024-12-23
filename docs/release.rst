@@ -104,7 +104,8 @@ When a new Python major version is released
   versions.
 
 - Add the ``Programming Language :: Python :: 3.<X>`` classifier to
-  ``psycopg/setup.cfg``, ``psycopg_c/setup.cfg`` and ``psycopg_pool/setup.cfg``.
+  ``psycopg/pyproject.toml``, ``psycopg_c/pyproject.toml``, and
+  ``psycopg_pool/pyproject.toml``.
 
 - Update the list of versions in ``tools/build/build_macos_arm64.sh`` to include
   the new version. Look for both the ``python_versions`` variable and the
