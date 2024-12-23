@@ -7,15 +7,24 @@
 ``psycopg`` release notes
 =========================
 
-Current release
+Future releases
 ---------------
 
-Psycopg 3.2.4
-^^^^^^^^^^^^^
+Python 3.3.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Drop support for Python 3.8.
+
+
+Psycopg 3.2.4 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Make sure that the notifies callback is called during the use of the
   `~Connection.notifies()` generator (:ticket:`#972`).
 
+
+Current release
+---------------
 
 Psycopg 3.2.3
 ^^^^^^^^^^^^^
