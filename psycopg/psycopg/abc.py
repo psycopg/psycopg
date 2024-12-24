@@ -30,8 +30,7 @@ Query: TypeAlias = LiteralString | bytes | sql.SQL | sql.Composed
 Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKeyType = TypeVar("DumperKey")
-DumperKey: TypeAlias = type | tuple[DumperKeyType, ...]
+DumperKey: TypeAlias = type | tuple["DumperKey", ...]
 ConnParam: TypeAlias = str | int | None
 ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
