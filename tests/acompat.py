@@ -115,7 +115,3 @@ class AEvent(asyncio.Event):
 
     async def wait_timeout(self, timeout):
         await asyncio.wait_for(self.wait(), timeout)
-
-
-class AQueue(asyncio.Queue):  # type: ignore[type-arg]
-    pass
