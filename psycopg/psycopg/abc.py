@@ -26,11 +26,12 @@ NoneType: type = type(None)
 # An object implementing the buffer protocol
 Buffer: TypeAlias = bytes | bytearray | memoryview
 
-Query: TypeAlias = LiteralString | bytes | "sql.SQL" | "sql.Composed"
+Query: TypeAlias = LiteralString | bytes | sql.SQL | sql.Composed
 Params: TypeAlias = Sequence[Any] | Mapping[str, Any]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-DumperKey: TypeAlias = type | "tuple[DumperKey, ...]"
+DumperKeyType = TypeVar("DumperKey")
+DumperKey: TypeAlias = type | tuple[DumperKeyType, ...]
 ConnParam: TypeAlias = str | int | None
 ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
