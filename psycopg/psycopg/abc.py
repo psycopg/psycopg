@@ -9,12 +9,13 @@ from __future__ import annotations
 from typing import Any, Callable, Generator, Mapping
 from typing import Protocol, Sequence, TYPE_CHECKING
 
+from . import sql
+
 from . import pq
 from ._enums import PyFormat as PyFormat
 from ._compat import LiteralString, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from . import sql  # noqa: F401
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready  # noqa: F401
