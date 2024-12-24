@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
 Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
 Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -27,7 +26,7 @@ def testfeed(svcconn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     await aconn.set_autocommit(True)
-    q: AQueue[Any] = AQueue()
+    q = AQueue()
 
     async def worker():
         try:

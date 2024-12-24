@@ -118,5 +118,17 @@ class AEvent(asyncio.Event):
         await asyncio.wait_for(self.wait(), timeout)
 
 
-Queue = queue.Queue
-AQueue = asyncio.Queue
+class Queue(queue.Queue):  # type: ignore[type-arg]
+    """
+    A Queue subclass with an interruptible get() method.
+    """
+
+    def get(self, block: bool = True, timeout: float | None = None) -> Any:
+        # Always specify a timeout to make the wait interruptible.
+        if timeout is None:
+            timeout = 24.0 * 60.0 * 60.0
+        return super().get(block=block, timeout=timeout)
+
+
+class AQueue(asyncio.Queue):  # type: ignore[type-arg]
+    pass
