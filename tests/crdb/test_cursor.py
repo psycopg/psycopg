@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import json
+from queue import Queue
 from uuid import uuid4
 
 import pytest
 from psycopg import pq, errors as e
 from psycopg.rows import namedtuple_row
-from ..acompat import Queue, spawn, gather
+from ..acompat import spawn, gather
 
 pytestmark = [pytest.mark.crdb]
 
