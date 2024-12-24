@@ -118,13 +118,14 @@ When dropping end-of-life Python versions
 - Update project metadata, ``requires-python`` and (maybe) package dependencies
   in ``pyproject.toml`` files of the corresponding ``psycopg`` directories.
 
-- Update necessary GitHub Actions workflow files in the ``.github/workflows/`` directory,
+- Update GitHub Actions workflow files in the ``.github/workflows/`` directory,
   e.g., ``tests.yml``, ``.3rd-party-tests.yml``, ``packages-bin.yml``.
 
-- Bump needed versions in the ``tests/constraints.txt`` file.
+- Bump versions in the ``tests/constraints.txt`` file if it is necessary.
 
-- Grep the source code for occurrences of the version to be dropped.
-  For example, dropping Python 3.8::
+- You may grep throughout the project for occurrences of a version to be dropped.
+  However, favouring smaller pull requests is convenient and easy to review.
+  An example for grepping `end-of-life <https://endoflife.date/python>` Python 3.8::
 
      git grep -E -e '\b3\.8\b' -e '\b(cp)?38\b' -e '\b3, 8\b'
 
