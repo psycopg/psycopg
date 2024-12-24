@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, i686, ppc64le, aarch64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        pyver: [cp39, cp310, cp311, cp312, cp313]
         platform: [manylinux, musllinux]
 
     steps:
@@ -161,7 +161,7 @@ jobs:
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        pyver: [cp39, cp310, cp311, cp312, cp313]
 
     env:
       PG_VERSION: "17"
@@ -215,7 +215,7 @@ jobs:
       matrix:
         # Might want to add win32, untested at the moment.
         arch: [win_amd64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        pyver: [cp39, cp310, cp311, cp312, cp313]
 
     defaults:
       run:
