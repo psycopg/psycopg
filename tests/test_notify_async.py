@@ -5,7 +5,7 @@ from time import time
 import pytest
 from psycopg import Notify
 
-from .acompat import alist, asleep, gather, spawn
+from .acompat import AEvent, alist, asleep, gather, spawn
 
 pytestmark = pytest.mark.crdb_skip("notify")
 
@@ -250,3 +250,62 @@ async def test_generator_and_handler(aconn, aconn_cls, dsn):
 
     assert n1
     assert n2
+
+
+@pytest.mark.parametrize("query_between", [True, False])
+async def test_first_notify_not_lost(aconn, aconn_cls, dsn, query_between):
+    await aconn.set_autocommit(True)
+    await aconn.execute("listen foo")
+
+    async with await aconn_cls.connect(dsn, autocommit=True) as conn2:
+        await conn2.execute("notify foo, 'hi'")
+
+    if query_between:
+        await aconn.execute("select 1")
+
+    n = None
+    async for n in aconn.notifies(timeout=1, stop_after=1):
+        pass
+    assert n
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.parametrize("sleep_on", ["server", "client"])
+async def test_notify_query_notify(aconn_cls, dsn, sleep_on):
+    e = AEvent()
+    by_gen: list[int] = []
+    by_cb: list[int] = []
+    workers = []
+
+    async def notifier():
+        async with await aconn_cls.connect(dsn, autocommit=True) as aconn:
+            await asleep(0.1)
+            for i in range(3):
+                await aconn.execute("select pg_notify('counter', %s)", (str(i),))
+                await asleep(0.2)
+
+    async def listener():
+        async with await aconn_cls.connect(dsn, autocommit=True) as aconn:
+            aconn.add_notify_handler(lambda n: by_cb.append(int(n.payload)))
+
+            await aconn.execute("listen counter")
+            e.set()
+            async for n in aconn.notifies(timeout=0.2):
+                by_gen.append(int(n.payload))
+
+            if sleep_on == "server":
+                await aconn.execute("select pg_sleep(0.2)")
+            else:
+                assert sleep_on == "client"
+                await asleep(0.2)
+
+            async for n in aconn.notifies(timeout=0.2):
+                by_gen.append(int(n.payload))
+
+    workers.append(spawn(listener))
+    await e.wait()
+    workers.append(spawn(notifier))
+    await gather(*workers)
+
+    assert list(range(3)) == by_cb == by_gen, f"{by_gen=}, {by_cb=}"
