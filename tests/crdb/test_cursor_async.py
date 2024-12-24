@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from asyncio import Queue
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from psycopg import pq, errors as e
 from psycopg.rows import namedtuple_row
-from ..acompat import spawn, gather
+from ..acompat import AQueue, spawn, gather
 
 pytestmark = [pytest.mark.crdb]
 if True:  # ASYNC
@@ -28,7 +27,7 @@ def testfeed(svcconn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     await aconn.set_autocommit(True)
-    q: Queue[Any] = Queue()
+    q: AQueue[Any] = AQueue()
 
     async def worker():
         try:

@@ -8,13 +8,14 @@ when generating the sync version.
 
 from __future__ import annotations
 
-import sys
-import time
 import asyncio
-import inspect
 import builtins
-import threading
 import contextlib
+import inspect
+import queue
+import sys
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -115,3 +116,7 @@ class AEvent(asyncio.Event):
 
     async def wait_timeout(self, timeout):
         await asyncio.wait_for(self.wait(), timeout)
+
+
+Queue = queue.Queue
+AQueue = asyncio.Queue
