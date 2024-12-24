@@ -129,6 +129,8 @@ When dropping end-of-life Python versions
 
      git grep -E -e '\b3\.8\b' -e '\b(cp)?38\b' -e '\b3, 8\b'
 
+- Consider proceeding steps described in the ``.github/workflows/lint.yml`` before ``git push``.
+
 Examples:
 
 - `PR #977 <https://github.com/psycopg/psycopg/pull/977>`_
