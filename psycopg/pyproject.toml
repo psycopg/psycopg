@@ -28,7 +28,6 @@ classifiers = [
 ]
 requires-python = ">= 3.9"
 dependencies = [
-    "backports.zoneinfo >= 0.2.0; python_version < '3.9'",
     "typing-extensions >= 4.6; python_version < '3.13'",
     "tzdata; sys_platform == 'win32'",
 ]
