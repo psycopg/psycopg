@@ -8,14 +8,14 @@ when generating the sync version.
 
 from __future__ import annotations
 
-import sys
-import time
-import queue
 import asyncio
-import inspect
 import builtins
-import threading
 import contextlib
+import inspect
+import queue
+import sys
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -118,7 +118,7 @@ class AEvent(asyncio.Event):
         await asyncio.wait_for(self.wait(), timeout)
 
 
-class Queue(queue.Queue):  # type: ignore[type-arg]  # can be dropped after Python 3.8
+class Queue(queue.Queue):  # type: ignore[type-arg]
     """
     A Queue subclass with an interruptible get() method.
     """

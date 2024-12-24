@@ -21,7 +21,7 @@ Test options
 
       $ pytest
       ========================= test session starts =========================
-      platform linux -- Python 3.8.5, pytest-6.0.2, py-1.10.0, pluggy-0.13.1
+      platform linux -- Python 3.9, pytest-6.0.2, py-1.10.0, pluggy-0.13.1
       Using --randomly-seed=2416596601
       libpq available: 130002
       libpq wrapper implementation: c
@@ -80,7 +80,7 @@ a set of env vars working for your setup::
 
     $ docker run -ti --rm --volume `pwd`:/src --workdir /src \
       -e PSYCOPG_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
-      python:3.8 bash
+      python:3.9 bash
 
     # pip install -e "./psycopg[test]" ./psycopg_pool ./psycopg_c
     # pytest

@@ -137,7 +137,7 @@ jobs:
           #       Current logic is test oldest in lts and newest in main
           - django_label: lts
             pip_django: "'Django>=4.2,<4.3'"
-            python-version: "3.8"
+            python-version: "3.9"
 
     env:
       DEPS: ./psycopg ./psycopg_pool
