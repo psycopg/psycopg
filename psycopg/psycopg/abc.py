@@ -26,7 +26,7 @@ NoneType: type = type(None)
 # An object implementing the buffer protocol
 Buffer = Union[bytes, bytearray, memoryview]
 
-Query: TypeAlias = Union[LiteralString, bytes, sql.SQL, sql.Composed]
+Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
 Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
