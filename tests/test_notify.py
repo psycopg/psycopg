@@ -255,6 +255,23 @@ def test_generator_and_handler(conn, conn_cls, dsn):
     assert n2
 
 
+@pytest.mark.parametrize("query_between", [True, False])
+def test_first_notify_not_lost(conn, conn_cls, dsn, query_between):
+    conn.set_autocommit(True)
+    conn.execute("listen foo")
+
+    with conn_cls.connect(dsn, autocommit=True) as conn2:
+        conn2.execute("notify foo, 'hi'")
+
+    if query_between:
+        conn.execute("select 1")
+
+    n = None
+    for n in conn.notifies(timeout=1, stop_after=1):
+        pass
+    assert n
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.parametrize("sleep_on", ["server", "client"])

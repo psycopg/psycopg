@@ -117,12 +117,11 @@ class BaseConnection(Generic[Row]):
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
         # Gather notifies when the notifies() generator is not running.
-        # This handler is registered after notifies() is used te first time.
-        # backlog = None means that the handler hasn't been registered.
-        self._notifies_backlog: Deque[Notify] | None = None
+        self._notifies_backlog = Deque[Notify]()
         self._notifies_backlog_handler = partial(
             BaseConnection._add_notify_to_backlog, wself
         )
+        self.add_notify_handler(self._notifies_backlog_handler)
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
