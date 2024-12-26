@@ -32,7 +32,7 @@ How to make a psycopg release
   .. __: https://github.com/psycopg/psycopg/actions/workflows/packages-bin.yml
   .. __: https://github.com/psycopg/psycopg/actions/workflows/packages-pool.yml
 
-- Delete the ``wheelhouse`` directory there is one.
+- Delete the ``wheelhouse`` directory if there is one.
 
 - Build m1 packages by running ``./tools/build/run_build_macos_arm64.sh BRANCH``.
   On successful completion it will save built packages in ``wheelhouse``
@@ -110,3 +110,25 @@ When a new Python major version is released
 - Update the list of versions in ``tools/build/build_macos_arm64.sh`` to include
   the new version. Look for both the ``python_versions`` variable and the
   ``CIBW_BUILD`` environment variable.
+
+
+When dropping end-of-life Python versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Update project metadata, ``requires-python`` and (maybe) package dependencies
+  in ``pyproject.toml`` files of the corresponding ``psycopg`` directories.
+
+- Update GitHub Actions workflow files in the ``.github/workflows/`` directory,
+  e.g., ``tests.yml``, ``.3rd-party-tests.yml``, ``packages-bin.yml``.
+
+- Bump versions in the ``tests/constraints.txt`` file if it is necessary.
+
+- You may grep throughout the project for occurrences of a version to be dropped.
+  However, favouring smaller pull requests is convenient and easy to review.
+  An example for grepping `end-of-life <https://endoflife.date/python>` Python 3.8::
+
+     git grep -E -e '\b3\.8\b' -e '\b(cp)?38\b' -e '\b3, 8\b'
+
+Examples:
+
+- `PR #977 <https://github.com/psycopg/psycopg/pull/977>`_

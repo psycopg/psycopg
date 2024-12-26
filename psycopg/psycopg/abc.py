@@ -7,8 +7,7 @@ Protocol objects representing different implementations of the same classes.
 from __future__ import annotations
 
 from typing import Any, Callable, Generator, Mapping
-from typing import Protocol, Sequence, TYPE_CHECKING
-from typing import Dict, Union  # drop with Python 3.8
+from typing import Protocol, Sequence, TYPE_CHECKING, Union
 
 from . import pq
 from ._enums import PyFormat as PyFormat
@@ -33,7 +32,7 @@ ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
 DumperKey: TypeAlias = Union[type, "tuple[DumperKey, ...]"]
 ConnParam: TypeAlias = Union[str, int, None]
-ConnDict: TypeAlias = Dict[str, ConnParam]
+ConnDict: TypeAlias = dict[str, ConnParam]
 ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 

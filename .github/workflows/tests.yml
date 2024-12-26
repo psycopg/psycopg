@@ -26,32 +26,30 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.8", postgres: "postgres:17", libpq: oldest}
-          - {impl: python, python: "3.9", postgres: "postgres:16", libpq: master}
-          - {impl: python, python: "3.10", postgres: "postgres:15"}
-          - {impl: python, python: "3.11", postgres: "postgres:14"}
-          - {impl: python, python: "3.12", postgres: "postgres:13", libpq: newest}
+          - {impl: python, python: "3.9", postgres: "postgres:17", libpq: oldest}
+          - {impl: python, python: "3.10", postgres: "postgres:16", libpq: master}
+          - {impl: python, python: "3.11", postgres: "postgres:15"}
+          - {impl: python, python: "3.12", postgres: "postgres:14", libpq: newest}
           - {impl: python, python: "3.13", postgres: "postgres:12"}
 
-          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: master}
-          - {impl: c, python: "3.9", postgres: "postgres:13"}
-          - {impl: c, python: "3.10", postgres: "postgres:14"}
+          - {impl: c, python: "3.9", postgres: "postgres:12", libpq: master}
+          - {impl: c, python: "3.10", postgres: "postgres:13"}
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:16", libpq: newest}
           - {impl: c, python: "3.13", postgres: "postgres:17"}
 
-          - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:17"}
-          - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}
+          - {impl: python, python: "3.9", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
           - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:14"}
           - {impl: c, python: "3.11", ext: numpy, postgres: "postgres:15"}
+          - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}
 
           # Test with minimum dependencies versions
           # WARNING: when bumping min version, make sure that the dependencies
           # # in tests/constraints.txt are updated and that binary packages
           # are available for such version.
-          - {impl: c, python: "3.8", ext: min, postgres: "postgres:15"}
+          - {impl: c, python: "3.9", ext: min, postgres: "postgres:15"}
 
           # Test memory alignment
           - {impl: c, python: "3.12", ext: align, postgres: "postgres:16"}
@@ -220,9 +218,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
-          - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
 
     env:
@@ -281,13 +277,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
           - {impl: python, python: "3.13"}
-          - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
