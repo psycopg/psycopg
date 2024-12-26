@@ -58,11 +58,11 @@ Oid = c_uint
 
 
 class PGconn_struct(Structure):
-    _fields_: list[tuple[str, type]] = []
+    _fields_ = []
 
 
 class PGresult_struct(Structure):
-    _fields_: list[tuple[str, type]] = []
+    _fields_ = []
 
 
 class PQconninfoOption_struct(Structure):
@@ -86,11 +86,11 @@ class PGnotify_struct(Structure):
 
 
 class PGcancelConn_struct(Structure):
-    _fields_: list[tuple[str, type]] = []
+    _fields_ = []
 
 
 class PGcancel_struct(Structure):
-    _fields_: list[tuple[str, type]] = []
+    _fields_ = []
 
 
 class PGresAttDesc_struct(Structure):
