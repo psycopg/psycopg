@@ -5,7 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "psycopg"
 description = "PostgreSQL database adapter for Python"
+
+# STOP AND READ! if you change:
 version = "3.3.0.dev1"
+# also change:
+# - `docs/news.rst` to declare this as the current version or an unreleased one;
+# - `psycopg_c/pyproject.toml` to the same version;
+# - the `c ` and `binary` "optional-dependencies" below to the same version.
+#
+# NOTE: you can use `tools/bump_version.py` to maintain versions.
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

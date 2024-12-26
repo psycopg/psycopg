@@ -5,7 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "psycopg-pool"
 description = "Connection Pool for Psycopg"
+
+# STOP AND READ! if you change:
 version = "3.3.0.dev1"
+# also change:
+# - `docs/news_pool.rst` to declare this version current or unreleased
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

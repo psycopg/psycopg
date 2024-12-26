@@ -78,6 +78,9 @@ license-files = ["LICENSE.txt"]
 include-package-data = true
 
 [tool.setuptools.package-data]
+# NOTE: do not include .pyx files: they shouldn't be in the sdist
+# package, so that build is only performed from the .c files (which are
+# distributed instead).
 psycopg_c = [
     "py.typed",
     "*.pyi",
@@ -91,7 +94,7 @@ psycopg_binary = [
 ]
 
 # Note: these ext modules lack details such as libraries and directories.
-# They are added by the psycopg_build_ext build module.
+# They are added by the 'psycopg_build_ext' build module.
 [[tool.setuptools.ext-modules]]
 name = "psycopg_c._psycopg"
 sources = ["psycopg_c/_psycopg.c", "psycopg_c/types/numutils.c"]
