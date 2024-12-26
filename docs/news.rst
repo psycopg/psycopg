@@ -19,6 +19,8 @@ Python 3.3.0 (unreleased)
 Psycopg 3.2.4 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Don't lose notifies received whilst the `~Connection.notifies()` iterator
+  is not running (:ticket:`#962`).
 - Make sure that the notifies callback is called during the use of the
   `~Connection.notifies()` generator (:ticket:`#972`).
 

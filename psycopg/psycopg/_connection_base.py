@@ -23,7 +23,7 @@ from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import LiteralString, Self, TypeAlias, TypeVar
+from ._compat import Deque, LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
 from ._preparing import PrepareManager
@@ -115,6 +115,13 @@ class BaseConnection(Generic[Row]):
         wself = ref(self)
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
+
+        # Gather notifies when the notifies() generator is not running.
+        self._notifies_backlog = Deque[Notify]()
+        self._notifies_backlog_handler = partial(
+            BaseConnection._add_notify_to_backlog, wself
+        )
+        self.add_notify_handler(self._notifies_backlog_handler)
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
@@ -376,6 +383,15 @@ class BaseConnection(Generic[Row]):
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
+
+    @staticmethod
+    def _add_notify_to_backlog(
+        wself: ReferenceType[BaseConnection[Row]], notify: Notify
+    ) -> None:
+        self = wself()
+        if not self or self._notifies_backlog is None:
+            return
+        self._notifies_backlog.append(notify)
 
     @property
     def prepare_threshold(self) -> int | None:
