@@ -10,7 +10,8 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Match, Sequence, TYPE_CHECKING
+from typing import Any, Generic, TYPE_CHECKING
+from collections.abc import Sequence
 
 from . import pq
 from . import adapt
@@ -415,7 +416,7 @@ _dump_repl = {
 }
 
 
-def _dump_sub(m: Match[bytes], __map: dict[bytes, bytes] = _dump_repl) -> bytes:
+def _dump_sub(m: re.Match[bytes], __map: dict[bytes, bytes] = _dump_repl) -> bytes:
     return __map[m.group(0)]
 
 
@@ -423,7 +424,7 @@ _load_re = re.compile(b"\\\\[btnvfr\\\\]")
 _load_repl = {v: k for k, v in _dump_repl.items()}
 
 
-def _load_sub(m: Match[bytes], __map: dict[bytes, bytes] = _load_repl) -> bytes:
+def _load_sub(m: re.Match[bytes], __map: dict[bytes, bytes] = _load_repl) -> bytes:
     return __map[m.group(0)]
 
 
