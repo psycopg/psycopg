@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import re
 from typing import Any, Callable, NamedTuple, TYPE_CHECKING
-from collections.abc import Mapping, Sequence
 from functools import lru_cache
+from collections.abc import Mapping, Sequence
 
 from . import pq
 from . import errors as e

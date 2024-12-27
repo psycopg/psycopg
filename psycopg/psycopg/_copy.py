@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, Iterator, Sequence, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Iterator, Sequence
 
 from . import pq
 from . import errors as e

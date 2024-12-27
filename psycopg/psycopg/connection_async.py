@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, cast, overload, TYPE_CHECKING
+from typing import Any, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, AsyncIterator
 
 from . import pq
 from . import errors as e

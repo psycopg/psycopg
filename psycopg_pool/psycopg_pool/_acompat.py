@@ -15,7 +15,8 @@ import queue
 import asyncio
 import logging
 import threading
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable
+from collections.abc import Coroutine
 
 from ._compat import TypeAlias, TypeVar
 

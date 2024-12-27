@@ -7,8 +7,9 @@ Support for multirange types adaptation.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Generic, Iterable, MutableSequence, overload, TYPE_CHECKING
+from typing import Any, Generic, overload, TYPE_CHECKING
 from datetime import date, datetime
+from collections.abc import Iterable, MutableSequence
 
 from .. import sql
 from .. import _oids

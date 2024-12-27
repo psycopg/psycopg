@@ -9,7 +9,8 @@ from __future__ import annotations
 import logging
 
 from types import TracebackType
-from typing import Any, Generic, Iterator, TYPE_CHECKING
+from typing import Any, Generic, TYPE_CHECKING
+from collections.abc import Iterator
 
 from . import pq
 from . import sql

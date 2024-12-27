@@ -14,7 +14,8 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Iterator, cast, Generic
+from typing import Any, cast, Generic
+from collections.abc import Iterator
 from weakref import ref
 from contextlib import contextmanager
 

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any, Callable
+from collections.abc import Sequence
 
 from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor

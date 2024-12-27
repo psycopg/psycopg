@@ -7,7 +7,8 @@ import random
 import asyncio
 import logging
 from enum import Enum
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
@@ -124,7 +125,7 @@ WHERE customer.id = %(id)s
 
 
 @contextmanager
-def time_log(message: str) -> Generator[None, None, None]:
+def time_log(message: str) -> Generator[None]:
     start = time.monotonic()
     yield
     end = time.monotonic()

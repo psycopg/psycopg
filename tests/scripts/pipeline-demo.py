@@ -15,7 +15,8 @@ import asyncio
 import logging
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Iterator, Sequence
+from typing import Any
+from collections.abc import Iterator, Sequence
 
 from psycopg import AsyncConnection, Connection
 from psycopg import pq, waiting

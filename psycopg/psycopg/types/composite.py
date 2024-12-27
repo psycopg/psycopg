@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import re
 import struct
+from typing import Any, Callable, cast, NamedTuple, TYPE_CHECKING
 from collections import namedtuple
-from typing import Any, Callable, cast, Iterator
-from typing import NamedTuple, Sequence, TYPE_CHECKING
+from collections.abc import Iterator, Sequence
 
 from .. import pq
 from .. import abc
