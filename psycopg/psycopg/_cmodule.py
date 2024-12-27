@@ -1,3 +1,4 @@
+# mypy: disable-error-code="import-not-found, attr-defined"
 """
 Simplify access to the _psycopg module
 """
@@ -6,19 +7,29 @@ Simplify access to the _psycopg module
 
 from __future__ import annotations
 
+from types import ModuleType
 from . import pq
 
 __version__: str | None = None
+_psycopg: ModuleType
 
 # Note: "c" must the first attempt so that mypy associates the variable the
 # right module interface. It will not result Optional, but hey.
 if pq.__impl__ == "c":
-    from psycopg_c import _psycopg as _psycopg
-    from psycopg_c import __version__ as __version__  # noqa: F401
+    import psycopg_c._psycopg
+
+    _psycopg = psycopg_c._psycopg
+    __version__ = psycopg_c.__version__
+
 elif pq.__impl__ == "binary":
-    from psycopg_binary import _psycopg as _psycopg  # type: ignore
-    from psycopg_binary import __version__ as __version__  # type: ignore  # noqa: F401
+    import psycopg_binary._psycopg
+
+    _psycopg = psycopg_binary._psycopg
+    __version__ = psycopg_binary.__version__
+
 elif pq.__impl__ == "python":
-    _psycopg = None  # type: ignore
+
+    _psycopg = None  # type: ignore[assignment]
+
 else:
     raise ImportError(f"can't find _psycopg optimised module in {pq.__impl__!r}")
