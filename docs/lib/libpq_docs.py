@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Sphinx plugin to link to the libpq documentation.
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-r"""Add or edit github users in the backers file
+# mypy: ignore-errors
+"""Add or edit github users in the backers file
 """
 
 import sys
