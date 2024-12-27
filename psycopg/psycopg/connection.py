@@ -315,7 +315,7 @@ class Connection(BaseConnection[Row]):
 
     def notifies(
         self, *, timeout: float | None = None, stop_after: int | None = None
-    ) -> Generator[Notify, None, None]:
+    ) -> Generator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
 

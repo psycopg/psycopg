@@ -335,7 +335,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     async def notifies(
         self, *, timeout: float | None = None, stop_after: int | None = None
-    ) -> AsyncGenerator[Notify, None]:
+    ) -> AsyncGenerator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
 
