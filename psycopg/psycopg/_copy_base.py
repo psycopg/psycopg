@@ -230,10 +230,11 @@ class TextFormatter(Formatter):
         self._encoding = encoding
 
     def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
+        rv: Optional[Tuple[Any, ...]] = None
         if data:
-            return parse_row_text(data, self.transformer)
-        else:
-            return None
+            rv = parse_row_text(data, self.transformer)
+
+        return rv
 
     def write(self, buffer: Union[Buffer, str]) -> Buffer:
         data = self._ensure_bytes(buffer)
@@ -274,6 +275,8 @@ class BinaryFormatter(Formatter):
         self._signature_sent = False
 
     def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
+        rv: Optional[Tuple[Any, ...]] = None
+
         if not self._signature_sent:
             if data[: len(_binary_signature)] != _binary_signature:
                 raise e.DataError(
@@ -282,10 +285,10 @@ class BinaryFormatter(Formatter):
             self._signature_sent = True
             data = data[len(_binary_signature) :]
 
-        elif data == _binary_trailer:
-            return None
+        if data != _binary_trailer:
+            rv = parse_row_binary(data, self.transformer)
 
-        return parse_row_binary(data, self.transformer)
+        return rv
 
     def write(self, buffer: Union[Buffer, str]) -> Buffer:
         data = self._ensure_bytes(buffer)

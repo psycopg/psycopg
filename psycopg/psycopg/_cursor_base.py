@@ -329,6 +329,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from send(self._pgconn)
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
+        res: Optional[PGresult] = yield from fetch(self._pgconn)
         res = yield from fetch(self._pgconn)
         if res is None:
             return None

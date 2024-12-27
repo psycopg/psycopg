@@ -454,7 +454,7 @@ class BaseConnection(Generic[Row]):
 
         self.pgconn.send_query_params(command, None, result_format=result_format)
 
-        result = (yield from generators.execute(self.pgconn))[-1]
+        result: PGresult = (yield from generators.execute(self.pgconn))[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
