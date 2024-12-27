@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Customisation for docs generation.
 """
