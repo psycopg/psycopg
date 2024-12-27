@@ -128,6 +128,12 @@ When dropping end-of-life Python versions
   An example for grepping `end-of-life <https://endoflife.date/python>` Python 3.8::
 
      git grep -E -e '\b3\.8\b' -e '\b(cp)?38\b' -e '\b3, 8\b'
+     git grep -E -e '\b3\.9\b' -e '\b(cp)?39\b' -e '\b3, 9\b'
+
+- Consider using pyupgrade_ with ``--py3NN-plus`` in order to refresh syntax
+  to Python 3.NN (the new minimum supported version).
+
+.. _pyupgrade: https://pypi.org/project/pyupgrade/
 
 Examples:
 
