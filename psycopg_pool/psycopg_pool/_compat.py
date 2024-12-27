@@ -7,13 +7,7 @@ compatibility functions for different Python versions
 from __future__ import annotations
 
 import sys
-
-import psycopg.errors as e
-
-if sys.version_info >= (3, 9):
-    from collections import Counter, deque as Deque
-else:
-    from typing import Counter, Deque
+from collections import Counter, deque as Deque
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -29,6 +23,8 @@ if sys.version_info >= (3, 13):
     from typing import TypeVar
 else:
     from typing_extensions import TypeVar
+
+import psycopg.errors as e
 
 __all__ = [
     "Counter",

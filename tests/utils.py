@@ -3,18 +3,13 @@ from __future__ import annotations
 import re
 import sys
 import operator
+import collections
 from typing import Callable
 from contextlib import contextmanager
 
+import pytest
 
-if sys.version_info >= (3, 9):
-    import collections
-
-    Counter = collections.Counter
-else:
-    import typing
-
-    Counter = typing.Counter
+Counter = collections.Counter
 
 if sys.version_info >= (3, 11):
     import typing
@@ -24,9 +19,6 @@ else:
     import typing_extensions
 
     assert_type = typing_extensions.assert_type
-
-
-import pytest
 
 eur = "\u20ac"
 
