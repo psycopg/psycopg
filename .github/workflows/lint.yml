@@ -27,20 +27,11 @@ jobs:
       - name: install packages to tests
         run: pip install ./psycopg[dev,test]
 
-      - name: Run black
-        run: black --check --diff .
-
-      - name: Run flake8
-        run: flake8
-
-      - name: Run mypy
-        run: mypy
+      - name: Lint codebase
+        run: pre-commit run -a --color=always
 
       - name: Check for sync/async inconsistencies
         run: ./tools/async_to_sync.py --check --all
-
-      - name: Check spelling
-        run: codespell
 
       - name: Install requirements to generate docs
         run: sudo apt-get install -y libgeos-dev
