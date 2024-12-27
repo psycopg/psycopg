@@ -83,6 +83,15 @@ Now hack away! You can run the tests using::
     export PSYCOPG_TEST_DSN="dbname=psycopg_test"
     pytest
 
+The library includes some pre-commit hooks to check that the code is valid
+according to the project coding convention. Please make sure to install them
+by running::
+
+    pre-commit install
+
+This will allow to check lint errors before submitting merge requests, which
+will save you time and frustrations.
+
 
 Cross-compiling
 ---------------
