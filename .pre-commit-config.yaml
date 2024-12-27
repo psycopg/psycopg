@@ -22,5 +22,5 @@ repos:
       - id: mypy
         name: mypy
         language: system
-        entry: mypy --pretty
+        entry: mypy --pretty --follow-imports=silent
         files: \.py[i]?$

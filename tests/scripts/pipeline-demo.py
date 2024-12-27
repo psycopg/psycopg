@@ -190,10 +190,7 @@ def pipeline_demo_pq(rows_to_send: int, logger: logging.Logger) -> None:
     ):
         while results_queue:
             fetched = waiting.wait(
-                pipeline_communicate(
-                    pgconn,  # type: ignore[arg-type]
-                    commands,
-                ),
+                pipeline_communicate(pgconn, commands),
                 pgconn.socket,
             )
             assert not commands, commands
@@ -216,10 +213,7 @@ async def pipeline_demo_pq_async(rows_to_send: int, logger: logging.Logger) -> N
     ):
         while results_queue:
             fetched = await waiting.wait_async(
-                pipeline_communicate(
-                    pgconn,  # type: ignore[arg-type]
-                    commands,
-                ),
+                pipeline_communicate(pgconn, commands),
                 pgconn.socket,
             )
             assert not commands, commands
