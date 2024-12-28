@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, cast, Generic
+from collections import deque
 from collections.abc import Iterator
 from weakref import ref
 from contextlib import contextmanager
@@ -26,7 +27,7 @@ from psycopg.pq import TransactionStatus
 from .abc import CT, ConnectionCB, ConnectFailedCB
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Deque, Self
+from ._compat import Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
 from ._acompat import sleep, current_thread_name
 from .sched import Scheduler
@@ -36,7 +37,7 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class ConnectionPool(Generic[CT], BasePool):
-    _pool: Deque[CT]
+    _pool: deque[CT]
 
     def __init__(
         self,
@@ -72,7 +73,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._sched: Scheduler
         self._tasks: Queue[MaintenanceTask]
 
-        self._waiting = Deque[WaitingClient[CT]]()
+        self._waiting = deque[WaitingClient[CT]]()
 
         # to notify that the pool is full
         self._pool_full_event: Event | None = None

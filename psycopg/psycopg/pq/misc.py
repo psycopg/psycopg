@@ -13,10 +13,10 @@ import logging
 import ctypes.util
 from typing import NamedTuple
 from pathlib import Path
+from functools import cache
 
 from . import abc
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
-from .._compat import cache
 
 logger = logging.getLogger("psycopg.pq")
 

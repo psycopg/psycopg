@@ -12,6 +12,7 @@ from typing import Callable, Generic, NamedTuple, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
+from collections import deque
 
 from . import pq
 from . import errors as e
@@ -23,7 +24,7 @@ from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import Deque, LiteralString, Self, TypeAlias, TypeVar
+from ._compat import LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
 from ._preparing import PrepareManager
@@ -117,7 +118,7 @@ class BaseConnection(Generic[Row]):
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
         # Gather notifies when the notifies() generator is not running.
-        self._notifies_backlog = Deque[Notify]()
+        self._notifies_backlog = deque[Notify]()
         self._notifies_backlog_handler = partial(
             BaseConnection._add_notify_to_backlog, wself
         )

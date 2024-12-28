@@ -10,10 +10,10 @@ import re
 import string
 import codecs
 from typing import Any, TYPE_CHECKING
+from functools import cache
 
 from .pq._enums import ConnStatus
 from .errors import NotSupportedError
-from ._compat import cache
 
 if TYPE_CHECKING:
     from ._connection_base import BaseConnection

@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 from datetime import timezone, tzinfo
+from zoneinfo import ZoneInfo
 
 from .pq.abc import PGconn
-from ._compat import ZoneInfo
 
 logger = logging.getLogger("psycopg")
 

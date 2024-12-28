@@ -24,13 +24,13 @@ from __future__ import annotations
 
 import logging
 from time import monotonic
+from collections import deque
 
 from . import pq
 from . import errors as e
 from .abc import Buffer, PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGcancelConn, PGconn, PGresult
 from .waiting import Wait, Ready
-from ._compat import Deque
 from ._cmodule import _psycopg
 from ._encodings import conninfo_encoding
 
@@ -226,7 +226,7 @@ def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
 
 
 def _pipeline_communicate(
-    pgconn: PGconn, commands: Deque[PipelineCommand]
+    pgconn: PGconn, commands: deque[PipelineCommand]
 ) -> PQGen[list[list[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.

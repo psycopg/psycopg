@@ -6,12 +6,6 @@ compatibility functions for different Python versions
 
 import sys
 
-from asyncio import to_thread
-from zoneinfo import ZoneInfo
-from functools import cache
-from collections import Counter, deque as Deque
-
-
 if sys.version_info >= (3, 10):
     from typing import TypeGuard, TypeAlias
 else:
@@ -28,14 +22,9 @@ else:
     from typing_extensions import TypeVar
 
 __all__ = [
-    "Counter",
-    "Deque",
     "LiteralString",
     "Self",
     "TypeAlias",
     "TypeGuard",
     "TypeVar",
-    "ZoneInfo",
-    "cache",
-    "to_thread",
 ]

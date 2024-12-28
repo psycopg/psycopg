@@ -7,12 +7,12 @@ C implementation of generators for the communication protocols with the libpq
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
 from time import monotonic
+from collections import deque
 
 from psycopg import errors as e
 from psycopg.pq import abc
 from psycopg.abc import PipelineCommand, PQGen
 from psycopg._enums import Wait, Ready
-from psycopg._compat import Deque
 from psycopg._encodings import conninfo_encoding
 
 cdef object WAIT_W = Wait.W
@@ -245,7 +245,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[PGresult | None]:
 
 
 def pipeline_communicate(
-    pq.PGconn pgconn, commands: Deque[PipelineCommand]
+    pq.PGconn pgconn, commands: deque[PipelineCommand]
 ) -> PQGen[list[list[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.

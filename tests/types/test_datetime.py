@@ -1,10 +1,10 @@
 import datetime as dt
 
 import pytest
+from zoneinfo import ZoneInfo
 
 from psycopg import DataError, pq, sql
 from psycopg.adapt import PyFormat
-from psycopg._compat import ZoneInfo
 
 crdb_skip_datestyle = pytest.mark.crdb("skip", reason="set datestyle/intervalstyle")
 crdb_skip_negative_interval = pytest.mark.crdb("skip", reason="negative interval")

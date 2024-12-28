@@ -5,13 +5,13 @@ import os
 import sys
 import pytest
 import logging
+from functools import cache
 from contextlib import contextmanager
 
 import psycopg
 from psycopg import pq
 from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
-from psycopg._compat import cache
 from psycopg.pq._debug import PGconnDebug
 
 from .utils import check_postgres_version

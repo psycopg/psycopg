@@ -10,6 +10,7 @@ import re
 from typing import Any, Generic, cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
+from functools import cache
 
 from .. import sql
 from .. import _oids
@@ -19,7 +20,7 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
-from .._compat import cache, TypeVar
+from .._compat import TypeVar
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 

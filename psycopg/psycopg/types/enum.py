@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Generic, cast, TYPE_CHECKING
+from functools import cache
 from collections.abc import Mapping, Sequence
 
 from .. import sql
@@ -14,7 +15,7 @@ from .. import errors as e
 from ..pq import Format
 from ..abc import AdaptContext, Query
 from ..adapt import Buffer, Dumper, Loader
-from .._compat import cache, TypeAlias, TypeVar
+from .._compat import TypeAlias, TypeVar
 from .._encodings import conn_encoding
 from .._typeinfo import TypeInfo
 

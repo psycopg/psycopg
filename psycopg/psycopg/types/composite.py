@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import struct
 from typing import Any, Callable, cast, NamedTuple, TYPE_CHECKING
+from functools import cache
 from collections import namedtuple
 from collections.abc import Iterator, Sequence
 
@@ -18,7 +19,6 @@ from .. import sql
 from .. import postgres
 from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper, Buffer
 from .._oids import TEXT_OID
-from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier

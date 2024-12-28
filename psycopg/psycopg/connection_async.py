@@ -35,8 +35,7 @@ from ._connection_base import BaseConnection, CursorRow, Notify
 if True:  # ASYNC
     import sys
     import asyncio
-    from asyncio import Lock
-    from ._compat import to_thread
+    from asyncio import Lock, to_thread
 else:
     from threading import Lock
 
