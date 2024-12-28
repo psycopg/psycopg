@@ -7,6 +7,7 @@ import logging
 import weakref
 from time import time
 from typing import Any
+from collections import Counter
 
 import pytest
 
@@ -14,7 +15,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 
-from ..utils import assert_type, Counter, set_autocommit
+from ..utils import assert_type, set_autocommit
 from ..acompat import Event, spawn, gather, sleep, skip_sync
 from .test_pool_common import delay_connection
 

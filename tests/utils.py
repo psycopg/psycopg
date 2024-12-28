@@ -3,13 +3,10 @@ from __future__ import annotations
 import re
 import sys
 import operator
-import collections
 from typing import Callable
 from contextlib import contextmanager
 
 import pytest
-
-Counter = collections.Counter
 
 if sys.version_info >= (3, 11):
     import typing
