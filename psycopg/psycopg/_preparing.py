@@ -66,13 +66,11 @@ class PrepareManager:
             return Prepare.NO, b""
 
         key = self.key(query)
-        name = self._names.get(key)
-        if name:
+        if name := self._names.get(key):
             # The query was already prepared in this session
             return Prepare.YES, name
 
-        count = self._counts.get(key, 0)
-        if count >= self.prepare_threshold or prepare:
+        if self._counts.get(key, 0) >= self.prepare_threshold or prepare:
             # The query has been executed enough times and needs to be prepared
             name = f"_pg3_{self._prepared_idx}".encode()
             self._prepared_idx += 1
@@ -102,8 +100,7 @@ class PrepareManager:
             # We cannot prepare a multiple statement
             return False
 
-        status = results[0].status
-        if COMMAND_OK != status != TUPLES_OK:
+        if COMMAND_OK != results[0].status != TUPLES_OK:
             # We don't prepare failed queries or other weird results
             return False
 
@@ -134,8 +131,7 @@ class PrepareManager:
         if self.prepare_threshold is None:
             return None
 
-        key = self.key(query)
-        if key in self._counts:
+        if (key := self.key(query)) in self._counts:
             if prep is Prepare.SHOULD:
                 del self._counts[key]
                 self._names[key] = name
@@ -156,11 +152,7 @@ class PrepareManager:
             return key
 
     def validate(
-        self,
-        key: Key,
-        prep: Prepare,
-        name: bytes,
-        results: Sequence[PGresult],
+        self, key: Key, prep: Prepare, name: bytes, results: Sequence[PGresult]
     ) -> None:
         """Validate cached entry with 'key' by checking query 'results'.
 

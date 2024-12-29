@@ -66,8 +66,7 @@ class Scheduler:
         while True:
             with self._lock:
                 now = monotonic()
-                task = q[0] if q else None
-                if task:
+                if task := (q[0] if q else None):
                     if task.time <= now:
                         heappop(q)
                     else:

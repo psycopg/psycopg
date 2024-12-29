@@ -235,8 +235,7 @@ class ConnectionPool(Generic[CT], BasePool):
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
-            conn = self._get_ready_connection(timeout)
-            if not conn:
+            if not (conn := self._get_ready_connection(timeout)):
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos: WaitingClient[CT] = WaitingClient()
@@ -574,9 +573,7 @@ class ConnectionPool(Generic[CT], BasePool):
         StopWorker is received.
         """
         while True:
-            task = q.get()
-
-            if isinstance(task, StopWorker):
+            if isinstance((task := q.get()), StopWorker):
                 logger.debug("terminating working task %s", current_thread_name())
                 return
 
@@ -609,8 +606,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         if self._configure:
             self._configure(conn)
-            status = conn.pgconn.transaction_status
-            if status != TransactionStatus.IDLE:
+            if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
                 sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
                     f"connection left in status {sname} by configure function {self._configure}: discarded"
@@ -737,8 +733,7 @@ class ConnectionPool(Generic[CT], BasePool):
             while self._waiting:
                 # If there is a client waiting (which is still waiting and
                 # hasn't timed out), give it the connection and notify it.
-                pos = self._waiting.popleft()
-                if pos.set(conn):
+                if self._waiting.popleft().set(conn):
                     break
             else:
                 # No client waiting for a connection: put it back into the pool
@@ -752,8 +747,7 @@ class ConnectionPool(Generic[CT], BasePool):
         """
         Bring a connection to IDLE state or close it.
         """
-        status = conn.pgconn.transaction_status
-        if status == TransactionStatus.IDLE:
+        if (status := conn.pgconn.transaction_status) == TransactionStatus.IDLE:
             pass
         elif status == TransactionStatus.UNKNOWN:
             # Connection closed
@@ -779,8 +773,7 @@ class ConnectionPool(Generic[CT], BasePool):
         if self._reset:
             try:
                 self._reset(conn)
-                status = conn.pgconn.transaction_status
-                if status != TransactionStatus.IDLE:
+                if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
                     sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
                         f"connection left in status {sname} by reset function {self._reset}: discarded"

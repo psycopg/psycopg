@@ -158,13 +158,11 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             while self._waiting:
                 # If there is a client waiting (which is still waiting and
                 # hasn't timed out), give it the connection and notify it.
-                pos = self._waiting.popleft()
-                if await pos.set(conn):
+                if await self._waiting.popleft().set(conn):
                     break
             else:
                 # No client waiting for a connection: close the connection
                 await conn.close()
-
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is ready.
                 if self._pool_full_event:

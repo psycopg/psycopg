@@ -397,8 +397,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         query = self._convert_query(statement)
 
         self._execute_send(query, binary=False)
-        results = yield from execute(self._pgconn)
-        if len(results) != 1:
+        if 1 != len((results := (yield from execute(self._pgconn)))):
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
         self._check_copy_result(results[0])
@@ -475,8 +474,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """
         Raise an appropriate error message for an unexpected database result
         """
-        status = result.status
-        if status == FATAL_ERROR:
+        if (status := result.status) == FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
         elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
@@ -574,12 +572,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def _check_result_for_fetch(self) -> None:
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
-        res = self.pgresult
-        if not res:
+        if not (res := self.pgresult):
             raise e.ProgrammingError("no result available")
 
-        status = res.status
-        if status == TUPLES_OK:
+        if (status := res.status) == TUPLES_OK:
             return
         elif status == FATAL_ERROR:
             raise e.error_from_result(res, encoding=self._encoding)

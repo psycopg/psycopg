@@ -47,8 +47,7 @@ class NumericTypeModifier(TypeModifier):
         if typemod < 0:
             return None
 
-        scale = (typemod - 4) & 0xFFFF
-        if scale >= 0x400:
+        if (scale := (typemod - 4 & 0xFFFF)) >= 0x400:
             scale = scale - 0x800
         return scale
 

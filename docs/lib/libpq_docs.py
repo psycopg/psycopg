@@ -61,13 +61,11 @@ class LibpqParser(HTMLParser):
         self.add_function(data)
 
     def handle_sect1(self, tag, attrs):
-        attrs = dict(attrs)
-        if "id" in attrs:
+        if "id" in (attrs := dict(attrs)):
             self.section_id = attrs["id"]
 
     def handle_varlistentry(self, tag, attrs):
-        attrs = dict(attrs)
-        if "id" in attrs:
+        if "id" in (attrs := dict(attrs)):
             self.varlist_id = attrs["id"]
 
     def add_function(self, func_name):
@@ -113,8 +111,7 @@ class LibpqReader:
             parser.feed(f.read())
 
     def download(self):
-        filename = os.environ.get("LIBPQ_DOCS_FILE")
-        if filename:
+        if filename := os.environ.get("LIBPQ_DOCS_FILE"):
             logger.info("reading postgres libpq docs from %s", filename)
             with open(filename, "rb") as f:
                 data = f.read()

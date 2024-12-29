@@ -82,8 +82,7 @@ class Composable(ABC):
         """
         conn = context.connection if context else None
         enc = conn_encoding(conn)
-        b = self.as_bytes(context)
-        if isinstance(b, bytes):
+        if isinstance((b := self.as_bytes(context)), bytes):
             return b.decode(enc)
         else:
             # buffer object
@@ -374,8 +373,7 @@ class Identifier(Composable):
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
 
     def as_bytes(self, context: AdaptContext | None = None) -> bytes:
-        conn = context.connection if context else None
-        if conn:
+        if conn := (context.connection if context else None):
             esc = Escaping(conn.pgconn)
             enc = conn_encoding(conn)
             escs = [esc.escape_identifier(s.encode(enc)) for s in self._obj]

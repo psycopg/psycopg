@@ -18,7 +18,6 @@ from .abc import ConnDict, ConnMapping
 from ._conninfo_utils import get_param, is_ip_address, get_param_def
 from ._conninfo_utils import split_attempts
 
-
 logger = logging.getLogger("psycopg")
 
 
@@ -75,8 +74,7 @@ def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
         # Local path, or no host to resolve
         return [params]
 
-    hostaddr = get_param(params, "hostaddr")
-    if hostaddr:
+    if get_param(params, "hostaddr"):
         # Already resolved
         return [params]
 
@@ -84,8 +82,7 @@ def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
         # If the host is already an ip address don't try to resolve it
         return [{**params, "hostaddr": host}]
 
-    port = get_param(params, "port")
-    if not port:
+    if not (port := get_param(params, "port")):
         port_def = get_param_def("port")
         port = port_def and port_def.compiled or "5432"
 

@@ -65,8 +65,7 @@ def find_libpq_full_path() -> str | None:
                 import subprocess as sp
 
                 libdir = sp.check_output(["pg_config", "--libdir"]).strip().decode()
-                libname = os.path.join(libdir, "libpq.dylib")
-                if not os.path.exists(libname):
+                if not os.path.exists((libname := os.path.join(libdir, "libpq.dylib"))):
                     libname = None
             except Exception as ex:
                 logger.debug("couldn't use pg_config to find libpq: %s", ex)
@@ -127,16 +126,14 @@ PREFIXES = re.compile(
 
 def strip_severity(msg: str) -> str:
     """Strip severity and whitespaces from error message."""
-    m = PREFIXES.match(msg)
-    if m:
+    if m := PREFIXES.match(msg):
         msg = msg[m.span()[1] :]
 
     return msg.strip()
 
 
 def _clean_error_message(msg: bytes, encoding: str) -> str:
-    smsg = msg.decode(encoding, "replace")
-    if smsg:
+    if smsg := msg.decode(encoding, "replace"):
         return strip_severity(smsg)
     else:
         return "no error details available"
@@ -163,12 +160,10 @@ def connection_summary(pgconn: abc.PGconn) -> str:
         if pgconn.user != pgconn.db:
             parts.append(("user", pgconn.user.decode()))
         parts.append(("database", pgconn.db.decode()))
-
     else:
         status = ConnStatus(pgconn.status).name
 
-    sparts = " ".join("%s=%s" % part for part in parts)
-    if sparts:
+    if sparts := " ".join(("%s=%s" % part for part in parts)):
         sparts = f" ({sparts})"
     return f"[{status}]{sparts}"
 

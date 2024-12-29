@@ -22,8 +22,7 @@ import logging
 
 
 def main() -> None:
-    opt = parse_cmdline()
-    if opt.loglevel:
+    if (opt := parse_cmdline()).loglevel:
         loglevel = getattr(logging, opt.loglevel.upper())
         logging.basicConfig(
             level=loglevel, format="%(asctime)s %(levelname)s %(message)s"
@@ -111,8 +110,7 @@ class DelayedConnection(psycopg.Connection[Row]):
         t0 = time.time()
         conn = super().connect(conninfo, **kwargs)
         t1 = time.time()
-        wait = max(0.0, conn_delay - (t1 - t0))
-        if wait:
+        if wait := max(0.0, conn_delay - (t1 - t0)):
             time.sleep(wait)
         return conn
 

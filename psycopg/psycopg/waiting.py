@@ -53,8 +53,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) ->
         with DefaultSelector() as sel:
             sel.register(fileno, s)
             while True:
-                rlist = sel.select(timeout=interval)
-                if not rlist:
+                if not (rlist := sel.select(timeout=interval)):
                     gen.send(READY_NONE)
                     continue
 
@@ -88,8 +87,7 @@ def wait_conn(gen: PQGenConn[RV], interval: float | None = None) -> RV:
         with DefaultSelector() as sel:
             sel.register(fileno, s)
             while True:
-                rlist = sel.select(timeout=interval)
-                if not rlist:
+                if not (rlist := sel.select(timeout=interval)):
                     gen.send(READY_NONE)
                     continue
 
@@ -132,8 +130,7 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None)
         s = next(gen)
         while True:
             reader = s & WAIT_R
-            writer = s & WAIT_W
-            if not reader and not writer:
+            if not reader and (not (writer := (s & WAIT_W))):
                 raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
             ready = 0
@@ -193,8 +190,7 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float | None = None) -> 
         fileno, s = next(gen)
         while True:
             reader = s & WAIT_R
-            writer = s & WAIT_W
-            if not reader and not writer:
+            if not reader and (not (writer := (s & WAIT_W))):
                 raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
             ready = 0  # type: ignore[assignment]
@@ -296,8 +292,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV
             evmask = _epoll_evmasks[s]
             epoll.register(fileno, evmask)
             while True:
-                fileevs = epoll.poll(interval)
-                if not fileevs:
+                if not (fileevs := epoll.poll(interval)):
                     gen.send(READY_NONE)
                     continue
                 ev = fileevs[0][1]
@@ -343,8 +338,7 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
         evmask = _poll_evmasks[s]
         poll.register(fileno, evmask)
         while True:
-            fileevs = poll.poll(interval)
-            if not fileevs:
+            if not (fileevs := poll.poll(interval)):
                 gen.send(READY_NONE)
                 continue
 
@@ -373,8 +367,7 @@ def _is_select_patched() -> bool:
     Currently supported: gevent.
     """
     # If not imported, don't import it.
-    m = sys.modules.get("gevent.monkey")
-    if m:
+    if m := sys.modules.get("gevent.monkey"):
         try:
             if m.is_module_patched("select"):
                 return True
