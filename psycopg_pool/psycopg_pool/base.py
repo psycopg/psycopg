@@ -145,8 +145,7 @@ class BasePool:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
     def _check_pool_putconn(self, conn: BaseConnection[Any]) -> None:
-        pool = getattr(conn, "_pool", None)
-        if pool is self:
+        if (pool := getattr(conn, "_pool", None)) is self:
             return
 
         if pool:

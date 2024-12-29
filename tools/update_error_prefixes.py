@@ -91,8 +91,7 @@ def parse_cmdline() -> Namespace:
         help="the file to change [default: %(default)s]",
     )
 
-    opt = parser.parse_args()
-    if not opt.pgroot.is_dir():
+    if not (opt := parser.parse_args()).pgroot.is_dir():
         parser.error("not a valid directory: {opt.pgroot}")
 
     return opt

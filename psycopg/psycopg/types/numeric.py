@@ -39,17 +39,18 @@ if TYPE_CHECKING:
 
 
 class _IntDumper(Dumper):
+
     def dump(self, obj: Any) -> Buffer | None:
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
-        value = self.dump(obj)
-        if value is None:
+        if (value := self.dump(obj)) is None:
             return b"NULL"
         return value if obj >= 0 else b" " + value
 
 
 class _IntOrSubclassDumper(_IntDumper):
+
     def dump(self, obj: Any) -> Buffer | None:
         t = type(obj)
         # Convert to int in order to dump IntEnum or numpy.integer correctly
@@ -66,9 +67,7 @@ class _SpecialValuesDumper(Dumper):
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
-        value = self.dump(obj)
-
-        if value is None:
+        if (value := self.dump(obj)) is None:
             return b"NULL"
         if not isinstance(value, bytes):
             value = bytes(value)
@@ -456,8 +455,7 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
 
     # Equivalent of 0-padding left to align the py digits to the pg digits
     # but without changing the digits tuple.
-    mod = (ndigits - dscale) % DEC_DIGITS
-    if mod:
+    if mod := ((ndigits - dscale) % DEC_DIGITS):
         wi = DEC_DIGITS - mod
         ndigits += wi
 

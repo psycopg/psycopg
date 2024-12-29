@@ -15,10 +15,7 @@ from psycopg.abc import Query
 from psycopg import sql
 
 logger = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def main():
@@ -137,9 +134,7 @@ def parse_cmdline() -> Namespace:
         default=logging.INFO,
     )
 
-    args = parser.parse_args()
-
-    if args.writer:
+    if (args := parser.parse_args()).writer:
         try:
             getattr(psycopg.copy, args.writer)
         except AttributeError:

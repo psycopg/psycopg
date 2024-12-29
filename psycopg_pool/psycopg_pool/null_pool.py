@@ -162,8 +162,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             while self._waiting:
                 # If there is a client waiting (which is still waiting and
                 # hasn't timed out), give it the connection and notify it.
-                pos = self._waiting.popleft()
-                if pos.set(conn):
+                if self._waiting.popleft().set(conn):
                     break
             else:
                 # No client waiting for a connection: close the connection

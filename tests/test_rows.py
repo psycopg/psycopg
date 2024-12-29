@@ -151,8 +151,7 @@ def test_no_column_class_row(conn):
 
 
 def factory_from_name(name):
-    factory = getattr(rows, name)
-    if factory is rows.class_row:
+    if (factory := getattr(rows, name)) is rows.class_row:
         factory = factory(Person)
     if factory is rows.args_row:
         factory = factory(argf)

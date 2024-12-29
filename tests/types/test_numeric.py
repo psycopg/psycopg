@@ -493,8 +493,7 @@ def test_dump_numeric_binary_inf(conn, val, expr):
 def test_load_numeric_binary(conn, expr):
     cur = conn.cursor(binary=1)
     res = cur.execute(f"select '{expr}'::numeric").fetchone()[0]
-    val = Decimal(expr)
-    if val.is_nan():
+    if (val := Decimal(expr)).is_nan():
         assert res.is_nan()
     else:
         assert res == val

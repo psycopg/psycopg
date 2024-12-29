@@ -115,8 +115,7 @@ def dict_row(cursor: BaseCursor[Any, Any]) -> RowMaker[DictRow]:
 
     The dictionary keys are taken from the column names of the returned columns.
     """
-    names = _get_names(cursor)
-    if names is None:
+    if (names := _get_names(cursor)) is None:
         return no_result
 
     def dict_row_(values: Sequence[Any]) -> dict[str, Any]:
@@ -131,12 +130,10 @@ def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
     The field names are taken from the column names of the returned columns,
     with some mangling to deal with invalid names.
     """
-    res = cursor.pgresult
-    if not res:
+    if not (res := cursor.pgresult):
         return no_result
 
-    nfields = _get_nfields(res)
-    if nfields is None:
+    if (nfields := _get_nfields(res)) is None:
         return no_result
 
     nt = _make_nt(cursor._encoding, *(res.fname(i) for i in range(nfields)))
@@ -160,8 +157,7 @@ def class_row(cls: type[T]) -> BaseRowFactory[T]:
     """
 
     def class_row_(cursor: BaseCursor[Any, Any]) -> RowMaker[T]:
-        names = _get_names(cursor)
-        if names is None:
+        if (names := _get_names(cursor)) is None:
             return no_result
 
         def class_row__(values: Sequence[Any]) -> T:
@@ -196,8 +192,7 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
     """
 
     def kwargs_row_(cursor: BaseCursor[Any, T]) -> RowMaker[T]:
-        names = _get_names(cursor)
-        if names is None:
+        if (names := _get_names(cursor)) is None:
             return no_result
 
         def kwargs_row__(values: Sequence[Any]) -> T:
@@ -213,12 +208,10 @@ def scalar_row(cursor: BaseCursor[Any, Any]) -> RowMaker[Any]:
     Generate a row factory returning the first column
     as a scalar value.
     """
-    res = cursor.pgresult
-    if not res:
+    if not (res := cursor.pgresult):
         return no_result
 
-    nfields = _get_nfields(res)
-    if nfields is None:
+    if (nfields := _get_nfields(res)) is None:
         return no_result
 
     if nfields < 1:
@@ -241,12 +234,10 @@ def no_result(values: Sequence[Any]) -> NoReturn:
 
 
 def _get_names(cursor: BaseCursor[Any, Any]) -> list[str] | None:
-    res = cursor.pgresult
-    if not res:
+    if not (res := cursor.pgresult):
         return None
 
-    nfields = _get_nfields(res)
-    if nfields is None:
+    if (nfields := _get_nfields(res)) is None:
         return None
 
     enc = cursor._encoding
@@ -261,14 +252,13 @@ def _get_nfields(res: PGresult) -> int | None:
 
     Take into account the special case of results with zero columns.
     """
-    nfields = res.nfields
 
     if (
         res.status == TUPLES_OK
         or res.status == SINGLE_TUPLE
         or res.status == TUPLES_CHUNK
         # "describe" in named cursors
-        or (res.status == COMMAND_OK and nfields)
+        or (res.status == COMMAND_OK and (nfields := res.nfields))
     ):
         return nfields
     else:

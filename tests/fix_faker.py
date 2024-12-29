@@ -157,8 +157,7 @@ class Faker:
                     try:
                         cur.execute(self._insert_field_stmt(j), (val,))
                     except psycopg.DatabaseError as e:
-                        r = repr(val)
-                        if len(r) > 200:
+                        if len((r := repr(val))) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
                             f"value {r!r} at record {i} column0 {j} failed insert: {e}"
@@ -182,8 +181,7 @@ class Faker:
                     try:
                         await acur.execute(self._insert_field_stmt(j), (val,))
                     except psycopg.DatabaseError as e:
-                        r = repr(val)
-                        if len(r) > 200:
+                        if len((r := repr(val))) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
                             f"value {r!r} at record {i} column0 {j} failed insert: {e}"
@@ -201,8 +199,7 @@ class Faker:
     def choose_schema(self, ncols=20):
         schema: list[tuple[type, ...] | type] = []
         while len(schema) < ncols:
-            s = self.make_schema(choice(self.types))
-            if s is not None:
+            if (s := self.make_schema(choice(self.types))) is not None:
                 schema.append(s)
         self.schema = schema
         return schema
@@ -273,8 +270,7 @@ class Faker:
         except KeyError:
             pass
 
-        meth = self._get_method("make", cls)
-        if meth:
+        if meth := self._get_method("make", cls):
             self._makers[cls] = meth
             return meth
         else:
@@ -293,8 +289,7 @@ class Faker:
         parts = name.split(".")
         for i in range(len(parts) - 1, -1, -1):
             mname = f"{prefix}_{'_'.join(parts[-(i + 1) :])}"
-            meth = getattr(self, mname, None)
-            if meth:
+            if meth := getattr(self, mname, None):
                 return meth
 
         return None
@@ -306,8 +301,7 @@ class Faker:
     def example(self, spec):
         # A good representative of the object - no degenerate case
         cls = spec if isinstance(spec, type) else spec[0]
-        meth = self._get_method("example", cls)
-        if meth:
+        if meth := self._get_method("example", cls):
             return meth(spec)
         else:
             return self.make(spec)
@@ -509,8 +503,7 @@ class Faker:
 
     def schema_list(self, cls):
         while True:
-            scls = choice(self.types)
-            if scls is cls:
+            if (scls := choice(self.types)) is cls:
                 continue
             if scls is float:
                 # TODO: float lists are currently adapted as decimal.
@@ -522,8 +515,7 @@ class Faker:
             if self.conn.info.vendor == "CockroachDB" and scls in (Json, Jsonb):
                 continue
 
-            schema = self.make_schema(scls)
-            if schema is not None:
+            if (schema := self.make_schema(scls)) is not None:
                 break
 
         return (cls, schema)
@@ -583,8 +575,7 @@ class Faker:
 
         out: list[Range[Any]] = []
         for i in range(length):
-            r = self.make_Range((Range, spec[1]), **kwargs)
-            if r.isempty:
+            if (r := self.make_Range((Range, spec[1]), **kwargs)).isempty:
                 continue
             for r2 in out:
                 if overlap(r, r2):
@@ -839,8 +830,7 @@ class Faker:
         rec_types = [list, dict]
         scal_types = [type(None), int, JsonFloat, bool, str]
         if random() < container_chance:
-            cls = choice(rec_types)
-            if cls is list:
+            if (cls := choice(rec_types)) is list:
                 return [
                     self._make_json(container_chance=container_chance / 2.0)
                     for i in range(randrange(self.json_max_length))

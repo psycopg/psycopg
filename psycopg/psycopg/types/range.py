@@ -225,8 +225,7 @@ class Range(Generic[T]):
             return NotImplemented
         for attr in ("_lower", "_upper", "_bounds"):
             self_value = getattr(self, attr)
-            other_value = getattr(other, attr)
-            if self_value == other_value:
+            if self_value == (other_value := getattr(other, attr)):
                 pass
             elif self_value is None:
                 return True
@@ -297,8 +296,7 @@ class BaseRangeDumper(RecursiveDumper):
         if self.cls is not Range:
             return self.cls
 
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             sd = self._tx.get_dumper(item, self._adapt_format)
             return (self.cls, sd.get_key(item, format))
         else:
@@ -309,8 +307,7 @@ class BaseRangeDumper(RecursiveDumper):
         if self.cls is not Range:
             return self
 
-        item = self._get_item(obj)
-        if item is None:
+        if (item := self._get_item(obj)) is None:
             return self
 
         dumper: BaseRangeDumper
@@ -357,8 +354,7 @@ class RangeDumper(BaseRangeDumper):
     """
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
@@ -373,8 +369,7 @@ def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
     parts: list[Buffer] = [b"[" if obj.lower_inc else b"("]
 
     def dump_item(item: Any) -> Buffer:
-        ad = dump(item)
-        if ad is None:
+        if (ad := dump(item)) is None:
             return b""
         elif not ad:
             return b'""'
@@ -404,8 +399,7 @@ class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
@@ -426,8 +420,7 @@ def dump_range_binary(obj: Range[Any], dump: DumpFunc) -> Buffer:
         head |= RANGE_UB_INC
 
     if obj.lower is not None:
-        data = dump(obj.lower)
-        if data is not None:
+        if (data := dump(obj.lower)) is not None:
             out += pack_len(len(data))
             out += data
         else:
@@ -436,8 +429,7 @@ def dump_range_binary(obj: Range[Any], dump: DumpFunc) -> Buffer:
         head |= RANGE_LB_INF
 
     if obj.upper is not None:
-        data = dump(obj.upper)
-        if data is not None:
+        if (data := dump(obj.upper)) is not None:
             out += pack_len(len(data))
             out += data
         else:
@@ -532,8 +524,7 @@ class RangeBinaryLoader(BaseRangeLoader[T]):
 
 
 def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
-    head = data[0]
-    if head & RANGE_EMPTY:
+    if (head := data[0]) & RANGE_EMPTY:
         return Range(empty=True)
 
     lb = "[" if head & RANGE_LB_INC else "("

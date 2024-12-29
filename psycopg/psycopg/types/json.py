@@ -100,16 +100,14 @@ def set_json_loads(
 
 @cache
 def _make_dumper(base: type[abc.Dumper], dumps: JsonDumpsFunction) -> type[abc.Dumper]:
-    name = base.__name__
-    if not name.startswith("Custom"):
+    if not (name := base.__name__).startswith("Custom"):
         name = f"Custom{name}"
     return type(name, (base,), {"_dumps": dumps})
 
 
 @cache
 def _make_loader(base: type[Loader], loads: JsonLoadsFunction) -> type[Loader]:
-    name = base.__name__
-    if not name.startswith("Custom"):
+    if not (name := base.__name__).startswith("Custom"):
         name = f"Custom{name}"
     return type(name, (base,), {"_loads": loads})
 
@@ -122,8 +120,7 @@ class _JsonWrapper:
         self.dumps = dumps
 
     def __repr__(self) -> str:
-        sobj = repr(self.obj)
-        if len(sobj) > 40:
+        if len((sobj := repr(self.obj))) > 40:
             sobj = f"{sobj[:35]} ... ({len(sobj)} chars)"
         return f"{self.__class__.__name__}({sobj})"
 
@@ -151,8 +148,7 @@ class _JsonDumper(Dumper):
             obj = obj.obj
         else:
             dumps = self.dumps
-        data = dumps(obj)
-        if isinstance(data, str):
+        if isinstance((data := dumps(obj)), str):
             return data.encode()
         return data
 
@@ -175,8 +171,7 @@ class JsonbBinaryDumper(_JsonDumper):
     oid = _oids.JSONB_OID
 
     def dump(self, obj: Any) -> Buffer | None:
-        obj_bytes = super().dump(obj)
-        if obj_bytes is not None:
+        if (obj_bytes := super().dump(obj)) is not None:
             return b"\x01" + obj_bytes
         else:
             return None
@@ -216,8 +211,7 @@ class JsonbBinaryLoader(_JsonLoader):
     def load(self, data: Buffer) -> Any:
         if data and data[0] != 1:
             raise DataError("unknown jsonb binary format: {data[0]}")
-        data = data[1:]
-        if not isinstance(data, bytes):
+        if not isinstance((data := data[1:]), bytes):
             data = bytes(data)
         return self.loads(data)
 

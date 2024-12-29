@@ -38,13 +38,11 @@ def parse_errors_txt(url):
     page = urlopen(url)
     for line in page.read().decode("ascii").splitlines():
         # Strip comments and skip blanks
-        line = line.split("#")[0].strip()
-        if not line:
+        if not (line := line.split("#")[0].strip()):
             continue
 
         # Parse a section
-        m = re.match(r"Section: (Class (..) - .+)", line)
-        if m:
+        if m := re.match("Section: (Class (..) - .+)", line):
             label, class_ = m.groups()
             classes[class_] = label
             continue
@@ -83,7 +81,7 @@ def fetch_errors(versions):
         logger.info("fetching errors from version %s", version)
         tver = tuple(map(int, version.split()[0].split(".")))
         tag = "%s%s_STABLE" % (
-            (tver[0] >= 10 and "REL_" or "REL"),
+            tver[0] >= 10 and "REL_" or "REL",
             version.replace(".", "_"),
         )
         c1, e1 = parse_errors_txt(errors_txt_url % tag)

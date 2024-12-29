@@ -37,12 +37,10 @@ def check_crdb_version(got, mark):
     pred = VersionCheck.parse(spec)
     pred.whose = "CockroachDB"
 
-    msg = pred.get_skip_message(got)
-    if not msg:
+    if not (msg := pred.get_skip_message(got)):
         return None
 
-    reason = crdb_skip_message(reason)
-    if reason:
+    if reason := crdb_skip_message(reason):
         msg = f"{msg}: {reason}"
 
     return msg
@@ -58,10 +56,8 @@ def crdb_skip_message(reason: str | None) -> str:
     if reason:
         msg = reason
         if _crdb_reasons.get(reason):
-            url = (
-                "https://github.com/cockroachdb/cockroach/"
-                f"issues/{_crdb_reasons[reason]}"
-            )
+            cr = _crdb_reasons[reason]
+            url = f"https://github.com/cockroachdb/cockroach/issues/{cr}"
             msg = f"{msg} ({url})"
 
     return msg
