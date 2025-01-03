@@ -21,7 +21,6 @@ __author__ = 'Stuart Bishop <stuart@stuartbishop.net>'
 
 import unittest
 import time
-import sys
 from typing import Any
 
 
@@ -190,12 +189,8 @@ class DatabaseAPI20Test(unittest.TestCase):
     def test_Exceptions(self):
         # Make sure required exceptions exist, and are in the
         # defined hierarchy.
-        if sys.version[0] == '3': #under Python 3 StardardError no longer exists
-            self.assertTrue(issubclass(self.driver.Warning,Exception))
-            self.assertTrue(issubclass(self.driver.Error,Exception))
-        else:
-            self.assertTrue(issubclass(self.driver.Warning,StandardError))  # type: ignore[name-defined]
-            self.assertTrue(issubclass(self.driver.Error,StandardError))  # type: ignore[name-defined]
+        self.assertTrue(issubclass(self.driver.Warning,Exception))
+        self.assertTrue(issubclass(self.driver.Error,Exception))
 
         self.assertTrue(
             issubclass(self.driver.InterfaceError,self.driver.Error)
