@@ -9,7 +9,8 @@ from __future__ import annotations
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 from . import _oids
 from .abc import AdaptContext, Buffer

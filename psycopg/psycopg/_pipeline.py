@@ -9,11 +9,12 @@ from __future__ import annotations
 import logging
 from types import TracebackType
 from typing import Any, TYPE_CHECKING
+from collections import deque
 
 from . import pq
 from . import errors as e
 from .abc import PipelineCommand, PQGen
-from ._compat import Deque, Self, TypeAlias
+from ._compat import Self, TypeAlias
 from .pq.misc import connection_summary
 from .generators import pipeline_communicate, fetch_many, send
 from ._capabilities import capabilities
@@ -41,14 +42,14 @@ logger = logging.getLogger("psycopg")
 
 
 class BasePipeline:
-    command_queue: Deque[PipelineCommand]
-    result_queue: Deque[PendingResult]
+    command_queue: deque[PipelineCommand]
+    result_queue: deque[PendingResult]
 
     def __init__(self, conn: BaseConnection[Any]) -> None:
         self._conn = conn
         self.pgconn = conn.pgconn
-        self.command_queue = Deque[PipelineCommand]()
-        self.result_queue = Deque[PendingResult]()
+        self.command_queue = deque[PipelineCommand]()
+        self.result_queue = deque[PendingResult]()
         self.level = 0
 
     def __repr__(self) -> str:

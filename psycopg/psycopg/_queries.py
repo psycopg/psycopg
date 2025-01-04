@@ -7,9 +7,9 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Mapping, Match, NamedTuple
-from typing import Sequence, TYPE_CHECKING
+from typing import Any, Callable, NamedTuple, TYPE_CHECKING
 from functools import lru_cache
+from collections.abc import Mapping, Sequence
 
 from . import pq
 from . import errors as e
@@ -347,7 +347,7 @@ _re_placeholder = re.compile(
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> list[QueryPart]:
-    parts: list[tuple[bytes, Match[bytes] | None]] = []
+    parts: list[tuple[bytes, re.Match[bytes] | None]] = []
     cur = 0
 
     # pairs [(fragment, match], with the last match None

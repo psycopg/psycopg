@@ -9,7 +9,8 @@ information to the adapters if needed.
 
 from __future__ import annotations
 
-from typing import Any, Iterator, overload, Sequence, TYPE_CHECKING
+from typing import Any, overload, TYPE_CHECKING
+from collections.abc import Iterator, Sequence
 
 from . import sql
 from . import errors as e

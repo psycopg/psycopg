@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import weakref
 from time import time
-from typing import Any, Dict
+from typing import Any
+from collections import Counter
 
 import pytest
 
@@ -11,7 +12,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 
-from ..utils import assert_type, Counter, set_autocommit
+from ..utils import assert_type, set_autocommit
 from ..acompat import AEvent, spawn, gather, asleep, skip_sync
 from .test_pool_common_async import delay_connection
 
@@ -43,7 +44,7 @@ async def test_bad_size(dsn, min_size, max_size):
         pool.AsyncConnectionPool(min_size=min_size, max_size=max_size)
 
 
-class MyRow(Dict[str, Any]):
+class MyRow(dict[str, Any]):
     pass
 
 

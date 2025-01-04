@@ -22,11 +22,11 @@ static int _uspad[] = {0, 100000, 10000, 1000, 100, 10, 1};
     cdef int *_uspad
 
 from datetime import date, time, timedelta, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
-from psycopg._compat import ZoneInfo
 
 
 # Initialise the datetime C API

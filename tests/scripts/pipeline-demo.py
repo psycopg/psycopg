@@ -15,7 +15,9 @@ import asyncio
 import logging
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Iterator, Sequence
+from typing import Any
+from collections import deque
+from collections.abc import Iterator, Sequence
 
 from psycopg import AsyncConnection, Connection
 from psycopg import pq, waiting
@@ -23,7 +25,6 @@ from psycopg import errors as e
 from psycopg.abc import PipelineCommand
 from psycopg.generators import pipeline_communicate
 from psycopg.pq import Format, DiagnosticField
-from psycopg._compat import Deque
 
 psycopg_logger = logging.getLogger("psycopg")
 pipeline_logger = logging.getLogger("pipeline")
@@ -111,7 +112,7 @@ class LoggingPGconn:
 @contextmanager
 def prepare_pipeline_demo_pq(
     pgconn: LoggingPGconn, rows_to_send: int, logger: logging.Logger
-) -> Iterator[tuple[Deque[PipelineCommand], Deque[str]]]:
+) -> Iterator[tuple[deque[PipelineCommand], deque[str]]]:
     """Set up pipeline demo with initial queries and yield commands and
     results queue for pipeline_communicate().
     """
@@ -137,8 +138,8 @@ def prepare_pipeline_demo_pq(
         ),
     ]
 
-    commands = Deque[PipelineCommand]()
-    results_queue = Deque[str]()
+    commands = deque[PipelineCommand]()
+    results_queue = deque[str]()
 
     for qname, query in setup_queries:
         if qname == "prepare":

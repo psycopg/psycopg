@@ -11,7 +11,8 @@ import os
 import re
 import warnings
 from random import randint
-from typing import Any, DefaultDict, NamedTuple, Sequence, TYPE_CHECKING
+from typing import Any, DefaultDict, NamedTuple, TYPE_CHECKING
+from collections.abc import Sequence
 from collections import defaultdict
 
 try:

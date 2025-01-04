@@ -11,7 +11,9 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, cast, Generic
+from typing import Any, cast, Generic
+from collections import deque
+from collections.abc import AsyncIterator
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -22,7 +24,7 @@ from psycopg.pq import TransactionStatus
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Deque, Self
+from ._compat import Self
 from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
 from ._acompat import asleep, current_task_name
 from .sched_async import AsyncScheduler
@@ -34,7 +36,7 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncConnectionPool(Generic[ACT], BasePool):
-    _pool: Deque[ACT]
+    _pool: deque[ACT]
 
     def __init__(
         self,
@@ -70,7 +72,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._sched: AsyncScheduler
         self._tasks: AQueue[MaintenanceTask]
 
-        self._waiting = Deque[WaitingClient[ACT]]()
+        self._waiting = deque[WaitingClient[ACT]]()
 
         # to notify that the pool is full
         self._pool_full_event: AEvent | None = None

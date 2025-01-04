@@ -9,7 +9,8 @@ from __future__ import annotations
 import re
 import struct
 from math import prod
-from typing import Any, cast, Callable, Pattern
+from typing import Any, cast, Callable
+from functools import cache
 
 from .. import pq
 from .. import errors as e
@@ -17,7 +18,6 @@ from .. import postgres
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, Loader, Transformer
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import TEXT_OID, INVALID_OID, TEXT_ARRAY_OID
-from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._cmodule import _psycopg
 from .._typeinfo import TypeInfo
@@ -199,7 +199,7 @@ class ListDumper(BaseListDumper):
 
 
 @cache
-def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
+def _get_needs_quotes_regexp(delimiter: bytes) -> re.Pattern[bytes]:
     """Return a regexp to recognise when a value needs quotes
 
     from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
@@ -385,7 +385,7 @@ def _load_text(
     data: Buffer,
     loader: Loader,
     delimiter: bytes = b",",
-    __re_unescape: Pattern[bytes] = re.compile(rb"\\(.)"),
+    __re_unescape: re.Pattern[bytes] = re.compile(rb"\\(.)"),
 ) -> list[Any]:
     rv = None
     stack: list[Any] = []
@@ -434,7 +434,7 @@ def _load_text(
 
 
 @cache
-def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
+def _get_array_parse_regexp(delimiter: bytes) -> re.Pattern[bytes]:
     """
     Return a regexp to tokenize an array representation into item and brackets
     """

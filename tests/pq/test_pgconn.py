@@ -9,7 +9,8 @@ import logging
 import weakref
 from functools import partial
 from select import select
-from typing import Iterator, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from collections.abc import Iterator
 
 import pytest
 

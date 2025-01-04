@@ -12,8 +12,9 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generator, Iterator, cast, overload, TYPE_CHECKING
+from typing import Any, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
+from collections.abc import Generator, Iterator
 
 from . import pq
 from . import errors as e
@@ -315,7 +316,7 @@ class Connection(BaseConnection[Row]):
 
     def notifies(
         self, *, timeout: float | None = None, stop_after: int | None = None
-    ) -> Generator[Notify, None, None]:
+    ) -> Generator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
 

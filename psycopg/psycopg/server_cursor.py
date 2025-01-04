@@ -6,8 +6,9 @@ psycopg server-side cursor objects.
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Iterable, Iterator, TYPE_CHECKING, overload
+from typing import Any, overload, TYPE_CHECKING
 from warnings import warn
+from collections.abc import AsyncIterator, Iterable, Iterator
 
 from . import pq
 from . import sql

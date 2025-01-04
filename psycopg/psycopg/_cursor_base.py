@@ -7,7 +7,8 @@ Psycopg BaseCursor object
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Generic, Iterable, NoReturn, Sequence
+from typing import Any, Generic, NoReturn
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING
 
 from . import pq

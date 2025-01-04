@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, cast, overload, TYPE_CHECKING
+from typing import Any, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, AsyncIterator
 
 from . import pq
 from . import errors as e
@@ -34,8 +35,7 @@ from ._connection_base import BaseConnection, CursorRow, Notify
 if True:  # ASYNC
     import sys
     import asyncio
-    from asyncio import Lock
-    from ._compat import to_thread
+    from asyncio import Lock, to_thread
 else:
     from threading import Lock
 
@@ -335,7 +335,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     async def notifies(
         self, *, timeout: float | None = None, stop_after: int | None = None
-    ) -> AsyncGenerator[Notify, None]:
+    ) -> AsyncGenerator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
 

@@ -8,13 +8,6 @@ from __future__ import annotations
 
 import sys
 
-import psycopg.errors as e
-
-if sys.version_info >= (3, 9):
-    from collections import Counter, deque as Deque
-else:
-    from typing import Counter, Deque
-
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
 else:
@@ -30,9 +23,9 @@ if sys.version_info >= (3, 13):
 else:
     from typing_extensions import TypeVar
 
+import psycopg.errors as e
+
 __all__ = [
-    "Counter",
-    "Deque",
     "Self",
     "TypeAlias",
     "TypeVar",

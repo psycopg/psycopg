@@ -5,7 +5,7 @@ Support module for test_cursor[_async].py
 from __future__ import annotations
 
 import re
-from typing import Any, Match
+from typing import Any
 
 import pytest
 import psycopg
@@ -41,7 +41,7 @@ def ph(cur: Any, query: str) -> str:
 
     n = 1
 
-    def s(m: Match[str]) -> str:
+    def s(m: re.Match[str]) -> str:
         nonlocal n
         rv = f"${n}"
         n += 1

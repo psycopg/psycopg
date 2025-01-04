@@ -9,11 +9,11 @@ from __future__ import annotations
 from time import monotonic
 from random import random
 from typing import Any, TYPE_CHECKING
+from collections import Counter, deque
 
 from psycopg import errors as e
 
 from .errors import PoolClosed
-from ._compat import Counter, Deque
 
 if TYPE_CHECKING:
     from psycopg._connection_base import BaseConnection
@@ -40,7 +40,7 @@ class BasePool:
     _CONNECTIONS_ERRORS = "connections_errors"
     _CONNECTIONS_LOST = "connections_lost"
 
-    _pool: Deque[Any]
+    _pool: deque[Any]
 
     def __init__(
         self,
@@ -79,7 +79,7 @@ class BasePool:
         self.num_workers = num_workers
 
         self._nconns = min_size  # currently in the pool, out, being prepared
-        self._pool = Deque()
+        self._pool = deque()
         self._stats = Counter[str]()
 
         # Min number of connections in the pool in a max_idle unit of time.

@@ -19,8 +19,8 @@ from weakref import ref
 
 from ctypes import Array, POINTER, cast, string_at, create_string_buffer, byref
 from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_object
-from typing import Any, Callable, Sequence
-from typing import cast as t_cast, TYPE_CHECKING
+from typing import Any, Callable, cast as t_cast, TYPE_CHECKING
+from collections.abc import Sequence
 
 from .. import errors as e
 from .._encodings import pg2pyenc

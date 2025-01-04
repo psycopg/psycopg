@@ -6,15 +6,7 @@ import operator
 from typing import Callable
 from contextlib import contextmanager
 
-
-if sys.version_info >= (3, 9):
-    import collections
-
-    Counter = collections.Counter
-else:
-    import typing
-
-    Counter = typing.Counter
+import pytest
 
 if sys.version_info >= (3, 11):
     import typing
@@ -24,9 +16,6 @@ else:
     import typing_extensions
 
     assert_type = typing_extensions.assert_type
-
-
-import pytest
 
 eur = "\u20ac"
 

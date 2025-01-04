@@ -7,8 +7,10 @@ Support for multirange types adaptation.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Generic, Iterable, MutableSequence, overload, TYPE_CHECKING
+from typing import Any, Generic, overload, TYPE_CHECKING
 from datetime import date, datetime
+from functools import cache
+from collections.abc import Iterable, MutableSequence
 
 from .. import sql
 from .. import _oids
@@ -18,7 +20,6 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
-from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 

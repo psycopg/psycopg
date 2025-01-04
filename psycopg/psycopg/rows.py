@@ -7,9 +7,9 @@ psycopg row factories
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, NamedTuple, NoReturn
-from typing import TYPE_CHECKING, Protocol, Sequence
+from typing import Any, Callable, NamedTuple, NoReturn, Protocol, TYPE_CHECKING
 from collections import namedtuple
+from collections.abc import Sequence
 
 from . import pq
 from . import errors as e

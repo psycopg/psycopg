@@ -7,12 +7,13 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Any, Sequence, TYPE_CHECKING
-from collections import OrderedDict
+from typing import Any, TYPE_CHECKING
+from collections import deque, OrderedDict
+from collections.abc import Sequence
 
 from . import pq
 from .abc import PQGen
-from ._compat import Deque, TypeAlias
+from ._compat import TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
@@ -48,7 +49,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._to_flush = Deque["bytes | None"]()
+        self._to_flush = deque["bytes | None"]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:

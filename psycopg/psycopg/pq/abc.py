@@ -6,7 +6,8 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol, Sequence, TYPE_CHECKING, Union
+from typing import Any, Callable, Protocol, TYPE_CHECKING, Union
+from collections.abc import Sequence
 
 from ._enums import Format, Trace
 from .._compat import Self, TypeAlias

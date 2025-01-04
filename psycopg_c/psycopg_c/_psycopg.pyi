@@ -10,12 +10,12 @@ information. Will submit a bug.
 from __future__ import annotations
 
 from typing import Any, Sequence
+from collections import deque
 
 from psycopg import pq, abc, BaseConnection
 from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGcancelConn, PGconn, PGresult
-from psycopg._compat import Deque
 
 class Transformer(abc.AdaptContext):
     types: tuple[int, ...] | None
@@ -60,7 +60,7 @@ def send(pgconn: PGconn) -> abc.PQGen[None]: ...
 def fetch_many(pgconn: PGconn) -> abc.PQGen[list[PGresult]]: ...
 def fetch(pgconn: PGconn) -> abc.PQGen[PGresult | None]: ...
 def pipeline_communicate(
-    pgconn: PGconn, commands: Deque[abc.PipelineCommand]
+    pgconn: PGconn, commands: deque[abc.PipelineCommand]
 ) -> abc.PQGen[list[list[PGresult]]]: ...
 def wait_c(
     gen: abc.PQGen[abc.RV], fileno: int, interval: float | None = None
