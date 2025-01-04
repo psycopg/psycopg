@@ -775,16 +775,17 @@ def as_date(s):
     return dt.date(*map(int, s.split(","))) if "," in s else getattr(dt.date, s)
 
 
-def as_time(s):
-    if "~" in s:
-        s, off = s.split("~")
+def as_time(ts):
+    if "~" in ts:
+        ts, off = ts.split("~")
     else:
         off = None
 
-    if "," in s:
-        rv = dt.time(*map(int, s.split(",")))
+    if "," in ts:
+        h, m, s, u = (tuple(map(int, ts.split(","))) + (0,) * 3)[:4]
+        rv = dt.time(h, m, s, u)
     else:
-        rv = getattr(dt.time, s)
+        rv = getattr(dt.time, ts)
     if off:
         rv = rv.replace(tzinfo=as_tzinfo(off))
 
@@ -802,11 +803,12 @@ def as_dt(s):
     return rv
 
 
-def as_naive_dt(s):
-    if "," in s:
-        rv = dt.datetime(*map(int, s.split(",")))
+def as_naive_dt(ts):
+    if "," in ts:
+        y, m, d, h, mi, s, u = (tuple(map(int, ts.split(","))) + (0,) * 6)[:7]
+        rv = dt.datetime(y, m, d, h, mi, s, u)
     else:
-        rv = getattr(dt.datetime, s)
+        rv = getattr(dt.datetime, ts)
 
     return rv
 
