@@ -5,19 +5,19 @@ on:
   schedule:
     - cron: '28 7 * * sun'
 
+env:
+  # Latest release: https://www.postgresql.org/ftp/source/
+  LIBPQ_VERSION: "17.0"
+  # Latest release: https://www.openssl.org/source/
+  # Note: 3.3.2 is broken:
+  # https://github.com/openssl/openssl/issues/25366
+  OPENSSL_VERSION: "3.3.1"
+
 jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
     if: true
-
-    env:
-      # Latest release: https://www.postgresql.org/ftp/source/
-      LIBPQ_VERSION: "17.0"
-      # Latest release: https://www.openssl.org/source/
-      # Note: 3.3.2 is broken:
-      # https://github.com/openssl/openssl/issues/25366
-      OPENSSL_VERSION: "3.3.1"
 
     strategy:
       fail-fast: false
@@ -97,88 +97,28 @@ jobs:
 
   # }}}
 
-  macos-14:  # {{{
-    runs-on: macos-14
+  macos:  # {{{
+    runs-on: macos-latest
     if: true
 
     strategy:
       fail-fast: false
       matrix:
-        arch: [arm64]
-        pyver: [cp310, cp311, cp312, cp313]
-
-    env:
-      PG_VERSION: "17"
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create the binary package source tree
-        run: python3 ./tools/build/copy_to_binary.py
-
-      - name: Install PostgreSQL on the runner
-        # As of 2024-09-28 postgresql@17 reports an error but it's available
-        # So in a few days we might be able to drop it.
-        run: |
-          brew update
-          brew install gnu-sed postgresql@${PG_VERSION}
-
-      - name: Start PostgreSQL service
-        run: brew services start postgresql@${PG_VERSION}
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22.0
-        with:
-          package-dir: psycopg_binary
-        env:
-          CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
-          CIBW_ARCHS_MACOS: ${{matrix.arch}}
-          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
-          CIBW_TEST_COMMAND: >-
-            pytest {project}/tests -m 'not slow and not flakey' --color yes
-          CIBW_ENVIRONMENT: >-
-            MACOSX_DEPLOYMENT_TARGET=14.0
-            PSYCOPG_IMPL=binary
-            PSYCOPG_TEST_DSN='dbname=postgres'
-            PATH="/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-14-${{matrix.pyver}}-macosx_${{matrix.arch}}
-          path: ./wheelhouse/*.whl
-
-
-  # }}}
-
-  macos-13:  # {{{
-    runs-on: macos-13
-    if: true
-
-    strategy:
-      fail-fast: false
-      matrix:
-        # These archs require an Apple M1 runner: [arm64, universal2]
-        arch: [x86_64]
+        arch: [x86_64, arm64]
         pyver: [cp39, cp310, cp311, cp312, cp313]
 
-    env:
-      PG_VERSION: "17"
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repos
+        uses: actions/checkout@v4
+
+      - name: Cache libpq build
+        uses: actions/cache@v4
+        with:
+          path: /tmp/libpq.build
+          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
-
-      - name: Install PostgreSQL on the runner
-        run: |
-          brew update
-          brew install gnu-sed postgresql@${PG_VERSION}
-
-      - name: Start PostgreSQL service
-        run: brew services start postgresql@${PG_VERSION}
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
@@ -187,20 +127,24 @@ jobs:
         env:
           CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
           CIBW_ARCHS_MACOS: ${{matrix.arch}}
+          MACOSX_ARCHITECTURE: ${{matrix.arch}}
+          CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
-            MACOSX_DEPLOYMENT_TARGET=13.0
+            PG_VERSION=17
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
-            PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${PG_VERSION}"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${PG_VERSION}"
+            LIBPQ_BUILD_PREFIX=/tmp/libpq.build
+            PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${{env.LIBPQ_VERSION}}"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${{env.LIBPQ_VERSION}}"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: macos-13-${{matrix.pyver}}-macosx_${{matrix.arch}}
+          name: macos-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
 
 
@@ -276,12 +220,11 @@ jobs:
 
   # }}}
 
-  merge:
+  merge:  # {{{
     runs-on: ubuntu-latest
     needs:
       - linux
-      - macos-14
-      - macos-13
+      - macos
       - windows
     steps:
       - name: Merge Artifacts
@@ -289,3 +232,5 @@ jobs:
         with:
           name: psycopg-binary-artifact
           delete-merged: true
+
+  # }}}
