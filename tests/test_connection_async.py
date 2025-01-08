@@ -12,7 +12,7 @@ from psycopg import pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .acompat import is_async, skip_sync, skip_async
+from .acompat import is_async, skip_sync, skip_async, asleep
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
 from ._test_connection import conninfo_params_timeout
@@ -879,3 +879,11 @@ async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
         await aconn_cls.connect("host=foo.com")
 
     assert conninfo_to_dict(got) == {"host": "foo.com", "hostaddr": "1.1.1.1"}
+
+
+@pytest.mark.slow
+async def test_right_exception_on_server_disconnect(aconn):
+    await aconn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
+    await asleep(0.2)
+    with pytest.raises(e.IdleInTransactionSessionTimeout):
+        await aconn.execute("SELECT * from pg_tables")
