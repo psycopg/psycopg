@@ -17,8 +17,9 @@ Psycopg 3.2.4 (unreleased)
   is not running (:ticket:`#962`).
 - Make sure that the notifies callback is called during the use of the
   `~Connection.notifies()` generator (:ticket:`#972`).
-- Raise `~errors.IdleInTransactionSessionTimeout` instead of a generic
-  `OperationalError` upon hitting an idle-in-transaction timeout
+- Raise the correct error returned by the database (such as `!AdminShutdown`
+  or `!IdleInTransactionSessionTimeout`) instead of a generic
+  `OperationalError` when a server error causes a client disconnection
   (:ticket:`#988`).
 
 

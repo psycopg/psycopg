@@ -881,8 +881,16 @@ async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
     assert conninfo_to_dict(got) == {"host": "foo.com", "hostaddr": "1.1.1.1"}
 
 
-@pytest.mark.slow
+@pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_right_exception_on_server_disconnect(aconn):
+    with pytest.raises(e.AdminShutdown):
+        await aconn.execute(
+            "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
+        )
+
+
+@pytest.mark.slow
+async def test_right_exception_on_session_timeout(aconn):
     await aconn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
     await asleep(0.2)
     with pytest.raises(e.IdleInTransactionSessionTimeout):
