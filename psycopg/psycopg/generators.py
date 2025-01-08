@@ -46,6 +46,7 @@ COMMAND_OK = pq.ExecStatus.COMMAND_OK
 COPY_OUT = pq.ExecStatus.COPY_OUT
 COPY_IN = pq.ExecStatus.COPY_IN
 COPY_BOTH = pq.ExecStatus.COPY_BOTH
+FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 PIPELINE_SYNC = pq.ExecStatus.PIPELINE_SYNC
 
 WAIT_R = Wait.R
@@ -176,7 +177,19 @@ def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
     """
     results: list[PGresult] = []
     while True:
-        res = yield from _fetch(pgconn)
+        try:
+            res = yield from _fetch(pgconn)
+        except e.DatabaseError:
+            # What might have happened here is that a previuos error
+            # disconnected the connection, for example a idle in transaction
+            # timeout. Check if we had received an error before, and raise it
+            # as exception, because it should contain more details. See #988.
+            for res in results:
+                if res.status == FATAL_ERROR:
+                    raise e.error_from_result(res, encoding=pgconn._encoding) from None
+            else:
+                raise
+
         if not res:
             break
 
