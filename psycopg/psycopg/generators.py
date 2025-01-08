@@ -180,13 +180,13 @@ def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
         try:
             res = yield from _fetch(pgconn)
         except e.DatabaseError:
-            # What might have happened here is that a previuos error
-            # disconnected the connection, for example a idle in transaction
-            # timeout. Check if we had received an error before, and raise it
-            # as exception, because it should contain more details. See #988.
-            for res in results:
-                if res.status == FATAL_ERROR:
-                    raise e.error_from_result(res, encoding=pgconn._encoding) from None
+            # What might have happened here is that a previuos error disconnected
+            # the connection, for example a idle in transaction timeout.
+            # Check if we had received an error before: if that's the case
+            # just exit the loop. Our callers will handle this error and raise
+            # it as an exception.
+            if any(res.status == FATAL_ERROR for res in results):
+                break
             else:
                 raise
 
