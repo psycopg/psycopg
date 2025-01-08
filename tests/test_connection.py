@@ -877,8 +877,14 @@ def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
     assert conninfo_to_dict(got) == {"host": "foo.com", "hostaddr": "1.1.1.1"}
 
 
-@pytest.mark.slow
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_right_exception_on_server_disconnect(conn):
+    with pytest.raises(e.AdminShutdown):
+        conn.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
+
+
+@pytest.mark.slow
+def test_right_exception_on_session_timeout(conn):
     conn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
     sleep(0.2)
     with pytest.raises(e.IdleInTransactionSessionTimeout):
