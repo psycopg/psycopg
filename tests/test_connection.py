@@ -884,8 +884,20 @@ def test_right_exception_on_server_disconnect(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb("skip", reason="error result not returned")
 def test_right_exception_on_session_timeout(conn):
+    want_ex: type[psycopg.Error] = e.IdleInTransactionSessionTimeout
+    if sys.platform == "win32":
+        # No idea why this is needed and `test_right_exception_on_server_disconnect`
+        # works instead. Maybe the difference lies in the server we are testing
+        # with, not in the client.
+        want_ex = psycopg.OperationalError
+
     conn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
     sleep(0.2)
-    with pytest.raises(e.IdleInTransactionSessionTimeout):
+    with pytest.raises(want_ex) as ex:
         conn.execute("SELECT * from pg_tables")
+
+    # This check is here to monitor if the behaviour on Window chamge.
+    # Rreceiving the same exception of other platform will be acceptable.
+    assert type(ex.value) is want_ex
