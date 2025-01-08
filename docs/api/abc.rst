@@ -6,7 +6,17 @@ checking.
 
 .. module:: psycopg.abc
 
+.. seealso::
+
+    :ref:`adapt-life-cycle` for more information about how these objects
+    are used by Psycopg,
+
+
 .. autoclass:: Dumper(cls, context=None)
+
+    This class is a formal `~typing.Protocol`. A partial implementation of
+    this protocol (implementing everything except the `dump()` metood) is
+    available as `psycopg.adapt.Dumper`.
 
     :param cls: The type that will be managed by this dumper.
     :type cls: type
@@ -14,9 +24,6 @@ checking.
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
     :type context: `AdaptContext` or None
-
-    A partial implementation of this protocol (implementing everything except
-    `dump()`) is available as `psycopg.adapt.Dumper`.
 
     .. autoattribute:: format
 
@@ -58,15 +65,16 @@ checking.
 
 .. autoclass:: Loader(oid, context=None)
 
+    This class is a formal `~typing.Protocol`. A partial implementation of this
+    protocol (implementing everything except the `load()` method) is available
+    as `psycopg.adapt.Loader`.
+
     :param oid: The type that will be managed by this dumper.
     :type oid: int
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
     :type context: `AdaptContext` or None
-
-    A partial implementation of this protocol (implementing everything except
-    `load()`) is available as `psycopg.adapt.Loader`.
 
     .. autoattribute:: format
 

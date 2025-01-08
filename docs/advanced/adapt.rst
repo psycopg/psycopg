@@ -63,6 +63,66 @@ returned.
     created connections, not the ones already existing.
 
 
+.. _adapt-life-cycle:
+
+Dumpers and loaders life cycle
+------------------------------
+
+Registering dumpers and loaders will instruct Psycopg to use them
+in the queries to follow, in the context where they have been registered.
+
+When a query is performed on a `~psycopg.Cursor`, a
+`~psycopg.adapt.Transformer` object is created as a local context to manage
+adaptation during the query, instantiating the required dumpers and loaders
+and dispatching the values to perform the wanted conversions from Python to
+Postgres and back.
+
+- The `!Transformer` copies the adapters configuration from the `!Cursor`,
+  thus inheriting all the changes made to the global `psycopg.adapters`
+  configuration, the current `!Connection`, the `!Cursor`.
+
+- For every Python type passed as query argument, the `!Transformer` will
+  instantiate a `~psycopg.abc.Dumper`. Usually all the objects of the same
+  type will be converted by the same dumper instance.
+
+  - According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
+    select a binary or a text dumper class (identified by their
+    `~psycopg.abc.Dumper.format` attribute). When using the ``%s``
+    "`~PyFormat.AUTO`" format, if the same type has both a text and a binary
+    dumper registered, the last one registered by
+    `~AdaptersMap.register_dumper()` will be used.
+
+  - Sometimes, just looking at the Python type is not enough to decide the
+    best PostgreSQL type to use (for instance the PostgreSQL type of a Python
+    list depends on the objects it contains, whether to use an :sql:`integer`
+    or :sql:`bigint` depends on the number size...) In these cases the
+    mechanism provided by `~psycopg.abc.Dumper.get_key()` and
+    `~psycopg.abc.Dumper.upgrade()` is used to create more specific dumpers.
+
+- The query is executed. Upon successful request, the result is received as a
+  `~psycopg.pq.PGresult`.
+
+- For every OID returned by the query, the `!Transformer` will instantiate a
+  `~psycopg.abc.Loader`. All the values with the same OID will be converted by
+  the same loader instance.
+
+  - According to the format of the result, which can be text or binary,
+    Psycopg will select either text loaders or binary loaders (identified by
+    their `~psycopg.abc.Loader.format` attribute).
+
+- Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
+  will use the same adaptation rules.
+
+As a consequence it is possible to perform certain choices only once per query
+(e.g. looking up the connection encoding) and then call a fast-path operation
+for each value to convert.
+
+Querying will fail if a Python object for which there isn't a `!Dumper`
+registered (for the right `~psycopg.pq.Format`) is used as query parameter.
+If the query returns a data type whose OID doesn't have a `!Loader`, the
+value will be returned as a string (or bytes string for binary types).
+
+
 .. _adapt-example-xml:
 
 Writing a custom adapter: XML
@@ -264,55 +324,3 @@ cursor):
     # ('2020-12-31', 'infinity')
     cur.execute("SELECT '2020-12-31'::date, 'infinity'::date").fetchone()
     # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
-
-
-Dumpers and loaders life cycle
-------------------------------
-
-Registering dumpers and loaders will instruct Psycopg to use them
-in the queries to follow, in the context where they have been registered.
-
-When a query is performed on a `~psycopg.Cursor`, a
-`~psycopg.adapt.Transformer` object is created as a local context to manage
-adaptation during the query, instantiating the required dumpers and loaders
-and dispatching the values to perform the wanted conversions from Python to
-Postgres and back.
-
-- The `!Transformer` copies the adapters configuration from the `!Cursor`,
-  thus inheriting all the changes made to the global `psycopg.adapters`
-  configuration, the current `!Connection`, the `!Cursor`.
-
-- For every Python type passed as query argument, the `!Transformer` will
-  instantiate a `!Dumper`. Usually all the objects of the same type will be
-  converted by the same dumper instance.
-
-  - According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
-    pick a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`"
-    format, if the same type has both a text and a binary dumper registered,
-    the last one registered by `~AdaptersMap.register_dumper()` will be used.
-
-  - Sometimes, just looking at the Python type is not enough to decide the
-    best PostgreSQL type to use (for instance the PostgreSQL type of a Python
-    list depends on the objects it contains, whether to use an :sql:`integer`
-    or :sql:`bigint` depends on the number size...) In these cases the
-    mechanism provided by `~psycopg.abc.Dumper.get_key()` and
-    `~psycopg.abc.Dumper.upgrade()` is used to create more specific dumpers.
-
-- The query is executed. Upon successful request, the result is received as a
-  `~psycopg.pq.PGresult`.
-
-- For every OID returned by the query, the `!Transformer` will instantiate a
-  `!Loader`. All the values with the same OID will be converted by the same
-  loader instance.
-
-- Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
-  will use the same adaptation rules.
-
-As a consequence it is possible to perform certain choices only once per query
-(e.g. looking up the connection encoding) and then call a fast-path operation
-for each value to convert.
-
-Querying will fail if a Python object for which there isn't a `!Dumper`
-registered (for the right `~psycopg.pq.Format`) is used as query parameter.
-If the query returns a data type whose OID doesn't have a `!Loader`, the
-value will be returned as a string (or bytes string for binary types).
