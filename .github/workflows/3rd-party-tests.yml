@@ -5,6 +5,7 @@ on:
     branches:
       - "master"
       - "maint-3.1"
+      - "maint-3.2"
       - "sqlalchemy_pipeline"
       - "django_pipeline"
     paths-ignore:
