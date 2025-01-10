@@ -1,0 +1,26 @@
+# See https://pre-commit.com for more information
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        language: system
+        entry: black --check --diff
+        files: \.py[i]?$
+
+      - id: codespell
+        name: codespell
+        language: system
+        entry: codespell
+
+      - id: flake8
+        name: flake8
+        language: system
+        entry: flake8
+        files: \.py$
+
+      - id: mypy
+        name: mypy
+        language: system
+        entry: mypy --pretty --follow-imports=silent
+        files: \.py[i]?$

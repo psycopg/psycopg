@@ -37,16 +37,22 @@ show_error_codes = true
 disable_bytearray_promotion = true
 disable_memoryview_promotion = true
 strict = true
+exclude = '''(?x)(
+    ^ build/
+    | docs/lib/.*\.py
+    | psycopg/build/
+    | psycopg_binary/build/
+    | psycopg_c/build/
+    | psycopg_pool/build/
+    | tools/build/pg_config_vcpkg_stub/build/
+)'''
 
 [[tool.mypy.overrides]]
 module = [
-    "shapely.*",
     "numpy.*",
+    "polib",
+    "shapely.*",
 ]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "uvloop"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

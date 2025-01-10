@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 """
 libpq Python wrapper using ctypes bindings.
 

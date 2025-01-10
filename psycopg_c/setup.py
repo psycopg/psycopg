@@ -42,7 +42,7 @@ class psycopg_build_ext(build_ext):
         # In the sdist there are not .pyx, only c, so we don't need Cython.
         # Otherwise Cython is a requirement and it is used to compile pyx to c.
         if os.path.exists("psycopg_c/_psycopg.pyx"):
-            from Cython.Build import cythonize
+            from Cython.Build import cythonize  # type: ignore
 
         # Add include and lib dir for the libpq.
         includedir = get_config("includedir")
@@ -97,5 +97,5 @@ pqext = Extension(
 
 setup(
     ext_modules=[pgext, pqext],
-    cmdclass={"build_ext": psycopg_build_ext},
+    cmdclass={"build_ext": psycopg_build_ext},  # type: ignore
 )

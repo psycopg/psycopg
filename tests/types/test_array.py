@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 
 import psycopg
+import psycopg.types.numeric
 from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import PyFormat, Transformer, Dumper

@@ -427,10 +427,7 @@ def test_optimised_adapters():
         obj = getattr(_psycopg, n)
         if not isinstance(obj, type):
             continue
-        if not issubclass(
-            obj,
-            (_psycopg.CDumper, _psycopg.CLoader),  # type: ignore[attr-defined]
-        ):
+        if not issubclass(obj, (_psycopg.CDumper, _psycopg.CLoader)):
             continue
         c_adapters[n] = obj
 
