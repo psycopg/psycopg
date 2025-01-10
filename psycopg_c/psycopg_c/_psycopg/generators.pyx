@@ -173,9 +173,21 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[list[PGresult]]:
     cdef libpq.PGresult *pgres
 
     while True:
-        result = yield from fetch(pgconn)
+        try:
+            result = yield from fetch(pgconn)
+        except e.DatabaseError:
+            # What might have happened here is that a previuos error
+            # disconnected the connection, for example a idle in transaction
+            # timeout. Check if we had received an error before, and raise it
+            # as exception, because it should contain more details. See #988.
+            if any(result.status == libpq.PGRES_FATAL_ERROR for res in results):
+                break
+            else:
+                raise
+
         if result is None:
             break
+
         results.append(result)
         pgres = result._pgresult_ptr
 
