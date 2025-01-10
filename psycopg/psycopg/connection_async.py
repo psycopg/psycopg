@@ -359,17 +359,17 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             enc = self.pgconn._encoding
 
-            # Remove the handler for the duration of this critical section to
-            # avoid reporting notifies twice.
-            self.remove_notify_handler(self._notifies_backlog_handler)
+            # Remove the backlog deque for the duration of this critical
+            # section to avoid reporting notifies twice.
+            self._notifies_backlog, d = None, self._notifies_backlog
 
             try:
                 while True:
                     # if notifies were received when the generator was off,
                     # return them in a first batch.
-                    if self._notifies_backlog:
-                        while self._notifies_backlog:
-                            yield self._notifies_backlog.popleft()
+                    if d:
+                        while d:
+                            yield d.popleft()
                             nreceived += 1
                     else:
                         try:
@@ -399,7 +399,7 @@ class AsyncConnection(BaseConnection[Row]):
                         if interval < 0.0:
                             break
             finally:
-                self.add_notify_handler(self._notifies_backlog_handler)
+                self._notifies_backlog = d
 
     @asynccontextmanager
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
