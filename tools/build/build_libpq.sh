@@ -112,8 +112,8 @@ if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
             ./configure "darwin64-$MACOSX_ARCHITECTURE-cc" $options
         fi
 
-        make depend
-        make
+        make -s depend
+        make -s
     else
         pushd "${openssl_dir}"
     fi
@@ -136,7 +136,7 @@ if [ "$ID" == "macos" ]; then
 
         pushd "${krb5_dir}"
         ./configure "${make_configure_standard_flags[@]}"
-        make
+        make -s
     else
         pushd "${krb5_dir}"
     fi
@@ -165,7 +165,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
 
         autoreconf -i
         ./configure "${make_configure_standard_flags[@]}" --disable-macos-framework
-        make
+        make -s
     else
         pushd "${sasl_dir}"
     fi
@@ -195,10 +195,10 @@ if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
 
         ./configure "${make_configure_standard_flags[@]}" --enable-backends=no --enable-null
 
-        make depend
-        make -C libraries/liblutil/
-        make -C libraries/liblber/
-        make -C libraries/libldap/
+        make -s depend
+        make -s -C libraries/liblutil/
+        make -s -C libraries/liblber/
+        make -s -C libraries/libldap/
     else
         pushd "${ldap_dir}"
     fi
@@ -237,9 +237,9 @@ if [ ! -d "${postgres_dir}" ]; then
     ./configure "${make_configure_standard_flags[@]}" --sysconfdir=/etc/postgresql-common \
         --with-gssapi --with-openssl --with-pam --with-ldap \
         --without-readline --without-icu
-    make -C src/interfaces/libpq
-    make -C src/bin/pg_config
-    make -C src/include
+    make -s -C src/interfaces/libpq
+    make -s -C src/bin/pg_config
+    make -s -C src/include
 else
     pushd "${postgres_dir}"
 fi
