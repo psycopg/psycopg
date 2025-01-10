@@ -15,7 +15,7 @@ from psycopg import pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .acompat import is_async, skip_sync, skip_async
+from .acompat import is_async, skip_sync, skip_async, sleep
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
 from ._test_connection import conninfo_params_timeout
@@ -875,3 +875,29 @@ def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
         conn_cls.connect("host=foo.com")
 
     assert conninfo_to_dict(got) == {"host": "foo.com", "hostaddr": "1.1.1.1"}
+
+
+@pytest.mark.crdb_skip("pg_terminate_backend")
+def test_right_exception_on_server_disconnect(conn):
+    with pytest.raises(e.AdminShutdown):
+        conn.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
+
+
+@pytest.mark.slow
+@pytest.mark.crdb("skip", reason="error result not returned")
+def test_right_exception_on_session_timeout(conn):
+    want_ex: type[psycopg.Error] = e.IdleInTransactionSessionTimeout
+    if sys.platform == "win32":
+        # No idea why this is needed and `test_right_exception_on_server_disconnect`
+        # works instead. Maybe the difference lies in the server we are testing
+        # with, not in the client.
+        want_ex = psycopg.OperationalError
+
+    conn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
+    sleep(0.2)
+    with pytest.raises(want_ex) as ex:
+        conn.execute("SELECT * from pg_tables")
+
+    # This check is here to monitor if the behaviour on Window chamge.
+    # Rreceiving the same exception of other platform will be acceptable.
+    assert type(ex.value) is want_ex

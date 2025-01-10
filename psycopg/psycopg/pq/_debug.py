@@ -93,12 +93,17 @@ def debugging(f: Func) -> Func:
             reprs.append(f"{k}={v!r}")
 
         logger.info("PGconn.%s(%s)", f.__name__, ", ".join(reprs))
-        rv = f(*args, **kwargs)
-        # Display the return value only if the function is declared to return
-        # something else than None.
-        ra = inspect.signature(f).return_annotation
-        if ra is not None or rv is not None:
-            logger.info("    <- %r", rv)
-        return rv
+        try:
+            rv = f(*args, **kwargs)
+        except Exception as ex:
+            logger.info("    <- %r", ex)
+            raise
+        else:
+            # Display the return value only if the function is declared to return
+            # something else than None.
+            ra = inspect.signature(f).return_annotation
+            if ra is not None or rv is not None:
+                logger.info("    <- %r", rv)
+            return rv
 
     return debugging_  # type: ignore
