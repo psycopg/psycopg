@@ -105,7 +105,12 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        pyver: [cp39, cp310, cp311, cp312, cp313]
+        include:
+          # cp38 on arm64 can be built but cannot be tested:
+          # https://github.com/pypa/cibuildwheel/pull/1169
+          - arch: x86_64
+            pyver: cp38
 
     steps:
       - name: Checkout repos
