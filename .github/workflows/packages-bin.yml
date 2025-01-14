@@ -9,9 +9,7 @@ env:
   # Latest release: https://www.postgresql.org/ftp/source/
   LIBPQ_VERSION: "17.0"
   # Latest release: https://www.openssl.org/source/
-  # Note: 3.3.2 is broken:
-  # https://github.com/openssl/openssl/issues/25366
-  OPENSSL_VERSION: "3.3.1"
+  OPENSSL_VERSION: "3.4.0"
 
 jobs:
 
@@ -120,7 +118,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}
+          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
