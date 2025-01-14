@@ -1,6 +1,7 @@
 name: Build binary packages
 
 on:
+  push:
   workflow_dispatch:
   schedule:
     - cron: '28 7 * * sun'
@@ -21,7 +22,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -103,7 +104,7 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
@@ -168,7 +169,8 @@ jobs:
       matrix:
         # Might want to add win32, untested at the moment.
         arch: [win_amd64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        # pyver: [cp38, cp39, cp310, cp311, cp312, cp313]
+        pyver: [cp313]
 
     defaults:
       run:
@@ -231,6 +233,7 @@ jobs:
 
   merge:  # {{{
     runs-on: ubuntu-latest
+    if: false
     needs:
       - linux
       - macos
