@@ -21,6 +21,13 @@ Psycopg 3.2.4 (unreleased)
   or `!IdleInTransactionSessionTimeout`) instead of a generic
   `OperationalError` when a server error causes a client disconnection
   (:ticket:`#988`).
+- Build macOS dependencies from sources instead using the Homebrew versions
+  in order to avoid problems with ``MACOSX_DEPLOYMENT_TARGET`` (:ticket:`#858`).
+- Bump libpq to 17.2 in Linux and macOS binary packages.
+- Bump libpq to 16.4 in Windows binary packages, using the `vcpkg library`__
+  (:ticket:`#966`).
+
+.. __: https://vcpkg.io/en/package/libpq
 
 
 Current release
