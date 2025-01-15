@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.2.4 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.4
+^^^^^^^^^^^^^
 
 - Don't lose notifies received whilst the `~Connection.notifies()` iterator
   is not running (:ticket:`#962`).
@@ -29,9 +29,6 @@ Psycopg 3.2.4 (unreleased)
 
 .. __: https://vcpkg.io/en/package/libpq
 
-
-Current release
----------------
 
 Psycopg 3.2.3
 ^^^^^^^^^^^^^
