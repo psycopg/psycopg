@@ -377,8 +377,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: c, crdb: "latest-v23.1", python: "3.10", libpq: newest}
-          - {impl: python, crdb: "latest-v22.2", python: "3.12"}
+          - {impl: c, crdb: "latest-v24.3", python: "3.10", libpq: newest}
+          - {impl: python, crdb: "latest-v23.2", python: "3.12"}
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
