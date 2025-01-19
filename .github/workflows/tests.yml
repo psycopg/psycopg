@@ -377,12 +377,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: c, crdb: "latest-v24.3", python: "3.10", libpq: newest}
-          - {impl: python, crdb: "latest-v23.2", python: "3.12"}
+          # Releases: https://www.cockroachlabs.com/docs/releases/
+          # Images: https://console.cloud.google.com/artifacts/docker/cockroach-cloud-images/us/cockroachdb/cockroach
+          #
+          # Also useful:
+          #
+          #   curl -fsSL -X GET \
+          #   https://us-docker.pkg.dev/v2/cockroach-cloud-images/cockroachdb/cockroach/tags/list \
+          #   | jq .tags | egrep 'latest-[^-]+-build' | sort
+          - {impl: c, crdb: "latest-v24.3-build", python: "3.11", libpq: newest}
+          - {impl: python, crdb: "latest-v23.2-build", python: "3.12"}
+          - {impl: c, crdb: "latest-master-build", python: "3.13"}
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 port=26257 user=root dbname=defaultdb"
+      CRDB_REPO: us-docker.pkg.dev/cockroach-cloud-images/cockroachdb/cockroach
 
     steps:
       - uses: actions/checkout@v4
@@ -395,9 +405,9 @@ jobs:
         # Note: this would love to be a service, but I don't see a way to pass
         # the args to the docker run command line.
         run: |
-          docker pull cockroachdb/cockroach:${{ matrix.crdb }}
-          docker run --rm -d --name crdb -p 26257:26257 \
-            cockroachdb/cockroach:${{ matrix.crdb }} start-single-node --insecure
+          docker pull ${CRDB_REPO}:${{ matrix.crdb }}
+          docker run --rm -d --name crdb -p 26257:26257 ${CRDB_REPO}:${{ matrix.crdb }} \
+            start-single-node --insecure
 
       - name: Install the wanted libpq version
         run: sudo ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
