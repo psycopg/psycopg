@@ -120,8 +120,8 @@ jobs:
       fail-fast: false
       matrix:
         django_label:
-          # what version of django to download is defined in the "include" section below,
-          # in the variable pip_django
+          # what version of django to download is defined in the "include"
+          # section below, in the variable pip_django
           - git_main
           - lts
         impl:
@@ -130,15 +130,23 @@ jobs:
         include:
           - django_label: git_main
             pip_django: git+https://github.com/django/django.git#egg=Django
-            # Need pylibmc wheel package to test with Python 3.12.
-            # https://github.com/lericson/pylibmc/issues/288
-            python-version: "3.11"
           # TODO: Needs updating with new LTS releases, is this something we want?
-          #       Also needs consideration against which python we wanna test.
-          #       Current logic is test oldest in lts and newest in main
           - django_label: lts
             pip_django: "'Django>=4.2,<4.3'"
+
+          # Test with min and max Python supported versions
+          - django_label: lts
+            impl: c
             python-version: "3.8"
+          - django_label: lts
+            impl: python
+            python-version: "3.13"
+          - django_label: git_main
+            impl: c
+            python-version: "3.13"
+          - django_label: git_main
+            impl: python
+            python-version: "3.12"
 
     env:
       DEPS: ./psycopg ./psycopg_pool
@@ -236,6 +244,12 @@ jobs:
       - name: Install Django and dependencies
         working-directory: django_home/django
         run: |
+          # pylibmc wheel package not available from Python 3.12.
+          # https://github.com/lericson/pylibmc/issues/288
+          # Dependency in:
+          # https://github.com/django/django/blob/main/tests/requirements/py3.txt#L12
+          # (You can check the above in case it gets dropped in the future).
+          sudo apt-get install -y libmemcached-dev
           pip install .
           pip install -r tests/requirements/py3.txt
 
