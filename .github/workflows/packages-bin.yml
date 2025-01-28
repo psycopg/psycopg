@@ -1,7 +1,7 @@
 name: Build binary packages
 
-# Note: Libpq is currently built from source on most platform and the build
-# cached across pipeline runs.
+# Note: Libpq is currently built from source on most platforms and the build
+# artifacts are cached across pipeline runs.
 #
 # You can see the caches at https://github.com/psycopg/psycopg/actions/caches
 #
