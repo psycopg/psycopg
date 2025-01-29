@@ -52,9 +52,8 @@ jobs:
         # Check https://github.com/docker/setup-qemu-action for newer versions.
         uses: docker/setup-qemu-action@v3
         with:
-          # Note: 6.2.0 is buggy: make sure to avoid it.
-          # See https://github.com/pypa/cibuildwheel/issues/1250
-          image: tonistiigi/binfmt:qemu-v7.0.0
+          # https://github.com/pypa/cibuildwheel/discussions/2256
+          image: tonistiigi/binfmt:qemu-v8.1.5
 
       - name: Cache libpq build
         uses: actions/cache@v4
