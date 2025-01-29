@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Copy operation micro-benchmarks.
-"""
+"""Copy operation micro-benchmarks."""
 from __future__ import annotations
 
 import sys

@@ -1,12 +1,12 @@
 # mypy: ignore-errors
 """
-    sql role
-    ~~~~~~~~
+sql role
+~~~~~~~~
 
-    An interpreted text role to style SQL syntax in Psycopg documentation.
+An interpreted text role to style SQL syntax in Psycopg documentation.
 
-    :copyright: Copyright 2010 by Daniele Varrazzo.
-    :copyright: Copyright 2020 The Psycopg Team.
+:copyright: Copyright 2010 by Daniele Varrazzo.
+:copyright: Copyright 2020 The Psycopg Team.
 """
 
 from docutils import nodes, utils
