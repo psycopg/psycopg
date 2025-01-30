@@ -1,12 +1,15 @@
 cimport cython
 
-import uuid
+from types import ModuleType
 from cpython.bytes cimport PyBytes_AsString
 
 cdef extern from "Python.h":
     # PyUnicode_AsUTF8 was added to cpython.unicode in 3.1.x but we still
     # support 3.0.x
     const char *PyUnicode_AsUTF8(object unicode) except NULL
+
+
+uuid: ModuleType | None = None
 
 
 @cython.final
@@ -37,6 +40,12 @@ cdef class UUIDBinaryDumper(CDumper):
 cdef class UUIDLoader(CLoader):
     format = PQ_TEXT
 
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        global uuid
+        # uuid is slow to import, lazy load it
+        if uuid is None:
+            import uuid
+
     cdef object cload(self, const char *data, size_t length):
         cdef char[33] hex_str
         cdef size_t i
@@ -57,6 +66,12 @@ cdef class UUIDLoader(CLoader):
 @cython.final
 cdef class UUIDBinaryLoader(CLoader):
     format = PQ_BINARY
+
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        global uuid
+        # uuid is slow to import, lazy load it
+        if uuid is None:
+            import uuid
 
     cdef object cload(self, const char *data, size_t length):
         u = uuid.UUID.__new__(uuid.UUID)
