@@ -19,7 +19,14 @@ def test_uuid_dump(conn, fmt_in):
 @pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize(
-    "val", ["12345678123456781234567812345679", "12345678-1234-5678-1234-567812345679"]
+    "val",
+    [
+        "12345678123456781234567812345679",
+        "12345678-1234-5678-1234-567812345679",
+        "0123456789abcdef0123456789abcdef",
+        "01234567-89ab-cdef-0123-456789abcdef",
+        "{a0eebc99-9c0b4ef8-bb6d6bb9-bd380a11}",
+    ],
 )
 def test_uuid_load(conn, fmt_out, val):
     cur = conn.cursor(binary=fmt_out)
@@ -33,7 +40,13 @@ def test_uuid_load(conn, fmt_out, val):
         copy.set_types(["uuid"])
         (res,) = copy.read_row()
 
-    assert res == UUID(val)
+    uuid_val = UUID(val)
+    assert res == uuid_val
+    # the C modules bypasses __init__, so checking the state of the UUID object
+    assert res.hex == uuid_val.hex
+    assert res.int == uuid_val.int
+    assert res.bytes == uuid_val.bytes
+    assert res.is_safe == uuid_val.is_safe
 
 
 @pytest.mark.slow
