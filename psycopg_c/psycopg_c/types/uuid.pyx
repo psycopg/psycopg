@@ -2,6 +2,7 @@ cimport cython
 
 from types import ModuleType
 from cpython.bytes cimport PyBytes_AsString
+from cpython.long cimport PyLong_FromUnsignedLongLong
 
 cdef extern from "Python.h":
     # PyUnicode_AsUTF8 was added to cpython.unicode in 3.1.x but we still
@@ -36,6 +37,30 @@ cdef class UUIDBinaryDumper(CDumper):
         return 16
 
 
+cdef extern from *:
+    """
+static const int8_t hex_to_int_map[] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0-15
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 16-31
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 32-47
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1,            // 48-63 ('0'-'9')
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 64-79 ('A'-'F')
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 80-95
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 96-111 ('a'-'f')
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 112-127
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 128-143
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 144-159
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 160-175
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 176-191
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 192-207
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 208-223
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 224-239
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1   // 240-255
+};
+"""
+    const int8_t[256] hex_to_int_map
+
+
 @cython.final
 cdef class UUIDLoader(CLoader):
     format = PQ_TEXT
@@ -47,19 +72,32 @@ cdef class UUIDLoader(CLoader):
             import uuid
 
     cdef object cload(self, const char *data, size_t length):
-        cdef char[33] hex_str
+        cdef uint64_t high = 0
+        cdef uint64_t low = 0
         cdef size_t i
-        cdef int j = 0
-        for i in range(36):
-            if data[i] == b'-':
+        cdef int ndigits = 0
+        cdef int8_t c
+
+        for i in range(length):
+            c = data[i]
+            if hex_to_int_map[c] == -1:
                 continue
-            hex_str[j] = data[i]
-            j += 1
-        hex_str[32] = 0
+
+            if ndigits < 16:
+                high = (high << 4) | hex_to_int_map[c]
+            else:
+                low = (low << 4) | hex_to_int_map[c]
+            ndigits += 1
+
+        if ndigits != 32:
+            raise ValueError("Invalid UUID string")
+
+        cdef object py_high = PyLong_FromUnsignedLongLong(high)
+        cdef object py_low = PyLong_FromUnsignedLongLong(low)
 
         u = uuid.UUID.__new__(uuid.UUID)
         object.__setattr__(u, 'is_safe', uuid.SafeUUID.unknown)
-        object.__setattr__(u, 'int', PyLong_FromString(hex_str, NULL, 16))
+        object.__setattr__(u, 'int', (py_high << 64) | py_low)
         return u
 
 
