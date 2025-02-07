@@ -114,14 +114,25 @@ cdef class UUIDLoader(CLoader):
 cdef class UUIDBinaryLoader(CLoader):
     format = PQ_BINARY
 
+    cdef PyObject *_uuid_type
+    cdef object _uuid_new
+    cdef object _obj_setattr
+    cdef PyObject *_safeuuid_unknown
+
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
         global uuid
         # uuid is slow to import, lazy load it
         if uuid is None:
             import uuid
 
+        self._uuid_type = <PyObject *>uuid.UUID
+        self._uuid_new = uuid.UUID.__new__
+        self._obj_setattr = object.__setattr__
+        self._safeuuid_unknown = <PyObject *>uuid.SafeUUID.unknown
+
     cdef object cload(self, const char *data, size_t length):
-        u = uuid.UUID.__new__(uuid.UUID)
-        object.__setattr__(u, 'is_safe', uuid.SafeUUID.unknown)
-        object.__setattr__(u, 'int', int.from_bytes(data[:length], 'big'))
+        cdef object int_value = int.from_bytes(data[:length], 'big')
+        cdef object u = PyObject_CallFunctionObjArgs(self._uuid_new, self._uuid_type, NULL)
+        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"is_safe", self._safeuuid_unknown, NULL)
+        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"int", <PyObject *>int_value, NULL)
         return u
