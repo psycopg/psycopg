@@ -47,6 +47,11 @@ def test_uuid_load(conn, fmt_out, val):
     assert res.int == uuid_val.int
     assert res.bytes == uuid_val.bytes
     assert res.is_safe == uuid_val.is_safe
+    #  https://github.com/python/typeshed/issues/8832
+    slots = ("int", "is_safe", "__weakref__")
+    assert (
+        UUID.__slots__ == slots  # type: ignore[attr-defined]
+    ), "UUID structure changed"
 
 
 @pytest.mark.slow
