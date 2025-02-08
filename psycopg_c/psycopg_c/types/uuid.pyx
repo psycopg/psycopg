@@ -10,9 +10,6 @@ cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8(object unicode) except NULL
 
 
-uuid: ModuleType | None = None
-
-
 @cython.final
 cdef class UUIDDumper(CDumper):
     format = PQ_TEXT
@@ -61,25 +58,37 @@ static const int8_t hex_to_int_map[] = {
     const int8_t[256] hex_to_int_map
 
 
-@cython.final
-cdef class UUIDLoader(CLoader):
-    format = PQ_TEXT
+cdef class _UUIDLoader(CLoader):
 
-    cdef PyObject *_uuid_type
-    cdef object _uuid_new
-    cdef object _obj_setattr
-    cdef PyObject *_safeuuid_unknown
+    cdef object _object_new
+    cdef object _uuid_type
+    cdef PyObject *_wuuid_type
+    cdef object _safeuuid_unknown
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        global uuid
-        # uuid is slow to import, lazy load it
-        if uuid is None:
-            import uuid
+        from psycopg_c import _uuid
 
-        self._uuid_type = <PyObject *>uuid.UUID
-        self._uuid_new = uuid.UUID.__new__
-        self._obj_setattr = object.__setattr__
-        self._safeuuid_unknown = <PyObject *>uuid.SafeUUID.unknown
+        self._object_new = object.__new__
+        self._uuid_type = _uuid.UUID
+        self._wuuid_type = <PyObject *>_uuid._WritableUUID
+        self._safeuuid_unknown = _uuid.SafeUUID_unknown
+
+    cdef object _return_uuid(self, uint64_t low, uint64_t high):
+        cdef object py_low = PyLong_FromUnsignedLongLong(low)
+        cdef object py_high = PyLong_FromUnsignedLongLong(high)
+        cdef object py_value = (py_high << 64) | py_low
+
+        cdef object u = PyObject_CallFunctionObjArgs(
+            self._object_new, self._wuuid_type, NULL)
+        u.int = py_value
+        u.is_safe = self._safeuuid_unknown
+        u.__class__ = self._uuid_type
+        return u
+
+
+@cython.final
+cdef class UUIDLoader(_UUIDLoader):
+    format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
         cdef uint64_t high = 0
@@ -102,37 +111,19 @@ cdef class UUIDLoader(CLoader):
         if ndigits != 32:
             raise ValueError("Invalid UUID string")
 
-        cdef object int_value = (PyLong_FromUnsignedLongLong(high) << 64) | PyLong_FromUnsignedLongLong(low)
-
-        cdef object u = PyObject_CallFunctionObjArgs(self._uuid_new, self._uuid_type, NULL)
-        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"is_safe", self._safeuuid_unknown, NULL)
-        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"int", <PyObject *>int_value, NULL)
-        return u
+        return self._return_uuid(low, high)
 
 
 @cython.final
-cdef class UUIDBinaryLoader(CLoader):
+cdef class UUIDBinaryLoader(_UUIDLoader):
     format = PQ_BINARY
 
-    cdef PyObject *_uuid_type
-    cdef object _uuid_new
-    cdef object _obj_setattr
-    cdef PyObject *_safeuuid_unknown
-
-    def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        global uuid
-        # uuid is slow to import, lazy load it
-        if uuid is None:
-            import uuid
-
-        self._uuid_type = <PyObject *>uuid.UUID
-        self._uuid_new = uuid.UUID.__new__
-        self._obj_setattr = object.__setattr__
-        self._safeuuid_unknown = <PyObject *>uuid.SafeUUID.unknown
-
     cdef object cload(self, const char *data, size_t length):
-        cdef object int_value = int.from_bytes(data[:length], 'big')
-        cdef object u = PyObject_CallFunctionObjArgs(self._uuid_new, self._uuid_type, NULL)
-        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"is_safe", self._safeuuid_unknown, NULL)
-        PyObject_CallFunctionObjArgs(self._obj_setattr, <PyObject *>u, <PyObject *>"int", <PyObject *>int_value, NULL)
-        return u
+        cdef uint64_t be[2]
+        if length != sizeof(be):
+            raise ValueError("Invalid UUID data")
+        memcpy(&be, data, sizeof(be))
+
+        cdef uint64_t high = endian.be64toh(be[0])
+        cdef uint64_t low = endian.be64toh(be[1])
+        return self._return_uuid(low, high)
