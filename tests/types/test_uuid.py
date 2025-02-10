@@ -9,8 +9,17 @@ from psycopg.adapt import PyFormat
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_uuid_dump(conn, fmt_in):
-    val = "12345678123456781234567812345679"
+@pytest.mark.parametrize(
+    "val",
+    [
+        "12345678123456781234567812345679",
+        "12345678-1234-5678-1234-567812345679",
+        "0123456789abcdef0123456789abcdef",
+        "01234567-89ab-cdef-0123-456789abcdef",
+        "{a0eebc99-9c0b4ef8-bb6d6bb9-bd380a11}",
+    ],
+)
+def test_uuid_dump(conn, fmt_in, val):
     cur = conn.cursor()
     cur.execute(f"select %{fmt_in.value} = %s::uuid", (UUID(val), val))
     assert cur.fetchone()[0] is True
