@@ -132,6 +132,7 @@ def convert(fpin: Path, fpout: Path) -> None:
         print(output, file=f)
 
     sp.check_call(["black", "-q", str(fpout)])
+    sp.check_call(["isort", "-q", str(fpout)])
 
 
 def check(outputs: list[str]) -> int:

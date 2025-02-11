@@ -64,3 +64,9 @@ disallow_untyped_calls = false
 [tool.codespell]
 ignore-words-list = "alot,ans,ba,fo,te,erro,varning"
 skip = "build,_build,.tox,.mypy_cache,.venv,pq.c,_psycopg.c,*.html"
+
+[tool.isort]
+profile = "black"
+length_sort = true
+multi_line_output = 9
+sort_order = "psycopg"  # requires the isort-psycopg module
