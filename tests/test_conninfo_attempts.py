@@ -4,7 +4,7 @@
 import pytest
 
 import psycopg
-from psycopg.conninfo import conninfo_to_dict, conninfo_attempts
+from psycopg.conninfo import conninfo_attempts, conninfo_to_dict
 
 pytestmark = pytest.mark.anyio
 

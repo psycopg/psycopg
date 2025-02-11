@@ -26,11 +26,11 @@ import logging
 from time import monotonic
 from collections import deque
 
-from . import pq
 from . import errors as e
+from . import pq
 from .abc import Buffer, PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGcancelConn, PGconn, PGresult
-from .waiting import Wait, Ready
+from .waiting import Ready, Wait
 from ._cmodule import _psycopg
 from ._encodings import conninfo_encoding
 

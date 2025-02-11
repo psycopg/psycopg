@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import datetime as dt
-from base64 import b64encode, b64decode
+from base64 import b64decode, b64encode
 from dataclasses import dataclass, replace
 
 _re_xid = re.compile(r"^(\d+)_([^_]*)_([^_]*)$")

@@ -8,15 +8,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from collections.abc import AsyncIterator, Sequence
 
-from . import pq
 from . import errors as e
+from . import pq
 from ._compat import Self
-from ._copy_base import BaseCopy, MAX_BUFFER_SIZE, QUEUE_SIZE, PREFER_FLUSH
-from .generators import copy_to, copy_end
-from ._acompat import aspawn, agather, AQueue, AWorker
+from ._acompat import AQueue, AWorker, agather, aspawn
+from ._copy_base import MAX_BUFFER_SIZE, PREFER_FLUSH, QUEUE_SIZE, BaseCopy
+from .generators import copy_end, copy_to
 
 if TYPE_CHECKING:
     from .abc import Buffer

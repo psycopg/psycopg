@@ -7,8 +7,8 @@ from weakref import ref
 import pytest
 
 import psycopg
-from psycopg import pq
 from psycopg import errors as e
+from psycopg import pq
 
 from .utils import eur
 from .fix_crdb import is_crdb

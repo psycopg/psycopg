@@ -1,4 +1,5 @@
 import ctypes
+
 import pytest
 
 from psycopg import pq

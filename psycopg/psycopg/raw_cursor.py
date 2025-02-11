@@ -7,18 +7,20 @@ psycopg raw queries cursors
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from .abc import ConnectionType, Query, Params
+
+from .abc import ConnectionType, Params, Query
 from .sql import Composable
 from .rows import Row
 from ._enums import PyFormat
 from .cursor import Cursor
-from .cursor_async import AsyncCursor
-from .server_cursor import ServerCursor, AsyncServerCursor
 from ._queries import PostgresQuery
 from ._cursor_base import BaseCursor
+from .cursor_async import AsyncCursor
+from .server_cursor import AsyncServerCursor, ServerCursor
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
+
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 

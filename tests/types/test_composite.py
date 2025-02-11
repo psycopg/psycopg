@@ -1,16 +1,15 @@
 import pytest
 
-from psycopg import pq, postgres, sql
+from psycopg import postgres, pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 from psycopg.types.range import Range
-from psycopg.types.composite import CompositeInfo, register_composite
-from psycopg.types.composite import TupleDumper, TupleBinaryDumper
+from psycopg.types.composite import CompositeInfo, TupleBinaryDumper, TupleDumper
+from psycopg.types.composite import register_composite
 
 from ..utils import eur
-from ..fix_crdb import is_crdb, crdb_skip_message
-from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
-
+from ..fix_crdb import crdb_skip_message, is_crdb
+from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("composite")
 

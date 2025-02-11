@@ -5,7 +5,7 @@ psycopg_c.pq.PGresult object implementation.
 # Copyright (C) 2020 The Psycopg Team
 
 cimport cython
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Free, PyMem_Malloc
 
 from psycopg.pq.misc import PGresAttDesc
 from psycopg.pq._enums import ExecStatus

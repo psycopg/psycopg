@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import _oids
-from ..pq import Format, Escaping
+from ..pq import Escaping, Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError

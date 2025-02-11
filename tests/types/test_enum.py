@@ -2,7 +2,8 @@ from enum import Enum, auto
 
 import pytest
 
-from psycopg import pq, sql, errors as e
+from psycopg import errors as e
+from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.enum import EnumInfo, register_enum

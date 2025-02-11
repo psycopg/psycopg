@@ -7,20 +7,20 @@ psycopg row factories
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, NamedTuple, NoReturn, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, NoReturn, Protocol
 from collections import namedtuple
 from collections.abc import Sequence
 
-from . import pq
 from . import errors as e
+from . import pq
 from ._compat import TypeAlias, TypeVar
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
     from .cursor import Cursor
+    from .pq.abc import PGresult
     from ._cursor_base import BaseCursor
     from .cursor_async import AsyncCursor
-    from psycopg.pq.abc import PGresult
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK

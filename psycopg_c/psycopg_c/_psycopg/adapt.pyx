@@ -16,12 +16,11 @@ equivalent C implementations.
 from typing import Any
 
 cimport cython
+from libc.string cimport memchr, memcpy
+from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_FromStringAndSize
+from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
 
-from libc.string cimport memcpy, memchr
-from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
-from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
-
-from psycopg_c.pq cimport _buffer_as_string_and_size, Escaping
+from psycopg_c.pq cimport Escaping, _buffer_as_string_and_size
 
 from psycopg import errors as e
 

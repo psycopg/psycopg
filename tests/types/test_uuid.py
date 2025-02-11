@@ -1,11 +1,10 @@
 import sys
-from uuid import UUID
 import subprocess as sp
+from uuid import UUID
 
 import pytest
 
-from psycopg import pq
-from psycopg import sql
+from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 
 

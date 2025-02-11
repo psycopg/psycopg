@@ -6,8 +6,8 @@ Various functionalities to make easier to work with the libpq.
 
 from __future__ import annotations
 
-import re
 import os
+import re
 import sys
 import logging
 import ctypes.util
@@ -16,7 +16,7 @@ from pathlib import Path
 from functools import cache
 
 from . import abc
-from ._enums import ConnStatus, TransactionStatus, PipelineStatus
+from ._enums import ConnStatus, PipelineStatus, TransactionStatus
 
 logger = logging.getLogger("psycopg.pq")
 

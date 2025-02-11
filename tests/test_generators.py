@@ -1,12 +1,11 @@
 import time
-from collections import deque
 from functools import partial
+from collections import deque
 
 import pytest
 
 import psycopg
-from psycopg import waiting
-from psycopg import pq
+from psycopg import pq, waiting
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 

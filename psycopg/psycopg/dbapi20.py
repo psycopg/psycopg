@@ -14,7 +14,7 @@ from collections.abc import Sequence
 
 from . import _oids
 from .abc import AdaptContext, Buffer
-from .types.string import BytesDumper, BytesBinaryDumper
+from .types.string import BytesBinaryDumper, BytesDumper
 
 
 class DBAPITypeObject:

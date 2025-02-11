@@ -6,17 +6,19 @@ Types used in the psycopg_pool package
 
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Callable, Union
 from collections.abc import Awaitable
 
 from ._compat import TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
+
+    from psycopg import AsyncConnection, Connection  # noqa: F401
+    from psycopg.rows import TupleRow  # noqa: F401
+
     from .pool import ConnectionPool  # noqa: F401
     from .pool_async import AsyncConnectionPool  # noqa: F401
-    from psycopg import Connection, AsyncConnection  # noqa: F401
-    from psycopg.rows import TupleRow  # noqa: F401
 
 # Connection types to make the pool generic
 CT = TypeVar("CT", bound="Connection[Any]", default="Connection[TupleRow]")

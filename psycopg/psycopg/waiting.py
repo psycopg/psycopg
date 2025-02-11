@@ -15,12 +15,13 @@ import sys
 import select
 import logging
 import selectors
-from asyncio import get_event_loop, wait_for, Event, TimeoutError
+from asyncio import Event, TimeoutError, get_event_loop, wait_for
 from selectors import DefaultSelector
 
 from . import errors as e
 from .abc import RV, PQGen, PQGenConn, WaitFunc
-from ._enums import Wait as Wait, Ready as Ready  # re-exported
+from ._enums import Ready as Ready
+from ._enums import Wait as Wait  # re-exported
 from ._cmodule import _psycopg
 
 WAIT_R = Wait.R

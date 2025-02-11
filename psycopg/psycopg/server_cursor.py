@@ -6,15 +6,14 @@ psycopg server-side cursor objects.
 
 from __future__ import annotations
 
-from typing import Any, overload, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, overload
 from warnings import warn
 from collections.abc import AsyncIterator, Iterable, Iterator
 
-from . import pq
-from . import sql
 from . import errors as e
-from .abc import ConnectionType, Query, Params, PQGen
-from .rows import Row, RowFactory, AsyncRowFactory
+from . import pq, sql
+from .abc import ConnectionType, Params, PQGen, Query
+from .rows import AsyncRowFactory, Row, RowFactory
 from .cursor import Cursor
 from ._compat import Self
 from .generators import execute

@@ -12,8 +12,9 @@ from collections import deque
 from psycopg import errors as e
 from psycopg.pq import abc
 from psycopg.abc import PipelineCommand, PQGen
-from psycopg._enums import Wait, Ready
+from psycopg._enums import Ready, Wait
 from psycopg._encodings import conninfo_encoding
+
 
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R

@@ -19,10 +19,9 @@ __rcs_id__  = '$Id: dbapi20.py,v 1.11 2005/01/02 02:41:01 zenzen Exp $'
 __version__ = '$Revision: 1.12 $'[11:-2]
 __author__ = 'Stuart Bishop <stuart@stuartbishop.net>'
 
-import unittest
 import time
+import unittest
 from typing import Any
-
 
 # Revision 1.12  2009/02/06 03:35:11  kf7xm
 # Tested okay with Python 3.0, includes last minute patches from Mark H.

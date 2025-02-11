@@ -5,22 +5,24 @@ from __future__ import annotations
 
 import sys
 import time
-import pytest
 import logging
 import weakref
 from typing import Any
 
+import pytest
+
 import psycopg
-from psycopg import pq, errors as e
+from psycopg import errors as e
+from psycopg import pq
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .acompat import is_async, skip_sync, skip_async, sleep
-from ._test_cursor import my_row_factory
-from ._test_connection import tx_params, tx_params_isolation, tx_values_map
-from ._test_connection import conninfo_params_timeout
-from ._test_connection import testctx  # noqa: F401  # fixture
+from .acompat import is_async, skip_async, skip_sync, sleep
 from .test_adapt import make_bin_dumper, make_dumper
+from ._test_cursor import my_row_factory
+from ._test_connection import testctx  # noqa: F401  # fixture
+from ._test_connection import conninfo_params_timeout, tx_params, tx_params_isolation
+from ._test_connection import tx_values_map
 
 
 def test_connect(conn_cls, dsn):

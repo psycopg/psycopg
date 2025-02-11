@@ -8,6 +8,7 @@ Simplify access to the _psycopg module
 from __future__ import annotations
 
 from types import ModuleType
+
 from . import pq
 
 __version__: str | None = None

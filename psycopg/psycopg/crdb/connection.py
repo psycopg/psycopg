@@ -7,15 +7,15 @@ CockroachDB-specific connections.
 from __future__ import annotations
 
 import re
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .. import errors as e
 from ..rows import Row
+from ._types import adapters
 from ..connection import Connection
 from .._adapters_map import AdaptersMap
 from .._connection_info import ConnectionInfo
 from ..connection_async import AsyncConnection
-from ._types import adapters
 
 if TYPE_CHECKING:
     from ..pq.abc import PGconn

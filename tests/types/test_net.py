@@ -2,8 +2,7 @@ import ipaddress
 
 import pytest
 
-from psycopg import pq
-from psycopg import sql
+from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 
 crdb_skip_inet = pytest.mark.crdb_skip("inet")

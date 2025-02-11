@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import pytest
 import datetime as dt
 from typing import Any
+
+import pytest
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
-from . import dbapi20
-from . import dbapi20_tpc
+from . import dbapi20, dbapi20_tpc
 
 
 @pytest.fixture(scope="class")

@@ -10,9 +10,8 @@ libpq and accounting for other platform differences.
 import os
 import sys
 import subprocess as sp
-
-from distutils.command.build_ext import build_ext
 from distutils import log
+from distutils.command.build_ext import build_ext
 
 
 def get_config(what: str) -> str:

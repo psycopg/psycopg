@@ -10,21 +10,21 @@ happens when the output buffer is full.
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import logging
-from contextlib import contextmanager
-from functools import partial
+import argparse
 from typing import Any
+from functools import partial
+from contextlib import contextmanager
 from collections import deque
 from collections.abc import Iterator, Sequence
 
 from psycopg import AsyncConnection, Connection
-from psycopg import pq, waiting
 from psycopg import errors as e
+from psycopg import pq, waiting
+from psycopg.pq import DiagnosticField, Format
 from psycopg.abc import PipelineCommand
 from psycopg.generators import pipeline_communicate
-from psycopg.pq import Format, DiagnosticField
 
 psycopg_logger = logging.getLogger("psycopg")
 pipeline_logger = logging.getLogger("pipeline")

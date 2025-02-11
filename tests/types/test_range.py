@@ -10,8 +10,8 @@ from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
 
 from ..utils import eur
-from ..fix_crdb import is_crdb, crdb_skip_message
-from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
+from ..fix_crdb import crdb_skip_message, is_crdb
+from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("range")
 

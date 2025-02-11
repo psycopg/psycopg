@@ -8,17 +8,14 @@ from __future__ import annotations
 
 import re
 import struct
-from typing import Any, Callable, cast, NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
 from functools import cache
 from collections import namedtuple
 from collections.abc import Iterator, Sequence
 
-from .. import pq
-from .. import abc
-from .. import sql
-from .. import postgres
-from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper, Buffer
+from .. import abc, postgres, pq, sql
 from .._oids import TEXT_OID
+from ..adapt import Buffer, Dumper, Loader, PyFormat, RecursiveDumper, Transformer
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier

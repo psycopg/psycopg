@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import time
 
 import pytest
+
 from psycopg import Notify
 
 from .acompat import AEvent, alist, asleep, gather, spawn

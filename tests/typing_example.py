@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Callable
+from dataclasses import dataclass
 from collections.abc import Sequence
 
-from psycopg import Connection, Cursor, ServerCursor, connect, rows
-from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
+from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor, Connection, Cursor
+from psycopg import ServerCursor, connect, rows
 
 
 def int_row_factory(

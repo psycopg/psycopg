@@ -4,9 +4,12 @@ import json
 from uuid import uuid4
 
 import pytest
-from psycopg import pq, errors as e
+
+from psycopg import errors as e
+from psycopg import pq
 from psycopg.rows import namedtuple_row
-from ..acompat import AQueue, spawn, gather
+
+from ..acompat import AQueue, gather, spawn
 
 pytestmark = [pytest.mark.crdb]
 if True:  # ASYNC

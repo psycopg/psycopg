@@ -10,15 +10,15 @@ Psycopg Cursor object.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, overload
 from contextlib import contextmanager
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable, Iterator
 
-from . import pq
 from . import errors as e
-from .abc import Query, Params
+from . import pq
+from .abc import Params, Query
 from .copy import Copy, Writer
-from .rows import Row, RowMaker, RowFactory
+from .rows import Row, RowFactory, RowMaker
 from ._compat import Self
 from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor

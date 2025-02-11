@@ -8,9 +8,9 @@ import asyncio
 import logging
 from enum import Enum
 from typing import Any
-from collections.abc import Generator
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
+from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger()

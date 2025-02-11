@@ -7,8 +7,8 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Any, TYPE_CHECKING
-from collections import deque, OrderedDict
+from typing import TYPE_CHECKING, Any
+from collections import OrderedDict, deque
 from collections.abc import Sequence
 
 from . import pq

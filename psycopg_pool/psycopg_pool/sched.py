@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import logging
 from time import monotonic
-from heapq import heappush, heappop
+from heapq import heappop, heappush
 from typing import Any, Callable
 
 from ._task import Task
-from ._acompat import Lock, Event
+from ._acompat import Event, Lock
 
 logger = logging.getLogger(__name__)
 

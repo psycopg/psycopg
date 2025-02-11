@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import sys
 import time
 import ctypes
 import logging
 import weakref
-from functools import partial
+import contextlib
 from select import select
 from typing import TYPE_CHECKING
+from functools import partial
 from collections.abc import Iterator
 
 import pytest
 
 import psycopg
-from psycopg import pq
 import psycopg.generators
+from psycopg import pq
 
 if TYPE_CHECKING:
     from psycopg.pq.abc import PGcancelConn, PGconn

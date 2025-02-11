@@ -4,8 +4,7 @@ from copy import deepcopy
 import pytest
 
 import psycopg.types
-from psycopg import pq
-from psycopg import sql
+from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.types.json import set_json_dumps, set_json_loads
 

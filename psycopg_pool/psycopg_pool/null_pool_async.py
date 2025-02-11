@@ -12,12 +12,12 @@ from typing import Any, cast
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 
-from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
+from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import AEvent
+from .pool_async import AddConnection, AsyncConnectionPool
 from .base_null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, AddConnection
 
 logger = logging.getLogger("psycopg.pool")
 

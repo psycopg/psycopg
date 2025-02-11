@@ -5,24 +5,24 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 cimport cython
-
+from cpython.mem cimport PyMem_Free
 from libc.stdint cimport *
 from libc.string cimport memcpy, memset, strlen
-from cpython.mem cimport PyMem_Free
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
-from cpython.long cimport (
-    PyLong_FromString, PyLong_FromLong, PyLong_FromLongLong,
-    PyLong_FromUnsignedLong, PyLong_AsLongLong)
+from cpython.long cimport PyLong_AsLongLong, PyLong_FromLong, PyLong_FromLongLong
+from cpython.long cimport PyLong_FromString, PyLong_FromUnsignedLong
 from cpython.bytes cimport PyBytes_AsStringAndSize
-from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
+from cpython.float cimport PyFloat_AsDouble, PyFloat_FromDouble
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 
 import sys
-from decimal import Decimal, Context, DefaultContext
+from decimal import Context, Decimal, DefaultContext
 
 from psycopg_c._psycopg cimport endian
+
 from psycopg import errors as e
 from psycopg._wrappers import Int2, Int4, Int8, IntNumeric
+
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909

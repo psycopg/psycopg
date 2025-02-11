@@ -18,17 +18,20 @@ cdef extern from * nogil:
     pid_t getpid()
 
 from libc.stdio cimport fdopen
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Free, PyMem_Malloc
 from cpython.bytes cimport PyBytes_AsString
 from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
 
-from psycopg._encodings import pg2pyenc
-from psycopg.pq import Format as PqFormat, Trace, version_pretty
-from psycopg.pq.misc import PGnotify, connection_summary, _clean_error_message
+from psycopg.pq import Format as PqFormat
+from psycopg.pq import Trace, version_pretty
+from psycopg.pq.misc import PGnotify, _clean_error_message, connection_summary
 from psycopg.pq._enums import ExecStatus
+from psycopg._encodings import pg2pyenc
+
 from psycopg_c.pq cimport PQBuffer
+
 
 cdef object _check_supported(fname, int pgversion):
     if libpq.PG_VERSION_NUM < pgversion:

@@ -10,6 +10,7 @@ An interpreted text role to link docs to tickets issues.
 """
 
 import re
+
 from docutils import nodes, utils
 from docutils.parsers.rst import roles
 
