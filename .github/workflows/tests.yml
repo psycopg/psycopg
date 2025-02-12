@@ -385,14 +385,19 @@ jobs:
           #   curl -fsSL -X GET \
           #   https://us-docker.pkg.dev/v2/cockroach-cloud-images/cockroachdb/cockroach/tags/list \
           #   | jq .tags | egrep 'latest-[^-]+-build' | sort
+          - {impl: c, crdb: "latest-master-build", python: "3.13"}
+          - {impl: c, crdb: "latest-v25.1-build", python: "3.13", libpq: newest}
           - {impl: c, crdb: "latest-v24.3-build", python: "3.8", libpq: newest}
           - {impl: python, crdb: "latest-v23.2-build", python: "3.12"}
-          - {impl: c, crdb: "latest-master-build", python: "3.13"}
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 port=26257 user=root dbname=defaultdb"
       CRDB_REPO: us-docker.pkg.dev/cockroach-cloud-images/cockroachdb/cockroach
+      # Since CRDB 25.1, 'on' should become the default, which will break
+      # the test suite assumption.
+      # https://www.cockroachlabs.com/docs/stable/online-schema-changes#enable-automatic-commit-before-running-schema-changes-inside-transactions
+      PGOPTIONS: "-c autocommit_before_ddl=off"
 
     steps:
       - uses: actions/checkout@v4
