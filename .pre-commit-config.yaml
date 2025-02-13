@@ -13,7 +13,7 @@ repos:
       - id: black
         name: black
         language: system
-        entry: black --check --diff
+        entry: black --check --diff --color --quiet
         files: \.py[i]?$
 
       - id: codespell
@@ -36,5 +36,5 @@ repos:
       - id: isort
         name: isort
         language: system
-        entry: isort
+        entry: isort --diff --color --check
         files: \.(py[i]?|pxd|pyx)$
