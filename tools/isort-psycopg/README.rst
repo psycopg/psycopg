@@ -1,9 +1,10 @@
 Psycopg style isort
 ===================
 
-This is an isort_ plugin to sort:
+This is an isort_ plugin implementing the style used in the `Psycopg 3`_
+project to sort:
 
-- import in length order
+- imports in length order
 - import lists in natural order
 
 The effect is the same of specifying ``--length-sort`` but only for the module
@@ -25,3 +26,4 @@ Note: because this is the first day I use isort at all, there is a chance that
 this plug-in is totally useless and the same can be done using isort features.
 
 .. _isort: https://pycqa.github.io/isort/
+.. _psycopg 3: https://www.psycopg.org/
