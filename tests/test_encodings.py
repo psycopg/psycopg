@@ -1,4 +1,5 @@
 import codecs
+
 import pytest
 
 import psycopg

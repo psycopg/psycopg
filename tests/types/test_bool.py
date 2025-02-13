@@ -1,8 +1,7 @@
 import pytest
 
-from psycopg import pq
-from psycopg import sql
-from psycopg.adapt import Transformer, PyFormat
+from psycopg import pq, sql
+from psycopg.adapt import PyFormat, Transformer
 from psycopg.postgres import types as builtins
 
 

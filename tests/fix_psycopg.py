@@ -41,7 +41,7 @@ class Tpc:
         self.conn = conn
 
     def check_tpc(self):
-        from .fix_crdb import is_crdb, crdb_skip_message
+        from .fix_crdb import crdb_skip_message, is_crdb
 
         if is_crdb(self.conn):
             pytest.skip(crdb_skip_message("2-phase commit"))

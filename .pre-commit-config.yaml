@@ -32,3 +32,9 @@ repos:
         language: system
         entry: mypy --pretty --follow-imports=silent
         files: \.py[i]?$
+
+      - id: isort
+        name: isort
+        language: system
+        entry: isort
+        files: \.(py[i]?|pxd|pyx)$

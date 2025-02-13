@@ -5,16 +5,17 @@ C optimised functions for the copy system.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from libc.stdint cimport int32_t, uint16_t, uint32_t
 from libc.string cimport memcpy
-from libc.stdint cimport uint16_t, uint32_t, int32_t
-from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
-from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_GET_SIZE
+from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_FromStringAndSize
+from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
 from cpython.memoryview cimport PyMemoryView_FromObject
 
-from psycopg_c._psycopg cimport endian
 from psycopg_c.pq cimport ViewBuffer
+from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
+
 
 cdef int32_t _binary_null = -1
 

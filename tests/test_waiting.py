@@ -6,8 +6,7 @@ import socket
 import pytest
 
 import psycopg
-from psycopg import waiting
-from psycopg import generators
+from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
 
 skip_if_not_linux = pytest.mark.skipif(

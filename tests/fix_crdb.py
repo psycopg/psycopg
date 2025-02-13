@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from .utils import VersionCheck
 from psycopg.crdb import CrdbConnection
+
+from .utils import VersionCheck
 
 
 def pytest_configure(config):

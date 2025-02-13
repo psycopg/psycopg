@@ -8,8 +8,8 @@ import time
 import queue
 import signal
 import threading
-import multiprocessing
 import subprocess as sp
+import multiprocessing
 
 import pytest
 

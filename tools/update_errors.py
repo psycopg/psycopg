@@ -12,8 +12,8 @@ import os
 import re
 import sys
 import logging
-from urllib.request import urlopen
 from collections import defaultdict, namedtuple
+from urllib.request import urlopen
 
 from psycopg.errors import get_base_exception
 

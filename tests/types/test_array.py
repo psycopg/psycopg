@@ -9,14 +9,13 @@ import pytest
 
 import psycopg
 import psycopg.types.numeric
-from psycopg import pq
-from psycopg import sql
-from psycopg.adapt import PyFormat, Transformer, Dumper
+from psycopg import pq, sql
+from psycopg.adapt import Dumper, PyFormat, Transformer
 from psycopg.types import TypeInfo
 from psycopg.postgres import types as builtins
 from psycopg.types.array import register_array
 
-from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
+from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 tests_str = [
     ([[[[[["a"]]]]]], "{{{{{{a}}}}}}"),

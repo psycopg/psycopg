@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from time import monotonic
 from random import random
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from collections import Counter, deque
 
 from psycopg import errors as e

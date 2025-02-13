@@ -7,14 +7,14 @@ from typing import Any
 import pytest
 
 import psycopg
-from psycopg import pq, sql, postgres
 from psycopg import errors as e
+from psycopg import postgres, pq, sql
 from psycopg.abc import Buffer
-from psycopg.adapt import Transformer, PyFormat, Dumper, Loader
+from psycopg.adapt import Dumper, Loader, PyFormat, Transformer
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins
-from psycopg.types.array import ListDumper, ListBinaryDumper
-from psycopg.types.string import StrDumper, StrBinaryDumper
+from psycopg.types.array import ListBinaryDumper, ListDumper
+from psycopg.types.string import StrBinaryDumper, StrDumper
 
 
 @pytest.mark.parametrize(

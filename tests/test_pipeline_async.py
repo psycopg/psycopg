@@ -8,10 +8,10 @@ from itertools import groupby
 import pytest
 
 import psycopg
-from psycopg import pq
 from psycopg import errors as e
+from psycopg import pq
 
-from .acompat import is_async, anext
+from .acompat import anext, is_async
 
 pytestmark = [
     pytest.mark.pipeline,

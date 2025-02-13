@@ -6,8 +6,7 @@ psycopg capabilities objects
 
 from __future__ import annotations
 
-from . import pq
-from . import _cmodule
+from . import _cmodule, pq
 from .errors import NotSupportedError
 
 

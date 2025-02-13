@@ -10,7 +10,7 @@ import codecs
 import string
 from abc import ABC, abstractmethod
 from typing import Any
-from collections.abc import Iterator, Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext

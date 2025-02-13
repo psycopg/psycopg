@@ -15,9 +15,7 @@ from random import shuffle
 
 from . import errors as e
 from .abc import ConnDict, ConnMapping
-from ._conninfo_utils import get_param, is_ip_address, get_param_def
-from ._conninfo_utils import split_attempts
-
+from ._conninfo_utils import get_param, get_param_def, is_ip_address, split_attempts
 
 logger = logging.getLogger("psycopg")
 

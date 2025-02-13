@@ -1,5 +1,5 @@
-import asyncio
 import socket
+import asyncio
 
 import pytest
 

@@ -4,11 +4,12 @@ Cython adapters for date/time types.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from cpython cimport datetime as cdt
 from libc.stdint cimport int64_t
 from libc.string cimport memset, strchr
-from cpython cimport datetime as cdt
 from cpython.dict cimport PyDict_GetItem
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
+
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
@@ -21,13 +22,12 @@ static int _uspad[] = {0, 100000, 10000, 1000, 100, 10, 1};
     """
     cdef int *_uspad
 
-from datetime import date, time, timedelta, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
-
 
 # Initialise the datetime C API
 cdt.import_datetime()

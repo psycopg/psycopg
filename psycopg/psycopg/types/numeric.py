@@ -10,29 +10,26 @@ import sys
 import struct
 from abc import ABC, abstractmethod
 from math import log
-from typing import Any, Callable, DefaultDict, cast, TYPE_CHECKING
-from decimal import Decimal, DefaultContext, Context
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict, cast
+from decimal import Context, Decimal, DefaultContext
 
 from .. import _oids
 from .. import errors as e
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader, PyFormat
-from .._struct import pack_int2, pack_uint2, unpack_int2
-from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
-from .._struct import pack_int8, unpack_int8
-from .._struct import pack_float4, pack_float8, unpack_float4, unpack_float8
+from .._struct import pack_float4, pack_float8, pack_int2, pack_int4, pack_int8
+from .._struct import pack_uint2, pack_uint4, unpack_float4, unpack_float8, unpack_int2
+from .._struct import unpack_int4, unpack_int8, unpack_uint4
 
 # Exposed here
-from .._wrappers import (
-    Int2 as Int2,
-    Int4 as Int4,
-    Int8 as Int8,
-    IntNumeric as IntNumeric,
-    Oid as Oid,
-    Float4 as Float4,
-    Float8 as Float8,
-)
+from .._wrappers import Float4 as Float4
+from .._wrappers import Float8 as Float8
+from .._wrappers import Int2 as Int2
+from .._wrappers import Int4 as Int4
+from .._wrappers import Int8 as Int8
+from .._wrappers import IntNumeric as IntNumeric
+from .._wrappers import Oid as Oid
 
 if TYPE_CHECKING:
     import numpy

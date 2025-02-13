@@ -32,11 +32,10 @@ import inspect
 import logging
 from typing import Any, Callable
 from functools import wraps
-from .._compat import Self, TypeVar
 
-from . import abc
-from . import PGconn
+from . import PGconn, abc
 from .misc import connection_summary
+from .._compat import Self, TypeVar
 
 Func = TypeVar("Func", bound=Callable[..., Any])
 

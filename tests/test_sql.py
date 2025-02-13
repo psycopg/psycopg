@@ -7,10 +7,10 @@ import datetime as dt
 
 import pytest
 
-from psycopg import pq, sql, ProgrammingError
+from psycopg import ProgrammingError, pq, sql
 from psycopg.adapt import PyFormat
-from psycopg._encodings import py2pgenc
 from psycopg.types import TypeInfo
+from psycopg._encodings import py2pgenc
 from psycopg.types.string import StrDumper
 
 from .utils import eur

@@ -8,7 +8,7 @@ from uuid import UUID
 from random import choice, random, randrange
 from typing import Any
 from decimal import Decimal
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from collections import deque
 
 import pytest
@@ -16,8 +16,8 @@ import pytest
 import psycopg
 from psycopg import sql
 from psycopg.adapt import PyFormat
-from psycopg.types.range import Range
 from psycopg.types.json import Json, Jsonb
+from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
 

@@ -4,8 +4,9 @@
 
 import sys
 import logging
-import requests
 from pathlib import Path
+
+import requests
 from ruamel.yaml import YAML  # pip install ruamel.yaml
 
 logger = logging.getLogger()

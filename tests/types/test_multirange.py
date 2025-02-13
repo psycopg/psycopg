@@ -6,14 +6,13 @@ import pytest
 
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat
-from psycopg.types.range import Range
 from psycopg.types import multirange
-from psycopg.types.multirange import Multirange, MultirangeInfo
-from psycopg.types.multirange import register_multirange
+from psycopg.types.range import Range
+from psycopg.types.multirange import Multirange, MultirangeInfo, register_multirange
 
 from ..utils import eur
 from .test_range import create_test_range
-from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
+from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = [
     pytest.mark.pg(">= 14"),

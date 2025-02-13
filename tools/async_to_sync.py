@@ -12,7 +12,6 @@ Hint: in order to explore the AST of a module you can run:
 from __future__ import annotations
 
 import os
-from concurrent.futures import ProcessPoolExecutor
 import sys
 import logging
 import subprocess as sp
@@ -20,6 +19,7 @@ from copy import deepcopy
 from typing import Any, Literal
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from concurrent.futures import ProcessPoolExecutor
 from importlib.metadata import version
 
 import ast_comments as ast  # type: ignore
@@ -132,6 +132,7 @@ def convert(fpin: Path, fpout: Path) -> None:
         print(output, file=f)
 
     sp.check_call(["black", "-q", str(fpout)])
+    sp.check_call(["isort", "-q", str(fpout)])
 
 
 def check(outputs: list[str]) -> int:

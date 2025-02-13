@@ -14,24 +14,23 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, cast, Generic
-from collections import deque
-from collections.abc import Iterator
+from typing import Any, Generic, cast
 from weakref import ref
 from contextlib import contextmanager
+from collections import deque
+from collections.abc import Iterator
 
-from psycopg import errors as e
 from psycopg import Connection
+from psycopg import errors as e
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectionCB, ConnectFailedCB
+from .abc import CT, ConnectFailedCB, ConnectionCB
 from .base import AttemptWithBackoff, BasePool
+from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Self
-from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
-from ._acompat import sleep, current_thread_name
-from .sched import Scheduler
-
+from ._acompat import Condition, Event, Lock, Queue, Worker, current_thread_name
+from ._acompat import gather, sleep, spawn
 
 logger = logging.getLogger("psycopg.pool")
 

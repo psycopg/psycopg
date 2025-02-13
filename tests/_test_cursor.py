@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 import pytest
+
 import psycopg
 from psycopg.rows import RowMaker
 

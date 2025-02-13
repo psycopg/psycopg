@@ -83,7 +83,7 @@ def monkeypatch_autodoc():
     """
     Patch autodoc in order to use information found by `recover_defined_module`.
     """
-    from sphinx.ext.autodoc import Documenter, AttributeDocumenter
+    from sphinx.ext.autodoc import AttributeDocumenter, Documenter
 
     orig_doc_get_real_modname = Documenter.get_real_modname
     orig_attr_get_real_modname = AttributeDocumenter.get_real_modname

@@ -7,9 +7,9 @@ Entry point into the adaptation system.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from . import pq, abc
+from . import abc, pq
 
 # Objects exported here
 from ._enums import PyFormat as PyFormat

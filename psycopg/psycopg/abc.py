@@ -6,7 +6,7 @@ Protocol objects representing different implementations of the same classes.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Callable, Protocol, Union
 from collections.abc import Generator, Mapping, Sequence
 
 from . import pq
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from . import sql  # noqa: F401
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
-    from .waiting import Wait, Ready  # noqa: F401
+    from .waiting import Ready, Wait  # noqa: F401
     from ._adapters_map import AdaptersMap
     from ._connection_base import BaseConnection
 

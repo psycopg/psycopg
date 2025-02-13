@@ -9,7 +9,7 @@ import psycopg.crdb
 from psycopg import errors as e
 from psycopg.crdb import CrdbConnection
 
-from ..acompat import sleep, spawn, gather
+from ..acompat import gather, sleep, spawn
 
 pytestmark = [pytest.mark.crdb]
 
