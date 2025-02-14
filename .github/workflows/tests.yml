@@ -379,7 +379,6 @@ jobs:
           #   curl -fsSL -X GET \
           #   https://us-docker.pkg.dev/v2/cockroach-cloud-images/cockroachdb/cockroach/tags/list \
           #   | jq .tags | egrep 'latest-[^-]+-build' | sort
-          # Suspended as currently failing
           - {impl: c, crdb: "latest-master-build", python: "3.13"}
           - {impl: c, crdb: "latest-v25.1-build", python: "3.13", libpq: newest}
           - {impl: c, crdb: "latest-v24.3-build", python: "3.9", libpq: newest}
