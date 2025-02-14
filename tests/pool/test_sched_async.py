@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from ..acompat import spawn, gather, asleep
+from ..acompat import asleep, gather, spawn
 
 try:
     from psycopg_pool.sched_async import AsyncScheduler

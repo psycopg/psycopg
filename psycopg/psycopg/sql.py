@@ -9,7 +9,7 @@ from __future__ import annotations
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, Sequence
+from typing import Any, Iterable, Iterator, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext

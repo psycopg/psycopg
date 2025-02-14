@@ -5,20 +5,19 @@ Tests common to psycopg.AsyncCursor and its subclasses.
 import weakref
 import datetime as dt
 from typing import Any
-from packaging.version import parse as ver
 
 import pytest
+from packaging.version import parse as ver
 
 import psycopg
-from psycopg import pq, sql, rows
+from psycopg import pq, rows, sql
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
 from .utils import raiseif
 from .acompat import aclosing, alist, anext
 from .fix_crdb import crdb_encoding
-from ._test_cursor import my_row_factory, ph
-from ._test_cursor import execmany, _execmany  # noqa: F401
+from ._test_cursor import _execmany, execmany, my_row_factory, ph  # noqa: F401
 
 execmany = execmany  # avoid F811 underneath
 

@@ -5,19 +5,21 @@ compatibility functions for different Python versions
 # Copyright (C) 2021 The Psycopg Team
 
 import sys
-from functools import partial
 from typing import Any
+from functools import partial
 
 if sys.version_info >= (3, 9):
     from asyncio import to_thread
     from zoneinfo import ZoneInfo
     from functools import cache
-    from collections import Counter, deque as Deque
+    from collections import Counter
+    from collections import deque as Deque
     from collections.abc import Callable
 else:
     import asyncio
     from typing import Callable, Counter, Deque, TypeVar
     from functools import lru_cache
+
     from backports.zoneinfo import ZoneInfo
 
     cache = lru_cache(maxsize=None)
@@ -31,9 +33,9 @@ else:
 
 
 if sys.version_info >= (3, 10):
-    from typing import TypeGuard, TypeAlias
+    from typing import TypeAlias, TypeGuard
 else:
-    from typing_extensions import TypeGuard, TypeAlias
+    from typing_extensions import TypeAlias, TypeGuard
 
 if sys.version_info >= (3, 11):
     from typing import LiteralString, Self

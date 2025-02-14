@@ -10,7 +10,8 @@ from itertools import cycle
 import pytest
 
 import psycopg
-from psycopg import pq, sql, errors as e
+from psycopg import errors as e
+from psycopg import pq, sql
 from psycopg.copy import Copy, LibpqWriter, QueuedLibpqWriter
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
@@ -18,10 +19,11 @@ from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
 from .utils import eur
-from ._test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
-from ._test_copy import sample_values, sample_records, sample_tabledef
-from ._test_copy import ensure_table, py_to_raw, special_chars, FileWriter
-from .test_adapt import StrNoneDumper, StrNoneBinaryDumper
+from ._test_copy import sample_binary  # noqa
+from ._test_copy import FileWriter, ensure_table, py_to_raw, sample_binary_rows
+from ._test_copy import sample_records, sample_tabledef, sample_text, sample_values
+from ._test_copy import special_chars
+from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")
 

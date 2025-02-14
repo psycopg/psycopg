@@ -7,7 +7,7 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import Any, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Sequence
 from collections import OrderedDict
 
 from . import pq

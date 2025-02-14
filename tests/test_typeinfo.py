@@ -4,10 +4,10 @@ import psycopg
 from psycopg import sql
 from psycopg.pq import TransactionStatus
 from psycopg.types import TypeInfo
-from psycopg.types.composite import CompositeInfo
 from psycopg.types.enum import EnumInfo
-from psycopg.types.multirange import MultirangeInfo
 from psycopg.types.range import RangeInfo
+from psycopg.types.composite import CompositeInfo
+from psycopg.types.multirange import MultirangeInfo
 
 from .fix_crdb import crdb_encoding
 

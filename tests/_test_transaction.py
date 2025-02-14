@@ -1,8 +1,9 @@
 import sys
+
 import pytest
+
 import psycopg
 from psycopg import pq
-
 
 # TODOCRDB: is this the expected behaviour?
 crdb_skip_external_observer = pytest.mark.crdb(

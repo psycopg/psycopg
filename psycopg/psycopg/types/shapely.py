@@ -5,14 +5,14 @@ Adapters for PostGIS geometries
 from __future__ import annotations
 
 from .. import postgres
+from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from ..adapt import Dumper, Loader
-from ..pq import Format
 from .._compat import cache
 from .._typeinfo import TypeInfo
 
 try:
-    from shapely.wkb import loads, dumps
+    from shapely.wkb import dumps, loads
     from shapely.geometry.base import BaseGeometry
 
 except ImportError:

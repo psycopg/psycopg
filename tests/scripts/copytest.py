@@ -10,8 +10,8 @@ from typing import Any
 from argparse import ArgumentParser, Namespace
 
 import psycopg
-from psycopg.abc import Query
 from psycopg import sql
+from psycopg.abc import Query
 
 logger = logging.getLogger()
 logging.basicConfig(

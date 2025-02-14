@@ -11,7 +11,8 @@ import sys
 import psycopg.errors as e
 
 if sys.version_info >= (3, 9):
-    from collections import Counter, deque as Deque
+    from collections import Counter
+    from collections import deque as Deque
 else:
     from typing import Counter, Deque
 

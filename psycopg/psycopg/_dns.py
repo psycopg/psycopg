@@ -11,20 +11,20 @@ import os
 import re
 import warnings
 from random import randint
-from typing import Any, DefaultDict, NamedTuple, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, DefaultDict, NamedTuple, Sequence
 from collections import defaultdict
 
 try:
-    from dns.resolver import Resolver, Cache
-    from dns.asyncresolver import Resolver as AsyncResolver
+    from dns.resolver import Cache, Resolver
     from dns.exception import DNSException
+    from dns.asyncresolver import Resolver as AsyncResolver
 except ImportError:
     raise ImportError(
         "the module psycopg._dns requires the package 'dnspython' installed"
     )
 
-from . import errors as e
 from . import conninfo
+from . import errors as e
 
 if TYPE_CHECKING:
     from dns.rdtypes.IN.SRV import SRV

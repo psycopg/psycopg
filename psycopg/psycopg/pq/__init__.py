@@ -16,10 +16,9 @@ import logging
 from typing import Callable
 
 from . import abc
-from .misc import ConninfoOption, PGnotify, PGresAttDesc
-from .misc import error_message, version_pretty
-from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Trace
-from ._enums import Ping, PipelineStatus, PollingStatus, TransactionStatus
+from .misc import ConninfoOption, PGnotify, PGresAttDesc, error_message, version_pretty
+from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Ping
+from ._enums import PipelineStatus, PollingStatus, Trace, TransactionStatus
 
 logger = logging.getLogger(__name__)
 

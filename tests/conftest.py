@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 import asyncio
 import selectors
-import sys
 from typing import Any
 
 import pytest

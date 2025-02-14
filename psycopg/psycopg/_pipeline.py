@@ -8,20 +8,20 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from . import pq
 from . import errors as e
+from . import pq
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, Self, TypeAlias
 from .pq.misc import connection_summary
-from .generators import pipeline_communicate, fetch_many, send
+from .generators import fetch_many, pipeline_communicate, send
 from ._capabilities import capabilities
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
-    from .connection import Connection
     from ._preparing import Key, Prepare  # noqa: F401
+    from .connection import Connection
     from ._cursor_base import BaseCursor  # noqa: F401
     from ._connection_base import BaseConnection
     from .connection_async import AsyncConnection

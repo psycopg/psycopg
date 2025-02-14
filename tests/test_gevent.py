@@ -3,6 +3,7 @@ import json
 import subprocess as sp
 
 import pytest
+
 import psycopg
 
 pytest.importorskip("gevent")

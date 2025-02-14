@@ -11,20 +11,20 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, cast, Generic
+from typing import Any, AsyncIterator, Generic, cast
 from weakref import ref
 from contextlib import asynccontextmanager
 
-from psycopg import errors as e
 from psycopg import AsyncConnection
+from psycopg import errors as e
 from psycopg.pq import TransactionStatus
 
-from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
+from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque, Self
-from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
-from ._acompat import asleep, current_task_name
+from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, agather, asleep
+from ._acompat import aspawn, current_task_name
 from .sched_async import AsyncScheduler
 
 if True:  # ASYNC

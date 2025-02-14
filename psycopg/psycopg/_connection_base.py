@@ -8,17 +8,15 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import Callable, Generic, NamedTuple, TYPE_CHECKING
-from weakref import ref, ReferenceType
+from typing import TYPE_CHECKING, Callable, Generic, NamedTuple
+from weakref import ReferenceType, ref
 from warnings import warn
 from functools import partial
 
-from . import pq
 from . import errors as e
-from . import postgres
-from . import generators
+from . import generators, postgres, pq
 from .abc import PQGen, PQGenConn, Query
-from .sql import Composable, SQL
+from .sql import SQL, Composable
 from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
@@ -31,8 +29,9 @@ from ._capabilities import capabilities
 from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:
-    from .pq.abc import PGconn, PGresult
     from psycopg_pool.base import BasePool
+
+    from .pq.abc import PGconn, PGresult
 
 # Row Type variable for Cursor (when it needs to be distinguished from the
 # connection's one)

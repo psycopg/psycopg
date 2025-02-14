@@ -6,7 +6,7 @@ Adapters for network types.
 
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from .. import _oids
 from ..pq import Format
@@ -45,10 +45,9 @@ class _LazyIpaddress:
         global IPv4Network, IPv6Network
 
         if ip_address is None:
-            from ipaddress import ip_address, ip_interface, ip_network
-            from ipaddress import IPv4Address, IPv6Address
-            from ipaddress import IPv4Interface, IPv6Interface
-            from ipaddress import IPv4Network, IPv6Network
+            from ipaddress import IPv4Address, IPv4Interface, IPv4Network, IPv6Address
+            from ipaddress import IPv6Interface, IPv6Network, ip_address, ip_interface
+            from ipaddress import ip_network
 
 
 class InterfaceDumper(Dumper):

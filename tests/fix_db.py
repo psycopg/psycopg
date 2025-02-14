@@ -3,15 +3,15 @@ from __future__ import annotations
 import io
 import os
 import sys
-import pytest
 import logging
 from contextlib import contextmanager
 
+import pytest
+
 import psycopg
-from psycopg import pq
-from psycopg import sql
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg import pq, sql
 from psycopg._compat import cache
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.pq._debug import PGconnDebug
 
 from .utils import check_postgres_version

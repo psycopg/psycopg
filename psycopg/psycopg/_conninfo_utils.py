@@ -11,9 +11,9 @@ from functools import lru_cache
 from ipaddress import ip_address
 from dataclasses import dataclass
 
+from . import errors as e
 from . import pq
 from .abc import ConnDict, ConnMapping
-from . import errors as e
 
 
 def split_attempts(params: ConnMapping) -> list[ConnDict]:

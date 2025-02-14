@@ -6,7 +6,7 @@ Adapters for None.
 
 from __future__ import annotations
 
-from ..abc import AdaptContext, NoneType, Buffer
+from ..abc import AdaptContext, Buffer, NoneType
 from ..adapt import Dumper
 
 

@@ -1,8 +1,8 @@
 # These tests relate to AsyncConnectionPool, but are not marked asyncio
 # because they rely on the pool initialization outside the asyncio loop.
 
-import asyncio
 import sys
+import asyncio
 
 import pytest
 

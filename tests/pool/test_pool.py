@@ -12,10 +12,10 @@ import pytest
 
 import psycopg
 from psycopg.pq import TransactionStatus
-from psycopg.rows import class_row, Row, TupleRow
+from psycopg.rows import Row, TupleRow, class_row
 
-from ..utils import assert_type, Counter, set_autocommit
-from ..acompat import Event, spawn, gather, sleep, skip_sync
+from ..utils import Counter, assert_type, set_autocommit
+from ..acompat import Event, gather, skip_sync, sleep, spawn
 from .test_pool_common import delay_connection
 
 try:

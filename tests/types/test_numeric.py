@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import enum
-from math import isnan, isinf, exp
+from math import exp, isinf, isnan
 from decimal import Decimal
 
 import pytest
 
 import psycopg
-from psycopg import pq
-from psycopg import sql
+from psycopg import pq, sql
 from psycopg.abc import Buffer
-from psycopg.adapt import Transformer, PyFormat
-from psycopg.types.numeric import Int8, Int8Dumper, Int8BinaryDumper, FloatLoader
+from psycopg.adapt import PyFormat, Transformer
+from psycopg.types.numeric import FloatLoader, Int8, Int8BinaryDumper, Int8Dumper
 
 from ..fix_crdb import is_crdb
 

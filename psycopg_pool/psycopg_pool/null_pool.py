@@ -15,12 +15,12 @@ from typing import Any, cast
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectionCB, ConnectFailedCB
+from .abc import CT, ConnectFailedCB, ConnectionCB
+from .pool import AddConnection, ConnectionPool
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import Event
 from .base_null_pool import _BaseNullConnectionPool
-from .pool import ConnectionPool, AddConnection
 
 logger = logging.getLogger("psycopg.pool")
 

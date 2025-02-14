@@ -1,6 +1,7 @@
-import pytest
-import asyncio
 import sys
+import asyncio
+
+import pytest
 
 from psycopg.errors import InterfaceError
 

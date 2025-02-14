@@ -7,14 +7,13 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Mapping, Match, NamedTuple
-from typing import Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Match, NamedTuple, Sequence
 from functools import lru_cache
 
-from . import pq
 from . import errors as e
+from . import pq
+from .abc import Buffer, Params, Query
 from .sql import Composable
-from .abc import Buffer, Query, Params
 from ._enums import PyFormat
 from ._compat import TypeAlias, TypeGuard
 from ._encodings import conn_encoding

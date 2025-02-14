@@ -9,13 +9,12 @@ from __future__ import annotations
 import json
 from typing import Any, Callable
 
-from .. import abc
-from .. import _oids
+from .. import _oids, abc
 from .. import errors as e
 from ..pq import Format
-from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
+from ..adapt import AdaptersMap, Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError
-from .._compat import cache, TypeAlias
+from .._compat import TypeAlias, cache
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
 JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]

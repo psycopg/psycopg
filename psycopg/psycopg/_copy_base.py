@@ -10,11 +10,11 @@ import re
 import sys
 import struct
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Match, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, Match, Sequence
 
-from . import pq
 from . import adapt
 from . import errors as e
+from . import pq
 from .abc import Buffer, ConnectionType, PQGen, Transformer
 from .pq.misc import connection_summary
 from ._cmodule import _psycopg

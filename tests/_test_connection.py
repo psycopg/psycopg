@@ -8,6 +8,7 @@ from typing import Any
 from dataclasses import dataclass
 
 import pytest
+
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 

@@ -2,10 +2,10 @@ import re
 
 import pytest
 
-from psycopg import pq, _cmodule
+from psycopg import _cmodule, pq
 
 try:
-    from psycopg import Capabilities, capabilities, NotSupportedError
+    from psycopg import Capabilities, NotSupportedError, capabilities
 except ImportError:
     # Allow to import the module with Psycopg 3.1
     pass

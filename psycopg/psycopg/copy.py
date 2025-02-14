@@ -4,8 +4,8 @@ Module gathering the various parts of the copy subsystem.
 
 from typing import IO
 
-from .abc import Buffer
 from . import _copy, _copy_async
+from .abc import Buffer
 
 # re-exports
 

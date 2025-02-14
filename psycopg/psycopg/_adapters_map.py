@@ -6,10 +6,10 @@ Mapping from types/oids to Dumpers/Loaders
 
 from __future__ import annotations
 
-from typing import Any, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
-from . import pq
 from . import errors as e
+from . import pq
 from .abc import Dumper, Loader
 from ._enums import PyFormat as PyFormat
 from ._compat import TypeVar

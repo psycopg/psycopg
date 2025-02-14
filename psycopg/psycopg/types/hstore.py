@@ -10,10 +10,10 @@ import re
 
 from .. import errors as e
 from .. import postgres
-from ..abc import Buffer, AdaptContext
+from ..abc import AdaptContext, Buffer
 from .._oids import TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from .._compat import cache, TypeAlias
+from .._compat import TypeAlias, cache
 from .._typeinfo import TypeInfo
 
 _re_escape = re.compile(r'(["\\])')

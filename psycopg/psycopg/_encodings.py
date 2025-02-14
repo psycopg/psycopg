@@ -7,13 +7,13 @@ Mappings between PostgreSQL and Python encodings.
 from __future__ import annotations
 
 import re
-import string
 import codecs
-from typing import Any, TYPE_CHECKING
+import string
+from typing import TYPE_CHECKING, Any
 
-from .pq._enums import ConnStatus
 from .errors import NotSupportedError
 from ._compat import cache
+from .pq._enums import ConnStatus
 
 if TYPE_CHECKING:
     from ._connection_base import BaseConnection

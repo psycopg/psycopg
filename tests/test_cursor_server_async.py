@@ -2,11 +2,11 @@ import pytest
 from packaging.version import parse as ver
 
 import psycopg
-from psycopg import pq, rows, errors as e
+from psycopg import errors as e
+from psycopg import pq, rows
 
 from .acompat import alist
 from ._test_cursor import ph
-
 
 pytestmark = pytest.mark.crdb_skip("server-side cursor")
 

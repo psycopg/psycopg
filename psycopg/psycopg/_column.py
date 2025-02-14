@@ -6,7 +6,7 @@ The Column object in Cursor.description
 
 from __future__ import annotations
 
-from typing import Any, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Sequence
 from operator import attrgetter
 
 if TYPE_CHECKING:

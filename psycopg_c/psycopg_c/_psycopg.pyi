@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
-from psycopg import pq, abc, BaseConnection
+from psycopg import BaseConnection, abc, pq
 from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGcancelConn, PGconn, PGresult

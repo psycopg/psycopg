@@ -3,7 +3,8 @@ import pickle
 import pytest
 
 from psycopg.postgres import types as builtins
-from .fix_crdb import is_crdb, crdb_encoding, skip_crdb
+
+from .fix_crdb import crdb_encoding, is_crdb, skip_crdb
 
 
 def test_description_attribs(conn):

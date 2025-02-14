@@ -9,10 +9,10 @@ information to the adapters if needed.
 
 from __future__ import annotations
 
-from typing import Any, Iterator, overload, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator, Sequence, overload
 
-from . import sql
 from . import errors as e
+from . import sql
 from .abc import AdaptContext, Query
 from .rows import dict_row
 from ._compat import TypeAlias, TypeVar
@@ -21,8 +21,8 @@ from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .connection import Connection
-    from .connection_async import AsyncConnection
     from ._connection_base import BaseConnection
+    from .connection_async import AsyncConnection
 
 T = TypeVar("T", bound="TypeInfo")
 RegistryKey: TypeAlias = "str | int | tuple[type, int]"

@@ -6,24 +6,22 @@ Support for multirange types adaptation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Generic, Iterable, MutableSequence, overload
 from decimal import Decimal
-from typing import Any, Generic, Iterable, MutableSequence, overload, TYPE_CHECKING
 from datetime import date, datetime
 
-from .. import sql
 from .. import _oids
 from .. import errors as e
-from .. import postgres
+from .. import postgres, sql
 from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
-from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .range import Range, T, dump_range_binary, dump_range_text, fail_dump
+from .range import load_range_binary, load_range_text
 from .._oids import INVALID_OID, TEXT_OID
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
-
-from .range import Range, T, load_range_text, load_range_binary
-from .range import dump_range_text, dump_range_binary, fail_dump
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection

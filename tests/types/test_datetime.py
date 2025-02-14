@@ -130,7 +130,8 @@ class TestDate:
         # NOTE: this is an example in the docs. Make sure it doesn't regress when
         # adding binary datetime adapters
         from datetime import date
-        from psycopg.types.datetime import DateLoader, DateDumper
+
+        from psycopg.types.datetime import DateDumper, DateLoader
 
         class InfDateDumper(DateDumper):
             def dump(self, obj):

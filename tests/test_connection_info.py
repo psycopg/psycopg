@@ -3,7 +3,7 @@ import datetime as dt
 import pytest
 
 import psycopg
-from psycopg.conninfo import make_conninfo, conninfo_to_dict
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg._encodings import pg2pyenc
 
 from .fix_crdb import crdb_encoding

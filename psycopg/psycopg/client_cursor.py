@@ -9,20 +9,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from functools import partial
 
-from ._queries import PostgresQuery, PostgresClientQuery
-
-from . import pq
 from . import adapt
 from . import errors as e
-from .abc import ConnectionType, Query, Params
+from . import pq
+from .abc import ConnectionType, Params, Query
 from .rows import Row
 from .cursor import Cursor
+from ._queries import PostgresClientQuery, PostgresQuery
 from ._preparing import Prepare
 from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
+
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 

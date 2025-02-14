@@ -5,8 +5,7 @@ Cython adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 cimport cython
-
-from libc.string cimport memcpy, memchr
+from libc.string cimport memchr, memcpy
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.unicode cimport (
     PyUnicode_AsEncodedString,
@@ -16,10 +15,11 @@ from cpython.unicode cimport (
     PyUnicode_DecodeUTF8,
 )
 
-from psycopg_c.pq cimport libpq, Escaping, _buffer_as_string_and_size
+from psycopg_c.pq cimport Escaping, _buffer_as_string_and_size, libpq
 
 from psycopg import errors as e
 from psycopg._encodings import pg2pyenc
+
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL

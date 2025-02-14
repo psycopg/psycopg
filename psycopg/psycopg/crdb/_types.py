@@ -5,15 +5,15 @@ Types configuration specific for CockroachDB.
 # Copyright (C) 2022 The Psycopg Team
 
 from enum import Enum
-from .._typeinfo import TypeInfo, TypesRegistry
 
 from ..abc import AdaptContext, NoneType
 from .._oids import TEXT_OID
 from .._typemod import BitTypeModifier, CharTypeModifier, NumericTypeModifier
 from .._typemod import TimeTypeModifier
-from .._adapters_map import AdaptersMap
-from ..types.enum import EnumDumper, EnumBinaryDumper
+from .._typeinfo import TypeInfo, TypesRegistry
+from ..types.enum import EnumBinaryDumper, EnumDumper
 from ..types.none import NoneDumper
+from .._adapters_map import AdaptersMap
 
 types = TypesRegistry()
 
@@ -54,8 +54,7 @@ def register_crdb_adapters(context: AdaptContext) -> None:
 def _register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
-    from ..types import array, bool, composite, datetime
-    from ..types import numeric, numpy, string, uuid
+    from ..types import array, bool, composite, datetime, numeric, numpy, string, uuid
 
     array.register_default_adapters(context)
     composite.register_default_adapters(context)

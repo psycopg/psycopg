@@ -12,13 +12,12 @@ The test is inspired to the `spike analysis`__ illustrated by HikariCP
 # mypy: allow-untyped-calls
 
 import time
+import logging
 import threading
 
 import psycopg
 import psycopg_pool
 from psycopg.rows import Row
-
-import logging
 
 
 def main() -> None:

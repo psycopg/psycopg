@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import re
 import struct
+from typing import TYPE_CHECKING, Any, Callable, cast
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Any, Callable, cast, TYPE_CHECKING
 
 from .. import _oids
 from ..pq import Format
 from .._tz import get_tzinfo
 from ..abc import AdaptContext, DumperKey
 from ..adapt import Buffer, Dumper, Loader, PyFormat
-from ..errors import InterfaceError, DataError
+from ..errors import DataError, InterfaceError
 from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 
 if TYPE_CHECKING:

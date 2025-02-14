@@ -4,8 +4,8 @@ psycopg_c.pq.Escaping object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.mem cimport PyMem_Free, PyMem_Malloc
 from libc.string cimport strlen
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 
 cdef class Escaping:

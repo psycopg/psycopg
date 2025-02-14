@@ -6,7 +6,7 @@ import psycopg.crdb
 from psycopg import errors as e
 from psycopg.crdb import AsyncCrdbConnection
 
-from ..acompat import asleep, spawn, gather
+from ..acompat import asleep, gather, spawn
 
 pytestmark = [pytest.mark.crdb]
 if True:  # ASYNC

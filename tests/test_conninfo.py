@@ -1,8 +1,8 @@
 import pytest
 
 from psycopg import ProgrammingError
-from psycopg.conninfo import make_conninfo, conninfo_to_dict
-from psycopg.conninfo import timeout_from_conninfo, _DEFAULT_CONNECT_TIMEOUT
+from psycopg.conninfo import _DEFAULT_CONNECT_TIMEOUT, conninfo_to_dict, make_conninfo
+from psycopg.conninfo import timeout_from_conninfo
 
 snowman = "\u2603"
 

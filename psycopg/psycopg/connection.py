@@ -12,29 +12,27 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generator, Iterator, cast, overload, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generator, Iterator, cast, overload
+from threading import Lock
 from contextlib import contextmanager
 
-from . import pq
 from . import errors as e
-from . import waiting
-from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, Query, RV
+from . import pq, waiting
+from .abc import RV, AdaptContext, ConnDict, ConnParam, Params, PQGen, Query
 from ._tpc import Xid
-from .rows import Row, RowFactory, tuple_row, args_row
+from .rows import Row, RowFactory, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
+from .cursor import Cursor
 from ._compat import Self
-from .conninfo import make_conninfo, conninfo_to_dict
-from .conninfo import conninfo_attempts, timeout_from_conninfo
+from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
+from .conninfo import timeout_from_conninfo
 from ._pipeline import Pipeline
 from .generators import notifies
 from .transaction import Transaction
-from .cursor import Cursor
 from ._capabilities import capabilities
 from .server_cursor import ServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
-
-from threading import Lock
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn

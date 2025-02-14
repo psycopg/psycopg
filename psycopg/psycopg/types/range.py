@@ -7,19 +7,18 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import Any, Generic, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, cast
 from decimal import Decimal
 from datetime import date, datetime
 
-from .. import sql
 from .. import _oids
 from .. import errors as e
-from .. import postgres
+from .. import postgres, sql
 from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc, Query
-from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
-from .._compat import cache, TypeVar
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from .._compat import TypeVar, cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 

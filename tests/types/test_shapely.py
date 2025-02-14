@@ -2,12 +2,13 @@ import pytest
 
 import psycopg
 from psycopg.pq import Format
-from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
+from psycopg.types import TypeInfo
 
 pytest.importorskip("shapely")
 
-from shapely.geometry import Point, Polygon, MultiPolygon  # noqa: E402
+from shapely.geometry import MultiPolygon, Point, Polygon  # noqa: E402
+
 from psycopg.types.shapely import register_shapely  # noqa: E402
 
 pytestmark = [

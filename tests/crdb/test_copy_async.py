@@ -1,16 +1,19 @@
-import pytest
 import string
-from random import randrange, choice
+from random import choice, randrange
 from typing import Any  # noqa: ignore
 
-from psycopg import pq, sql, errors as e
+import pytest
+
+from psycopg import errors as e
+from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.types.numeric import Int4
 
 from ..utils import eur
-from .._test_copy import sample_text, sample_binary  # noqa
+from .._test_copy import sample_binary  # noqa
 from .._test_copy import ensure_table_async, sample_records
 from .._test_copy import sample_tabledef as sample_tabledef_pg
+from .._test_copy import sample_text
 
 # CRDB int/serial are int8
 sample_tabledef = sample_tabledef_pg.replace("int", "int4").replace("serial", "int4")

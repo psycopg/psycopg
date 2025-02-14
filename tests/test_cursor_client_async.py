@@ -1,6 +1,7 @@
 import datetime as dt
 
 import pytest
+
 import psycopg
 from psycopg import rows
 

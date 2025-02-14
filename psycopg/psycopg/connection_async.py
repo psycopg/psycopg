@@ -9,20 +9,19 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, cast, overload, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, AsyncGenerator, AsyncIterator, cast, overload
 from contextlib import asynccontextmanager
 
-from . import pq
 from . import errors as e
-from . import waiting
-from .abc import AdaptContext, ConnDict, ConnParam, Params, PQGen, Query, RV
+from . import pq, waiting
+from .abc import RV, AdaptContext, ConnDict, ConnParam, Params, PQGen, Query
 from ._tpc import Xid
-from .rows import Row, AsyncRowFactory, tuple_row, args_row
+from .rows import AsyncRowFactory, Row, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self
-from .conninfo import make_conninfo, conninfo_to_dict
-from .conninfo import conninfo_attempts_async, timeout_from_conninfo
+from .conninfo import conninfo_attempts_async, conninfo_to_dict, make_conninfo
+from .conninfo import timeout_from_conninfo
 from ._pipeline import AsyncPipeline
 from .generators import notifies
 from .transaction import AsyncTransaction
@@ -35,6 +34,7 @@ if True:  # ASYNC
     import sys
     import asyncio
     from asyncio import Lock
+
     from ._compat import to_thread
 else:
     from threading import Lock

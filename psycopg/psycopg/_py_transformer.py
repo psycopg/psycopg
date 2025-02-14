@@ -11,13 +11,13 @@ dependencies problems).
 
 from __future__ import annotations
 
-from typing import Any, Sequence, DefaultDict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, DefaultDict, Sequence
 from collections import defaultdict
 
-from . import pq
 from . import abc
 from . import errors as e
-from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, NoneType
+from . import pq
+from .abc import AdaptContext, Buffer, LoadFunc, NoneType, PyFormat
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
 from ._compat import TypeAlias

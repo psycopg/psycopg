@@ -9,12 +9,11 @@ too many temporary Python objects and performing less memory copying.
 # Copyright (C) 2020 The Psycopg Team
 
 cimport cython
-from cpython.ref cimport Py_INCREF, Py_DECREF
+from cpython.ref cimport Py_DECREF, Py_INCREF
 from cpython.set cimport PySet_Add, PySet_Contains
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
-from cpython.list cimport (
-    PyList_New, PyList_CheckExact,
-    PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE)
+from cpython.list cimport PyList_CheckExact, PyList_GET_ITEM, PyList_GET_SIZE
+from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs

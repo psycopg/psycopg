@@ -6,7 +6,6 @@ import operator
 from typing import Callable
 from contextlib import contextmanager
 
-
 if sys.version_info >= (3, 9):
     import collections
 

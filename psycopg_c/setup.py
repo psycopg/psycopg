@@ -8,10 +8,10 @@ PostgreSQL database adapter for Python - optimisation package
 import os
 import sys
 import subprocess as sp
-
-from setuptools import setup, Extension
-from distutils.command.build_ext import build_ext
 from distutils import log
+from distutils.command.build_ext import build_ext
+
+from setuptools import Extension, setup
 
 # Move to the directory of setup.py: executing this file from another location
 # (e.g. from the project root) will fail

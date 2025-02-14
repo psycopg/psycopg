@@ -15,22 +15,21 @@ from __future__ import annotations
 import sys
 import logging
 from os import getpid
+from ctypes import POINTER, Array, addressof, byref, c_char_p, c_int, c_size_t, c_ulong
+from ctypes import c_void_p, cast, create_string_buffer, py_object, string_at
+from typing import TYPE_CHECKING, Any, Callable, Sequence
+from typing import cast as t_cast
 from weakref import ref
 
-from ctypes import Array, POINTER, cast, string_at, create_string_buffer, byref
-from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_object
-from typing import Any, Callable, Sequence
-from typing import cast as t_cast, TYPE_CHECKING
-
-from .. import errors as e
-from .._encodings import pg2pyenc
 from . import _pq_ctypes as impl
-from .misc import PGnotify, ConninfoOption, PGresAttDesc
-from .misc import connection_summary, _clean_error_message
+from .. import errors as e
+from .misc import ConninfoOption, PGnotify, PGresAttDesc, _clean_error_message
+from .misc import connection_summary
 from ._enums import ConnStatus, ExecStatus, Format, Trace
 
 # Imported locally to call them from __del__ methods
-from ._pq_ctypes import PQclear, PQfinish, PQfreeCancel, PQcancelFinish, PQstatus
+from ._pq_ctypes import PQcancelFinish, PQclear, PQfinish, PQfreeCancel, PQstatus
+from .._encodings import pg2pyenc
 
 if TYPE_CHECKING:
     from . import abc

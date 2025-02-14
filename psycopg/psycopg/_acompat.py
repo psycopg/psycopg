@@ -13,7 +13,7 @@ from __future__ import annotations
 import queue
 import asyncio
 import threading
-from typing import Any, Callable, Coroutine, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from ._compat import TypeAlias, TypeVar
 

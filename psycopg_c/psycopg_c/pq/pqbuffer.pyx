@@ -6,8 +6,8 @@ PQbuffer object implementation.
 
 cimport cython
 from cpython.bytes cimport PyBytes_AsStringAndSize
-from cpython.buffer cimport PyObject_CheckBuffer, PyBUF_SIMPLE
-from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
+from cpython.buffer cimport PyBUF_SIMPLE, PyBuffer_Release, PyObject_CheckBuffer
+from cpython.buffer cimport PyObject_GetBuffer
 
 
 @cython.freelist(32)

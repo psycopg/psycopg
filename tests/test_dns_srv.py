@@ -111,9 +111,9 @@ def afake_srv(monkeypatch):
 def get_fake_srv_function(monkeypatch):
     import_dnspython()
 
+    from dns.exception import DNSException
     from dns.rdtypes.IN.A import A
     from dns.rdtypes.IN.SRV import SRV
-    from dns.exception import DNSException
 
     fake_hosts = {
         ("_pg._tcp.dot.com", "SRV"): ["0 0 5432 ."],

@@ -6,8 +6,10 @@ Tests for psycopg.Cursor that are not supposed to pass for subclasses.
 """
 
 import pytest
+
 import psycopg
-from psycopg import pq, rows, errors as e
+from psycopg import errors as e
+from psycopg import pq, rows
 from psycopg.adapt import PyFormat
 
 
