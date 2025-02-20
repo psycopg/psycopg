@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- 3x faster UUID loading thanks to C implementation (:tickets:`#447, #998`).
+
+
 Current release
 ---------------
 

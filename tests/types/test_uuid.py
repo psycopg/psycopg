@@ -9,8 +9,17 @@ from psycopg.adapt import PyFormat
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_uuid_dump(conn, fmt_in):
-    val = "12345678123456781234567812345679"
+@pytest.mark.parametrize(
+    "val",
+    [
+        "12345678123456781234567812345679",
+        "12345678-1234-5678-1234-567812345679",
+        "0123456789abcdef0123456789abcdef",
+        "01234567-89ab-cdef-0123-456789abcdef",
+        "{a0eebc99-9c0b4ef8-bb6d6bb9-bd380a11}",
+    ],
+)
+def test_uuid_dump(conn, fmt_in, val):
     cur = conn.cursor()
     cur.execute(f"select %{fmt_in.value} = %s::uuid", (UUID(val), val))
     assert cur.fetchone()[0] is True
@@ -18,9 +27,18 @@ def test_uuid_dump(conn, fmt_in):
 
 @pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
-def test_uuid_load(conn, fmt_out):
+@pytest.mark.parametrize(
+    "val",
+    [
+        "12345678123456781234567812345679",
+        "12345678-1234-5678-1234-567812345679",
+        "0123456789abcdef0123456789abcdef",
+        "01234567-89ab-cdef-0123-456789abcdef",
+        "{a0eebc99-9c0b4ef8-bb6d6bb9-bd380a11}",
+    ],
+)
+def test_uuid_load(conn, fmt_out, val):
     cur = conn.cursor(binary=fmt_out)
-    val = "12345678123456781234567812345679"
     cur.execute("select %s::uuid", (val,))
     assert cur.fetchone()[0] == UUID(val)
 
@@ -31,7 +49,18 @@ def test_uuid_load(conn, fmt_out):
         copy.set_types(["uuid"])
         (res,) = copy.read_row()
 
-    assert res == UUID(val)
+    uuid_val = UUID(val)
+    assert res == uuid_val
+    # the C modules bypasses __init__, so checking the state of the UUID object
+    assert res.hex == uuid_val.hex
+    assert res.int == uuid_val.int
+    assert res.bytes == uuid_val.bytes
+    assert res.is_safe == uuid_val.is_safe
+    #  https://github.com/python/typeshed/issues/8832
+    slots = ("int", "is_safe", "__weakref__")
+    assert (
+        UUID.__slots__ == slots  # type: ignore[attr-defined]
+    ), "UUID structure changed"
 
 
 @pytest.mark.slow
