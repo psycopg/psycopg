@@ -797,7 +797,7 @@ class ConnectionPool(Generic[CT], BasePool):
             self._nconns_min = len(self._pool)
 
             # If the pool can shrink and connections were unused, drop one
-            if self._nconns > self._min_size and nconns_min > 0:
+            if self._nconns > self._min_size and nconns_min > 0 and self._pool:
                 to_close = self._pool.popleft()
                 self._nconns -= 1
                 self._nconns_min -= 1
