@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Bump the version number of the project.
-"""
+"""Bump the version number of the project."""
 
 from __future__ import annotations
 

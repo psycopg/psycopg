@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-r"""Add or edit github users in the backers file
-"""
+r"""Add or edit github users in the backers file"""
 
 import sys
 import logging

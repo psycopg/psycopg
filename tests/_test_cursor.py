@@ -47,7 +47,7 @@ def ph(cur: Any, query: str) -> str:
 
 
 def my_row_factory(
-    cursor: Union[psycopg.Cursor[List[str]], psycopg.AsyncCursor[List[str]]]
+    cursor: Union[psycopg.Cursor[List[str]], psycopg.AsyncCursor[List[str]]],
 ) -> RowMaker[List[str]]:
     if cursor.description is not None:
         titles = [c.name for c in cursor.description]

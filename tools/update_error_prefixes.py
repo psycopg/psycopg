@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Find the error prefixes in various l10n used for precise prefixstripping.
-"""
+"""Find the error prefixes in various l10n used for precise prefixstripping."""
 
 import re
 import logging
