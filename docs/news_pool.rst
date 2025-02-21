@@ -7,6 +7,18 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix spurious warning logging on pool shrinking (:ticket:`#1001`).
+
+
+Current release
+---------------
+
 psycopg_pool 3.2.4
 ^^^^^^^^^^^^^^^^^^
 
@@ -14,9 +26,6 @@ psycopg_pool 3.2.4
   ``__del__``, which has been reported happening during interpreter shutdown
   on Python 3.13 (see :ticket:`#954`).
 
-
-Current release
----------------
 
 psycopg_pool 3.2.3
 ^^^^^^^^^^^^^^^^^^
