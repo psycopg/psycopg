@@ -7,6 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix spurious warning logging on pool shrinking (:ticket:`#1001`).
+
+
 Current release
 ---------------
 
