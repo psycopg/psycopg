@@ -58,7 +58,7 @@ $ssh rm -rf "${rdir}"
 $ssh git clone https://github.com/psycopg/psycopg.git --branch ${tag} "${rdir}"
 
 # Build the wheel packages
-$ssh "${rdir}/tools/build/build_macos_arm64.sh"
+$ssh "${rdir}/tools/ci/build_macos_arm64.sh"
 
 # Transfer the packages locally
 scp -r "${user}@${host}:${rdir}/wheelhouse" .

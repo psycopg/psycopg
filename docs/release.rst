@@ -34,7 +34,7 @@ How to make a psycopg release
 
 - Delete the ``wheelhouse`` directory if there is one.
 
-- Build m1 packages by running ``./tools/build/run_build_macos_arm64.sh BRANCH``.
+- Build m1 packages by running ``./tools/ci/run_build_macos_arm64.sh BRANCH``.
   On successful completion it will save built packages in ``wheelhouse``
 
 - If all packages were built ok, push the new tag created by ``bump_version.py``::
@@ -84,9 +84,9 @@ When a new PostgreSQL major version is released
   -  ``.github/workflows/packages-bin.yml``.
   -  ``.github/workflows/tests.yml``.
 
-- Bump ``pg_version`` in ``tools/build/build_macos_arm64.sh``.
+- Bump ``pg_version`` in ``tools/ci/build_macos_arm64.sh``.
 
-- Bump the version in ``tools/build/wheel_win32_before_build.bat``.
+- Bump the version in ``tools/ci/wheel_win32_before_build.bat``.
 
 - Update the documented versions in:
 
@@ -107,7 +107,7 @@ When a new Python major version is released
   ``psycopg/pyproject.toml``, ``psycopg_c/pyproject.toml``, and
   ``psycopg_pool/pyproject.toml``.
 
-- Update the list of versions in ``tools/build/build_macos_arm64.sh`` to include
+- Update the list of versions in ``tools/ci/build_macos_arm64.sh`` to include
   the new version. Look for both the ``python_versions`` variable and the
   ``CIBW_BUILD`` environment variable.
 

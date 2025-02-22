@@ -92,7 +92,7 @@ log "building wheels"
 
 # Create the psycopg_binary source package
 rm -rf psycopg_binary
-python tools/build/copy_to_binary.py
+python tools/ci/copy_to_binary.py
 
 # Build the binary packages
 export CIBW_PLATFORM=macos
