@@ -22,7 +22,7 @@ on:
 
 env:
   # Latest release: https://www.postgresql.org/ftp/source/
-  LIBPQ_VERSION: "17.2"
+  LIBPQ_VERSION: "17.4"
   # Note: On windows the latest version can be found at
   # https://vcpkg.io/en/package/libpq
   # However the command line tool doesn't have a flag to specify to install
@@ -30,7 +30,7 @@ env:
   # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.4.0"
+  OPENSSL_VERSION: "3.4.1"
 
 jobs:
 
