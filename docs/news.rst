@@ -16,14 +16,14 @@ Python 3.3.0 (unreleased)
 - Drop support for Python 3.8.
 
 
-Psycopg 3.2.5 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.2.5
+^^^^^^^^^^^^^
 
 - 3x faster UUID loading thanks to C implementation (:tickets:`#447, #998`).
 
-
-Current release
----------------
 
 Psycopg 3.2.4
 ^^^^^^^^^^^^^
