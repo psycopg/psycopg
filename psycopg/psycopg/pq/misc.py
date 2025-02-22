@@ -53,6 +53,8 @@ class PGresAttDesc(NamedTuple):
 def find_libpq_full_path() -> str | None:
     if sys.platform == "win32":
         libname = ctypes.util.find_library("libpq.dll")
+        if libname is None:
+            return None
         libname = str(Path(libname).resolve())
 
     elif sys.platform == "darwin":
