@@ -17,20 +17,23 @@ name: Build binary packages
 
 on:
   workflow_dispatch:
+  pull_request:
+    files:
+      - '.github/workflows/packages-bin.yml'
   schedule:
     - cron: '28 7 * * sun'
 
 env:
   # Latest release: https://www.postgresql.org/ftp/source/
   LIBPQ_VERSION: "17.4"
-  # Note: On windows the latest version can be found at
-  # https://vcpkg.io/en/package/libpq
-  # However the command line tool doesn't have a flag to specify to install
-  # a specific version, so whatever you get you keep it.
-  # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
   OPENSSL_VERSION: "3.4.1"
+
+concurrency:
+  # Cancel older requests of the same workflow in the same branch.
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -196,15 +199,12 @@ jobs:
           $PgSvc.Start()
         shell: powershell
 
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          script: |
-            const path = require('path')
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
-            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
+          run-install: false
+      - run: pixi global install libpq=${{ env.LIBPQ_VERSION }} --with openssl=${{ env.OPENSSL_VERSION }}
+      - run: echo "EXTRA_LIB_DIR=$(pg_config.exe --bindir)" >> $GITHUB_OUTPUT
+        id: libdir
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -220,6 +220,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: '.\tools\build\wheel_win32_before_build.bat'
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir}
+            --add-path="${{ steps.libdir.outputs.EXTRA_LIB_DIR }}"
             --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: >-
@@ -227,8 +228,8 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 16"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{env.LIBPQ_VERSION}}
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{env.LIBPQ_VERSION}}
 
       - uses: actions/upload-artifact@v4
         with:
