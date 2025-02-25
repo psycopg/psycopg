@@ -145,7 +145,7 @@ class Bumper:
 chore: bump {self.package.name} package version to {self.want_version}
 """
         files = self.package.ini_files + [self.package.history_file]
-        cmdline = ["git", "commit", "-m", msg] + list(map(str, files))
+        cmdline = ["git", "commit", "-n", "-m", msg] + list(map(str, files))
         sp.check_call(cmdline)
 
     def create_tag(self) -> None:
