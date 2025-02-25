@@ -728,6 +728,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         """
         Return a connection to the pool after usage.
         """
+        await self._reset_connection(conn)
         if from_getconn:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._CONNECTIONS_LOST] += 1
@@ -737,7 +738,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 return
 
         else:
-            await self._reset_connection(conn)
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
                 # Connection no more in working state: create a new one.
