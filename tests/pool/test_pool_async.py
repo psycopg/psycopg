@@ -1018,3 +1018,24 @@ async def test_check_backoff(dsn, caplog, monkeypatch):
     for delta in deltas:
         assert delta == pytest.approx(want, 0.05), deltas
         want *= 2
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("status", ["ERROR", "INTRANS"])
+async def test_check_returns_an_ok_connection(dsn, status):
+    async def check(conn):
+        if status == "ERROR":
+            await conn.execute("wat")
+        elif status == "INTRANS":
+            await conn.execute("select 1")
+            1 / 0
+        else:
+            assert False
+
+    async with pool.AsyncConnectionPool(dsn, min_size=1, check=check) as p:
+        await p.wait(1.0)
+        with pytest.raises(pool.PoolTimeout):
+            conn = await p.getconn(0.5)
+
+        conn = list(p._pool)[0]
+        assert conn.info.transaction_status == TransactionStatus.IDLE
