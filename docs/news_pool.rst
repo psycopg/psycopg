@@ -7,6 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Reset transaction status of connection failing check (:ticket:`#1014`).
+
+
 Current release
 ---------------
 
