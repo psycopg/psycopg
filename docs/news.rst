@@ -7,6 +7,13 @@
 ``psycopg`` release notes
 =========================
 
+Python 3.2.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix connection semantic when using ``target_session_attrs=prefer-standby``
+  (:ticket:`#1021`).
+
+
 Current release
 ---------------
 
