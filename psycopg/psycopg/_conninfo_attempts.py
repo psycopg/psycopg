@@ -35,6 +35,11 @@ def conninfo_attempts(params: ConnMapping) -> list[ConnDict]:
     """
     last_exc = None
     attempts = []
+    if prefer_standby := (
+        get_param(params, "target_session_attrs") == "prefer-standby"
+    ):
+        params = {k: v for k, v in params.items() if k != "target_session_attrs"}
+
     for attempt in split_attempts(params):
         try:
             attempts.extend(_resolve_hostnames(attempt))
@@ -49,6 +54,13 @@ def conninfo_attempts(params: ConnMapping) -> list[ConnDict]:
 
     if get_param(params, "load_balance_hosts") == "random":
         shuffle(attempts)
+
+    # Order matters: first try all the load-balanced host in standby mode,
+    # then allow primary
+    if prefer_standby:
+        attempts = [
+            {**a, "target_session_attrs": "standby"} for a in attempts
+        ] + attempts
 
     return attempts
 
