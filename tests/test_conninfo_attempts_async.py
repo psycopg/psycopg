@@ -47,6 +47,16 @@ pytestmark = pytest.mark.anyio
             None,
         ),
         (
+            "host=1.1.1.1,2.2.2.2 target_session_attrs=prefer-standby",
+            [
+                "host=1.1.1.1 hostaddr=1.1.1.1 target_session_attrs=standby",
+                "host=2.2.2.2 hostaddr=2.2.2.2 target_session_attrs=standby",
+                "host=1.1.1.1 hostaddr=1.1.1.1",
+                "host=2.2.2.2 hostaddr=2.2.2.2",
+            ],
+            None,
+        ),
+        (
             "port=5432",
             [
                 "host=1.1.1.1 port=5432 hostaddr=1.1.1.1",
@@ -126,6 +136,16 @@ async def test_conninfo_attempts_no_resolve(
         (
             "host=dup.com",
             ["host=dup.com hostaddr=3.3.3.3", "host=dup.com hostaddr=3.3.3.4"],
+            None,
+        ),
+        (
+            "host=dup.com target_session_attrs=prefer-standby",
+            [
+                "host=dup.com hostaddr=3.3.3.3 target_session_attrs=standby",
+                "host=dup.com hostaddr=3.3.3.4 target_session_attrs=standby",
+                "host=dup.com hostaddr=3.3.3.3",
+                "host=dup.com hostaddr=3.3.3.4",
+            ],
             None,
         ),
     ],
