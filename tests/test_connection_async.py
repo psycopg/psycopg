@@ -909,3 +909,21 @@ async def test_right_exception_on_session_timeout(aconn):
     # This check is here to monitor if the behaviour on Window chamge.
     # Rreceiving the same exception of other platform will be acceptable.
     assert type(ex.value) is want_ex
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.parametrize("mode", ["any", "read-write", "primary", "prefer-standby"])
+async def test_connect_tsa(aconn_cls, dsn, mode):
+    # NOTE: assume that the test database is a "primary"
+    params = conninfo_to_dict(dsn, target_session_attrs=mode)
+    async with await aconn_cls.connect(**params) as aconn:
+        assert aconn.pgconn.status == pq.ConnStatus.OK
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.parametrize("mode", ["read-only", "standby", "nosuchmode"])
+async def test_connect_tsa_bad(aconn_cls, dsn, mode):
+    # NOTE: assume that the test database is a "primary"
+    params = conninfo_to_dict(dsn, target_session_attrs=mode)
+    with pytest.raises(psycopg.OperationalError, match=mode):
+        await aconn_cls.connect(**params)

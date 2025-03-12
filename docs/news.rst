@@ -16,6 +16,13 @@ Python 3.3.0 (unreleased)
 - Drop support for Python 3.8.
 
 
+Python 3.2.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix connection semantic when using ``target_session_attrs=prefer-standby``
+  (:ticket:`#1021`).
+
+
 Current release
 ---------------
 

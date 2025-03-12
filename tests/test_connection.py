@@ -903,3 +903,21 @@ def test_right_exception_on_session_timeout(conn):
     # This check is here to monitor if the behaviour on Window chamge.
     # Rreceiving the same exception of other platform will be acceptable.
     assert type(ex.value) is want_ex
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.parametrize("mode", ["any", "read-write", "primary", "prefer-standby"])
+def test_connect_tsa(conn_cls, dsn, mode):
+    # NOTE: assume that the test database is a "primary"
+    params = conninfo_to_dict(dsn, target_session_attrs=mode)
+    with conn_cls.connect(**params) as conn:
+        assert conn.pgconn.status == pq.ConnStatus.OK
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.parametrize("mode", ["read-only", "standby", "nosuchmode"])
+def test_connect_tsa_bad(conn_cls, dsn, mode):
+    # NOTE: assume that the test database is a "primary"
+    params = conninfo_to_dict(dsn, target_session_attrs=mode)
+    with pytest.raises(psycopg.OperationalError, match=mode):
+        conn_cls.connect(**params)
