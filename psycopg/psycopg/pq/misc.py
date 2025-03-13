@@ -153,7 +153,7 @@ def connection_summary(pgconn: abc.PGconn) -> str:
     parts = []
     if pgconn.status == OK:
         # Put together the [STATUS]
-        status = TransactionStatus(pgconn.transaction_status).name
+        status: str = TransactionStatus(pgconn.transaction_status).name
         if pgconn.pipeline_status:
             status += f", pipeline={PipelineStatus(pgconn.pipeline_status).name}"
 
