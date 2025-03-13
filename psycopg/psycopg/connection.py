@@ -85,6 +85,7 @@ class Connection(BaseConnection[Row]):
         context: AdaptContext | None = None,
         row_factory: RowFactory[Row] | None = None,
         cursor_factory: type[Cursor[Row]] | None = None,
+        server_cursor_factory: type[ServerCursor[Row]] | None = None,
         **kwargs: ConnParam,
     ) -> Self:
         """
@@ -122,6 +123,8 @@ class Connection(BaseConnection[Row]):
             rv.row_factory = row_factory
         if cursor_factory:
             rv.cursor_factory = cursor_factory
+        if server_cursor_factory:
+            rv.server_cursor_factory = server_cursor_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
         rv.prepare_threshold = prepare_threshold

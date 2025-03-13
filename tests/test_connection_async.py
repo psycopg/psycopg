@@ -623,6 +623,16 @@ async def test_server_cursor_factory(aconn):
         assert isinstance(cur, MyServerCursor)
 
 
+async def test_server_cursor_factory_connect(aconn_cls, dsn):
+    class MyCursor(psycopg.AsyncServerCursor[psycopg.rows.Row]):
+        pass
+
+    async with await aconn_cls.connect(dsn, server_cursor_factory=MyCursor) as aconn:
+        assert aconn.server_cursor_factory is MyCursor
+        async with aconn.cursor(name="n") as cur:
+            assert type(cur) is MyCursor
+
+
 @pytest.mark.parametrize("param", tx_params)
 async def test_transaction_param_default(aconn, param):
     assert getattr(aconn, param.name) is None
