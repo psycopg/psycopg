@@ -14,7 +14,7 @@ Python 3.3.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Drop support for Python 3.8.
-
+- Add ``server_cursor_factory`` parameter to `Connection.connect`.
 
 Current release
 ---------------
