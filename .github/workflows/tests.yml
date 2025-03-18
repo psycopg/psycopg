@@ -385,10 +385,11 @@ jobs:
           #   curl -fsSL -X GET \
           #   https://us-docker.pkg.dev/v2/cockroach-cloud-images/cockroachdb/cockroach/tags/list \
           #   | jq .tags | egrep 'latest-[^-]+-build' | sort
-          - {impl: c, crdb: "latest-master-build", python: "3.13"}
-          - {impl: c, crdb: "latest-v25.1-build", python: "3.13", libpq: newest}
-          - {impl: c, crdb: "latest-v24.3-build", python: "3.8", libpq: newest}
-          - {impl: python, crdb: "latest-v23.2-build", python: "3.12"}
+          - {impl: c, crdb: "master", python: "3.13"}
+          - {impl: c, crdb: "v25.1", python: "3.13", libpq: newest}
+          - {impl: c, crdb: "v24.3", python: "3.8", libpq: newest}
+          - {impl: python, crdb: "v23.2", python: "3.12"}
+
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
@@ -410,8 +411,13 @@ jobs:
         # Note: this would love to be a service, but I don't see a way to pass
         # the args to the docker run command line.
         run: |
-          docker pull ${CRDB_REPO}:${{ matrix.crdb }}
-          docker run --rm -d --name crdb -p 26257:26257 ${CRDB_REPO}:${{ matrix.crdb }} \
+          if [[ ${{ matrix.crdb }} == "master" ]]; then
+            image=us-docker.pkg.dev/cockroach-cloud-images/cockroachdb/cockroach:latest-master-build
+          else
+            image=cockroachdb/cockroach:latest-${{ matrix.crdb }}
+          fi
+          docker pull ${image}
+          docker run --rm -d --name crdb -p 26257:26257 ${image} \
             start-single-node --insecure
 
       - name: Install the wanted libpq version
