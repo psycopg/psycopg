@@ -91,3 +91,15 @@ async def test_identify_closure(aconn_cls, dsn):
                 assert 0.2 < dt < 2
             finally:
                 await gather(t)
+
+
+@pytest.mark.crdb("> 24.0", reason="autocommit_before_ddl not available")
+async def test_unknown_portal(aconn):
+    # See #1009. The test fails with CRDB v25.1.2 with autocommit before DDL enabled.
+    await aconn.execute("set autocommit_before_ddl=on")
+    await aconn.commit()
+    for i in range(10):
+        await aconn.execute("drop table if exists integer_table")
+        await aconn.execute(
+            "create table integer_table (id serial primary key, integer_data bigint)"
+        )
