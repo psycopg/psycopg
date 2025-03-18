@@ -91,3 +91,15 @@ def test_identify_closure(conn_cls, dsn):
                 assert 0.2 < dt < 2
             finally:
                 gather(t)
+
+
+@pytest.mark.crdb("> 24.0", reason="autocommit_before_ddl not available")
+def test_unknown_portal(conn):
+    # See #1009. The test fails with CRDB v25.1.2 with autocommit before DDL enabled.
+    conn.execute("set autocommit_before_ddl=on")
+    conn.commit()
+    for i in range(10):
+        conn.execute("drop table if exists integer_table")
+        conn.execute(
+            "create table integer_table (id serial primary key, integer_data bigint)"
+        )
