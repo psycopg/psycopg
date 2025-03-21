@@ -7,18 +7,18 @@ dict to hstore adaptation
 from __future__ import annotations
 
 import re
-from functools import cache
 from struct import Struct
+from functools import cache
 
 from .. import errors as e
 from .. import postgres
-from .._compat import TypeAlias
-from .._encodings import conn_encoding
-from .._oids import TEXT_OID
-from .._typeinfo import TypeInfo
-from ..abc import AdaptContext, Buffer
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from ..pq import Format
+from ..abc import AdaptContext, Buffer
+from .._oids import TEXT_OID
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from .._compat import TypeAlias
+from .._typeinfo import TypeInfo
+from .._encodings import conn_encoding
 
 _re_escape = re.compile(r'(["\\])')
 _re_unescape = re.compile(r"\\(.)")
@@ -93,18 +93,18 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
 
         i2b = _I2B
         encoding = self.encoding
-        buffer: list[bytes] = [i2b.get(l := len(obj)) or l.to_bytes(4, "big")]
+        buffer: list[bytes] = [i2b.get(i := len(obj)) or i.to_bytes(4, "big")]
 
         for key, value in obj.items():
             key_bytes = key.encode(encoding)
-            buffer.append(i2b.get(l := len(key_bytes)) or l.to_bytes(4, "big"))
+            buffer.append(i2b.get(i := len(key_bytes)) or i.to_bytes(4, "big"))
             buffer.append(key_bytes)
 
             if value is None:
-                buffer.append(b"\xFF\xFF\xFF\xFF")
+                buffer.append(b"\xff\xff\xff\xff")
             else:
                 value_bytes = value.encode(encoding)
-                buffer.append(i2b.get(l := len(value_bytes)) or l.to_bytes(4, "big"))
+                buffer.append(i2b.get(i := len(value_bytes)) or i.to_bytes(4, "big"))
                 buffer.append(value_bytes)
 
         return b"".join(buffer)
