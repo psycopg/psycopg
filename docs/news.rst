@@ -14,6 +14,7 @@ Psycopg 3.2.7 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add SRID support to shapely dumpers/loaders (:ticket:`#1028`).
+- Add support for binary hstore (:ticket:`#1030`).
 
 
 Current release
