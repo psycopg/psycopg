@@ -17,6 +17,9 @@ name: Build binary packages
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/packages-bin.yml'
   schedule:
     - cron: '28 7 * * sun'
 
