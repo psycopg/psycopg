@@ -39,10 +39,10 @@ _re_hstore = re.compile(
     re.VERBOSE,
 )
 
-_U32_STRUCT = Struct('!I')
+_U32_STRUCT = Struct("!I")
 """Simple struct representing an unsigned 32-bit big-endian integer."""
 
-_I2B = {i: i.to_bytes(4, 'big') for i in range(256)}
+_I2B = {i: i.to_bytes(4, "big") for i in range(256)}
 """Lookup dict for common ints to bytes conversions."""
 
 
@@ -89,25 +89,25 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
 
     def dump(self, obj: Hstore) -> Buffer:
         if not obj:
-            return b'\x00\x00\x00\x00'
+            return b"\x00\x00\x00\x00"
 
         i2b = _I2B
         encoding = self.encoding
-        buffer: list[bytes] = [i2b.get(l := len(obj)) or l.to_bytes(4, 'big')]
+        buffer: list[bytes] = [i2b.get(l := len(obj)) or l.to_bytes(4, "big")]
 
         for key, value in obj.items():
             key_bytes = key.encode(encoding)
-            buffer.append(i2b.get(l := len(key_bytes)) or l.to_bytes(4, 'big'))
+            buffer.append(i2b.get(l := len(key_bytes)) or l.to_bytes(4, "big"))
             buffer.append(key_bytes)
 
             if value is None:
-                buffer.append(b'\xFF\xFF\xFF\xFF')
+                buffer.append(b"\xFF\xFF\xFF\xFF")
             else:
                 value_bytes = value.encode(encoding)
-                buffer.append(i2b.get(l := len(value_bytes)) or l.to_bytes(4, 'big'))
+                buffer.append(i2b.get(l := len(value_bytes)) or l.to_bytes(4, "big"))
                 buffer.append(value_bytes)
 
-        return b''.join(buffer)
+        return b"".join(buffer)
 
 
 class HstoreLoader(RecursiveLoader):
@@ -147,17 +147,17 @@ class BaseHstoreBinaryLoader(RecursiveLoader):
         result = {}
 
         view = bytes(data)
-        size, = unpack_from(view)
+        (size,) = unpack_from(view)
         pos = 4
 
         for _ in range(size):
-            key_size, = unpack_from(view, pos)
+            (key_size,) = unpack_from(view, pos)
             pos += 4
 
             key = view[pos : pos + key_size].decode(encoding)
             pos += key_size
 
-            value_size, = unpack_from(view, pos)
+            (value_size,) = unpack_from(view, pos)
             pos += 4
 
             if value_size == 0xFFFFFFFF:
