@@ -42,8 +42,8 @@ _re_hstore = re.compile(
 _U32_STRUCT = Struct("!I")
 """Simple struct representing an unsigned 32-bit big-endian integer."""
 
-_I2B = {i: i.to_bytes(4, "big") for i in range(256)}
-"""Lookup dict for common ints to bytes conversions."""
+_I2B = [i.to_bytes(4, "big") for i in range(256)]
+"""Lookup list for small ints to bytes conversions."""
 
 
 Hstore: TypeAlias = "dict[str, str | None]"
@@ -93,18 +93,24 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
 
         i2b = _I2B
         encoding = self.encoding
-        buffer: list[bytes] = [i2b.get(i := len(obj)) or i.to_bytes(4, "big")]
+        buffer: list[bytes] = [
+            i2b[i] if (i := len(obj)) < 256 else i.to_bytes(4, "big")
+        ]
 
         for key, value in obj.items():
             key_bytes = key.encode(encoding)
-            buffer.append(i2b.get(i := len(key_bytes)) or i.to_bytes(4, "big"))
+            buffer.append(
+                i2b[i] if (i := len(key_bytes)) < 256 else i.to_bytes(4, "big")
+            )
             buffer.append(key_bytes)
 
             if value is None:
                 buffer.append(b"\xff\xff\xff\xff")
             else:
                 value_bytes = value.encode(encoding)
-                buffer.append(i2b.get(i := len(value_bytes)) or i.to_bytes(4, "big"))
+                buffer.append(
+                    i2b[i] if (i := len(value_bytes)) < 256 else i.to_bytes(4, "big")
+                )
                 buffer.append(value_bytes)
 
         return b"".join(buffer)
