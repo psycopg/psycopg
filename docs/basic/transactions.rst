@@ -1,13 +1,13 @@
 .. currentmodule:: psycopg
 
-.. index:: Transactions management
+.. index:: transaction management
 .. index:: InFailedSqlTransaction
 .. index:: idle in transaction
 
 .. _transactions:
 
-Transactions management
-=======================
+Transaction management
+======================
 
 Psycopg has a behaviour that may seem surprising compared to
 :program:`psql`: by default, any database operation will start a new
@@ -223,6 +223,8 @@ If a `!transaction()` block starts when no transaction is active then it will
 manage a proper transaction. In essence, a transaction context tries to leave
 a connection in the state it found it, and leaves you to deal with the wider
 context.
+
+.. _common-transaction-idiom:
 
 .. hint::
     The interaction between non-autocommit transactions and transaction
