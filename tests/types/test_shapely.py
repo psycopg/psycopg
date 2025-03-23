@@ -7,6 +7,7 @@ from psycopg.types import TypeInfo
 
 pytest.importorskip("shapely")
 
+from shapely import get_srid, set_srid
 from shapely.geometry import MultiPolygon, Point, Polygon
 
 from psycopg.types.shapely import register_shapely
@@ -105,7 +106,8 @@ def test_with_adapter(shapely_conn):
 @pytest.mark.parametrize("fmt_out", Format)
 def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
     SAMPLE_POINT = Point(1.2, 3.4)
-    SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
+    SAMPLE_POLYGON_4326 = Polygon([(0, 0), (1, 1), (1, 0)])
+    set_srid(SAMPLE_POLYGON_4326, 4326)
 
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
@@ -122,16 +124,18 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
         )
         cur.execute(
             f"insert into sample_geoms(id, geom) VALUES(2, %{fmt_in})",
-            (SAMPLE_POLYGON,),
+            (SAMPLE_POLYGON_4326,),
         )
 
         cur.execute("select geom from sample_geoms where id=1")
         result = cur.fetchone()[0]
         assert result == SAMPLE_POINT
+        assert get_srid(result) == 0
 
         cur.execute("select geom from sample_geoms where id=2")
         result = cur.fetchone()[0]
-        assert result == SAMPLE_POLYGON
+        assert result == SAMPLE_POLYGON_4326
+        assert get_srid(result) == 4326
 
 
 @pytest.mark.parametrize("fmt_out", Format)
