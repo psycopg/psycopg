@@ -7,9 +7,9 @@ from psycopg.types import TypeInfo
 
 pytest.importorskip("shapely")
 
-from shapely.geometry import MultiPolygon, Point, Polygon  # noqa: E402
+from shapely.geometry import MultiPolygon, Point, Polygon
 
-from psycopg.types.shapely import register_shapely  # noqa: E402
+from psycopg.types.shapely import register_shapely
 
 pytestmark = [
     pytest.mark.postgis,

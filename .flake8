@@ -13,3 +13,7 @@ per-file-ignores =
 
     # Allow concatenated string literals from async_to_sync
     psycopg_pool/psycopg_pool/pool.py: E501
+
+    # Pytest's importorskip() getting in the way
+    tests/types/test_numpy.py: E402
+    tests/types/test_shapely.py: E402

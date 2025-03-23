@@ -7,12 +7,9 @@ from packaging.version import parse as ver  # noqa: F401  # used in skipif
 from psycopg.pq import Format
 from psycopg.adapt import PyFormat
 
-try:
-    import numpy as np
-except ImportError:
-    pass
-
 pytest.importorskip("numpy")
+
+import numpy as np
 
 pytestmark = [pytest.mark.numpy]
 
