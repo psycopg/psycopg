@@ -7,8 +7,14 @@ from psycopg.types import TypeInfo
 
 pytest.importorskip("shapely")
 
-from shapely import get_srid, set_srid
 from shapely.geometry import MultiPolygon, Point, Polygon
+
+try:
+    from shapely import get_srid, set_srid
+except ImportError:
+    # Shapely<2 compatibility, no notion of SRID
+    get_srid = None  # type: ignore[assignment]
+    set_srid = None  # type: ignore[assignment]
 
 from psycopg.types.shapely import register_shapely
 
@@ -107,7 +113,8 @@ def test_with_adapter(shapely_conn):
 def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON_4326 = Polygon([(0, 0), (1, 1), (1, 0)])
-    set_srid(SAMPLE_POLYGON_4326, 4326)
+    if set_srid is not None:
+        SAMPLE_POLYGON_4326 = set_srid(SAMPLE_POLYGON_4326, 4326)
 
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
@@ -130,12 +137,14 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
         cur.execute("select geom from sample_geoms where id=1")
         result = cur.fetchone()[0]
         assert result == SAMPLE_POINT
-        assert get_srid(result) == 0
+        if get_srid is not None:
+            assert get_srid(result) == 0
 
         cur.execute("select geom from sample_geoms where id=2")
         result = cur.fetchone()[0]
         assert result == SAMPLE_POLYGON_4326
-        assert get_srid(result) == 4326
+        if get_srid is not None:
+            assert get_srid(result) == 4326
 
 
 @pytest.mark.parametrize("fmt_out", Format)
