@@ -13,9 +13,7 @@ from ..adapt import Dumper, Loader
 from .._typeinfo import TypeInfo
 
 try:
-    from shapely import from_wkb, to_wkb
     from shapely.geometry.base import BaseGeometry
-
 except ImportError:
     raise ImportError(
         "The module psycopg.types.shapely requires the package 'Shapely'"
@@ -23,29 +21,38 @@ except ImportError:
     )
 
 
+try:
+    from shapely import from_wkb as from_wkb_compat
+    from shapely import to_wkb as to_wkb_compat
+except ImportError:
+    # Shapely<2 compatibility
+    from shapely.wkb import dumps as to_wkb_compat  # type: ignore[no-redef]
+    from shapely.wkb import loads as from_wkb_compat  # type: ignore[no-redef]
+
+
 class GeometryBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> BaseGeometry:
-        return from_wkb(bytes(data))
+        return from_wkb_compat(bytes(data))
 
 
 class GeometryLoader(Loader):
     def load(self, data: Buffer) -> BaseGeometry:
         # it's a hex string in binary
-        return from_wkb(bytes(data))
+        return from_wkb_compat(bytes(data))
 
 
 class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
     def dump(self, obj: BaseGeometry) -> Buffer | None:
-        return to_wkb(obj, include_srid=True)
+        return to_wkb_compat(obj, include_srid=True)
 
 
 class BaseGeometryDumper(Dumper):
     def dump(self, obj: BaseGeometry) -> Buffer | None:
-        return to_wkb(obj, True, include_srid=True).encode()
+        return to_wkb_compat(obj, True, include_srid=True).encode()
 
 
 def register_shapely(info: TypeInfo, context: AdaptContext | None = None) -> None:
