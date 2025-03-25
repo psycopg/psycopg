@@ -16,6 +16,12 @@ Python 3.3.0 (unreleased)
 - Drop support for Python 3.8.
 
 
+Python 3.2.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add SRID support to shapely dumpers/loaders (:ticket:`#1028`).
+
+
 Current release
 ---------------
 
