@@ -9,14 +9,12 @@ pytest.importorskip("shapely")
 
 from shapely.geometry import MultiPolygon, Point, Polygon
 
-try:
-    from shapely import get_srid, set_srid
-except ImportError:
-    # Shapely<2 compatibility, no notion of SRID
-    get_srid = None  # type: ignore[assignment]
-    set_srid = None  # type: ignore[assignment]
+from psycopg.types.shapely import register_shapely, shapely_version
 
-from psycopg.types.shapely import register_shapely
+if shapely_version >= (2, 0):
+    from shapely import get_srid, set_srid
+else:
+    set_srid = get_srid = None  # type: ignore[assignment]
 
 pytestmark = [
     pytest.mark.postgis,
