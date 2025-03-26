@@ -12,8 +12,7 @@ from .._compat import cache
 from .._typeinfo import TypeInfo
 
 try:
-    from shapely.wkb import dumps, loads
-    from shapely.geometry.base import BaseGeometry
+    import shapely
 
 except ImportError:
     raise ImportError(
@@ -21,34 +20,40 @@ except ImportError:
         " to be installed"
     )
 
+from shapely.geometry.base import BaseGeometry
+
+shapely_version = tuple(int(s) for s in shapely.__version__.split(".") if s.isdigit())
+
+if shapely_version >= (2, 0):
+    from shapely import from_wkb, to_wkb
+else:
+    from shapely.wkb import dumps as to_wkb  # type: ignore[no-redef]
+    from shapely.wkb import loads as from_wkb  # type: ignore[no-redef]
+
 
 class GeometryBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> BaseGeometry:
-        if not isinstance(data, bytes):
-            data = bytes(data)
-        return loads(data)
+        return from_wkb(bytes(data))
 
 
 class GeometryLoader(Loader):
     def load(self, data: Buffer) -> BaseGeometry:
         # it's a hex string in binary
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        return loads(data.decode(), hex=True)
+        return from_wkb(bytes(data))
 
 
 class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
     def dump(self, obj: BaseGeometry) -> Buffer | None:
-        return dumps(obj)  # type: ignore
+        return to_wkb(obj, include_srid=True)
 
 
 class BaseGeometryDumper(Dumper):
     def dump(self, obj: BaseGeometry) -> Buffer | None:
-        return dumps(obj, hex=True).encode()  # type: ignore
+        return to_wkb(obj, True, include_srid=True).encode()
 
 
 def register_shapely(info: TypeInfo, context: AdaptContext | None = None) -> None:
