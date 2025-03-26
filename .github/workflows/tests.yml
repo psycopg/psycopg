@@ -40,7 +40,7 @@ jobs:
 
           - {impl: python, python: "3.9", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
-          - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
+          - {impl: python, python: "3.12", ext: postgis, postgres: "postgis/postgis"}
           - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:14"}
           - {impl: c, python: "3.11", ext: numpy, postgres: "postgres:15"}
           - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}

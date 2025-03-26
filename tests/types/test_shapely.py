@@ -106,7 +106,7 @@ def test_no_info_error(conn):
 def test_with_adapter(shapely_conn, obj, fmt_in):
     obj = globals()[obj]
     with shapely_conn.cursor() as cur:
-        cur.execute(f"SELECT pg_typeof(%{fmt_in})", [obj])
+        cur.execute(f"SELECT pg_typeof(%{fmt_in.value})", [obj])
         assert cur.fetchone()[0] == "geometry"
 
 
@@ -121,7 +121,7 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out, obj, srid):
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute("drop table if exists sample_geoms")
         cur.execute("create table sample_geoms(id SERIAL PRIMARY KEY, geom geometry)")
-        cur.execute(f"insert into sample_geoms(geom) VALUES(%{fmt_in})", (obj,))
+        cur.execute(f"insert into sample_geoms(geom) VALUES(%{fmt_in.value})", (obj,))
         cur.execute("select geom from sample_geoms")
         result = cur.fetchone()[0]
         assert result == obj
