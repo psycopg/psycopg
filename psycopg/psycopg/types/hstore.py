@@ -85,8 +85,7 @@ class HstoreLoader(RecursiveLoader):
             if m is None or m.start() != start:
                 raise e.DataError(f"error parsing hstore pair at char {start}")
             k = _re_unescape.sub(r"\1", m.group(1))
-            v = m.group(2)
-            if v is not None:
+            if (v := m.group(2)) is not None:
                 v = _re_unescape.sub(r"\1", v)
 
             rv[k] = v

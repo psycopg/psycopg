@@ -32,8 +32,7 @@ from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
 
 # Set the logger to a quiet default, can be enabled if needed
-logger = logging.getLogger("psycopg")
-if logger.level == logging.NOTSET:
+if (logger := logging.getLogger("psycopg")).level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
 
 # DBAPI compliance

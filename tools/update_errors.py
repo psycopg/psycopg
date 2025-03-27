@@ -38,20 +38,18 @@ def parse_errors_txt(url):
     page = urlopen(url)
     for line in page.read().decode("ascii").splitlines():
         # Strip comments and skip blanks
-        line = line.split("#")[0].strip()
-        if not line:
+
+        if not (line := line.split("#")[0].strip()):
             continue
 
         # Parse a section
-        m = re.match(r"Section: (Class (..) - .+)", line)
-        if m:
+        if m := re.match("Section: (Class (..) - .+)", line):
             label, class_ = m.groups()
             classes[class_] = label
             continue
 
         # Parse an error
-        m = re.match(r"(.....)\s+(?:E|W|S)\s+ERRCODE_(\S+)(?:\s+(\S+))?$", line)
-        if m:
+        if m := re.match(r"(.....)\s+(?:E|W|S)\s+ERRCODE_(\S+)(?:\s+(\S+))?$", line):
             sqlstate, macro, spec = m.groups()
             # skip sqlstates without specs as they are not publicly visible
             if not spec:

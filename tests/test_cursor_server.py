@@ -385,8 +385,7 @@ def test_row_factory(conn):
     recs = cur.fetchall()
     cur.scroll(0, "absolute")
     while True:
-        rec = cur.fetchone()
-        if not rec:
+        if not (rec := cur.fetchone()):
             break
         recs.append(rec)
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2

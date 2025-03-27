@@ -391,8 +391,7 @@ async def test_row_factory(aconn):
     recs = await cur.fetchall()
     await cur.scroll(0, "absolute")
     while True:
-        rec = await cur.fetchone()
-        if not rec:
+        if not (rec := (await cur.fetchone())):
             break
         recs.append(rec)
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2

@@ -91,13 +91,11 @@ async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc)
 
                     if fetch == "one":
                         while True:
-                            tmp = await cur.fetchone()
-                            if tmp is None:
+                            if (await cur.fetchone()) is None:
                                 break
                     elif fetch == "many":
                         while True:
-                            tmp = await cur.fetchmany(3)
-                            if not tmp:
+                            if not (await cur.fetchmany(3)):
                                 break
                     elif fetch == "all":
                         await cur.fetchall()

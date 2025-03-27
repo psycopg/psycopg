@@ -262,8 +262,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
-            conn = await self._get_ready_connection(timeout)
-            if not conn:
+            if not (conn := (await self._get_ready_connection(timeout))):
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos: WaitingClient[ACT] = WaitingClient()
@@ -625,9 +624,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         StopWorker is received.
         """
         while True:
-            task = await q.get()
-
-            if isinstance(task, StopWorker):
+            if isinstance((task := (await q.get())), StopWorker):
                 logger.debug("terminating working task %s", current_task_name())
                 return
 
@@ -660,8 +657,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         if self._configure:
             await self._configure(conn)
-            status = conn.pgconn.transaction_status
-            if status != TransactionStatus.IDLE:
+            if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
                 sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
                     f"connection left in status {sname} by configure function"
@@ -791,13 +787,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             while self._waiting:
                 # If there is a client waiting (which is still waiting and
                 # hasn't timed out), give it the connection and notify it.
-                pos = self._waiting.popleft()
-                if await pos.set(conn):
+
+                if await self._waiting.popleft().set(conn):
                     break
             else:
                 # No client waiting for a connection: put it back into the pool
                 self._pool.append(conn)
-
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is full.
                 if self._pool_full_event and len(self._pool) >= self._min_size:
@@ -807,10 +802,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         """
         Bring a connection to IDLE state or close it.
         """
-        status = conn.pgconn.transaction_status
-        if status == TransactionStatus.IDLE:
+        if (status := conn.pgconn.transaction_status) == TransactionStatus.IDLE:
             pass
-
         elif status == TransactionStatus.UNKNOWN:
             # Connection closed
             return
@@ -837,8 +830,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if self._reset:
             try:
                 await self._reset(conn)
-                status = conn.pgconn.transaction_status
-                if status != TransactionStatus.IDLE:
+                if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
                     sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
                         f"connection left in status {sname} by reset function"

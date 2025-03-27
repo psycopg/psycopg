@@ -323,8 +323,7 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     def run_process():
         nonlocal proc
         proc = sp.Popen(
-            [sys.executable, "-s", "-c", script],
-            creationflags=creationflags,
+            [sys.executable, "-s", "-c", script], creationflags=creationflags
         )
         proc.communicate()
 
@@ -335,8 +334,8 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
         cur = conn.execute(
             "select pid from pg_stat_activity where application_name = %s", (APPNAME,)
         )
-        rec = cur.fetchone()
-        if rec:
+
+        if rec := cur.fetchone():
             pid = rec[0]
             break
         time.sleep(0.1)

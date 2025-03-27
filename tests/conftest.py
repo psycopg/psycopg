@@ -49,11 +49,8 @@ def pytest_addoption(parser):
 
 
 def pytest_report_header(config):
-    rv = []
-
-    rv.append(f"default selector: {selectors.DefaultSelector.__name__}")
-    loop = config.getoption("--loop")
-    if loop != "default":
+    rv = [f"default selector: {selectors.DefaultSelector.__name__}"]
+    if (loop := config.getoption("--loop")) != "default":
         rv.append(f"asyncio loop: {loop}")
 
     return rv
@@ -65,8 +62,7 @@ def pytest_sessionstart(session):
     # In case of segfault, pytest doesn't get a chance to write failed tests
     # in the cache. As a consequence, retries would find no test failed and
     # assume that all tests passed in the previous run, making the whole test pass.
-    cache = session.config.cache
-    if cache.get("segfault", False):
+    if (cache := session.config.cache).get("segfault", False):
         session.warn(Warning("Previous run resulted in segfault! Not running any test"))
         session.warn(Warning("(delete '.pytest_cache/v/segfault' to clear this state)"))
         raise session.Failed

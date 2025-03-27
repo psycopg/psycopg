@@ -204,8 +204,7 @@ def test_numbers_array(num, type, fmt_in):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
-    wrapper = getattr(psycopg.types.numeric, wrapper)
-    if wrapper is Decimal:
+    if (wrapper := getattr(psycopg.types.numeric, wrapper)) is Decimal:
         want_cls = Decimal
     else:
         assert wrapper.__mro__[1] in (int, float)

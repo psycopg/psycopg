@@ -19,8 +19,7 @@ skip_numpy2 = pytest.mark.skipif(
 
 
 def _get_arch_size() -> int:
-    psize = struct.calcsize("P") * 8
-    if psize not in (32, 64):
+    if (psize := (struct.calcsize("P") * 8)) not in (32, 64):
         msg = f"the pointer size {psize} is unusual"
         raise ValueError(msg)
     return psize
@@ -198,9 +197,7 @@ def test_copy_by_oid(conn, val, nptype, pgtypes, fmt):
 
     fnames = [f"f{t}" for t in pgtypes]
     fields = [f"f{t} {t}" for fname, t in zip(fnames, pgtypes)]
-    cur.execute(
-        f"create table numpyoid (id serial primary key, {', '.join(fields)})",
-    )
+    cur.execute(f"create table numpyoid (id serial primary key, {', '.join(fields)})")
     with cur.copy(
         f"copy numpyoid ({', '.join(fnames)}) from stdin (format {fmt.name})"
     ) as copy:

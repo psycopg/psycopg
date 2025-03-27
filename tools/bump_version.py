@@ -168,8 +168,7 @@ chore: bump {self.package.name} package version to {self.want_version}
         matches = []
         with fp.open() as f:
             for line in f:
-                m = self._ini_regex.match(line)
-                if m:
+                if m := self._ini_regex.match(line):
                     matches.append(m)
 
         if not matches:
@@ -240,8 +239,7 @@ chore: bump {self.package.name} package version to {self.want_version}
         with fp.open() as f:
             lines = f.readlines()
 
-        lns = self._find_lines(r"^[^\s]+ " + re.escape(str(version)), lines)
-        if not lns:
+        if not (lns := self._find_lines("^[^\\s]+ " + re.escape(str(version)), lines)):
             logger.warning("no change log line found")
             return []
 
