@@ -96,13 +96,11 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory, gc):
                 await cur.execute(faker.select_stmt)
 
                 if fetch == "one":
-                    while True:
-                        if (await cur.fetchone()) is None:
-                            break
+                    while (await cur.fetchone()) is not None:
+                        pass
                 elif fetch == "many":
-                    while True:
-                        if not (await cur.fetchmany(3)):
-                            break
+                    while await cur.fetchmany(3):
+                        pass
                 elif fetch == "all":
                     await cur.fetchall()
                 elif fetch == "iter":

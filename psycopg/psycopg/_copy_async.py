@@ -78,9 +78,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
     async def __aiter__(self) -> AsyncIterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
-        while True:
-            if not (data := (await self.read())):
-                break
+        while data := (await self.read()):
             yield data
 
     async def read(self) -> Buffer:
@@ -98,9 +96,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         Note that the records returned will be tuples of unparsed strings or
         bytes, unless data types are specified using `set_types()`.
         """
-        while True:
-            if (record := (await self.read_row())) is None:
-                break
+        while (record := (await self.read_row())) is not None:
             yield record
 
     async def read_row(self) -> tuple[Any, ...] | None:
@@ -251,9 +247,7 @@ class AsyncQueuedLibpqWriter(AsyncLibpqWriter):
         The function is designed to be run in a separate task.
         """
         try:
-            while True:
-                if not (data := (await self._queue.get())):
-                    break
+            while data := (await self._queue.get()):
                 await self.connection.wait(
                     copy_to(self._pgconn, data, flush=PREFER_FLUSH)
                 )
