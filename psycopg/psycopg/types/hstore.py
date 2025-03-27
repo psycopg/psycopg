@@ -7,15 +7,18 @@ dict to hstore adaptation
 from __future__ import annotations
 
 import re
+from struct import Struct
 from functools import cache
 
 from .. import errors as e
 from .. import postgres
+from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from .._oids import TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._compat import TypeAlias
 from .._typeinfo import TypeInfo
+from .._encodings import conn_encoding
 
 _re_escape = re.compile(r'(["\\])')
 _re_unescape = re.compile(r"\\(.)")
@@ -35,6 +38,12 @@ _re_hstore = re.compile(
 """,
     re.VERBOSE,
 )
+
+_U32_STRUCT = Struct("!I")
+"""Simple struct representing an unsigned 32-bit big-endian integer."""
+
+_I2B = [i.to_bytes(4, "big") for i in range(256)]
+"""Lookup list for small ints to bytes conversions."""
 
 
 Hstore: TypeAlias = "dict[str, str | None]"
@@ -74,6 +83,39 @@ class BaseHstoreDumper(RecursiveDumper):
         return dumper.dump(data)
 
 
+class BaseHstoreBinaryDumper(RecursiveDumper):
+    format = Format.BINARY
+    encoding: str
+
+    def dump(self, obj: Hstore) -> Buffer:
+        if not obj:
+            return b"\x00\x00\x00\x00"
+
+        i2b = _I2B
+        encoding = self.encoding
+        buffer: list[bytes] = [
+            i2b[i] if (i := len(obj)) < 256 else i.to_bytes(4, "big")
+        ]
+
+        for key, value in obj.items():
+            key_bytes = key.encode(encoding)
+            buffer.append(
+                i2b[i] if (i := len(key_bytes)) < 256 else i.to_bytes(4, "big")
+            )
+            buffer.append(key_bytes)
+
+            if value is None:
+                buffer.append(b"\xff\xff\xff\xff")
+            else:
+                value_bytes = value.encode(encoding)
+                buffer.append(
+                    i2b[i] if (i := len(value_bytes)) < 256 else i.to_bytes(4, "big")
+                )
+                buffer.append(value_bytes)
+
+        return b"".join(buffer)
+
+
 class HstoreLoader(RecursiveLoader):
     def load(self, data: Buffer) -> Hstore:
         loader = self._tx.get_loader(TEXT_OID, self.format)
@@ -96,6 +138,43 @@ class HstoreLoader(RecursiveLoader):
             raise e.DataError(f"error parsing hstore: unparsed data after char {start}")
 
         return rv
+
+
+class BaseHstoreBinaryLoader(RecursiveLoader):
+    format = Format.BINARY
+    encoding: str
+
+    def load(self, data: Buffer) -> Hstore:
+        if len(data) < 12:  # Fast-path if too small to contain any data.
+            return {}
+
+        unpack_from = _U32_STRUCT.unpack_from
+        encoding = self.encoding
+        result = {}
+
+        view = bytes(data)
+        (size,) = unpack_from(view)
+        pos = 4
+
+        for _ in range(size):
+            (key_size,) = unpack_from(view, pos)
+            pos += 4
+
+            key = view[pos : pos + key_size].decode(encoding)
+            pos += key_size
+
+            (value_size,) = unpack_from(view, pos)
+            pos += 4
+
+            if value_size == 0xFFFFFFFF:
+                value = None
+            else:
+                value = view[pos : pos + value_size].decode(encoding)
+                pos += value_size
+
+            result[key] = value
+
+        return result
 
 
 def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None:
@@ -121,12 +200,15 @@ def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None
     info.register(context)
 
     adapters = context.adapters if context else postgres.adapters
+    encoding = conn_encoding(context.connection if context is not None else None)
 
     # Generate and register a customized text dumper
     adapters.register_dumper(dict, _make_hstore_dumper(info.oid))
+    adapters.register_dumper(dict, _make_hstore_binary_dumper(info.oid, encoding))
 
     # register the text loader on the oid
     adapters.register_loader(info.oid, HstoreLoader)
+    adapters.register_loader(info.oid, _make_hstore_binary_loader(encoding))
 
 
 # Cache all dynamically-generated types to avoid leaks in case the types
@@ -145,3 +227,20 @@ def _make_hstore_dumper(oid_in: int) -> type[BaseHstoreDumper]:
         oid = oid_in
 
     return HstoreDumper
+
+
+@cache
+def _make_hstore_binary_dumper(oid_in: int, enc: str) -> type[BaseHstoreBinaryDumper]:
+    class HstoreBinaryDumper(BaseHstoreBinaryDumper):
+        oid = oid_in
+        encoding = enc
+
+    return HstoreBinaryDumper
+
+
+@cache
+def _make_hstore_binary_loader(enc: str) -> type[BaseHstoreBinaryLoader]:
+    class HstoreBinaryLoader(BaseHstoreBinaryLoader):
+        encoding = enc
+
+    return HstoreBinaryLoader
