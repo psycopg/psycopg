@@ -69,9 +69,7 @@ class AdaptersMap:
     _optimised: dict[type, type] = {}
 
     def __init__(
-        self,
-        template: AdaptersMap | None = None,
-        types: TypesRegistry | None = None,
+        self, template: AdaptersMap | None = None, types: TypesRegistry | None = None
     ):
         if template:
             self._dumpers = template._dumpers.copy()
@@ -179,8 +177,7 @@ class AdaptersMap:
         if _psycopg:
             loader = self._get_optimised(loader)
 
-        fmt = loader.format
-        if not self._own_loaders[fmt]:
+        if not self._own_loaders[(fmt := loader.format)]:
             self._loaders[fmt] = self._loaders[fmt].copy()
             self._own_loaders[fmt] = True
 
@@ -282,8 +279,7 @@ class AdaptersMap:
         from psycopg import types
 
         if cls.__module__.startswith(types.__name__):
-            new = cast("type[RV]", getattr(_psycopg, cls.__name__, None))
-            if new:
+            if new := cast("type[RV]", getattr(_psycopg, cls.__name__, None)):
                 self._optimised[cls] = new
                 return new
 

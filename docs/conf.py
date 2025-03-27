@@ -22,7 +22,6 @@ import psycopg
 docs_dir = Path(__file__).parent
 sys.path.append(str(docs_dir / "lib"))
 
-
 # -- Project information -----------------------------------------------------
 
 project = "psycopg"
@@ -55,12 +54,10 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The announcement may be in the website but not shipped with the docs
-ann_file = docs_dir / "../../templates/docs3-announcement.html"
-if ann_file.exists():
+if (ann_file := (docs_dir / "../../templates/docs3-announcement.html")).exists():
     with ann_file.open() as f:
         announcement = f.read()
 else:
@@ -84,9 +81,7 @@ html_theme_options = {
     "sidebar_hide_name": False,
     "light_logo": "psycopg.svg",
     "dark_logo": "psycopg.svg",
-    "light_css_variables": {
-        "admonition-font-size": "1rem",
-    },
+    "light_css_variables": {"admonition-font-size": "1rem"},
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

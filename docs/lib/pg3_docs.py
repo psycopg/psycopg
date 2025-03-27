@@ -19,8 +19,7 @@ def process_docstring(app, what, name, obj, options, lines):
 
 
 def before_process_signature(app, obj, bound_method):
-    ann = getattr(obj, "__annotations__", {})
-    if "return" in ann:
+    if "return" in (ann := getattr(obj, "__annotations__", {})):
         # Drop "return: None" from the function signatures
         if ann["return"] is None:
             del ann["return"]
@@ -68,14 +67,12 @@ def recover_defined_module(m, skip_modules=()):
     for fn in walk_modules(mdir):
         assert fn.startswith(mdir)
         modname = os.path.splitext(fn[len(mdir) + 1 :])[0].replace("/", ".")
-        modname = f"{m.__name__}.{modname}"
-        if modname in skip_modules:
+        if (modname := f"{m.__name__}.{modname}") in skip_modules:
             continue
         with open(fn) as f:
             classnames = re.findall(r"^class\s+([^(:]+)", f.read(), re.M)
             for cls in classnames:
-                cls = deep_import(f"{modname}.{cls}")
-                if cls.__module__ != modname:
+                if (cls := deep_import(f"{modname}.{cls}")).__module__ != modname:
                     recovered_classes[cls] = modname
 
 

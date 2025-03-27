@@ -14,8 +14,8 @@ def test_connect_operationalerror_pgconn(generators, dsn, monkeypatch):
     OperationalError has a pgconn attribute set with needs_password.
     """
     gen = generators.connect(dsn)
-    pgconn = waiting.wait_conn(gen)
-    if not pgconn.used_password:
+
+    if not (pgconn := waiting.wait_conn(gen)).used_password:
         pytest.skip("test connection needs no password")
 
     with monkeypatch.context() as m:

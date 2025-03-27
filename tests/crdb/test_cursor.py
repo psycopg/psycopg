@@ -69,8 +69,7 @@ def test_changefeed(conn_cls, dsn, conn, testfeed, fmt_out):
     # We often find the record with {"after": null} at least another time
     # in the queue. Let's tolerate an extra one.
     for i in range(2):
-        row = q.get()
-        if row is None:
+        if (row := q.get()) is None:
             break
         assert json.loads(row.value)["after"] is None, json
     else:

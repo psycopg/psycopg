@@ -390,10 +390,7 @@ async def test_row_factory(aconn):
     await cur.execute("select generate_series(1, 3) as x")
     recs = await cur.fetchall()
     await cur.scroll(0, "absolute")
-    while True:
-        rec = await cur.fetchone()
-        if not rec:
-            break
+    while rec := (await cur.fetchone()):
         recs.append(rec)
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 

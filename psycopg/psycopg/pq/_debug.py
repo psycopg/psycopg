@@ -56,8 +56,7 @@ class PGconnDebug:
         return f"<{cls} {info} at 0x{id(self):x}>"
 
     def __getattr__(self, attr: str) -> Any:
-        value = getattr(self._pgconn, attr)
-        if callable(value):
+        if callable((value := getattr(self._pgconn, attr))):
             return debugging(value)
         else:
             logger.info("PGconn.%s -> %s", attr, value)

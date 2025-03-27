@@ -384,10 +384,7 @@ def test_row_factory(conn):
     cur.execute("select generate_series(1, 3) as x")
     recs = cur.fetchall()
     cur.scroll(0, "absolute")
-    while True:
-        rec = cur.fetchone()
-        if not rec:
-            break
+    while rec := cur.fetchone():
         recs.append(rec)
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 

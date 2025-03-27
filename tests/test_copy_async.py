@@ -148,10 +148,7 @@ async def test_copy_out_allchars(aconn, format):
     )
     async with cur.copy(query) as copy:
         copy.set_types(["text"])
-        while True:
-            row = await copy.read_row()
-            if not row:
-                break
+        while row := (await copy.read_row()):
             assert len(row) == 1
             rows.append(row[0])
 
@@ -165,10 +162,7 @@ async def test_read_row_notypes(aconn, format):
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         rows = []
-        while True:
-            row = await copy.read_row()
-            if not row:
-                break
+        while row := (await copy.read_row()):
             rows.append(row)
 
     ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
@@ -751,17 +745,13 @@ async def test_copy_to_leaks(aconn_cls, dsn, faker, fmt, set_types, method, gc):
                         copy.set_types(faker.types_names)
 
                     if method == "read":
-                        while True:
-                            tmp = await copy.read()
-                            if not tmp:
-                                break
+                        while await copy.read():
+                            pass
                     elif method == "iter":
                         await alist(copy)
                     elif method == "row":
-                        while True:
-                            tmp = await copy.read_row()
-                            if tmp is None:
-                                break
+                        while (await copy.read_row()) is not None:
+                            pass
                     elif method == "rows":
                         await alist(copy.rows())
 
@@ -878,10 +868,7 @@ class DataGenerator:
 
     def blocks(self):
         f = self.file()
-        while True:
-            block = f.read(self.block_size)
-            if not block:
-                break
+        while block := f.read(self.block_size):
             yield block
 
     async def assert_data(self):
@@ -894,10 +881,7 @@ class DataGenerator:
 
     def sha(self, f):
         m = hashlib.sha256()
-        while True:
-            block = f.read()
-            if not block:
-                break
+        while block := f.read():
             if isinstance(block, str):
                 block = block.encode()
             m.update(block)

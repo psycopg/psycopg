@@ -38,12 +38,10 @@ def check_crdb_version(got, mark):
     pred = VersionCheck.parse(spec)
     pred.whose = "CockroachDB"
 
-    msg = pred.get_skip_message(got)
-    if not msg:
+    if not (msg := pred.get_skip_message(got)):
         return None
 
-    reason = crdb_skip_message(reason)
-    if reason:
+    if reason := crdb_skip_message(reason):
         msg = f"{msg}: {reason}"
 
     return msg

@@ -144,10 +144,7 @@ def test_copy_out_allchars(conn, format):
     )
     with cur.copy(query) as copy:
         copy.set_types(["text"])
-        while True:
-            row = copy.read_row()
-            if not row:
-                break
+        while row := copy.read_row():
             assert len(row) == 1
             rows.append(row[0])
 
@@ -159,10 +156,7 @@ def test_read_row_notypes(conn, format):
     cur = conn.cursor()
     with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = []
-        while True:
-            row = copy.read_row()
-            if not row:
-                break
+        while row := copy.read_row():
             rows.append(row)
 
     ref = [tuple((py_to_raw(i, format) for i in record)) for record in sample_records]
@@ -735,17 +729,13 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method, gc):
                         copy.set_types(faker.types_names)
 
                     if method == "read":
-                        while True:
-                            tmp = copy.read()
-                            if not tmp:
-                                break
+                        while copy.read():
+                            pass
                     elif method == "iter":
                         list(copy)
                     elif method == "row":
-                        while True:
-                            tmp = copy.read_row()
-                            if tmp is None:
-                                break
+                        while copy.read_row() is not None:
+                            pass
                     elif method == "rows":
                         list(copy.rows())
 
@@ -863,10 +853,7 @@ class DataGenerator:
 
     def blocks(self):
         f = self.file()
-        while True:
-            block = f.read(self.block_size)
-            if not block:
-                break
+        while block := f.read(self.block_size):
             yield block
 
     def assert_data(self):
@@ -879,10 +866,7 @@ class DataGenerator:
 
     def sha(self, f):
         m = hashlib.sha256()
-        while True:
-            block = f.read()
-            if not block:
-                break
+        while block := f.read():
             if isinstance(block, str):
                 block = block.encode()
             m.update(block)
