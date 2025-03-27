@@ -458,13 +458,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
 
 
 @pytest.mark.pg(">= 14")
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        ("inf", "Infinity"),
-        ("-inf", "-Infinity"),
-    ],
-)
+@pytest.mark.parametrize("val, expr", [("inf", "Infinity"), ("-inf", "-Infinity")])
 def test_dump_numeric_binary_inf(conn, val, expr):
     cur = conn.cursor()
     val = Decimal(val)
@@ -492,8 +486,8 @@ def test_dump_numeric_binary_inf(conn, val, expr):
 def test_load_numeric_binary(conn, expr):
     cur = conn.cursor(binary=1)
     res = cur.execute(f"select '{expr}'::numeric").fetchone()[0]
-    val = Decimal(expr)
-    if val.is_nan():
+
+    if (val := Decimal(expr)).is_nan():
         assert res.is_nan()
     else:
         assert res == val
@@ -531,13 +525,7 @@ def test_load_numeric_exhaustive(conn, fmt_out):
 
 
 @pytest.mark.pg(">= 14")
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        ("inf", "Infinity"),
-        ("-inf", "-Infinity"),
-    ],
-)
+@pytest.mark.parametrize("val, expr", [("inf", "Infinity"), ("-inf", "-Infinity")])
 def test_load_numeric_binary_inf(conn, val, expr):
     cur = conn.cursor(binary=1)
     res = cur.execute(f"select '{expr}'::numeric").fetchone()[0]
@@ -546,14 +534,7 @@ def test_load_numeric_binary_inf(conn, val, expr):
 
 
 @pytest.mark.parametrize(
-    "val",
-    [
-        "0",
-        "0.0",
-        "0.000000000000000000001",
-        "-0.000000000000000000001",
-        "nan",
-    ],
+    "val", ["0", "0.0", "0.000000000000000000001", "-0.000000000000000000001", "nan"]
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()

@@ -95,8 +95,7 @@ class SequenceDumper(RecursiveDumper):
                 continue
 
             dumper = self._tx.get_dumper(item, PyFormat.from_pq(self.format))
-            ad = dumper.dump(item)
-            if ad is None:
+            if (ad := dumper.dump(item)) is None:
                 ad = b""
             elif not ad:
                 ad = b'""'

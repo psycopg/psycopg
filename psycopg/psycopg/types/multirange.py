@@ -191,8 +191,7 @@ class BaseMultirangeDumper(RecursiveDumper):
         if self.cls is not Multirange:
             return self.cls
 
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             sd = self._tx.get_dumper(item, self._adapt_format)
             return (self.cls, sd.get_key(item, format))
         else:
@@ -203,8 +202,7 @@ class BaseMultirangeDumper(RecursiveDumper):
         if self.cls is not Multirange:
             return self
 
-        item = self._get_item(obj)
-        if item is None:
+        if (item := self._get_item(obj)) is None:
             return self
 
         dumper: BaseMultirangeDumper
@@ -258,8 +256,7 @@ class MultirangeDumper(BaseMultirangeDumper):
         if not obj:
             return b"{}"
 
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
@@ -276,8 +273,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
     format = Format.BINARY
 
     def dump(self, obj: Multirange[Any]) -> Buffer | None:
-        item = self._get_item(obj)
-        if item is not None:
+        if (item := self._get_item(obj)) is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Find the error prefixes in various l10n used for precise prefixstripping."""
+"""Find the error prefixes in various l10n used for precise prefix stripping."""
 
 import re
 import logging
@@ -90,8 +90,7 @@ def parse_cmdline() -> Namespace:
         help="the file to change [default: %(default)s]",
     )
 
-    opt = parser.parse_args()
-    if not opt.pgroot.is_dir():
+    if not (opt := parser.parse_args()).pgroot.is_dir():
         parser.error("not a valid directory: {opt.pgroot}")
 
     return opt

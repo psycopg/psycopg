@@ -52,8 +52,7 @@ class Xid:
 
     @classmethod
     def _parse_string(cls, s: str) -> Xid:
-        m = _re_xid.match(s)
-        if not m:
+        if not (m := _re_xid.match(s)):
             raise ValueError("bad Xid format")
 
         format_id = int(m.group(1))

@@ -73,8 +73,8 @@ class Proxy:
             return
 
         logging.info("starting proxy")
-        pproxy = which("pproxy")
-        if not pproxy:
+
+        if not (pproxy := which("pproxy")):
             raise ValueError("pproxy program not found")
         cmdline = [pproxy, "--reuse"]
         cmdline.extend(["-l", f"tunnel://:{self.client_port}"])

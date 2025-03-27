@@ -136,9 +136,7 @@ def parse_cmdline() -> Namespace:
         default=logging.INFO,
     )
 
-    args = parser.parse_args()
-
-    if args.writer:
+    if (args := parser.parse_args()).writer:
         try:
             getattr(psycopg.copy, args.writer)
         except AttributeError:

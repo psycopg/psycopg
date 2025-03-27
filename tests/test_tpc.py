@@ -11,8 +11,8 @@ pytestmark = pytest.mark.crdb_skip("2-phase commit")
 
 def test_tpc_disabled(conn, pipeline):
     cur = conn.execute("show max_prepared_transactions")
-    val = int(cur.fetchone()[0])
-    if val:
+
+    if int(cur.fetchone()[0]):
         pytest.skip("prepared transactions enabled")
 
     conn.rollback()

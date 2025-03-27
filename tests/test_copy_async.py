@@ -149,8 +149,7 @@ async def test_copy_out_allchars(aconn, format):
     async with cur.copy(query) as copy:
         copy.set_types(["text"])
         while True:
-            row = await copy.read_row()
-            if not row:
+            if not (row := (await copy.read_row())):
                 break
             assert len(row) == 1
             rows.append(row[0])
@@ -166,8 +165,7 @@ async def test_read_row_notypes(aconn, format):
     ) as copy:
         rows = []
         while True:
-            row = await copy.read_row()
-            if not row:
+            if not (row := (await copy.read_row())):
                 break
             rows.append(row)
 
@@ -752,15 +750,13 @@ async def test_copy_to_leaks(aconn_cls, dsn, faker, fmt, set_types, method, gc):
 
                     if method == "read":
                         while True:
-                            tmp = await copy.read()
-                            if not tmp:
+                            if not (await copy.read()):
                                 break
                     elif method == "iter":
                         await alist(copy)
                     elif method == "row":
                         while True:
-                            tmp = await copy.read_row()
-                            if tmp is None:
+                            if (await copy.read_row()) is None:
                                 break
                     elif method == "rows":
                         await alist(copy.rows())
@@ -879,8 +875,7 @@ class DataGenerator:
     def blocks(self):
         f = self.file()
         while True:
-            block = f.read(self.block_size)
-            if not block:
+            if not (block := f.read(self.block_size)):
                 break
             yield block
 
@@ -895,8 +890,7 @@ class DataGenerator:
     def sha(self, f):
         m = hashlib.sha256()
         while True:
-            block = f.read()
-            if not block:
+            if not (block := f.read()):
                 break
             if isinstance(block, str):
                 block = block.encode()

@@ -75,12 +75,10 @@ def get_param(params: ConnMapping, name: str) -> str | None:
 
     # TODO: check if in service
 
-    paramdef = get_param_def(name)
-    if not paramdef:
+    if not (paramdef := get_param_def(name)):
         return None
 
-    env = os.environ.get(paramdef.envvar)
-    if env is not None:
+    if (env := os.environ.get(paramdef.envvar)) is not None:
         return env
 
     return None

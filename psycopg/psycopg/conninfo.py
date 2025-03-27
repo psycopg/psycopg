@@ -114,8 +114,7 @@ def _param_escape(s: str) -> str:
     if not s:
         return "''"
 
-    s = re_escape.sub(r"\\\1", s)
-    if re_space.search(s):
+    if re_space.search(s := re_escape.sub(r"\\\1", s)):
         s = "'" + s + "'"
 
     return s

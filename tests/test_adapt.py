@@ -51,13 +51,7 @@ def test_quote(data, result):
     assert dumper.quote(data) == result
 
 
-@pytest.mark.parametrize(
-    "data, result",
-    [
-        ("hello", b"'hello'"),
-        ("", b"NULL"),
-    ],
-)
+@pytest.mark.parametrize("data, result", [("hello", b"'hello'"), ("", b"NULL")])
 def test_quote_none(data, result, global_adapters):
     psycopg.adapters.register_dumper(str, StrNoneDumper)
     t = Transformer()
@@ -424,8 +418,8 @@ def test_optimised_adapters():
     for n in dir(_psycopg):
         if n.startswith("_") or n in ("CDumper", "CLoader"):
             continue
-        obj = getattr(_psycopg, n)
-        if not isinstance(obj, type):
+
+        if not isinstance((obj := getattr(_psycopg, n)), type):
             continue
         if not issubclass(obj, (_psycopg.CDumper, _psycopg.CLoader)):
             continue
@@ -449,12 +443,10 @@ def test_optimised_adapters():
 
     # Check that every optimised adapter is the optimised version of a Py one
     for n in dir(psycopg.types):
-        mod = getattr(psycopg.types, n)
-        if not isinstance(mod, ModuleType):
+        if not isinstance((mod := getattr(psycopg.types, n)), ModuleType):
             continue
         for n1 in dir(mod):
-            obj = getattr(mod, n1)
-            if not isinstance(obj, type):
+            if not isinstance((obj := getattr(mod, n1)), type):
                 continue
             if not issubclass(obj, (Dumper, Loader)):
                 continue
