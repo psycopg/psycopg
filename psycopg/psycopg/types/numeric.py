@@ -40,8 +40,7 @@ class _IntDumper(Dumper):
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
-        value = self.dump(obj)
-        if value is None:
+        if (value := self.dump(obj)) is None:
             return b"NULL"
         return value if obj >= 0 else b" " + value
 
@@ -63,9 +62,7 @@ class _SpecialValuesDumper(Dumper):
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
-        value = self.dump(obj)
-
-        if value is None:
+        if (value := self.dump(obj)) is None:
             return b"NULL"
         if not isinstance(value, bytes):
             value = bytes(value)
@@ -158,11 +155,10 @@ class IntDumper(Dumper):
                 return self._int2_dumper
             else:
                 return self._int4_dumper
+        elif -(2**63) <= obj < 2**63:
+            return self._int8_dumper
         else:
-            if -(2**63) <= obj < 2**63:
-                return self._int8_dumper
-            else:
-                return self._int_numeric_dumper
+            return self._int_numeric_dumper
 
 
 class Int2BinaryDumper(Int2Dumper):
@@ -453,8 +449,7 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
 
     # Equivalent of 0-padding left to align the py digits to the pg digits
     # but without changing the digits tuple.
-    mod = (ndigits - dscale) % DEC_DIGITS
-    if mod:
+    if mod := ((ndigits - dscale) % DEC_DIGITS):
         wi = DEC_DIGITS - mod
         ndigits += wi
 

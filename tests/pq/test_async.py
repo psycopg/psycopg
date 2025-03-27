@@ -24,8 +24,7 @@ def test_send_query(pgconn):
     # send loop
     waited_on_send = 0
     while True:
-        f = pgconn.flush()
-        if f == 0:
+        if pgconn.flush() == 0:
             break
 
         waited_on_send += 1
@@ -48,8 +47,8 @@ def test_send_query(pgconn):
         if pgconn.is_busy():
             select([pgconn.socket], [], [])
             continue
-        res = pgconn.get_result()
-        if res is None:
+
+        if (res := pgconn.get_result()) is None:
             break
         assert res.status == pq.ExecStatus.TUPLES_OK
         results.append(res)

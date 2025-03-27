@@ -16,8 +16,7 @@ from typing import Any, NoReturn
 from .misc import find_libpq_full_path, version_pretty
 from ..errors import NotSupportedError
 
-libname = find_libpq_full_path()
-if not libname:
+if not (libname := find_libpq_full_path()):
     raise ImportError("libpq library not found")
 
 pq = ctypes.cdll.LoadLibrary(libname)
@@ -30,8 +29,7 @@ class FILE(Structure):
 FILE_ptr = POINTER(FILE)
 
 if sys.platform == "linux":
-    libcname = ctypes.util.find_library("c")
-    if not libcname:
+    if not (libcname := ctypes.util.find_library("c")):
         # Likely this is a system using musl libc, see the following bug:
         # https://github.com/python/cpython/issues/65821
         libcname = "libc.so"
@@ -40,7 +38,6 @@ if sys.platform == "linux":
     fdopen = libc.fdopen
     fdopen.argtypes = (c_int, c_char_p)
     fdopen.restype = FILE_ptr
-
 
 # Get the libpq version to define what functions are available.
 
@@ -680,23 +677,14 @@ PQfreemem.restype = None
 
 if libpq_version >= 100000:
     PQencryptPasswordConn = pq.PQencryptPasswordConn
-    PQencryptPasswordConn.argtypes = [
-        PGconn_ptr,
-        c_char_p,
-        c_char_p,
-        c_char_p,
-    ]
+    PQencryptPasswordConn.argtypes = [PGconn_ptr, c_char_p, c_char_p, c_char_p]
     PQencryptPasswordConn.restype = POINTER(c_char)
 else:
     PQencryptPasswordConn = not_supported_before("PQencryptPasswordConn", 100000)
 
 if libpq_version >= 170000:
     PQchangePassword = pq.PQchangePassword
-    PQchangePassword.argtypes = [
-        PGconn_ptr,
-        c_char_p,
-        c_char_p,
-    ]
+    PQchangePassword.argtypes = [PGconn_ptr, c_char_p, c_char_p]
     PQchangePassword.restype = PGresult_ptr
 else:
     PQchangePassword = not_supported_before("PQchangePassword", 170000)

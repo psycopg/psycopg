@@ -247,8 +247,7 @@ class BaseConnection(Generic[Row]):
 
     def _check_intrans_gen(self, attribute: str) -> PQGen[None]:
         # Raise an exception if we are in a transaction
-        status = self.pgconn.transaction_status
-        if status == IDLE and self._pipeline:
+        if (status := self.pgconn.transaction_status) == IDLE and self._pipeline:
             yield from self._pipeline._sync_gen()
             status = self.pgconn.transaction_status
         if status != IDLE:
@@ -503,10 +502,7 @@ class BaseConnection(Generic[Row]):
         self._check_connection_ok()
 
         if self._pipeline:
-            cmd = partial(
-                self.pgconn.send_close_prepared,
-                name,
-            )
+            cmd = partial(self.pgconn.send_close_prepared, name)
             self._pipeline.command_queue.append(cmd)
             self._pipeline.result_queue.append(None)
             return

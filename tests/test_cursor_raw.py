@@ -94,13 +94,11 @@ def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc):
 
                     if fetch == "one":
                         while True:
-                            tmp = cur.fetchone()
-                            if tmp is None:
+                            if cur.fetchone() is None:
                                 break
                     elif fetch == "many":
                         while True:
-                            tmp = cur.fetchmany(3)
-                            if not tmp:
+                            if not cur.fetchmany(3):
                                 break
                     elif fetch == "all":
                         cur.fetchall()

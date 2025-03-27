@@ -142,8 +142,7 @@ class BasePipeline:
 
         exception = None
         while self.result_queue:
-            results = yield from fetch_many(self.pgconn)
-            if not results:
+            if not (results := (yield from fetch_many(self.pgconn))):
                 # No more results to fetch, but there may still be pending
                 # commands.
                 break

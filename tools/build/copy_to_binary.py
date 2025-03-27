@@ -11,17 +11,16 @@ from pathlib import Path
 
 curdir = Path(__file__).parent
 pdir = curdir / "../.."
-target = pdir / "psycopg_binary"
 
-if target.exists():
+if (target := (pdir / "psycopg_binary")).exists():
     raise Exception(f"path {target} already exists")
 
 
 def sed_i(pattern: str, repl: str, filename: str | Path) -> None:
     with open(filename, "rb") as f:
         data = f.read()
-    newdata = re.sub(pattern.encode("utf8"), repl.encode("utf8"), data)
-    if newdata != data:
+
+    if (newdata := re.sub(pattern.encode("utf8"), repl.encode("utf8"), data)) != data:
         with open(filename, "wb") as f:
             f.write(newdata)
 

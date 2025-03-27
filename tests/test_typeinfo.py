@@ -22,8 +22,7 @@ def test_fetch(conn, name, status, encoding):
         conn.execute("select set_config('client_encoding', %s, false)", [encoding])
 
     if status:
-        status = getattr(TransactionStatus, status)
-        if status == TransactionStatus.INTRANS:
+        if (status := getattr(TransactionStatus, status)) == TransactionStatus.INTRANS:
             conn.execute("select 1")
     else:
         conn.autocommit = True
@@ -54,8 +53,7 @@ async def test_fetch_async(aconn, name, status, encoding):
         )
 
     if status:
-        status = getattr(TransactionStatus, status)
-        if status == TransactionStatus.INTRANS:
+        if (status := getattr(TransactionStatus, status)) == TransactionStatus.INTRANS:
             await aconn.execute("select 1")
     else:
         await aconn.set_autocommit(True)
@@ -100,8 +98,8 @@ def test_fetch_not_found(conn, name, status, info_cls, monkeypatch):
             return exit_orig(self, exc_type, exc_val, exc_tb)
 
         monkeypatch.setattr(psycopg.Transaction, "__exit__", exit)
-    status = getattr(TransactionStatus, status)
-    if status == TransactionStatus.INTRANS:
+
+    if (status := getattr(TransactionStatus, status)) == TransactionStatus.INTRANS:
         conn.execute("select 1")
 
     assert conn.info.transaction_status == status
@@ -122,8 +120,8 @@ async def test_fetch_not_found_async(aconn, name, status, info_cls, monkeypatch)
             return await exit_orig(self, exc_type, exc_val, exc_tb)
 
         monkeypatch.setattr(psycopg.AsyncTransaction, "__aexit__", aexit)
-    status = getattr(TransactionStatus, status)
-    if status == TransactionStatus.INTRANS:
+
+    if (status := getattr(TransactionStatus, status)) == TransactionStatus.INTRANS:
         await aconn.execute("select 1")
 
     assert aconn.info.transaction_status == status

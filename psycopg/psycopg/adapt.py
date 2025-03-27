@@ -56,8 +56,7 @@ class Dumper(abc.Dumper, ABC):
         for most types and you won't likely have to implement this method in a
         subclass.
         """
-        value = self.dump(obj)
-        if value is None:
+        if (value := self.dump(obj)) is None:
             return b"NULL"
 
         if self.connection:

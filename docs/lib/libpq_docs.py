@@ -61,13 +61,11 @@ class LibpqParser(HTMLParser):
         self.add_function(data)
 
     def handle_sect1(self, tag, attrs):
-        attrs = dict(attrs)
-        if "id" in attrs:
+        if "id" in (attrs := dict(attrs)):
             self.section_id = attrs["id"]
 
     def handle_varlistentry(self, tag, attrs):
-        attrs = dict(attrs)
-        if "id" in attrs:
+        if "id" in (attrs := dict(attrs)):
             self.varlist_id = attrs["id"]
 
     def add_function(self, func_name):
@@ -89,10 +87,8 @@ class LibpqReader:
     # must be set before using the rest of the class.
     app = None
 
-    _url_pattern = (
-        "https://raw.githubusercontent.com/postgres/postgres/{branch}"
-        "/doc/src/sgml/libpq.sgml"
-    )
+    _url_pattern = "https://raw.githubusercontent.com/postgres/postgres/"
+    _url_pattern += "{branch}/doc/src/sgml/libpq.sgml"
 
     data = None
 
@@ -113,8 +109,7 @@ class LibpqReader:
             parser.feed(f.read())
 
     def download(self):
-        filename = os.environ.get("LIBPQ_DOCS_FILE")
-        if filename:
+        if filename := os.environ.get("LIBPQ_DOCS_FILE"):
             logger.info("reading postgres libpq docs from %s", filename)
             with open(filename, "rb") as f:
                 data = f.read()
@@ -156,7 +151,6 @@ def pq_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     if "(" in text:
         func, noise = text.split("(", 1)
         noise = "(" + noise
-
     else:
         func = text
         noise = ""

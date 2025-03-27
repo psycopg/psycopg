@@ -78,8 +78,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     async def __aiter__(self) -> AsyncIterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
         while True:
-            data = await self.read()
-            if not data:
+            if not (data := (await self.read())):
                 break
             yield data
 
@@ -99,8 +98,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         bytes, unless data types are specified using `set_types()`.
         """
         while True:
-            record = await self.read_row()
-            if record is None:
+            if (record := (await self.read_row())) is None:
                 break
             yield record
 
@@ -122,14 +120,12 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         If the :sql:`COPY` is in binary format `!buffer` must be `!bytes`. In
         text mode it can be either `!bytes` or `!str`.
         """
-        data = self.formatter.write(buffer)
-        if data:
+        if data := self.formatter.write(buffer):
             await self._write(data)
 
     async def write_row(self, row: Sequence[Any]) -> None:
         """Write a record to a table after a :sql:`COPY FROM` operation."""
-        data = self.formatter.write_row(row)
-        if data:
+        if data := self.formatter.write_row(row):
             await self._write(data)
 
     async def finish(self, exc: BaseException | None) -> None:
@@ -140,8 +136,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         using the `Copy` object outside a block.
         """
         if self._direction == COPY_IN:
-            data = self.formatter.end()
-            if data:
+            if data := self.formatter.end():
                 await self._write(data)
             await self.writer.finish(exc)
             self._finished = True
@@ -256,8 +251,7 @@ class AsyncQueuedLibpqWriter(AsyncLibpqWriter):
         """
         try:
             while True:
-                data = await self._queue.get()
-                if not data:
+                if not (data := (await self._queue.get())):
                     break
                 await self.connection.wait(
                     copy_to(self._pgconn, data, flush=PREFER_FLUSH)

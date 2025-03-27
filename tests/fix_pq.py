@@ -41,8 +41,8 @@ def pytest_configure(config):
 def pytest_runtest_setup(item):
     for m in item.iter_markers(name="libpq"):
         assert len(m.args) == 1
-        msg = check_libpq_version(pq.version(), m.args[0])
-        if msg:
+
+        if msg := check_libpq_version(pq.version(), m.args[0]):
             pytest.skip(msg)
 
 
@@ -81,8 +81,7 @@ def setpgenv(monkeypatch):
 
 @pytest.fixture
 def trace(libpq):
-    pqver = pq.__build_version__
-    if pqver < 140000:
+    if (pqver := pq.__build_version__) < 140000:
         pytest.skip(f"trace not available on libpq {pqver}")
     if sys.platform != "linux":
         pytest.skip(f"trace not available on {sys.platform}")

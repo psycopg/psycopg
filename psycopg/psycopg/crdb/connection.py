@@ -86,20 +86,17 @@ class CrdbConnectionInfo(ConnectionInfo):
 
         Return a number in the PostgreSQL format (e.g. 21.2.10 -> 210210).
         """
-        sver = self.parameter_status("crdb_version")
-        if not sver:
+        if not (sver := self.parameter_status("crdb_version")):
             raise e.InternalError("'crdb_version' parameter status not set")
 
-        ver = self.parse_crdb_version(sver)
-        if ver is None:
+        if (ver := self.parse_crdb_version(sver)) is None:
             raise e.InterfaceError(f"couldn't parse CockroachDB version from: {sver!r}")
 
         return ver
 
     @classmethod
     def parse_crdb_version(self, sver: str) -> int | None:
-        m = re.search(r"\bv(\d+)\.(\d+)\.(\d+)", sver)
-        if not m:
+        if not (m := re.search(r"\bv(\d+)\.(\d+)\.(\d+)", sver)):
             return None
 
         return int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3))

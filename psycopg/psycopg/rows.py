@@ -116,14 +116,15 @@ def dict_row(cursor: BaseCursor[Any, Any]) -> RowMaker[DictRow]:
 
     The dictionary keys are taken from the column names of the returned columns.
     """
-    names = _get_names(cursor)
-    if names is None:
+    if (names := _get_names(cursor)) is not None:
+
+        def dict_row_(values: Sequence[Any]) -> dict[str, Any]:
+            return dict(zip(names, values))
+
+        return dict_row_
+
+    else:
         return no_result
-
-    def dict_row_(values: Sequence[Any]) -> dict[str, Any]:
-        return dict(zip(names, values))
-
-    return dict_row_
 
 
 def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
@@ -132,16 +133,11 @@ def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
     The field names are taken from the column names of the returned columns,
     with some mangling to deal with invalid names.
     """
-    res = cursor.pgresult
-    if not res:
+    if (res := cursor.pgresult) and (nfields := _get_nfields(res)) is not None:
+        nt = _make_nt(cursor._encoding, *(res.fname(i) for i in range(nfields)))
+        return nt._make
+    else:
         return no_result
-
-    nfields = _get_nfields(res)
-    if nfields is None:
-        return no_result
-
-    nt = _make_nt(cursor._encoding, *(res.fname(i) for i in range(nfields)))
-    return nt._make
 
 
 @functools.lru_cache(512)
@@ -161,14 +157,15 @@ def class_row(cls: type[T]) -> BaseRowFactory[T]:
     """
 
     def class_row_(cursor: BaseCursor[Any, Any]) -> RowMaker[T]:
-        names = _get_names(cursor)
-        if names is None:
+        if (names := _get_names(cursor)) is not None:
+
+            def class_row__(values: Sequence[Any]) -> T:
+                return cls(**dict(zip(names, values)))
+
+            return class_row__
+
+        else:
             return no_result
-
-        def class_row__(values: Sequence[Any]) -> T:
-            return cls(**dict(zip(names, values)))
-
-        return class_row__
 
     return class_row_
 
@@ -197,14 +194,15 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
     """
 
     def kwargs_row_(cursor: BaseCursor[Any, T]) -> RowMaker[T]:
-        names = _get_names(cursor)
-        if names is None:
+        if (names := _get_names(cursor)) is not None:
+
+            def kwargs_row__(values: Sequence[Any]) -> T:
+                return func(**dict(zip(names, values)))
+
+            return kwargs_row__
+
+        else:
             return no_result
-
-        def kwargs_row__(values: Sequence[Any]) -> T:
-            return func(**dict(zip(names, values)))
-
-        return kwargs_row__
 
     return kwargs_row_
 
@@ -214,21 +212,17 @@ def scalar_row(cursor: BaseCursor[Any, Any]) -> RowMaker[Any]:
     Generate a row factory returning the first column
     as a scalar value.
     """
-    res = cursor.pgresult
-    if not res:
+    if (res := cursor.pgresult) and (nfields := _get_nfields(res)) is not None:
+        if nfields < 1:
+            raise e.ProgrammingError("at least one column expected")
+
+        def scalar_row_(values: Sequence[Any]) -> Any:
+            return values[0]
+
+        return scalar_row_
+
+    else:
         return no_result
-
-    nfields = _get_nfields(res)
-    if nfields is None:
-        return no_result
-
-    if nfields < 1:
-        raise e.ProgrammingError("at least one column expected")
-
-    def scalar_row_(values: Sequence[Any]) -> Any:
-        return values[0]
-
-    return scalar_row_
 
 
 def no_result(values: Sequence[Any]) -> NoReturn:
@@ -242,18 +236,13 @@ def no_result(values: Sequence[Any]) -> NoReturn:
 
 
 def _get_names(cursor: BaseCursor[Any, Any]) -> list[str] | None:
-    res = cursor.pgresult
-    if not res:
+    if (res := cursor.pgresult) and (nfields := _get_nfields(res)) is not None:
+        enc = cursor._encoding
+        return [
+            res.fname(i).decode(enc) for i in range(nfields)  # type: ignore[union-attr]
+        ]
+    else:
         return None
-
-    nfields = _get_nfields(res)
-    if nfields is None:
-        return None
-
-    enc = cursor._encoding
-    return [
-        res.fname(i).decode(enc) for i in range(nfields)  # type: ignore[union-attr]
-    ]
 
 
 def _get_nfields(res: PGresult) -> int | None:

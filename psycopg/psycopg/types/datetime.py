@@ -70,8 +70,7 @@ class _BaseTimeDumper(Dumper):
         raise NotImplementedError
 
     def _get_offset(self, obj: time) -> timedelta:
-        offset = obj.utcoffset()
-        if offset is None:
+        if (offset := obj.utcoffset()) is None:
             raise DataError(
                 f"cannot calculate the offset of tzinfo '{obj.tzinfo}' without a date"
             )
@@ -236,8 +235,7 @@ class DateLoader(Loader):
 
     def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
-        ds = _get_datestyle(self.connection)
-        if ds.startswith(b"I"):  # ISO
+        if (ds := _get_datestyle(self.connection)).startswith(b"I"):  # ISO
             self._order = self._ORDER_YMD
         elif ds.startswith(b"G"):  # German
             self._order = self._ORDER_DMY
@@ -290,8 +288,7 @@ class TimeLoader(Loader):
     _re_format = re.compile(rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?")
 
     def load(self, data: Buffer) -> time:
-        m = self._re_format.match(data)
-        if not m:
+        if not (m := self._re_format.match(data)):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse time {s!r}")
 
@@ -337,8 +334,7 @@ class TimetzLoader(Loader):
     )
 
     def load(self, data: Buffer) -> time:
-        m = self._re_format.match(data)
-        if not m:
+        if not (m := self._re_format.match(data)):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse timetz {s!r}")
 
@@ -415,9 +411,7 @@ class TimestampLoader(Loader):
 
     def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)
-
-        ds = _get_datestyle(self.connection)
-        if ds.startswith(b"I"):  # ISO
+        if (ds := _get_datestyle(self.connection)).startswith(b"I"):  # ISO
             self._order = self._ORDER_YMD
         elif ds.startswith(b"G"):  # German
             self._order = self._ORDER_DMY
@@ -430,8 +424,7 @@ class TimestampLoader(Loader):
             raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
     def load(self, data: Buffer) -> datetime:
-        m = self._re_format.match(data)
-        if not m:
+        if not (m := self._re_format.match(data)):
             raise _get_timestamp_load_error(self.connection, data) from None
 
         if self._order == self._ORDER_YMD:
@@ -499,8 +492,7 @@ class TimestamptzLoader(Loader):
         super().__init__(oid, context)
         self._timezone = get_tzinfo(self.connection.pgconn if self.connection else None)
 
-        ds = _get_datestyle(self.connection)
-        if ds.startswith(b"I"):  # ISO
+        if _get_datestyle(self.connection).startswith(b"I"):  # ISO
             self._load_method = self._load_iso
         else:
             self._load_method = self._load_notimpl
@@ -510,8 +502,7 @@ class TimestamptzLoader(Loader):
 
     @staticmethod
     def _load_iso(self: TimestamptzLoader, data: Buffer) -> datetime:
-        m = self._re_format.match(data)
-        if not m:
+        if not (m := self._re_format.match(data)):
             raise _get_timestamp_load_error(self.connection, data) from None
 
         ye, mo, da, ho, mi, se, fr, sgn, oh, om, os = m.groups()
@@ -582,10 +573,9 @@ class TimestamptzBinaryLoader(Loader):
             # timezone) we can still save the day by shifting the value by the
             # timezone offset and then replacing the timezone.
             if self._timezone:
-                utcoff = self._timezone.utcoffset(
+                if utcoff := self._timezone.utcoffset(
                     datetime.min if micros < 0 else datetime.max
-                )
-                if utcoff:
+                ):
                     usoff = 1_000_000 * int(utcoff.total_seconds())
                     try:
                         ts = _pg_datetime_epoch + timedelta(microseconds=micros + usoff)
@@ -624,8 +614,7 @@ class IntervalLoader(Loader):
 
     @staticmethod
     def _load_postgres(self: IntervalLoader, data: Buffer) -> timedelta:
-        m = self._re_interval.match(data)
-        if not m:
+        if not (m := self._re_interval.match(data)):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse interval {s!r}")
 
@@ -679,19 +668,15 @@ class IntervalBinaryLoader(Loader):
 
 
 def _get_datestyle(conn: BaseConnection[Any] | None) -> bytes:
-    if conn:
-        ds = conn.pgconn.parameter_status(b"DateStyle")
-        if ds:
-            return ds
+    if conn and (ds := conn.pgconn.parameter_status(b"DateStyle")):
+        return ds
 
     return b"ISO, DMY"
 
 
 def _get_intervalstyle(conn: BaseConnection[Any] | None) -> bytes:
-    if conn:
-        ints = conn.pgconn.parameter_status(b"IntervalStyle")
-        if ints:
-            return ints
+    if conn and (ints := conn.pgconn.parameter_status(b"IntervalStyle")):
+        return ints
 
     return b"unknown"
 
@@ -705,8 +690,7 @@ def _get_timestamp_load_error(
         if not s:
             return False
 
-        ds = _get_datestyle(conn)
-        if not ds.startswith(b"P"):  # Postgres
+        if not _get_datestyle(conn).startswith(b"P"):  # Postgres
             return len(s.split()[0]) > 10  # date is first token
         else:
             return len(s.split()[-1]) > 4  # year is last token

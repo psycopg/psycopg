@@ -372,8 +372,7 @@ def _split_query(
             rv.append(QueryPart(pre, 0, PyFormat.AUTO))
             break
 
-        ph = m.group(0)
-        if ph == b"%%":
+        if (ph := m.group(0)) == b"%%":
             # unescape '%%' to '%' if necessary, then merge the parts
             if collapse_double_percent:
                 ph = b"%"

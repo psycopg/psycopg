@@ -145,8 +145,7 @@ def test_copy_out_allchars(conn, format):
     with cur.copy(query) as copy:
         copy.set_types(["text"])
         while True:
-            row = copy.read_row()
-            if not row:
+            if not (row := copy.read_row()):
                 break
             assert len(row) == 1
             rows.append(row[0])
@@ -160,8 +159,7 @@ def test_read_row_notypes(conn, format):
     with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = []
         while True:
-            row = copy.read_row()
-            if not row:
+            if not (row := copy.read_row()):
                 break
             rows.append(row)
 
@@ -736,15 +734,13 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method, gc):
 
                     if method == "read":
                         while True:
-                            tmp = copy.read()
-                            if not tmp:
+                            if not copy.read():
                                 break
                     elif method == "iter":
                         list(copy)
                     elif method == "row":
                         while True:
-                            tmp = copy.read_row()
-                            if tmp is None:
+                            if copy.read_row() is None:
                                 break
                     elif method == "rows":
                         list(copy.rows())
@@ -864,8 +860,7 @@ class DataGenerator:
     def blocks(self):
         f = self.file()
         while True:
-            block = f.read(self.block_size)
-            if not block:
+            if not (block := f.read(self.block_size)):
                 break
             yield block
 
@@ -880,8 +875,7 @@ class DataGenerator:
     def sha(self, f):
         m = hashlib.sha256()
         while True:
-            block = f.read()
-            if not block:
+            if not (block := f.read()):
                 break
             if isinstance(block, str):
                 block = block.encode()

@@ -46,8 +46,7 @@ def pytest_addoption(parser):
 
 
 def pytest_report_header(config):
-    dsn = config.getoption("--test-dsn")
-    if dsn is None:
+    if (dsn := config.getoption("--test-dsn")) is None:
         return []
 
     try:
@@ -56,9 +55,7 @@ def pytest_report_header(config):
     except Exception as ex:
         server_version = f"unknown ({ex})"
 
-    return [
-        f"Server version: {server_version}",
-    ]
+    return [f"Server version: {server_version}"]
 
 
 def pytest_collection_modifyitems(items):
@@ -93,8 +90,7 @@ def session_dsn(request):
     """
     Return the dsn used to connect to the `--test-dsn` database (session-wide).
     """
-    dsn = request.config.getoption("--test-dsn")
-    if dsn is None:
+    if (dsn := request.config.getoption("--test-dsn")) is None:
         pytest.skip("skipping test as no --test-dsn")
 
     warm_up_database(dsn)
@@ -130,8 +126,7 @@ def tracefile(request):
     """Open and yield a file for libpq client/server communication traces if
     --pq-tracefile option is set.
     """
-    tracefile = request.config.getoption("--pq-trace")
-    if not tracefile:
+    if not (tracefile := request.config.getoption("--pq-trace")):
         yield None
         return
 
@@ -191,9 +186,7 @@ def pgconn_debug(request):
 def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
     check_connection_version(request.node)
-
-    conn = pq.PGconn.connect(dsn.encode())
-    if conn.status != pq.ConnStatus.OK:
+    if (conn := pq.PGconn.connect(dsn.encode())).status != pq.ConnStatus.OK:
         pytest.fail(f"bad connection: {conn.get_error_message()}")
 
     with maybe_trace(conn, tracefile, request.function):
@@ -298,8 +291,7 @@ def patch_exec(conn, monkeypatch):
     L = ListPopAll()
 
     def _exec_command(command, *args, **kwargs):
-        cmdcopy = command
-        if isinstance(cmdcopy, bytes):
+        if isinstance((cmdcopy := command), bytes):
             cmdcopy = cmdcopy.decode(conn.info.encoding)
         elif isinstance(cmdcopy, sql.Composable):
             cmdcopy = cmdcopy.as_string(conn)
@@ -330,15 +322,12 @@ def check_connection_version(node):
     for mark in node.iter_markers():
         if mark.name == "pg":
             assert len(mark.args) == 1
-            msg = check_postgres_version(pg_version, mark.args[0])
-            if msg:
+            if msg := check_postgres_version(pg_version, mark.args[0]):
                 pytest.skip(msg)
-
         elif mark.name in ("crdb", "crdb_skip"):
             from .fix_crdb import check_crdb_version
 
-            msg = check_crdb_version(crdb_version, mark)
-            if msg:
+            if msg := check_crdb_version(crdb_version, mark):
                 pytest.skip(msg)
 
 
@@ -366,12 +355,9 @@ def warm_up_database(dsn: str) -> None:
     try:
         with psycopg.connect(dsn, connect_timeout=10) as conn:
             conn.execute("select 1")
-
             pg_version = conn.info.server_version
-
             crdb_version = None
-            param = conn.info.parameter_status("crdb_version")
-            if param:
+            if param := conn.info.parameter_status("crdb_version"):
                 from psycopg.crdb import CrdbConnectionInfo
 
                 crdb_version = CrdbConnectionInfo.parse_crdb_version(param)
