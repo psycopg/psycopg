@@ -230,9 +230,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         def load(pos: int) -> Row | None:
             return self._tx.load_row(pos, self._make_row)
 
-        while True:
-            if (row := load(self._pos)) is None:
-                break
+        while (row := load(self._pos)) is not None:
             self._pos += 1
             yield row
 

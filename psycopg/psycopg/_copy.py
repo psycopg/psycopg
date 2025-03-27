@@ -80,9 +80,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     def __iter__(self) -> Iterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
-        while True:
-            if not (data := self.read()):
-                break
+        while data := self.read():
             yield data
 
     def read(self) -> Buffer:
@@ -100,9 +98,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         Note that the records returned will be tuples of unparsed strings or
         bytes, unless data types are specified using `set_types()`.
         """
-        while True:
-            if (record := self.read_row()) is None:
-                break
+        while (record := self.read_row()) is not None:
             yield record
 
     def read_row(self) -> tuple[Any, ...] | None:
@@ -251,9 +247,7 @@ class QueuedLibpqWriter(LibpqWriter):
         The function is designed to be run in a separate task.
         """
         try:
-            while True:
-                if not (data := self._queue.get()):
-                    break
+            while data := self._queue.get():
                 self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         except BaseException as ex:
             # Propagate the error to the main thread.
