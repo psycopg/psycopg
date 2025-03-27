@@ -10,8 +10,8 @@
 Future releases
 ---------------
 
-Python 3.2.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add SRID support to shapely dumpers/loaders (:ticket:`#1028`).
 
@@ -19,8 +19,8 @@ Python 3.2.7 (unreleased)
 Current release
 ---------------
 
-Python 3.2.6
-^^^^^^^^^^^^
+Psycopg 3.2.6
+^^^^^^^^^^^^^
 
 - Fix connection semantic when using ``target_session_attrs=prefer-standby``
   (:ticket:`#1021`).
