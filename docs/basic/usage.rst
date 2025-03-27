@@ -49,11 +49,17 @@ Here is an interactive session showing some of the basic commands:
 
             # Query the database and obtain data as Python objects.
             cur.execute("SELECT * FROM test")
-            cur.fetchone()
-            # will return (1, 100, "abc'def")
+            print(cur.fetchone())
+            # will print (1, 100, "abc'def")
+
+            # You can use `cur.executemany()` to perform an operation in batch
+            cur.executemany(
+                "INSERT INTO test (num) values (%s)",
+                [(33,), (66,), (99,)])
 
             # You can use `cur.fetchmany()`, `cur.fetchall()` to return a list
             # of several records, or even iterate on the cursor
+            cur.execute("SELECT id, num FROM test order by num")
             for record in cur:
                 print(record)
 
