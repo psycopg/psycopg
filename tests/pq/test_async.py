@@ -23,9 +23,7 @@ def test_send_query(pgconn):
 
     # send loop
     waited_on_send = 0
-    while True:
-        if pgconn.flush() == 0:
-            break
+    while pgconn.flush() != 0:
 
         waited_on_send += 1
 

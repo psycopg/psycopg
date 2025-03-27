@@ -148,13 +148,10 @@ def _send(pgconn: PGconn) -> PQGen[None]:
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
     """
-    while True:
-        if pgconn.flush() == 0:
-            break
+    while pgconn.flush() != 0:
 
-        while True:
-            if ready := (yield WAIT_RW):
-                break
+        while not (ready := (yield WAIT_RW)):
+            continue
 
         if ready & READY_R:
             # This call may read notifies: they will be saved in the
@@ -216,17 +213,15 @@ def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
     Return a result from the database (whether success or error).
     """
     if pgconn.is_busy():
-        while True:
-            if (yield WAIT_R):
-                break
+        while not (yield WAIT_R):
+            continue
 
         while True:
             pgconn.consume_input()
             if not pgconn.is_busy():
                 break
-            while True:
-                if (yield WAIT_R):
-                    break
+            while not (yield WAIT_R):
+                continue
 
     _consume_notifies(pgconn)
 
@@ -244,9 +239,8 @@ def _pipeline_communicate(
     results = []
 
     while True:
-        while True:
-            if ready := (yield WAIT_RW):
-                break
+        while not (ready := (yield WAIT_RW)):
+            continue
 
         if ready & READY_R:
             pgconn.consume_input()
@@ -283,9 +277,7 @@ def _pipeline_communicate(
 
 def _consume_notifies(pgconn: PGconn) -> None:
     # Consume notifies
-    while True:
-        if not (n := pgconn.notifies()):
-            break
+    while n := pgconn.notifies():
         if pgconn.notify_handler:
             pgconn.notify_handler(n)
 
@@ -295,13 +287,10 @@ def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
     pgconn.consume_input()
 
     ns = []
-    while True:
-        if n := pgconn.notifies():
-            ns.append(n)
-            if pgconn.notify_handler:
-                pgconn.notify_handler(n)
-        else:
-            break
+    while n := pgconn.notifies():
+        ns.append(n)
+        if pgconn.notify_handler:
+            pgconn.notify_handler(n)
 
     return ns
 
@@ -313,9 +302,8 @@ def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
             break
 
         # would block
-        while True:
-            if (yield WAIT_R):
-                break
+        while not (yield WAIT_R):
+            continue
         pgconn.consume_input()
 
     if nbytes > 0:
@@ -342,9 +330,8 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
     # into smaller ones. We prefer to do it there instead of here in order to
     # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
-        while True:
-            if (yield WAIT_W):
-                break
+        while not (yield WAIT_W):
+            continue
 
     # Flushing often has a good effect on macOS because memcpy operations
     # seem expensive on this platform so accumulating a large buffer has a
@@ -352,9 +339,8 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
     if flush:
         # Repeat until it the message is flushed to the server
         while True:
-            while True:
-                if (yield WAIT_W):
-                    break
+            while not (yield WAIT_W):
+                continue
 
             if pgconn.flush() == 0:
                 break
@@ -363,15 +349,13 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
 def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
-        while True:
-            if (yield WAIT_W):
-                break
+        while not (yield WAIT_W):
+            continue
 
     # Repeat until it the message is flushed to the server
     while True:
-        while True:
-            if (yield WAIT_W):
-                break
+        while not (yield WAIT_W):
+            continue
 
         if pgconn.flush() == 0:
             break
