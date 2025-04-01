@@ -68,7 +68,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v2.23.2
         with:
           package-dir: psycopg_binary
         env:
@@ -142,7 +142,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v2.23.2
         with:
           package-dir: psycopg_binary
         env:
@@ -199,7 +199,7 @@ jobs:
           $PgSvc.Start()
         shell: powershell
 
-      - uses: prefix-dev/setup-pixi@v0.8.3
+      - uses: prefix-dev/setup-pixi@v0.8.4
         with:
           run-install: false
       - run: pixi global install libpq=${{ env.LIBPQ_VERSION }} --with openssl=${{ env.OPENSSL_VERSION }}
@@ -210,7 +210,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v2.23.2
         with:
           package-dir: psycopg_binary
         env:
