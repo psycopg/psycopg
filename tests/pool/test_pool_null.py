@@ -459,8 +459,6 @@ def test_cancellation_in_queue(dsn):
         def worker(i):
             try:
                 logging.info("worker %s started", i)
-                nonlocal got_conns
-
                 with p.connection() as conn:
                     logging.info("worker %s got conn", i)
                     cur = conn.execute("select 1")

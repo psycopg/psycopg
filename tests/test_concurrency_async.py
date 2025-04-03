@@ -25,7 +25,6 @@ async def test_commit_concurrency(aconn):
     stop = False
 
     async def committer():
-        nonlocal stop
         while not stop:
             await aconn.commit()
             await asyncio.sleep(0)  # Allow the other worker to work
