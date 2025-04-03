@@ -113,8 +113,7 @@ def test_scalar_row(conn):
 
 
 @pytest.mark.parametrize(
-    "factory",
-    "tuple_row dict_row namedtuple_row class_row args_row kwargs_row".split(),
+    "factory", "tuple_row dict_row namedtuple_row class_row args_row kwargs_row".split()
 )
 def test_no_result(factory, conn):
     cur = conn.cursor(row_factory=factory_from_name(factory))
@@ -151,8 +150,7 @@ def test_no_column_class_row(conn):
 
 
 def factory_from_name(name):
-    factory = getattr(rows, name)
-    if factory is rows.class_row:
+    if (factory := getattr(rows, name)) is rows.class_row:
         factory = factory(Person)
     if factory is rows.args_row:
         factory = factory(argf)

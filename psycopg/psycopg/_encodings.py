@@ -98,8 +98,7 @@ def conninfo_encoding(conninfo: str) -> str:
     from .conninfo import conninfo_to_dict
 
     params = conninfo_to_dict(conninfo)
-    pgenc = params.get("client_encoding")
-    if pgenc:
+    if pgenc := params.get("client_encoding"):
         try:
             return pg2pyenc(str(pgenc).encode())
         except NotSupportedError:

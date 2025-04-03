@@ -70,8 +70,7 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
         if conn.status == BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {conn.get_error_message(encoding)}",
-                pgconn=conn,
+                f"connection is bad: {conn.get_error_message(encoding)}", pgconn=conn
             )
 
         status = conn.connect_poll()
@@ -107,8 +106,8 @@ def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[Non
     while True:
         if deadline and monotonic() > deadline:
             raise e.CancellationTimeout("cancellation timeout expired")
-        status = cancel_conn.poll()
-        if status == POLL_OK:
+
+        if (status := cancel_conn.poll()) == POLL_OK:
             break
         elif status == POLL_READING:
             yield cancel_conn.socket, WAIT_R
@@ -149,15 +148,10 @@ def _send(pgconn: PGconn) -> PQGen[None]:
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
     """
-    while True:
-        f = pgconn.flush()
-        if f == 0:
-            break
+    while pgconn.flush() != 0:
 
-        while True:
-            ready = yield WAIT_RW
-            if ready:
-                break
+        while not (ready := (yield WAIT_RW)):
+            continue
 
         if ready & READY_R:
             # This call may read notifies: they will be saved in the
@@ -219,19 +213,15 @@ def _fetch(pgconn: PGconn) -> PQGen[PGresult | None]:
     Return a result from the database (whether success or error).
     """
     if pgconn.is_busy():
-        while True:
-            ready = yield WAIT_R
-            if ready:
-                break
+        while not (yield WAIT_R):
+            continue
 
         while True:
             pgconn.consume_input()
             if not pgconn.is_busy():
                 break
-            while True:
-                ready = yield WAIT_R
-                if ready:
-                    break
+            while not (yield WAIT_R):
+                continue
 
     _consume_notifies(pgconn)
 
@@ -249,10 +239,8 @@ def _pipeline_communicate(
     results = []
 
     while True:
-        while True:
-            ready = yield WAIT_RW
-            if ready:
-                break
+        while not (ready := (yield WAIT_RW)):
+            continue
 
         if ready & READY_R:
             pgconn.consume_input()
@@ -260,28 +248,23 @@ def _pipeline_communicate(
 
             res: list[PGresult] = []
             while not pgconn.is_busy():
-                r = pgconn.get_result()
-                if r is None:
+                if (r := pgconn.get_result()) is None:
                     if not res:
                         break
                     results.append(res)
                     res = []
+                elif (status := r.status) == PIPELINE_SYNC:
+                    assert not res
+                    results.append([r])
+                elif status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
+                    # This shouldn't happen, but insisting hard enough, it will.
+                    # For instance, in test_executemany_badquery(), with the COPY
+                    # statement and the AsyncClientCursor, which disables
+                    # prepared statements).
+                    # Bail out from the resulting infinite loop.
+                    raise e.NotSupportedError("COPY cannot be used in pipeline mode")
                 else:
-                    status = r.status
-                    if status == PIPELINE_SYNC:
-                        assert not res
-                        results.append([r])
-                    elif status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
-                        # This shouldn't happen, but insisting hard enough, it will.
-                        # For instance, in test_executemany_badquery(), with the COPY
-                        # statement and the AsyncClientCursor, which disables
-                        # prepared statements).
-                        # Bail out from the resulting infinite loop.
-                        raise e.NotSupportedError(
-                            "COPY cannot be used in pipeline mode"
-                        )
-                    else:
-                        res.append(r)
+                    res.append(r)
 
         if ready & READY_W:
             pgconn.flush()
@@ -294,10 +277,7 @@ def _pipeline_communicate(
 
 def _consume_notifies(pgconn: PGconn) -> None:
     # Consume notifies
-    while True:
-        n = pgconn.notifies()
-        if not n:
-            break
+    while n := pgconn.notifies():
         if pgconn.notify_handler:
             pgconn.notify_handler(n)
 
@@ -307,14 +287,10 @@ def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
     pgconn.consume_input()
 
     ns = []
-    while True:
-        n = pgconn.notifies()
-        if n:
-            ns.append(n)
-            if pgconn.notify_handler:
-                pgconn.notify_handler(n)
-        else:
-            break
+    while n := pgconn.notifies():
+        ns.append(n)
+        if pgconn.notify_handler:
+            pgconn.notify_handler(n)
 
     return ns
 
@@ -326,10 +302,8 @@ def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
             break
 
         # would block
-        while True:
-            ready = yield WAIT_R
-            if ready:
-                break
+        while not (yield WAIT_R):
+            continue
         pgconn.consume_input()
 
     if nbytes > 0:
@@ -337,12 +311,12 @@ def copy_from(pgconn: PGconn) -> PQGen[memoryview | PGresult]:
         return data
 
     # Retrieve the final result of copy
-    results = yield from _fetch_many(pgconn)
-    if len(results) > 1:
+
+    if len(results := (yield from _fetch_many(pgconn))) > 1:
         # TODO: too brutal? Copy worked.
         raise e.ProgrammingError("you cannot mix COPY with other operations")
-    result = results[0]
-    if result.status != COMMAND_OK:
+
+    if (result := results[0]).status != COMMAND_OK:
         raise e.error_from_result(result, encoding=pgconn._encoding)
 
     return result
@@ -356,10 +330,8 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
     # into smaller ones. We prefer to do it there instead of here in order to
     # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
-        while True:
-            ready = yield WAIT_W
-            if ready:
-                break
+        while not (yield WAIT_W):
+            continue
 
     # Flushing often has a good effect on macOS because memcpy operations
     # seem expensive on this platform so accumulating a large buffer has a
@@ -367,31 +339,25 @@ def copy_to(pgconn: PGconn, buffer: Buffer, flush: bool = True) -> PQGen[None]:
     if flush:
         # Repeat until it the message is flushed to the server
         while True:
-            while True:
-                ready = yield WAIT_W
-                if ready:
-                    break
-            f = pgconn.flush()
-            if f == 0:
+            while not (yield WAIT_W):
+                continue
+
+            if pgconn.flush() == 0:
                 break
 
 
 def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
-        while True:
-            ready = yield WAIT_W
-            if ready:
-                break
+        while not (yield WAIT_W):
+            continue
 
     # Repeat until it the message is flushed to the server
     while True:
-        while True:
-            ready = yield WAIT_W
-            if ready:
-                break
-        f = pgconn.flush()
-        if f == 0:
+        while not (yield WAIT_W):
+            continue
+
+        if pgconn.flush() == 0:
             break
 
     # Retrieve the final result of copy

@@ -248,8 +248,8 @@ asyncio.run(main())
         cur = conn.execute(
             "select pid from pg_stat_activity where application_name = %s", (APPNAME,)
         )
-        rec = cur.fetchone()
-        if rec:
+
+        if rec := cur.fetchone():
             pid = rec[0]
             break
         time.sleep(0.1)

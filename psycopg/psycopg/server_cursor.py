@@ -41,12 +41,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
 
     __slots__ = "_name _scrollable _withhold _described itersize _format".split()
 
-    def __init__(
-        self,
-        name: str,
-        scrollable: bool | None,
-        withhold: bool,
-    ):
+    def __init__(self, name: str, scrollable: bool | None, withhold: bool):
         self._name = name
         self._scrollable = scrollable
         self._withhold = withhold
@@ -96,10 +91,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return self._pos if tuples else None
 
     def _declare_gen(
-        self,
-        query: Query,
-        params: Params | None = None,
-        binary: bool | None = None,
+        self, query: Query, params: Params | None = None, binary: bool | None = None
     ) -> PQGen[None]:
         """Generator implementing `ServerCursor.execute()`."""
 
@@ -196,10 +188,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         if not isinstance(query, sql.Composable):
             query = sql.SQL(query)
 
-        parts = [
-            sql.SQL("DECLARE"),
-            sql.Identifier(self._name),
-        ]
+        parts = [sql.SQL("DECLARE"), sql.Identifier(self._name)]
         if self._scrollable is not None:
             parts.append(sql.SQL("SCROLL" if self._scrollable else "NO SCROLL"))
         parts.append(sql.SQL("CURSOR"))
@@ -296,11 +285,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         return self
 
     def executemany(
-        self,
-        query: Query,
-        params_seq: Iterable[Params],
-        *,
-        returning: bool = True,
+        self, query: Query, params_seq: Iterable[Params], *, returning: bool = True
     ) -> None:
         """Method not implemented for server-side cursors."""
         raise e.NotSupportedError("executemany not supported on server-side cursors")
@@ -429,11 +414,7 @@ class AsyncServerCursor(
         return self
 
     async def executemany(
-        self,
-        query: Query,
-        params_seq: Iterable[Params],
-        *,
-        returning: bool = True,
+        self, query: Query, params_seq: Iterable[Params], *, returning: bool = True
     ) -> None:
         raise e.NotSupportedError("executemany not supported on server-side cursors")
 
