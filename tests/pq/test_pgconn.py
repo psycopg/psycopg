@@ -30,8 +30,8 @@ def wait(
     poll = getattr(conn, poll_method)
     while True:
         assert conn.status != pq.ConnStatus.BAD, conn.error_message
-        rv = poll()
-        if rv == return_on:
+
+        if (rv := poll()) == return_on:
             return
         elif rv == pq.PollingStatus.READING:
             select([conn.socket], [], [], timeout)
@@ -362,11 +362,10 @@ def test_used_password(pgconn, dsn, monkeypatch):
     # so it may be that has_password is false but still a password was
     # requested by the server and passed by libpq.
     info = pq.Conninfo.parse(dsn.encode())
-    has_password = (
-        "PGPASSWORD" in os.environ
-        or [i for i in info if i.keyword == b"password"][0].val is not None
-    )
-    if has_password:
+
+    if "PGPASSWORD" in os.environ:
+        assert pgconn.used_password
+    if [i for i in info if i.keyword == b"password"][0].val is not None:
         assert pgconn.used_password
 
     pgconn.finish()

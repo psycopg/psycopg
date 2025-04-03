@@ -93,17 +93,13 @@ class LoggingPGconn:
         self._logger.info("sent prepared '%s' with %s", name.decode(), param_values)
 
     def send_prepare(
-        self,
-        name: bytes,
-        command: bytes,
-        param_types: Sequence[int] | None = None,
+        self, name: bytes, command: bytes, param_types: Sequence[int] | None = None
     ) -> None:
         self._pgconn.send_prepare(name, command, param_types)
         self._logger.info("prepare %s as '%s'", command.decode(), name.decode())
 
     def get_result(self) -> pq.abc.PGresult | None:
-        r = self._pgconn.get_result()
-        if r is not None:
+        if (r := self._pgconn.get_result()) is not None:
             self._logger.info("got %s result", pq.ExecStatus(r.status).name)
         return r
 
@@ -190,8 +186,7 @@ def pipeline_demo_pq(rows_to_send: int, logger: logging.Logger) -> None:
     ):
         while results_queue:
             fetched = waiting.wait(
-                pipeline_communicate(pgconn, commands),
-                pgconn.socket,
+                pipeline_communicate(pgconn, commands), pgconn.socket
             )
             assert not commands, commands
             for results in fetched:
@@ -213,8 +208,7 @@ async def pipeline_demo_pq_async(rows_to_send: int, logger: logging.Logger) -> N
     ):
         while results_queue:
             fetched = await waiting.wait_async(
-                pipeline_communicate(pgconn, commands),
-                pgconn.socket,
+                pipeline_communicate(pgconn, commands), pgconn.socket
             )
             assert not commands, commands
             for results in fetched:

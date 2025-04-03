@@ -108,8 +108,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 # If there is already a pipeline, ride it, in order to avoid
                 # sending unnecessary Sync.
                 with self._conn.lock:
-                    p = self._conn._pipeline
-                    if p:
+                    if p := self._conn._pipeline:
                         self._conn.wait(
                             self._executemany_gen_pipeline(query, params_seq, returning)
                         )
@@ -153,8 +152,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 first = True
                 while self._conn.wait(self._stream_fetchone_gen(first)):
                     for pos in range(size):
-                        rec = self._tx.load_row(pos, self._make_row)
-                        if rec is None:
+                        if (rec := self._tx.load_row(pos, self._make_row)) is None:
                             break
                         yield rec
                     first = False
@@ -188,8 +186,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         self._fetch_pipeline()
         self._check_result_for_fetch()
-        record = self._tx.load_row(self._pos, self._make_row)
-        if record is not None:
+        if (record := self._tx.load_row(self._pos, self._make_row)) is not None:
             self._pos += 1
         return record
 
@@ -233,10 +230,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         def load(pos: int) -> Row | None:
             return self._tx.load_row(pos, self._make_row)
 
-        while True:
-            row = load(self._pos)
-            if row is None:
-                break
+        while (row := load(self._pos)) is not None:
             self._pos += 1
             yield row
 

@@ -62,11 +62,9 @@ async def resolve_hostaddr_async(params: dict[str, Any]) -> dict[str, Any]:
             ports.append(str(attempt["port"]))
 
     out = params.copy()
-    shosts = ",".join(hosts)
-    if shosts:
+    if shosts := ",".join(hosts):
         out["host"] = shosts
-    shostaddrs = ",".join(hostaddrs)
-    if shostaddrs:
+    if shostaddrs := ",".join(hostaddrs):
         out["hostaddr"] = shostaddrs
     sports = ",".join(ports)
     if ports:
@@ -103,8 +101,7 @@ class Rfc2782Resolver:
 
     def resolve(self, params: dict[str, Any]) -> dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
-        attempts = self._get_attempts(params)
-        if not attempts:
+        if not (attempts := self._get_attempts(params)):
             return params
 
         hps = []
@@ -118,8 +115,7 @@ class Rfc2782Resolver:
 
     async def resolve_async(self, params: dict[str, Any]) -> dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
-        attempts = self._get_attempts(params)
-        if not attempts:
+        if not (attempts := self._get_attempts(params)):
             return params
 
         hps = []
@@ -144,9 +140,7 @@ class Rfc2782Resolver:
         host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
         hosts_in = host_arg.split(",")
         port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
-        ports_in = port_arg.split(",")
-
-        if len(ports_in) == 1:
+        if len((ports_in := port_arg.split(","))) == 1:
             # If only one port is specified, it applies to all the hosts.
             ports_in *= len(hosts_in)
         if len(ports_in) != len(hosts_in):
@@ -159,8 +153,7 @@ class Rfc2782Resolver:
         out = []
         srv_found = False
         for host, port in zip(hosts_in, ports_in):
-            m = self.re_srv_rr.match(host)
-            if m or port.lower() == "srv":
+            if (m := self.re_srv_rr.match(host)) or port.lower() == "srv":
                 srv_found = True
                 target = m.group("target") if m else None
                 hp = HostPort(host=host, port=port, totry=True, target=target)

@@ -382,8 +382,7 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             self._check_connection_ok()
 
-            pipeline = self._pipeline
-            if pipeline is None:
+            if (pipeline := self._pipeline) is None:
                 # WARNING: reference loop, broken ahead.
                 pipeline = self._pipeline = Pipeline(self)
 

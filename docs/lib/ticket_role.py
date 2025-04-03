@@ -16,8 +16,7 @@ from docutils.parsers.rst import roles
 
 
 def ticket_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-    cfg = inliner.document.settings.env.app.config
-    if cfg.ticket_url is None:
+    if (cfg := inliner.document.settings.env.app.config).ticket_url is None:
         msg = inliner.reporter.warning(
             "ticket not configured: please configure ticket_url in conf.py"
         )

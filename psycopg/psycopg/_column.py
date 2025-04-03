@@ -20,8 +20,7 @@ class Column(Sequence[Any]):
         res = cursor.pgresult
         assert res
 
-        fname = res.fname(index)
-        if fname:
+        if fname := res.fname(index):
             self._name = fname.decode(cursor._encoding)
         else:
             # COPY_OUT results have columns but no name

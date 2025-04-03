@@ -395,8 +395,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         query = self._convert_query(statement)
 
         self._execute_send(query, binary=False)
-        results = yield from execute(self._pgconn)
-        if len(results) != 1:
+        if len(results := (yield from execute(self._pgconn))) != 1:
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
         self._check_copy_result(results[0])
@@ -473,8 +472,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """
         Raise an appropriate error message for an unexpected database result
         """
-        status = result.status
-        if status == FATAL_ERROR:
+        if (status := result.status) == FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
         elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
@@ -518,19 +516,17 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # Received from execute()
             self._results[:] = results
             self._select_current_result(0)
-
+        # Received from executemany()
+        elif self._execmany_returning:
+            first_batch = not self._results
+            self._results.extend(results)
+            if first_batch:
+                self._select_current_result(0)
         else:
-            # Received from executemany()
-            if self._execmany_returning:
-                first_batch = not self._results
-                self._results.extend(results)
-                if first_batch:
-                    self._select_current_result(0)
-            else:
-                # In non-returning case, set rowcount to the cumulated number of
-                # rows of executed queries.
-                for res in results:
-                    self._rowcount += res.command_tuples or 0
+            # In non-returning case, set rowcount to the cumulated number of
+            # rows of executed queries.
+            for res in results:
+                self._rowcount += res.command_tuples or 0
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         if self._conn._pipeline:
@@ -572,12 +568,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def _check_result_for_fetch(self) -> None:
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
-        res = self.pgresult
-        if not res:
+
+        if not (res := self.pgresult):
             raise e.ProgrammingError("no result available")
 
-        status = res.status
-        if status == TUPLES_OK:
+        if (status := res.status) == TUPLES_OK:
             return
         elif status == FATAL_ERROR:
             raise e.error_from_result(res, encoding=self._encoding)

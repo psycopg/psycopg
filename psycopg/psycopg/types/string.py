@@ -138,8 +138,7 @@ class BytesDumper(Dumper):
         return self._esc.escape_bytea(obj)
 
     def quote(self, obj: Buffer) -> Buffer:
-        escaped = self.dump(obj)
-        if escaped is None:
+        if (escaped := self.dump(obj)) is None:
             return b"NULL"
 
         # We cannot use the base quoting because escape_bytea already returns

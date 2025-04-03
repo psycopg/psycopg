@@ -98,11 +98,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self
 
     async def executemany(
-        self,
-        query: Query,
-        params_seq: Iterable[Params],
-        *,
-        returning: bool = False,
+        self, query: Query, params_seq: Iterable[Params], *, returning: bool = False
     ) -> None:
         """
         Execute the same command with a sequence of input data.
@@ -112,8 +108,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 # If there is already a pipeline, ride it, in order to avoid
                 # sending unnecessary Sync.
                 async with self._conn.lock:
-                    p = self._conn._pipeline
-                    if p:
+                    if p := self._conn._pipeline:
                         await self._conn.wait(
                             self._executemany_gen_pipeline(query, params_seq, returning)
                         )
@@ -157,8 +152,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 first = True
                 while await self._conn.wait(self._stream_fetchone_gen(first)):
                     for pos in range(size):
-                        rec = self._tx.load_row(pos, self._make_row)
-                        if rec is None:
+                        if (rec := self._tx.load_row(pos, self._make_row)) is None:
                             break
                         yield rec
                     first = False
@@ -196,8 +190,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         """
         await self._fetch_pipeline()
         self._check_result_for_fetch()
-        record = self._tx.load_row(self._pos, self._make_row)
-        if record is not None:
+        if (record := self._tx.load_row(self._pos, self._make_row)) is not None:
             self._pos += 1
         return record
 
@@ -216,9 +209,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         if not size:
             size = self.arraysize
         records = self._tx.load_rows(
-            self._pos,
-            min(self._pos + size, self.pgresult.ntuples),
-            self._make_row,
+            self._pos, min(self._pos + size, self.pgresult.ntuples), self._make_row
         )
         self._pos += len(records)
         return records
@@ -243,10 +234,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         def load(pos: int) -> Row | None:
             return self._tx.load_row(pos, self._make_row)
 
-        while True:
-            row = load(self._pos)
-            if row is None:
-                break
+        while (row := load(self._pos)) is not None:
             self._pos += 1
             yield row
 

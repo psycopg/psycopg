@@ -33,8 +33,7 @@ def get_user_data(data):
         "name": data["name"],
     }
     if data["blog"]:
-        website = data["blog"]
-        if not website.startswith("http"):
+        if not (website := data["blog"]).startswith("http"):
             website = "http://" + website
 
         out["website"] = website
@@ -54,8 +53,8 @@ def update_entry(opt, filedata, entry):
     # entry is an username or an user entry daat
     if isinstance(entry, str):
         username = entry
-        entry = [e for e in filedata if e["username"] == username]
-        if not entry:
+
+        if not (entry := [e for e in filedata if e["username"] == username]):
             raise Exception(f"{username} not found")
         entry = entry[0]
     else:

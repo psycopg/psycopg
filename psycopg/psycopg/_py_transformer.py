@@ -179,8 +179,7 @@ class Transformer(AdaptContext):
         # right size.
         if self._row_dumpers:
             for i in range(nparams):
-                param = params[i]
-                if param is not None:
+                if (param := params[i]) is not None:
                     out[i] = self._row_dumpers[i].dump(param)
             return out
 
@@ -188,8 +187,7 @@ class Transformer(AdaptContext):
         pqformats = [TEXT] * nparams
 
         for i in range(nparams):
-            param = params[i]
-            if param is None:
+            if (param := params[i]) is None:
                 continue
             dumper = self.get_dumper(param, formats[i])
             out[i] = dumper.dump(param)
@@ -212,8 +210,7 @@ class Transformer(AdaptContext):
             try:
                 type_sql = self._oid_types[oid]
             except KeyError:
-                ti = self.adapters.types.get(oid)
-                if ti:
+                if ti := self.adapters.types.get(oid):
                     if oid < 8192:
                         # builtin: prefer "timestamptz" to "timestamp with time zone"
                         type_sql = ti.name.encode(self.encoding)
@@ -254,8 +251,7 @@ class Transformer(AdaptContext):
                 cache[key] = dumper = dcls(key, self)
 
         # Check if the dumper requires an upgrade to handle this specific value
-        key1 = dumper.get_key(obj, format)
-        if key1 is key:
+        if (key1 := dumper.get_key(obj, format)) is key:
             return dumper
 
         # If it does, ask the dumper to create its own upgraded version
@@ -298,8 +294,7 @@ class Transformer(AdaptContext):
         return dumper
 
     def load_rows(self, row0: int, row1: int, make_row: RowMaker[Row]) -> list[Row]:
-        res = self._pgresult
-        if not res:
+        if not (res := self._pgresult):
             raise e.InterfaceError("result not set")
 
         if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
@@ -311,16 +306,14 @@ class Transformer(AdaptContext):
         for row in range(row0, row1):
             record: list[Any] = [None] * self._nfields
             for col in range(self._nfields):
-                val = res.get_value(row, col)
-                if val is not None:
+                if (val := res.get_value(row, col)) is not None:
                     record[col] = self._row_loaders[col](val)
             records.append(make_row(record))
 
         return records
 
     def load_row(self, row: int, make_row: RowMaker[Row]) -> Row | None:
-        res = self._pgresult
-        if not res:
+        if not (res := self._pgresult):
             return None
 
         if not 0 <= row < self._ntuples:
@@ -328,8 +321,7 @@ class Transformer(AdaptContext):
 
         record: list[Any] = [None] * self._nfields
         for col in range(self._nfields):
-            val = res.get_value(row, col)
-            if val is not None:
+            if (val := res.get_value(row, col)) is not None:
                 record[col] = self._row_loaders[col](val)
 
         return make_row(record)
@@ -352,10 +344,8 @@ class Transformer(AdaptContext):
         except KeyError:
             pass
 
-        loader_cls = self._adapters.get_loader(oid, format)
-        if not loader_cls:
-            loader_cls = self._adapters.get_loader(INVALID_OID, format)
-            if not loader_cls:
+        if not (loader_cls := self._adapters.get_loader(oid, format)):
+            if not (loader_cls := self._adapters.get_loader(INVALID_OID, format)):
                 raise e.InterfaceError("unknown oid loader not found")
         loader = self._loaders[format][oid] = loader_cls(oid, self)
         return loader

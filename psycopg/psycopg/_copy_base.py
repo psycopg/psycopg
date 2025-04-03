@@ -73,17 +73,13 @@ class BaseCopy(Generic[ConnectionType]):
     formatter: Formatter
 
     def __init__(
-        self,
-        cursor: BaseCursor[ConnectionType, Any],
-        *,
-        binary: bool | None = None,
+        self, cursor: BaseCursor[ConnectionType, Any], *, binary: bool | None = None
     ):
         self.cursor = cursor
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
 
-        result = cursor.pgresult
-        if result:
+        if result := cursor.pgresult:
             self._direction = result.status
             if self._direction != COPY_IN and self._direction != COPY_OUT:
                 raise e.ProgrammingError(
@@ -162,12 +158,10 @@ class BaseCopy(Generic[ConnectionType]):
         return memoryview(b"")
 
     def _read_row_gen(self) -> PQGen[tuple[Any, ...] | None]:
-        data = yield from self._read_gen()
-        if not data:
+        if not (data := (yield from self._read_gen())):
             return None
 
-        row = self.formatter.parse_row(data)
-        if row is None:
+        if (row := self.formatter.parse_row(data)) is None:
             # Get the final result to finish the copy operation
             yield from self._read_gen()
             self._finished = True

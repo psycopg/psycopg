@@ -80,10 +80,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     def __iter__(self) -> Iterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
-        while True:
-            data = self.read()
-            if not data:
-                break
+        while data := self.read():
             yield data
 
     def read(self) -> Buffer:
@@ -101,10 +98,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         Note that the records returned will be tuples of unparsed strings or
         bytes, unless data types are specified using `set_types()`.
         """
-        while True:
-            record = self.read_row()
-            if record is None:
-                break
+        while (record := self.read_row()) is not None:
             yield record
 
     def read_row(self) -> tuple[Any, ...] | None:
@@ -125,14 +119,12 @@ class Copy(BaseCopy["Connection[Any]"]):
         If the :sql:`COPY` is in binary format `!buffer` must be `!bytes`. In
         text mode it can be either `!bytes` or `!str`.
         """
-        data = self.formatter.write(buffer)
-        if data:
+        if data := self.formatter.write(buffer):
             self._write(data)
 
     def write_row(self, row: Sequence[Any]) -> None:
         """Write a record to a table after a :sql:`COPY FROM` operation."""
-        data = self.formatter.write_row(row)
-        if data:
+        if data := self.formatter.write_row(row):
             self._write(data)
 
     def finish(self, exc: BaseException | None) -> None:
@@ -143,8 +135,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         using the `Copy` object outside a block.
         """
         if self._direction == COPY_IN:
-            data = self.formatter.end()
-            if data:
+            if data := self.formatter.end():
                 self._write(data)
             self.writer.finish(exc)
             self._finished = True
@@ -256,10 +247,7 @@ class QueuedLibpqWriter(LibpqWriter):
         The function is designed to be run in a separate task.
         """
         try:
-            while True:
-                data = self._queue.get()
-                if not data:
-                    break
+            while data := self._queue.get():
                 self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         except BaseException as ex:
             # Propagate the error to the main thread.

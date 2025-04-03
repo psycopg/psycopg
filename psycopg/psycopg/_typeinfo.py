@@ -171,8 +171,7 @@ ORDER BY t.oid
     @classmethod
     def _has_to_regtype_function(cls, conn: BaseConnection[Any]) -> bool:
         # to_regtype() introduced in PostgreSQL 9.4 and CockroachDB 22.2
-        info = conn.info
-        if info.vendor == "PostgreSQL":
+        if (info := conn.info).vendor == "PostgreSQL":
             return info.server_version >= 90400
         elif info.vendor == "CockroachDB":
             return info.server_version >= 220200
@@ -195,10 +194,8 @@ ORDER BY t.oid
         pass
 
     def get_type_display(self, oid: int | None = None, fmod: int | None = None) -> str:
-        parts = []
-        parts.append(self.name)
-        mod = self.typemod.get_modifier(fmod) if fmod is not None else ()
-        if mod:
+        parts = [self.name]
+        if mod := (self.typemod.get_modifier(fmod) if fmod is not None else ()):
             parts.append(f"({','.join(map(str, mod))})")
 
         if oid == self.array_oid:

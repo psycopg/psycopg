@@ -8,8 +8,8 @@ pytestmark = pytest.mark.crdb_skip("2-phase commit")
 
 async def test_tpc_disabled(aconn, apipeline):
     cur = await aconn.execute("show max_prepared_transactions")
-    val = int((await cur.fetchone())[0])
-    if val:
+
+    if int((await cur.fetchone())[0]):
         pytest.skip("prepared transactions enabled")
 
     await aconn.rollback()
