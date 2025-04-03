@@ -47,7 +47,6 @@ def test_commit_concurrency(conn):
     stop = False
 
     def committer():
-        nonlocal stop
         while not stop:
             conn.commit()
 
