@@ -665,8 +665,6 @@ async def test_cancellation_in_queue(pool_cls, dsn):
         async def worker(i):
             try:
                 logging.info("worker %s started", i)
-                nonlocal got_conns
-
                 async with p.connection() as conn:
                     logging.info("worker %s got conn", i)
                     cur = await conn.execute("select 1")

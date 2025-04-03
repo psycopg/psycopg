@@ -54,7 +54,6 @@ def test_diag_right_attr(pgconn, monkeypatch):
     checked: list[pq.DiagnosticField] = []
 
     def check_val(self, v):
-        nonlocal to_check
         assert to_check == v
         checked.append(v)
         return None
