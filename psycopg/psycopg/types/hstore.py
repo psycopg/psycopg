@@ -15,7 +15,7 @@ from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from .._oids import TEXT_OID
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from ..adapt import Loader, PyFormat, RecursiveDumper, RecursiveLoader
 from .._compat import TypeAlias
 from .._typeinfo import TypeInfo
 from .._encodings import conn_encoding
@@ -85,7 +85,11 @@ class BaseHstoreDumper(RecursiveDumper):
 
 class BaseHstoreBinaryDumper(RecursiveDumper):
     format = Format.BINARY
-    encoding: str
+
+    def __init__(self, cls: type, context: AdaptContext | None = None):
+        super().__init__(cls, context)
+        enc = conn_encoding(self.connection)
+        self.encoding = enc if enc != "ascii" else "utf-8"
 
     def dump(self, obj: Hstore) -> Buffer:
         if not obj:
@@ -140,9 +144,13 @@ class HstoreLoader(RecursiveLoader):
         return rv
 
 
-class BaseHstoreBinaryLoader(RecursiveLoader):
+class HstoreBinaryLoader(Loader):
     format = Format.BINARY
-    encoding: str
+
+    def __init__(self, oid: int, context: AdaptContext | None = None):
+        super().__init__(oid, context)
+        enc = conn_encoding(self.connection)
+        self.encoding = enc if enc != "ascii" else "utf-8"
 
     def load(self, data: Buffer) -> Hstore:
         if len(data) < 12:  # Fast-path if too small to contain any data.
@@ -200,15 +208,14 @@ def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None
     info.register(context)
 
     adapters = context.adapters if context else postgres.adapters
-    encoding = conn_encoding(context.connection if context is not None else None)
 
     # Generate and register customized dumpers
     adapters.register_dumper(dict, _make_hstore_dumper(info.oid))
-    adapters.register_dumper(dict, _make_hstore_binary_dumper(info.oid, encoding))
+    adapters.register_dumper(dict, _make_hstore_binary_dumper(info.oid))
 
     # Register the loaders on the oid
     adapters.register_loader(info.oid, HstoreLoader)
-    adapters.register_loader(info.oid, _make_hstore_binary_loader(encoding))
+    adapters.register_loader(info.oid, HstoreBinaryLoader)
 
 
 # Cache all dynamically-generated types to avoid leaks in case the types
@@ -230,17 +237,8 @@ def _make_hstore_dumper(oid_in: int) -> type[BaseHstoreDumper]:
 
 
 @cache
-def _make_hstore_binary_dumper(oid_in: int, enc: str) -> type[BaseHstoreBinaryDumper]:
+def _make_hstore_binary_dumper(oid_in: int) -> type[BaseHstoreBinaryDumper]:
     class HstoreBinaryDumper(BaseHstoreBinaryDumper):
         oid = oid_in
-        encoding = enc
 
     return HstoreBinaryDumper
-
-
-@cache
-def _make_hstore_binary_loader(enc: str) -> type[BaseHstoreBinaryLoader]:
-    class HstoreBinaryLoader(BaseHstoreBinaryLoader):
-        encoding = enc
-
-    return HstoreBinaryLoader
