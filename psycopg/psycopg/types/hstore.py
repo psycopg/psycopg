@@ -42,7 +42,7 @@ _re_hstore = re.compile(
 _U32_STRUCT = Struct("!I")
 """Simple struct representing an unsigned 32-bit big-endian integer."""
 
-_I2B = [i.to_bytes(4, "big") for i in range(256)]
+_I2B = [i.to_bytes(4, "big") for i in range(64)]
 """Lookup list for small ints to bytes conversions."""
 
 
