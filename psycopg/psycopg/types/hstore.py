@@ -202,11 +202,11 @@ def register_hstore(info: TypeInfo, context: AdaptContext | None = None) -> None
     adapters = context.adapters if context else postgres.adapters
     encoding = conn_encoding(context.connection if context is not None else None)
 
-    # Generate and register a customized text dumper
+    # Generate and register customized dumpers
     adapters.register_dumper(dict, _make_hstore_dumper(info.oid))
     adapters.register_dumper(dict, _make_hstore_binary_dumper(info.oid, encoding))
 
-    # register the text loader on the oid
+    # Register the loaders on the oid
     adapters.register_loader(info.oid, HstoreLoader)
     adapters.register_loader(info.oid, _make_hstore_binary_loader(encoding))
 
