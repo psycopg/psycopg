@@ -4,9 +4,9 @@ import psycopg
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import (
+    HstoreBinaryLoader,
     HstoreLoader,
     _make_hstore_binary_dumper,
-    _make_hstore_binary_loader,
     register_hstore,
 )
 
@@ -64,9 +64,9 @@ def test_parse_ok(s, d):
     ],
 )
 def test_binary(d, b):
-    dumper = _make_hstore_binary_dumper(0, "utf-8")(dict)
+    dumper = _make_hstore_binary_dumper(0)(dict)
     assert dumper.dump(d) == b
-    loader = _make_hstore_binary_loader("utf-8")(0)
+    loader = HstoreBinaryLoader(0)
     assert loader.load(b) == d
 
 
