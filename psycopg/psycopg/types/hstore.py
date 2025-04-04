@@ -97,14 +97,12 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
 
         i2b = _I2B
         encoding = self.encoding
-        buffer: list[bytes] = [
-            i2b[i] if (i := len(obj)) < 256 else i.to_bytes(4, "big")
-        ]
+        buffer: list[bytes] = [i2b[i] if (i := len(obj)) < 64 else i.to_bytes(4, "big")]
 
         for key, value in obj.items():
             key_bytes = key.encode(encoding)
             buffer.append(
-                i2b[i] if (i := len(key_bytes)) < 256 else i.to_bytes(4, "big")
+                i2b[i] if (i := len(key_bytes)) < 64 else i.to_bytes(4, "big")
             )
             buffer.append(key_bytes)
 
@@ -113,7 +111,7 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
             else:
                 value_bytes = value.encode(encoding)
                 buffer.append(
-                    i2b[i] if (i := len(value_bytes)) < 256 else i.to_bytes(4, "big")
+                    i2b[i] if (i := len(value_bytes)) < 64 else i.to_bytes(4, "big")
                 )
                 buffer.append(value_bytes)
 
