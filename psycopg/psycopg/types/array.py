@@ -33,6 +33,8 @@ _unpack_dim = cast(Callable[[Buffer, int], "tuple[int, int]"], _struct_dim.unpac
 PY_TEXT = PyFormat.TEXT
 PQ_BINARY = pq.Format.BINARY
 
+ARRAY_NULL = b"\xff\xff\xff\xff"
+
 
 class BaseListDumper(RecursiveDumper):
     element_oid = INVALID_OID
@@ -275,7 +277,7 @@ class ListBinaryDumper(BaseListDumper):
                         data.append(item)
                     else:
                         hasnull = 1
-                        data.append(b"\xff\xff\xff\xff")
+                        data.append(ARRAY_NULL)
             else:
                 for item in L:
                     if not isinstance(item, self.cls):
