@@ -14,6 +14,7 @@ Python 3.3.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Drop support for Python 3.8.
+- Add support for binary hstore (:ticket:`#1030`).
 
 
 Current release
