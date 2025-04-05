@@ -1,8 +1,14 @@
 import pytest
 
 import psycopg
+from psycopg.pq import Format
 from psycopg.types import TypeInfo
-from psycopg.types.hstore import HstoreLoader, register_hstore
+from psycopg.types.hstore import (
+    HstoreBinaryLoader,
+    HstoreLoader,
+    _make_hstore_binary_dumper,
+    register_hstore,
+)
 
 pytestmark = pytest.mark.crdb_skip("hstore")
 
@@ -27,6 +33,41 @@ pytestmark = pytest.mark.crdb_skip("hstore")
 def test_parse_ok(s, d):
     loader = HstoreLoader(0, None)
     assert loader.load(s.encode()) == d
+
+
+@pytest.mark.parametrize(
+    "d, b",
+    [
+        ({}, b"\x00\x00\x00\x00"),
+        (
+            {"a": "1", "b": "2"},
+            b"\x00\x00\x00\x02"
+            b"\x00\x00\x00\x01a\x00\x00\x00\x011"
+            b"\x00\x00\x00\x01b\x00\x00\x00\x012",
+        ),
+        (
+            {"a": None, "b": "2"},
+            b"\x00\x00\x00\x02"
+            b"\x00\x00\x00\x01a\xff\xff\xff\xff"
+            b"\x00\x00\x00\x01b\x00\x00\x00\x012",
+        ),
+        (
+            {"\xe8": "\xe0"},
+            b"\x00\x00\x00\x01\x00\x00\x00\x02\xc3\xa8\x00\x00\x00\x02\xc3\xa0",
+        ),
+        (
+            {"a": None, "b": "1" * 300},
+            b"\x00\x00\x00\x02"
+            b"\x00\x00\x00\x01a\xff\xff\xff\xff"
+            b"\x00\x00\x00\x01b\x00\x00\x01," + b"1" * 300,
+        ),
+    ],
+)
+def test_binary(d, b):
+    dumper = _make_hstore_binary_dumper(0)(dict)
+    assert dumper.dump(d) == b
+    loader = HstoreBinaryLoader(0)
+    assert loader.load(b) == d
 
 
 @pytest.mark.parametrize(
@@ -92,15 +133,17 @@ samp = [
 
 
 @pytest.mark.parametrize("d", samp)
-def test_roundtrip(hstore, conn, d):
+@pytest.mark.parametrize("fmt_out", Format)
+def test_roundtrip(hstore, conn, d, fmt_out):
     register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
-    d1 = conn.execute("select %s", [d]).fetchone()[0]
+    d1 = conn.cursor(binary=fmt_out).execute("select %s", [d]).fetchone()[0]
     assert d == d1
 
 
-def test_roundtrip_array(hstore, conn):
+@pytest.mark.parametrize("fmt_out", Format)
+def test_roundtrip_array(hstore, conn, fmt_out):
     register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
-    samp1 = conn.execute("select %s", (samp,)).fetchone()[0]
+    samp1 = conn.cursor(binary=fmt_out).execute("select %s", (samp,)).fetchone()[0]
     assert samp1 == samp
 
 
