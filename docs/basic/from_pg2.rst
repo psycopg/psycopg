@@ -156,6 +156,14 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
 
 .. warning::
 
+    You cannot executeA multiple statements in the same query:
+
+    - when retrieving a :ref:`binary result <binary-data>` (such as using
+      ``.execute(..., binary=True)``;
+    - when using the :ref:`pipeline mode <pipeline-mode>`.
+
+.. warning::
+
     If a statement must be executed outside a transaction (such as
     :sql:`CREATE DATABASE`), it cannot be executed in batch with other
     statements, even if the connection is in autocommit mode::

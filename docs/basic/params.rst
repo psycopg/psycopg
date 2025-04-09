@@ -240,3 +240,8 @@ in the database, such as images::
     cur.execute(
         "SELECT image_data FROM images WHERE id = %s", [image_id], binary=True)
     data = cur.fetchone()[0]
+
+.. warning::
+
+    You cannot execute :ref:`multiple statements in the same query
+    <multi-statements>` when requesting a binary result.

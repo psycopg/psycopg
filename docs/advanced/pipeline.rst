@@ -200,8 +200,10 @@ synchronization point.
 
     - COPY is not supported in pipeline mode by PostgreSQL.
     - `Cursor.stream()` doesn't make sense in pipeline mode (its job is the
-      opposite of batching!)
+      opposite of batching!).
     - `ServerCursor` are currently not implemented in pipeline mode.
+    - You cannot execute :ref:`multiple statements in the same query
+      <multi-statements>`.
 
 .. note::
 
