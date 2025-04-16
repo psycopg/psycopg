@@ -1038,3 +1038,39 @@ def test_check_returns_an_ok_connection(dsn, status):
 
         conn = list(p._pool)[0]
         assert conn.info.transaction_status == TransactionStatus.IDLE
+
+
+def test_override_close(dsn):
+    # Verify that it's possible to override `close()` to act as `putconn()`.
+    # which allows to use the psycopg pool in a sqlalchemy NullPool.
+    #
+    # We cannot guarantee 100% that we will never break this implementation,
+    # but we can keep awareness that we use it this way, maintain it on a
+    # best-effort basis, and notify upstream if we are forced to break it.
+    #
+    # https://github.com/sqlalchemy/sqlalchemy/discussions/12522
+    # https://github.com/psycopg/psycopg/issues/1046
+
+    class MyConnection(psycopg.Connection[Row]):
+
+        def close(self) -> None:
+            if pool := getattr(self, "_pool", None):
+                # Connection currently checked out from the pool.
+                # Instead of closing it, return it to the pool.
+                pool.putconn(self)
+            else:
+                # Connection not part of any pool, or currently into the pool.
+                # Close the connection for real.
+                super().close()
+
+    with pool.ConnectionPool(dsn, connection_class=MyConnection, min_size=2) as p:
+        p.wait()
+        assert len(p._pool) == 2
+        conn = p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
