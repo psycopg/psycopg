@@ -42,6 +42,8 @@ The `!Connection` class
             :ref:`row-factories` for details.
         :param cursor_factory: Initial value for the `cursor_factory` attribute
             of the connection (new in Psycopg 3.1).
+        :param server_cursor_factory: Initial value for the `server_cursor_factory`
+            attribute of the connection (new in Psycopg 3.3).
         :param prepare_threshold: Initial value for the `prepare_threshold`
             attribute of the connection (new in Psycopg 3.1).
 
@@ -67,6 +69,9 @@ The `!Connection` class
 
         .. versionchanged:: 3.1
             added `!prepare_threshold` and `!cursor_factory` parameters.
+
+        .. versionchanged:: 3.3
+            added `!server_cursor_factory` parameter.
 
     .. automethod:: close
 

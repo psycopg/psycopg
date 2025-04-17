@@ -625,6 +625,17 @@ def test_server_cursor_factory(conn):
         assert isinstance(cur, MyServerCursor)
 
 
+def test_server_cursor_factory_connect(conn_cls, dsn):
+
+    class MyCursor(psycopg.ServerCursor[psycopg.rows.Row]):
+        pass
+
+    with conn_cls.connect(dsn, server_cursor_factory=MyCursor) as conn:
+        assert conn.server_cursor_factory is MyCursor
+        with conn.cursor(name="n") as cur:
+            assert type(cur) is MyCursor
+
+
 @pytest.mark.parametrize("param", tx_params)
 def test_transaction_param_default(conn, param):
     assert getattr(conn, param.name) is None
