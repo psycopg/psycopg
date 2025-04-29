@@ -421,3 +421,31 @@ _ph_to_fmt = {
     b"t": PyFormat.TEXT,
     b"b": PyFormat.BINARY,
 }
+
+
+class PostgresRawQuery(PostgresQuery):
+    def convert(self, query: Query, vars: Params | None) -> None:
+        if isinstance(query, str):
+            bquery = query.encode(self._encoding)
+        elif isinstance(query, Composable):
+            bquery = query.as_bytes(self._tx)
+        else:
+            bquery = query
+
+        self.query = bquery
+        self._want_formats = self._order = None
+        self.dump(vars)
+
+    def dump(self, vars: Params | None) -> None:
+        if vars is not None:
+            if not PostgresQuery.is_params_sequence(vars):
+                raise TypeError("raw queries require a sequence of parameters")
+            self._want_formats = [PyFormat.AUTO] * len(vars)
+
+            self.params = self._tx.dump_sequence(vars, self._want_formats)
+            self.types = self._tx.types or ()
+            self.formats = self._tx.formats
+        else:
+            self.params = None
+            self.types = ()
+            self.formats = None
