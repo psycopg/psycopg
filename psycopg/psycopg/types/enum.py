@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from .. import errors as e
 from .. import postgres, sql
 from ..pq import Format
-from ..abc import AdaptContext, Query
+from ..abc import AdaptContext, QueryNoTemplate
 from ..adapt import Buffer, Dumper, Loader
 from .._compat import TypeVar
 from .._typeinfo import TypeInfo
@@ -51,7 +51,7 @@ class EnumInfo(TypeInfo):
         self.enum: type[Enum] | None = None
 
     @classmethod
-    def _get_info_query(cls, conn: BaseConnection[Any]) -> Query:
+    def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
         return sql.SQL(
             """\
 SELECT name, oid, array_oid, array_agg(label) AS labels
