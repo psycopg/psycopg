@@ -16,8 +16,21 @@ if sys.version_info >= (3, 13):
 else:
     from typing_extensions import TypeVar
 
+if sys.version_info >= (3, 14):
+    from string.templatelib import Interpolation, Template
+else:
+
+    class Template:
+        pass
+
+    class Interpolation:
+        pass
+
+
 __all__ = [
+    "Interpolation",
     "LiteralString",
     "Self",
+    "Template",
     "TypeVar",
 ]

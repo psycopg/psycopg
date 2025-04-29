@@ -15,7 +15,7 @@ from collections.abc import Iterable, Iterator, Sequence
 from .pq import Escaping
 from .abc import AdaptContext
 from ._enums import PyFormat
-from ._compat import LiteralString
+from ._compat import LiteralString, Template
 from ._encodings import conn_encoding
 from ._transformer import Transformer
 
@@ -201,21 +201,25 @@ class SQL(Composable):
         SELECT "foo", "bar" FROM "table"
     """
 
-    _obj: LiteralString
+    _obj: "LiteralString | Template"
     _formatter = string.Formatter()
 
-    def __init__(self, obj: LiteralString):
+    def __init__(self, obj: LiteralString | Template):
         super().__init__(obj)
-        if not isinstance(obj, str):
-            raise TypeError(f"SQL values must be strings, got {obj!r} instead")
+        if not isinstance(obj, (str, Template)):
+            raise TypeError(
+                f"SQL values must be strings or Template, got {obj!r} instead"
+            )
 
     def as_string(self, context: AdaptContext | None = None) -> str:
+        if isinstance(self._obj, Template):
+            raise NotImplementedError("TODO: support template strings")
         return self._obj
 
     def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
-        return self._obj.encode(enc)
+        return self.as_string().encode(enc)
 
     def format(self, *args: Any, **kwargs: Any) -> Composed:
         """
@@ -252,11 +256,15 @@ class SQL(Composable):
             SELECT * FROM "people" WHERE name = 'O''Rourke'
 
         """
+        if isinstance(self._obj, Template):
+            raise NotImplementedError("TODO: support template strings")
+
         rv: list[Composable] = []
         autonum: int | None = 0
         # TODO: this is probably not the right way to whitelist pre
         # pyre complains. Will wait for mypy to complain too to fix.
         pre: LiteralString
+
         for pre, name, spec, conv in self._formatter.parse(self._obj):
             if spec:
                 raise ValueError("no format specification supported by SQL")
