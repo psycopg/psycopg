@@ -65,7 +65,14 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
     """
     deadline = monotonic() + timeout if timeout else 0.0
 
+    # To debug slowdown during connection:
+    #
+    #   $ PSYCOPG_IMPL=python python
+    #   >>> import logging
+    #   >>> logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
+
     conn = pq.PGconn.connect_start(conninfo.encode())
+    logger.debug("connection started: %s", conn)
     while True:
         if conn.status == BAD:
             encoding = conninfo_encoding(conninfo)
@@ -74,6 +81,7 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
             )
 
         status = conn.connect_poll()
+        logger.debug("connection polled: %s", conn)
 
         if status == POLL_READING or status == POLL_WRITING:
             wait = WAIT_R if status == POLL_READING else WAIT_W
