@@ -16,15 +16,12 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8.
 
 
-Psycopg 3.2.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.7
+^^^^^^^^^^^^^
 
 - Add SRID support to shapely dumpers/loaders (:ticket:`#1028`).
 - Add support for binary hstore (:ticket:`#1030`).
 
-
-Current release
----------------
 
 Psycopg 3.2.6
 ^^^^^^^^^^^^^
