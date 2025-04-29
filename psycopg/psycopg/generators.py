@@ -56,7 +56,7 @@ READY_R = Ready.R
 READY_W = Ready.W
 READY_RW = Ready.RW
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("psycopg")
 
 
 def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
@@ -70,6 +70,7 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
     #   $ PSYCOPG_IMPL=python python
     #   >>> import logging
     #   >>> logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
+    #   >>> logging.getLogger("psycopg").setLevel(logging.DEBUG)
 
     conn = pq.PGconn.connect_start(conninfo.encode())
     logger.debug("connection started: %s", conn)
