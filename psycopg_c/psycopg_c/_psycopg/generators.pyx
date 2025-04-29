@@ -42,6 +42,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     if timeout:
         deadline = monotonic() + timeout
 
+    logger.debug("connection started: %s", conn)
     while True:
         if conn_status == libpq.CONNECTION_BAD:
             encoding = conninfo_encoding(conninfo)
@@ -52,6 +53,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
 
         with nogil:
             poll_status = libpq.PQconnectPoll(pgconn_ptr)
+        logger.debug("connection polled: %s", conn)
 
         if poll_status == libpq.PGRES_POLLING_READING \
         or poll_status == libpq.PGRES_POLLING_WRITING:
