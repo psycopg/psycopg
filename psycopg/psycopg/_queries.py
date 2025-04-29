@@ -16,6 +16,7 @@ from . import pq
 from .abc import Buffer, Params, Query
 from .sql import Composable
 from ._enums import PyFormat
+from ._compat import Template
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ class PostgresQuery:
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
-        query = self._ensure_bytes(query)
+        query = self._ensure_bytes(query, vars)
 
         if vars is not None:
             # Avoid caching queries extremely long or with a huge number of
@@ -160,9 +161,18 @@ class PostgresQuery:
                     f" {', '.join(sorted(i for i in order or () if i not in vars))}"
                 )
 
-    def _ensure_bytes(self, query: Query) -> bytes:
+    def from_template(self, query: Template) -> bytes:
+        raise NotImplementedError
+
+    def _ensure_bytes(self, query: Query, vars: Params | None) -> bytes:
         if isinstance(query, str):
-            return query.encode(self._tx.encoding)
+            return query.encode(self._encoding)
+        elif isinstance(query, Template):
+            if vars is not None:
+                raise TypeError(
+                    "'execute()' with string template query doesn't support parameters"
+                )
+            return self.from_template(query)
         elif isinstance(query, Composable):
             return query.as_bytes(self._tx)
         else:
@@ -247,7 +257,7 @@ class PostgresClientQuery(PostgresQuery):
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
-        query = self._ensure_bytes(query)
+        query = self._ensure_bytes(query, vars)
 
         if vars is not None:
             if (
@@ -423,8 +433,7 @@ _ph_to_fmt = {
 
 class PostgresRawQuery(PostgresQuery):
     def convert(self, query: Query, vars: Params | None) -> None:
-        query = self._ensure_bytes(query)
-        self.query = query
+        self.query = self._ensure_bytes(query, vars)
         self._want_formats = self._order = None
         self.dump(vars)
 
