@@ -13,9 +13,8 @@ from functools import lru_cache
 from collections.abc import Callable, Mapping, Sequence
 
 from . import errors as e
-from . import pq
+from . import pq, sql
 from .abc import Buffer, Params, Query, QueryNoTemplate
-from .sql import Composable, Identifier, Literal
 from ._enums import PyFormat
 from ._compat import Interpolation, Template
 from ._encodings import conn_encoding
@@ -25,6 +24,13 @@ if TYPE_CHECKING:
 
 MAX_CACHED_STATEMENT_LENGTH = 4096
 MAX_CACHED_STATEMENT_PARAMS = 50
+
+# Formats supported by template strings
+FMT_AUTO = PyFormat.AUTO.value
+FMT_TEXT = PyFormat.TEXT.value
+FMT_BINARY = PyFormat.BINARY.value
+FMT_IDENT = "i"
+FMT_LITERAL = "l"
 
 
 class QueryPart(NamedTuple):
@@ -135,7 +141,7 @@ class BaseQuery(ABC):
     def _ensure_bytes(self, query: QueryNoTemplate, vars: Params | None) -> bytes:
         if isinstance(query, str):
             return query.encode(self._encoding)
-        elif isinstance(query, Composable):
+        elif isinstance(query, sql.Composable):
             return query.as_bytes(self._tx)
         else:
             return query
@@ -230,17 +236,21 @@ class PostgresQuery(BaseQuery):
                     process(item.value)
                     continue
 
-                if (fmt := item.format_spec or "s") == "i":
+                if isinstance(item.value, sql.Composable):
+                    process_composable(item)
+                    continue
+
+                if (fmt := item.format_spec or FMT_AUTO) == FMT_IDENT:
                     if not isinstance(item.value, str):
                         raise TypeError(
                             "identifier values must be strings; got"
                             f" {type(item.value).__name__}"
                             f" in {{{item.expression}:{fmt}}} instead"
                         )
-                    chunks.append(Identifier(item.value).as_bytes(self._tx))
+                    chunks.append(sql.Identifier(item.value).as_bytes(self._tx))
                     continue
                 elif fmt == "l":
-                    chunks.append(Literal(item.value).as_bytes(self._tx))
+                    chunks.append(sql.Literal(item.value).as_bytes(self._tx))
                     continue
 
                 try:
@@ -261,6 +271,41 @@ class PostgresQuery(BaseQuery):
                             f"placeholders '{{{expr}}}' cannot have different formats"
                         )
                     chunks.append(seen[expr][0])
+
+        def process_composable(item: Interpolation) -> None:
+            if isinstance(item.value, sql.Identifier):
+                if item.format_spec and item.format_spec != FMT_IDENT:
+                    raise e.ProgrammingError(
+                        f"{type(item.value).__name__} objects can only have"
+                        f" '{FMT_IDENT}' format, if specified;"
+                        f" got {{{item.expression}:{item.format_spec}}}"
+                    )
+                chunks.append(item.value.as_bytes(self._tx))
+                return
+
+            elif isinstance(item.value, sql.Literal):
+                if item.format_spec not in ("", FMT_AUTO, FMT_TEXT, FMT_LITERAL):
+                    raise e.ProgrammingError(
+                        f"{type(item.value).__name__} objects cannot have format"
+                        f" '{item.format_spec}' format;"
+                        f" got {{{item.expression}:{item.format_spec}}}"
+                    )
+                chunks.append(item.value.as_bytes(self._tx))
+                return
+
+            elif isinstance(item.value, (sql.SQL, sql.Composed)):
+                if item.format_spec:
+                    raise e.ProgrammingError(
+                        f"{type(item.value).__name__} objects cannot have a format;"
+                        f" got {{{item.expression}:{item.format_spec}}}"
+                    )
+                chunks.append(item.value.as_bytes(self._tx))
+                return
+
+            else:
+                raise e.ProgrammingError(
+                    f"{type(item.value).__name__} not supported in string templates"
+                )
 
         process(query)
 

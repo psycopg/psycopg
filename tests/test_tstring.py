@@ -1,6 +1,7 @@
 import pytest
 
 import psycopg
+from psycopg import sql
 from psycopg.pq import Format
 
 vstr = "hello"
@@ -109,3 +110,39 @@ async def test_nested(aconn):
 
     with pytest.raises(TypeError, match="nested templates don't support format"):
         cur = await aconn.execute(t"select {part:s}")
+
+
+async def test_sql(aconn):
+    part = sql.SQL("foo")
+    cur = await aconn.execute(t"select {vint} as {part}")
+    assert await cur.fetchone() == (16,)
+    assert cur._query.query == b"select $1 as foo"
+
+    with pytest.raises(psycopg.ProgrammingError, match="cannot have a format"):
+        await aconn.execute(t"select {vint} as {part:i}")
+
+
+async def test_sql_identifier(aconn):
+    part = sql.Identifier("foo")
+    cur = await aconn.execute(t"select {vint} as {part}")
+    assert await cur.fetchone() == (16,)
+    assert cur._query.query == b'select $1 as "foo"'
+
+    with pytest.raises(psycopg.ProgrammingError, match="can only have 'i' format"):
+        await aconn.execute(t"select {vint} as {part:s}")
+
+
+async def test_sql_composed(aconn):
+    part = sql.SQL("{} as {}").format(vint, sql.Identifier("foo"))
+    cur = await aconn.execute(t"select {part}")
+    assert await cur.fetchone() == (16,)
+    assert cur._query.query == b'select 16 as "foo"'
+
+    with pytest.raises(psycopg.ProgrammingError, match="cannot have a format"):
+        await aconn.execute(t"select {part:i}")
+
+
+async def test_sql_placeholder(aconn):
+    part = sql.Placeholder("foo")
+    with pytest.raises(psycopg.ProgrammingError, match="Placeholder not supported"):
+        cur = await aconn.execute(t"select {part}")
