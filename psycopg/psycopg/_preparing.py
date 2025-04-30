@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from . import pq
 from .abc import PQGen
 from ._compat import TypeAlias
-from ._queries import PostgresQuery
+from ._queries import BaseQuery
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
@@ -52,11 +52,11 @@ class PrepareManager:
         self._to_flush = deque["bytes | None"]()
 
     @staticmethod
-    def key(query: PostgresQuery) -> Key:
+    def key(query: BaseQuery) -> Key:
         return (query.query, query.types)
 
     def get(
-        self, query: PostgresQuery, prepare: bool | None = None
+        self, query: BaseQuery, prepare: bool | None = None
     ) -> tuple[Prepare, bytes]:
         """
         Check if a query is prepared, tell back whether to prepare it.
@@ -120,7 +120,7 @@ class PrepareManager:
             self._to_flush.append(name)
 
     def maybe_add_to_cache(
-        self, query: PostgresQuery, prep: Prepare, name: bytes
+        self, query: BaseQuery, prep: Prepare, name: bytes
     ) -> Key | None:
         """Handle 'query' for possible addition to the cache.
 

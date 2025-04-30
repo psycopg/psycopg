@@ -16,7 +16,7 @@ from collections import deque
 
 from . import errors as e
 from . import generators, postgres, pq
-from .abc import PQGen, PQGenConn, Query
+from .abc import PQGen, PQGenConn, QueryNoTemplate
 from .sql import SQL, Composable
 from ._tpc import Xid
 from .rows import Row
@@ -439,7 +439,7 @@ class BaseConnection(Generic[Row]):
         return conn
 
     def _exec_command(
-        self, command: Query, result_format: pq.Format = TEXT
+        self, command: QueryNoTemplate, result_format: pq.Format = TEXT
     ) -> PQGen[PGresult | None]:
         """
         Generator to send a command and receive the result to the backend.
