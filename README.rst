@@ -72,8 +72,8 @@ requirements::
 
 .. __: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
 
-Please add ``--config-settings editable_mode=strict`` to the ``pip install
--e`` above if you experience `editable mode broken`__.
+Please add ``--config-settings editable_mode=strict`` to the ``pip install -e``
+above if you experience `editable mode broken`__.
 
 .. __: https://github.com/pypa/setuptools/issues/3557
 
@@ -83,7 +83,7 @@ Now hack away! You can run the tests using::
     export PSYCOPG_TEST_DSN="dbname=psycopg_test"
     pytest
 
-The library includes some pre-commit hooks to check that the code is valid
+The project includes some `pre-commit`__ hooks to check that the code is valid
 according to the project coding convention. Please make sure to install them
 by running::
 
@@ -91,6 +91,8 @@ by running::
 
 This will allow to check lint errors before submitting merge requests, which
 will save you time and frustrations.
+
+.. __: https://pre-commit.com/
 
 
 Cross-compiling
