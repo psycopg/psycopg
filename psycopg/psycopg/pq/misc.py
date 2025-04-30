@@ -162,7 +162,12 @@ def connection_summary(pgconn: abc.PGconn) -> str:
         parts.append(("database", pgconn.db.decode()))
 
     else:
-        status = ConnStatus(pgconn.status).name
+        try:
+            status = ConnStatus(pgconn.status).name
+        except ValueError:
+            # It might happen if a new status on connection appears
+            # before upgrading the ConnStatus enum.
+            status = f"status={pgconn.status} (unkndown)"
 
     if sparts := " ".join(("%s=%s" % part for part in parts)):
         sparts = f" ({sparts})"
