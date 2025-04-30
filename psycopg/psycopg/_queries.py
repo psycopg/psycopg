@@ -229,7 +229,7 @@ class PostgresQuery(BaseQuery):
 
                 if isinstance(item.value, Template):
                     if item.format_spec:
-                        raise TypeError(
+                        raise e.ProgrammingError(
                             "nested templates don't support format; got"
                             f" '{{{item.expression}:{item.format_spec}}}'"
                         )
@@ -256,8 +256,9 @@ class PostgresQuery(BaseQuery):
                 try:
                     pyfmt = PyFormat(fmt)
                 except ValueError:
-                    raise TypeError(
-                        f"format '{{{item.expression}:{fmt}}}' not supported in query"
+                    raise e.ProgrammingError(
+                        f"format '{fmt}' not supported in query;"
+                        f" got '{{{item.expression}:{fmt}}}'"
                     )
                 if (expr := item.expression) not in seen:
                     ph = b"$%d" % (len(seen) + 1)
