@@ -212,7 +212,7 @@ class PostgresQuery(BaseQuery):
         chunks: list[bytes] = []
         formats: list[PyFormat] = []
         params: list[Any] = []
-        seen: dict[str, tuple[bytes, PyFormat]] = {}
+        seen: dict[tuple[str, int], tuple[bytes, PyFormat]] = {}
 
         def process(t: Template) -> None:
             for item in t:
@@ -260,18 +260,19 @@ class PostgresQuery(BaseQuery):
                         f"format '{fmt}' not supported in query;"
                         f" got '{{{item.expression}:{fmt}}}'"
                     )
-                if (expr := item.expression) not in seen:
+                if (key := (item.expression, id(item.value))) not in seen:
                     ph = b"$%d" % (len(seen) + 1)
-                    seen[expr] = (ph, pyfmt)
+                    seen[key] = (ph, pyfmt)
                     chunks.append(ph)
                     formats.append(pyfmt)
                     params.append(item.value)
                 else:
-                    if seen[expr][1] != fmt:
+                    if seen[key][1] != fmt:
                         raise e.ProgrammingError(
-                            f"placeholders '{{{expr}}}' cannot have different formats"
+                            f"placeholders '{{{item.expression}}}'"
+                            " cannot have different formats"
                         )
-                    chunks.append(seen[expr][0])
+                    chunks.append(seen[key][0])
 
         def process_composable(item: Interpolation) -> None:
             if isinstance(item.value, sql.Identifier):
@@ -294,13 +295,26 @@ class PostgresQuery(BaseQuery):
                 chunks.append(item.value.as_bytes(self._tx))
                 return
 
-            elif isinstance(item.value, (sql.SQL, sql.Composed)):
+            elif isinstance(item.value, sql.SQL):
                 if item.format_spec:
                     raise e.ProgrammingError(
                         f"{type(item.value).__name__} objects cannot have a format;"
                         f" got {{{item.expression}:{item.format_spec}}}"
                     )
                 chunks.append(item.value.as_bytes(self._tx))
+                return
+
+            elif isinstance(item.value, sql.Composed):
+                if item.format_spec:
+                    raise e.ProgrammingError(
+                        f"{type(item.value).__name__} objects cannot have a format;"
+                        f" got {{{item.expression}:{item.format_spec}}}"
+                    )
+                for obj in item.value:
+                    if isinstance(obj, sql.Literal) and isinstance(obj._obj, Template):
+                        process(obj._obj)
+                    else:
+                        chunks.append(obj.as_bytes(self._tx))
                 return
 
             else:
