@@ -6,6 +6,9 @@ psycopg server-side cursor base objects.
 
 from __future__ import annotations
 
+from typing import Any
+from warnings import warn
+
 from . import errors as e
 from . import pq, sql
 from .abc import ConnectionType, Params, PQGen, Query
@@ -43,6 +46,16 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         # Hold the state during iteration: a fetched page and position within it
         self._iter_rows: list[Row] | None = None
         self._page_pos = 0
+
+    def __del__(self, __warn: Any = warn) -> None:
+        if self.closed:
+            return
+
+        __warn(
+            f"{object.__repr__(self)} was deleted while still open."
+            " Please use 'with' or '.close()' to close the cursor properly",
+            ResourceWarning,
+        )
 
     def __repr__(self) -> str:
         # Insert the name as the second word

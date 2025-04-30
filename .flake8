@@ -12,7 +12,6 @@ per-file-ignores =
     psycopg/psycopg/errors.py: E125, E128, E302
 
     # Allow concatenated string literals from async_to_sync
-    psycopg/psycopg/_server_cursor.py: E501
     psycopg_pool/psycopg_pool/pool.py: E501
 
     # Pytest's importorskip() getting in the way
