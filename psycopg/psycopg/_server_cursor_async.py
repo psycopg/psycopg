@@ -7,7 +7,6 @@ psycopg server-side cursor (async).
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, overload
-from warnings import warn
 from collections.abc import AsyncIterator, Iterable
 
 from . import errors as e
@@ -61,14 +60,6 @@ class AsyncServerCursor(
             self, connection, row_factory=row_factory or connection.row_factory
         )
         ServerCursorMixin.__init__(self, name, scrollable, withhold)
-
-    def __del__(self) -> None:
-        if not self.closed:
-            warn(
-                f"the server-side cursor {self} was deleted while still open."
-                " Please use 'with' or '.close()' to close the cursor properly",
-                ResourceWarning,
-            )
 
     async def close(self) -> None:
         """

@@ -280,7 +280,9 @@ async def test_warn_close(aconn, recwarn, gc_collect):
     await cur.execute("select generate_series(1, 10) as bar")
     del cur
     gc_collect()
-    assert ".close()" in str(recwarn.pop(ResourceWarning).message)
+    msg = str(recwarn.pop(ResourceWarning).message)
+    assert aconn.server_cursor_factory.__name__ in msg
+    assert ".close()" in msg
 
 
 async def test_execute_reuse(aconn):
