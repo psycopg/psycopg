@@ -207,47 +207,62 @@ class PostgresQuery(BaseQuery):
         formats: list[PyFormat] = []
         params: list[Any] = []
         seen: dict[str, tuple[bytes, PyFormat]] = {}
-        for item in query:
-            if isinstance(item, str):
-                chunks.append(item.encode(self._encoding))
-                continue
 
-            assert isinstance(item, Interpolation)
-            if item.conversion:
-                raise TypeError(
-                    f"conversion '{{{item.expression}!{item.conversion}}}'"
-                    " not supported in query"
-                )
-            if (fmt := item.format_spec or "s") == "i":
-                if not isinstance(item.value, str):
+        def process(t: Template) -> None:
+            for item in t:
+                if isinstance(item, str):
+                    chunks.append(item.encode(self._encoding))
+                    continue
+
+                assert isinstance(item, Interpolation)
+                if item.conversion:
                     raise TypeError(
-                        f"expected string in {{{item.expression:i}}},"
-                        f" got {type(str).__name__} instead"
+                        "conversions not supported in query; got"
+                        f" '{{{item.expression}!{item.conversion}}}'"
                     )
-                chunks.append(Identifier(item.value).as_bytes(self._tx))
-                continue
-            elif fmt == "l":
-                chunks.append(Literal(item.value).as_bytes(self._tx))
-                continue
 
-            try:
-                pyfmt = PyFormat(fmt)
-            except ValueError:
-                raise TypeError(
-                    f"format '{{{item.expression}:{fmt}}}' not supported in query"
-                )
-            if (expr := item.expression) not in seen:
-                ph = b"$%d" % (len(seen) + 1)
-                seen[expr] = (ph, pyfmt)
-                chunks.append(ph)
-                formats.append(pyfmt)
-                params.append(item.value)
-            else:
-                if seen[expr][1] != fmt:
-                    raise e.ProgrammingError(
-                        f"placeholder '{{{expr}}}' cannot have different formats"
+                if isinstance(item.value, Template):
+                    if item.format_spec:
+                        raise TypeError(
+                            "nested templates don't support format; got"
+                            f" '{{{item.expression}:{item.format_spec}}}'"
+                        )
+                    process(item.value)
+                    continue
+
+                if (fmt := item.format_spec or "s") == "i":
+                    if not isinstance(item.value, str):
+                        raise TypeError(
+                            "identifier values must be strings; got"
+                            f" {type(item.value).__name__}"
+                            f" in {{{item.expression}:{fmt}}} instead"
+                        )
+                    chunks.append(Identifier(item.value).as_bytes(self._tx))
+                    continue
+                elif fmt == "l":
+                    chunks.append(Literal(item.value).as_bytes(self._tx))
+                    continue
+
+                try:
+                    pyfmt = PyFormat(fmt)
+                except ValueError:
+                    raise TypeError(
+                        f"format '{{{item.expression}:{fmt}}}' not supported in query"
                     )
-                chunks.append(seen[expr][0])
+                if (expr := item.expression) not in seen:
+                    ph = b"$%d" % (len(seen) + 1)
+                    seen[expr] = (ph, pyfmt)
+                    chunks.append(ph)
+                    formats.append(pyfmt)
+                    params.append(item.value)
+                else:
+                    if seen[expr][1] != fmt:
+                        raise e.ProgrammingError(
+                            f"placeholders '{{{expr}}}' cannot have different formats"
+                        )
+                    chunks.append(seen[expr][0])
+
+        process(query)
 
         self.query = b"".join(chunks)
         if params:

@@ -96,3 +96,16 @@ async def test_format_literal(aconn):
     assert cur._query.types == (psycopg.adapters.types["smallint"].oid,)
     assert cur._query.params == [b"16"]
     assert cur._query.formats == [Format.TEXT]
+
+
+async def test_nested(aconn):
+    part = t"{vint} as foo"
+    cur = await aconn.execute(t"select {part}")
+    assert await cur.fetchone() == (16,)
+    assert cur._query.query == b"select $1 as foo"
+    assert cur._query.types == (psycopg.adapters.types["smallint"].oid,)
+    assert cur._query.params == [b"\x00\x10"]
+    assert cur._query.formats == [Format.BINARY]
+
+    with pytest.raises(TypeError, match="nested templates don't support format"):
+        cur = await aconn.execute(t"select {part:s}")
