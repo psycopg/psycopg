@@ -119,6 +119,19 @@ async def test_nested(aconn):
         cur = await aconn.execute(t"select {part:s}")
 
 
+async def test_scope(aconn):
+    t = t"select "
+    for i, name in enumerate(("foo", "bar", "baz")):
+        if i:
+            t += ", "
+        t += t"{i} as {name:i}"
+
+    cur = await aconn.execute(t)
+    assert await cur.fetchone() == (0, 1, 2)
+    assert cur.description[0].name == "foo"
+    assert cur.description[2].name == "baz"
+
+
 async def test_sql(aconn):
     part = sql.SQL("foo")
     cur = await aconn.execute(t"select {vint} as {part}")
@@ -153,3 +166,22 @@ async def test_sql_placeholder(aconn):
     part = sql.Placeholder("foo")
     with pytest.raises(psycopg.ProgrammingError, match="Placeholder not supported"):
         cur = await aconn.execute(t"select {part}")
+
+
+@pytest.mark.xfail(reason="Template.join() needed")
+async def test_template_join(aconn):
+    ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
+    fields = t','.join(ts)
+    cur = await aconn.execute(t"select {fields}")
+    assert await cur.fetchone() == (0, 1, 2)
+    assert cur.description[0].name == "foo"
+    assert cur.description[2].name == "baz"
+
+
+async def test_sql_join(aconn):
+    ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
+    fields = sql.SQL(',').join(ts)
+    cur = await aconn.execute(t"select {fields}")
+    assert await cur.fetchone() == (0, 1, 2)
+    assert cur.description[0].name == "foo"
+    assert cur.description[2].name == "baz"
