@@ -52,6 +52,11 @@ async def test_format(aconn, t, fmt):
     assert cur._query.formats == [fmt]
 
 
+async def test_format_bad(aconn):
+    with pytest.raises(psycopg.ProgrammingError, match="format 'x' not supported"):
+        await aconn.execute(t"select {vint:x}")
+
+
 async def test_reuse(aconn):
     cur = await aconn.execute(t"select {vint}, {vstr}, {vint}")
     assert await cur.fetchone() == (16, "hello", 16)
@@ -108,7 +113,9 @@ async def test_nested(aconn):
     assert cur._query.params == [b"\x00\x10"]
     assert cur._query.formats == [Format.BINARY]
 
-    with pytest.raises(TypeError, match="nested templates don't support format"):
+    with pytest.raises(
+        psycopg.ProgrammingError, match="nested templates don't support format"
+    ):
         cur = await aconn.execute(t"select {part:s}")
 
 
