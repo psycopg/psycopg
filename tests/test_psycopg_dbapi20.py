@@ -84,6 +84,7 @@ def test_singletons(conn, typename, singleton):
     "ticks, want",
     [
         (0, "1970-01-01T00:00:00.000000+0000"),
+        (86370, "1970-01-01T23:59:30.000000+0000"),
         (1273173119.99992, "2010-05-06T14:11:59.999920-0500"),
     ],
 )
@@ -97,26 +98,24 @@ def test_timestamp_from_ticks(ticks, want):
     "ticks, want",
     [
         (0, "1970-01-01"),
-        # Returned date is local
-        (1273173119.99992, ["2010-05-06", "2010-05-07"]),
+        (86370, "1970-01-01"),  # 30 sec from Jan the 2nd, to test East localization
+        (1273173119.99992, "2010-05-06"),
     ],
 )
 def test_date_from_ticks(ticks, want):
     s = psycopg.DateFromTicks(ticks)
-    if isinstance(want, str):
-        want = [want]
-    want = [dt.datetime.strptime(w, "%Y-%m-%d").date() for w in want]
-    assert s in want
+    want = dt.datetime.strptime(want, "%Y-%m-%d").date()
+    assert s == want
 
 
 @pytest.mark.parametrize(
     "ticks, want",
-    [(0, "00:00:00.000000"), (1273173119.99992, "00:11:59.999920")],
+    [(0, "00:00:00.000000"), (1273173119.99992, "19:11:59.999920")],
 )
 def test_time_from_ticks(ticks, want):
     s = psycopg.TimeFromTicks(ticks)
     want = dt.datetime.strptime(want, "%H:%M:%S.%f").time()
-    assert s.replace(hour=0) == want
+    assert s == want
 
 
 @pytest.mark.parametrize(
