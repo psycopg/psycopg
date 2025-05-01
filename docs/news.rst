@@ -15,6 +15,14 @@ Psycopg 3.3.0 (unreleased)
 
 - Drop support for Python 3.8.
 
+Psycopg 3.2.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `DateFromTicks` and `TimeFromTicks` return values to return date and
+  time referred as UTC rather than the local timezone. Change
+  `TimestampFromTicks` to return a datetime in UTC rather than in the local
+  timezone (:ticket:`#1058`).
+
 
 Psycopg 3.2.7
 ^^^^^^^^^^^^^
