@@ -5,8 +5,7 @@ requires = [
     #   `[tool.setuptools.ext-modules]` in `pyproject.toml` is still
     #   *experimental* and likely to change in future releases
     #
-    "setuptools == 75.6.0; python_version >= '3.9'",
-    "setuptools == 75.3.0; python_version < '3.9'",  # last supported version
+    "setuptools == 75.6.0",
     "wheel >= 0.37",
     "tomli >= 2.0.1; python_version < '3.11'",
 ]
@@ -35,7 +34,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -46,7 +44,7 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 
 [[project.authors]]
 name = "Daniele Varrazzo"

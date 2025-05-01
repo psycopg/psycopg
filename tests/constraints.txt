@@ -42,6 +42,6 @@ tomli == 2.0.1
 # When the minimum supported Python version is increased, these dependencies
 # might need to be updated.
 #
-# Grep help: the current minimum supported version is Python 3.9.
+# Grep help: the current minimum supported version is Python 3.10.
 shapely == 1.8.0
-numpy == 1.20.0
+numpy == 1.22.0

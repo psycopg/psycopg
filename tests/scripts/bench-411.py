@@ -129,7 +129,7 @@ def time_log(message: str) -> Generator[None]:
     start = time.monotonic()
     yield
     end = time.monotonic()
-    logger.info(f"Run {message} in {end-start} s")
+    logger.info(f"Run {message} in {end - start} s")
 
 
 def run_psycopg2(psycopg2: Any, args: Namespace) -> None:
