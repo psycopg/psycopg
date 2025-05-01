@@ -22,14 +22,15 @@ Supported systems
 
 The Psycopg version documented here has *official and tested* support for:
 
-- Python: from version 3.9 to 3.13
+- Python: from version 3.10 to 3.13
 
-  - Python 3.8 supported before Psycopg 3.3
+  - Python 3.8 and 3.9 supported before Psycopg 3.3
   - Python 3.7 supported before Psycopg 3.2
   - Python 3.6 supported before Psycopg 3.1
 
-- PyPy: from version 3.9 to 3.11
+- PyPy: from version 3.10 to 3.11
 
+  - PyPy 3.9 supported before Psycopg 3.3
   - **Note:** Only the pure Python version is supported.
 
 - PostgreSQL: from version 10 to 17

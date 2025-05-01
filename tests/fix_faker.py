@@ -399,11 +399,11 @@ class Faker:
         if random() <= 0.99:
             # These exponents should generate no inf/overflow
             if size == 64:
-                s = f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310,309)}"
+                s = f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310, 309)}"
             elif size == 32:
-                s = f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
+                s = f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37, 38)}"
             elif size == 16:
-                s = f"{choice('-+')}0.{randrange(1 << 10)}e{randrange(-3,4)}"
+                s = f"{choice('-+')}0.{randrange(1 << 10)}e{randrange(-3, 4)}"
             else:
                 assert False, size
             return spec(s)
@@ -497,7 +497,7 @@ class Faker:
     def make_JsonFloat(self, spec):
         # A float limited to what json accepts
         # this exponent should generate no inf
-        return float(f"{choice('-+')}0.{randrange(1 << 20)}e{randrange(-15,15)}")
+        return float(f"{choice('-+')}0.{randrange(1 << 20)}e{randrange(-15, 15)}")
 
     def schema_list(self, cls):
         while True:

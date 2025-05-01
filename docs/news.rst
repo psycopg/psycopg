@@ -13,7 +13,8 @@ Future releases
 Psycopg 3.3.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Drop support for Python 3.8.
+- Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
+
 
 Psycopg 3.2.8 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
