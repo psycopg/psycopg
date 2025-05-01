@@ -327,7 +327,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' }}
         run: echo "NOT_MARKERS=$NOT_MARKERS refcount" >> $GITHUB_ENV
 
-      - uses: prefix-dev/setup-pixi@v0.8.4
+      - uses: prefix-dev/setup-pixi@v0.8.8
         with:
           run-install: false
 
