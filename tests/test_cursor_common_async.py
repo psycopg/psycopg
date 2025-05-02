@@ -874,3 +874,21 @@ async def test_message_0x33(aconn):
 async def test_typeinfo(aconn):
     info = await TypeInfo.fetch(aconn, "jsonb")
     assert info is not None
+
+
+async def test_error_no_result(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(psycopg.ProgrammingError, match="no result available"):
+        await cur.fetchone()
+
+    await cur.execute("set timezone to utc")
+    with pytest.raises(
+        psycopg.ProgrammingError, match="last operation.*command status: SET"
+    ):
+        await cur.fetchone()
+
+    await cur.execute("")
+    with pytest.raises(
+        psycopg.ProgrammingError, match="last operation.*result status: EMPTY_QUERY"
+    ):
+        await cur.fetchone()
