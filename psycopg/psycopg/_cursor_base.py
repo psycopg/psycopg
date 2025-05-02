@@ -583,7 +583,17 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
         else:
-            raise e.ProgrammingError("the last operation didn't produce a result")
+            if res.command_status:
+                detail = f" (command status: {res.command_status.decode()})"
+            else:
+                try:
+                    status_name = pq.ExecStatus(status).name
+                except ValueError:
+                    status_name = f"{status} - unknown"
+                detail = f" (result status: {status_name})"
+            raise e.ProgrammingError(
+                f"the last operation didn't produce records{detail}"
+            )
 
     def _check_copy_result(self, result: PGresult) -> None:
         """

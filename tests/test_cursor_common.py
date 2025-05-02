@@ -867,3 +867,21 @@ def test_message_0x33(conn):
 def test_typeinfo(conn):
     info = TypeInfo.fetch(conn, "jsonb")
     assert info is not None
+
+
+def test_error_no_result(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg.ProgrammingError, match="no result available"):
+        cur.fetchone()
+
+    cur.execute("set timezone to utc")
+    with pytest.raises(
+        psycopg.ProgrammingError, match="last operation.*command status: SET"
+    ):
+        cur.fetchone()
+
+    cur.execute("")
+    with pytest.raises(
+        psycopg.ProgrammingError, match="last operation.*result status: EMPTY_QUERY"
+    ):
+        cur.fetchone()
