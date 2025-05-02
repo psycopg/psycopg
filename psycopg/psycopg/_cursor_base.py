@@ -164,7 +164,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     @property
     def statusmessage(self) -> str | None:
         """
-        The command status tag from the last SQL command executed.
+        The status tag of the first command in the last `execute` call.
 
         `!None` if the cursor doesn't have a result available.
         """
