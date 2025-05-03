@@ -244,7 +244,7 @@ The `!Cursor` class
             for record in cursor:
                 ...
 
-        syntax will iterate on the records in the current recordset.
+        syntax will iterate on the records in the current result set.
 
     .. autoattribute:: row_factory
 
