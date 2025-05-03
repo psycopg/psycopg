@@ -232,7 +232,7 @@ The `!Cursor` class
 
     .. rubric:: Methods to retrieve results
 
-    Fetch methods are only available if the last operation produced results,
+    Fetch methods are only available if the current result set contains results,
     e.g. a :sql:`SELECT` or a command with :sql:`RETURNING`. They will raise
     an exception if used with operations that don't return result, such as an
     :sql:`INSERT` with no :sql:`RETURNING` or an :sql:`ALTER TABLE`.
