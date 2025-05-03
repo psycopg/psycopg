@@ -263,10 +263,9 @@ The `!Cursor` class
     .. attribute:: pgresult
         :type: Optional[psycopg.pq.PGresult]
 
-        The result returned by the last query and currently exposed by the
-        cursor, if available, else `!None`.
+        Representation of the current result set, if available, else `!None`.
 
-        It can be used to obtain low level info about the last query result
+        It can be used to obtain low level info about the current result set
         and to access to features not currently wrapped by Psycopg.
 
 
