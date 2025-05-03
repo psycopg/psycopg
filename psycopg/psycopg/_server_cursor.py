@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, overload
 from warnings import warn
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 
 from . import errors as e
 from .abc import Params, Query
@@ -136,15 +136,27 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         self._pos += len(recs)
         return recs
 
-    def __iter__(self) -> Iterator[Row]:
-        while True:
+    def __iter__(self) -> Self:
+        return self
+
+    def __next__(self) -> Row:
+        # Fetch a new page if we never fetched any, or we are at the end of
+        # a page of size itersize, meaning there is likely a following one.
+        if (
+            self._iter_rows is None
+            or self._page_pos >= len(self._iter_rows) >= self.itersize
+        ):
             with self._conn.lock:
-                recs = self._conn.wait(self._fetch_gen(self.itersize))
-            for rec in recs:
-                self._pos += 1
-                yield rec
-            if len(recs) < self.itersize:
-                break
+                self._iter_rows = self._conn.wait(self._fetch_gen(self.itersize))
+                self._page_pos += 0
+
+        if self._page_pos >= len(self._iter_rows):
+            raise StopIteration("no more records to return")
+
+        rec = self._iter_rows[self._page_pos]
+        self._page_pos += 1
+        self._pos += 1
+        return rec
 
     def scroll(self, value: int, mode: str = "relative") -> None:
         with self._conn.lock:

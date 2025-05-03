@@ -437,6 +437,7 @@ async def test_iter(aconn):
 
 async def test_iter_rownumber(aconn):
     async with aconn.cursor("foo") as cur:
+        cur.itersize = 2
         await cur.execute(ph(cur, "select generate_series(1, %s) as bar"), (3,))
         async for row in cur:
             assert cur.rownumber == row[0]
@@ -454,6 +455,14 @@ async def test_itersize(aconn, acommands):
         assert len(cmds) == 2
         for cmd in cmds:
             assert "fetch forward 2" in cmd.lower()
+
+
+async def test_next(aconn):
+    async with aconn.cursor() as cur:
+        await cur.execute("select 1")
+        assert await anext(cur) == (1,)
+        with pytest.raises(StopAsyncIteration):
+            await anext(cur)
 
 
 async def test_cant_scroll_by_default(aconn):

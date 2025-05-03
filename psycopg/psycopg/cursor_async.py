@@ -228,16 +228,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._pos = self.pgresult.ntuples
         return records
 
-    async def __aiter__(self) -> AsyncIterator[Row]:
-        await self._fetch_pipeline()
-        self._check_result_for_fetch()
+    def __aiter__(self) -> Self:
+        return self
 
-        def load(pos: int) -> Row | None:
-            return self._tx.load_row(pos, self._make_row)
-
-        while (row := load(self._pos)) is not None:
-            self._pos += 1
-            yield row
+    async def __anext__(self) -> Row:
+        if (rec := await self.fetchone()) is not None:
+            return rec
+        raise StopAsyncIteration("no more records to return")
 
     async def scroll(self, value: int, mode: str = "relative") -> None:
         """

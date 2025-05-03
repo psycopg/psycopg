@@ -431,6 +431,7 @@ def test_iter(conn):
 
 def test_iter_rownumber(conn):
     with conn.cursor("foo") as cur:
+        cur.itersize = 2
         cur.execute(ph(cur, "select generate_series(1, %s) as bar"), (3,))
         for row in cur:
             assert cur.rownumber == row[0]
@@ -448,6 +449,14 @@ def test_itersize(conn, commands):
         assert len(cmds) == 2
         for cmd in cmds:
             assert "fetch forward 2" in cmd.lower()
+
+
+def test_next(conn):
+    with conn.cursor() as cur:
+        cur.execute("select 1")
+        assert next(cur) == (1,)
+        with pytest.raises(StopIteration):
+            next(cur)
 
 
 def test_cant_scroll_by_default(conn):

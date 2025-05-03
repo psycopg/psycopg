@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, overload
 from warnings import warn
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import Iterable
 
 from . import errors as e
 from .abc import Params, Query
@@ -136,15 +136,26 @@ class AsyncServerCursor(
         self._pos += len(recs)
         return recs
 
-    async def __aiter__(self) -> AsyncIterator[Row]:
-        while True:
+    def __aiter__(self) -> Self:
+        return self
+
+    async def __anext__(self) -> Row:
+        # Fetch a new page if we never fetched any, or we are at the end of
+        # a page of size itersize, meaning there is likely a following one.
+        if self._iter_rows is None or (
+            self._page_pos >= len(self._iter_rows) >= self.itersize
+        ):
             async with self._conn.lock:
-                recs = await self._conn.wait(self._fetch_gen(self.itersize))
-            for rec in recs:
-                self._pos += 1
-                yield rec
-            if len(recs) < self.itersize:
-                break
+                self._iter_rows = await self._conn.wait(self._fetch_gen(self.itersize))
+                self._page_pos += 0
+
+        if self._page_pos >= len(self._iter_rows):
+            raise StopAsyncIteration("no more records to return")
+
+        rec = self._iter_rows[self._page_pos]
+        self._page_pos += 1
+        self._pos += 1
+        return rec
 
     async def scroll(self, value: int, mode: str = "relative") -> None:
         async with self._conn.lock:

@@ -224,16 +224,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._pos = self.pgresult.ntuples
         return records
 
-    def __iter__(self) -> Iterator[Row]:
-        self._fetch_pipeline()
-        self._check_result_for_fetch()
+    def __iter__(self) -> Self:
+        return self
 
-        def load(pos: int) -> Row | None:
-            return self._tx.load_row(pos, self._make_row)
-
-        while (row := load(self._pos)) is not None:
-            self._pos += 1
-            yield row
+    def __next__(self) -> Row:
+        if (rec := self.fetchone()) is not None:
+            return rec
+        raise StopIteration("no more records to return")
 
     def scroll(self, value: int, mode: str = "relative") -> None:
         """

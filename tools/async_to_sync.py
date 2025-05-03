@@ -296,9 +296,11 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "AsyncServerCursor": "ServerCursor",
         "AsyncTransaction": "Transaction",
         "AsyncWriter": "Writer",
+        "StopAsyncIteration": "StopIteration",
         "__aenter__": "__enter__",
         "__aexit__": "__exit__",
         "__aiter__": "__iter__",
+        "__anext__": "__next__",
         "_copy_async": "_copy",
         "_server_cursor_async": "_server_cursor",
         "aclose": "close",
@@ -363,6 +365,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         self._fix_docstring(node.body)
+        node.name = self.names_map.get(node.name, node.name)
         if node.decorator_list:
             self._fix_decorator(node.decorator_list)
         self.generic_visit(node)
