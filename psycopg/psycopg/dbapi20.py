@@ -6,15 +6,15 @@ Compatibility objects with DBAPI 2.0
 
 from __future__ import annotations
 
-import time
 import datetime as dt
-from math import floor
 from typing import Any
 from collections.abc import Sequence
 
 from . import _oids
 from .abc import AdaptContext, Buffer
 from .types.string import BytesBinaryDumper, BytesDumper
+
+EPOCH = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
 
 
 class DBAPITypeObject:
@@ -116,12 +116,7 @@ def Timestamp(
 
 
 def TimestampFromTicks(ticks: float) -> dt.datetime:
-    secs = floor(ticks)
-    frac = ticks - secs
-    t = time.localtime(ticks)
-    tzinfo = dt.timezone(dt.timedelta(seconds=t.tm_gmtoff))
-    rv = dt.datetime(*t[:6], round(frac * 1_000_000), tzinfo=tzinfo)
-    return rv
+    return EPOCH + dt.timedelta(seconds=ticks)
 
 
 def register_dbapi20_adapters(context: AdaptContext) -> None:
