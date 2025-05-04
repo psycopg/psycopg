@@ -50,6 +50,7 @@ class BasePool:
         min_size: int,
         max_size: int | None,
         name: str | None,
+        close_returns: bool,
         timeout: float,
         max_waiting: int,
         max_lifetime: float,
@@ -69,6 +70,7 @@ class BasePool:
         self.conninfo = conninfo
         self.kwargs: dict[str, Any] = kwargs or {}
         self.name = name
+        self.close_returns = close_returns
         self._min_size = min_size
         self._max_size = max_size
         self.timeout = timeout

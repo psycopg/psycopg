@@ -26,6 +26,9 @@ except ImportError:
     pass
 
 
+PSYCOPG_VERSION = tuple(map(int, psycopg.__version__.split(".", 2)[:2]))
+
+
 def test_default_sizes(dsn):
     with pool.ConnectionPool(dsn) as p:
         assert p.min_size == p.max_size == 4
@@ -1074,3 +1077,47 @@ def test_override_close(dsn):
         assert len(p._pool) == 2
 
     assert conn.closed
+
+
+def test_close_returns(dsn):
+    with pool.ConnectionPool(dsn, min_size=2, close_returns=True) as p:
+        p.wait()
+        assert len(p._pool) == 2
+        conn = p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+def test_close_returns_custom_class(dsn):
+
+    class MyConnection(psycopg.Connection):
+        pass
+
+    with pool.ConnectionPool(
+        dsn, min_size=2, connection_class=MyConnection, close_returns=True
+    ) as p:
+        p.wait()
+        conn = p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION >= (3, 3), reason="psycopg < 3.3 behaviour")
+def test_close_returns_custom_class_old(dsn):
+
+    class MyConnection(psycopg.Connection):
+        pass
+
+    with pytest.raises(TypeError, match="close_returns=True"):
+        pool.ConnectionPool(dsn, connection_class=MyConnection, close_returns=True)

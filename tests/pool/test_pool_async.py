@@ -25,6 +25,8 @@ except ImportError:
 if True:  # ASYNC
     pytestmark = [pytest.mark.anyio]
 
+PSYCOPG_VERSION = tuple(map(int, psycopg.__version__.split(".", 2)[:2]))
+
 
 async def test_default_sizes(dsn):
     async with pool.AsyncConnectionPool(dsn) as p:
@@ -1077,3 +1079,46 @@ async def test_override_close(dsn):
         assert len(p._pool) == 2
 
     assert conn.closed
+
+
+async def test_close_returns(dsn):
+
+    async with pool.AsyncConnectionPool(dsn, min_size=2, close_returns=True) as p:
+        await p.wait()
+        assert len(p._pool) == 2
+        conn = await p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        await conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+async def test_close_returns_custom_class(dsn):
+    class MyConnection(psycopg.AsyncConnection):
+        pass
+
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=2, connection_class=MyConnection, close_returns=True
+    ) as p:
+        await p.wait()
+        conn = await p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        await conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION >= (3, 3), reason="psycopg < 3.3 behaviour")
+async def test_close_returns_custom_class_old(dsn):
+    class MyConnection(psycopg.AsyncConnection):
+        pass
+
+    with pytest.raises(TypeError, match="close_returns=True"):
+        pool.AsyncConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
