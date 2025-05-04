@@ -28,7 +28,7 @@ from .abc import CT, ConnectFailedCB, ConnectionCB
 from .base import AttemptWithBackoff, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Self
+from ._compat import PSYCOPG_VERSION, PoolConnection, Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, current_thread_name
 from ._acompat import gather, sleep, spawn
 
@@ -51,6 +51,7 @@ class ConnectionPool(Generic[CT], BasePool):
         check: ConnectionCB[CT] | None = None,
         reset: ConnectionCB[CT] | None = None,
         name: str | None = None,
+        close_returns: bool = False,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
@@ -59,6 +60,14 @@ class ConnectionPool(Generic[CT], BasePool):
         reconnect_failed: ConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
+        if close_returns and PSYCOPG_VERSION < (3, 3):
+            if connection_class is Connection:
+                connection_class = cast(type[CT], PoolConnection)
+            else:
+                raise TypeError(
+                    "Using 'close_returns=True' and a non-standard 'connection_class' requires psycopg 3.3 or newer."
+                )
+
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -86,6 +95,7 @@ class ConnectionPool(Generic[CT], BasePool):
             min_size=min_size,
             max_size=max_size,
             name=name,
+            close_returns=close_returns,
             timeout=timeout,
             max_waiting=max_waiting,
             max_lifetime=max_lifetime,
