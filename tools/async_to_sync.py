@@ -34,6 +34,7 @@ ALL_INPUTS = """
     psycopg/psycopg/_copy_async.py
     psycopg/psycopg/connection_async.py
     psycopg/psycopg/cursor_async.py
+    psycopg/psycopg/_server_cursor_async.py
     psycopg_pool/psycopg_pool/null_pool_async.py
     psycopg_pool/psycopg_pool/pool_async.py
     psycopg_pool/psycopg_pool/sched_async.py
@@ -299,6 +300,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "__aexit__": "__exit__",
         "__aiter__": "__iter__",
         "_copy_async": "_copy",
+        "_server_cursor_async": "_server_cursor",
         "aclose": "close",
         "aclosing": "closing",
         "acommands": "commands",

@@ -23,6 +23,8 @@ Psycopg 3.2.8 (unreleased)
   time referred to the UTC timezone rather than to the local timezone. For
   consistency, `TimestampFromTicks` to return a datetime in UTC rather than in
   the local timezone (:ticket:`#1058`).
+- Fix `~Cursor.rownumber` after using `~AsyncServerCursor.scroll()` on
+  `AsyncServerCursor` (:ticket:`#1066`).
 
 
 Psycopg 3.2.7

@@ -388,10 +388,14 @@ async def test_row_factory(aconn):
 
     cur = aconn.cursor("foo", row_factory=my_row_factory, scrollable=True)
     await cur.execute("select generate_series(1, 3) as x")
+    assert cur.rownumber == 0
     recs = await cur.fetchall()
+    assert cur.rownumber == 3
     await cur.scroll(0, "absolute")
+    assert cur.rownumber == 0
     while rec := (await cur.fetchone()):
         recs.append(rec)
+    assert cur.rownumber == 3
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 
     await cur.scroll(0, "absolute")
@@ -464,17 +468,26 @@ async def test_cant_scroll_by_default(aconn):
 async def test_scroll(aconn):
     cur = aconn.cursor("tmp", scrollable=True)
     await cur.execute("select generate_series(0,9)")
+    assert cur.rownumber == 0
     await cur.scroll(2)
+    assert cur.rownumber == 2
     assert await cur.fetchone() == (2,)
+    assert cur.rownumber == 3
     await cur.scroll(2)
+    assert cur.rownumber == 5
     assert await cur.fetchone() == (5,)
+    assert cur.rownumber == 6
     await cur.scroll(2, mode="relative")
+    assert cur.rownumber == 8
     assert await cur.fetchone() == (8,)
     await cur.scroll(9, mode="absolute")
+    assert cur.rownumber == 9
     assert await cur.fetchone() == (9,)
+    assert cur.rownumber == 10
 
     with pytest.raises(ValueError):
         await cur.scroll(9, mode="wat")
+        assert cur.rownumber == 10
     await cur.close()
 
 
