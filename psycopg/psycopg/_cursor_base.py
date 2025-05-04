@@ -127,12 +127,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     @property
     def rowcount(self) -> int:
-        """Number of records affected by the precedent operation."""
+        """
+        Number of records affected by the operation that produced
+        the current result set.
+        """
         return self._rowcount
 
     @property
     def rownumber(self) -> int | None:
-        """Index of the next row to fetch in the current result.
+        """Index of the next row to fetch in the current result set.
 
         `!None` if there is no result to fetch.
         """
@@ -164,7 +167,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     @property
     def statusmessage(self) -> str | None:
         """
-        The command status tag from the last SQL command executed.
+        The status tag of the current result set.
 
         `!None` if the cursor doesn't have a result available.
         """

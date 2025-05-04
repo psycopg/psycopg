@@ -232,7 +232,7 @@ The `!Cursor` class
 
     .. rubric:: Methods to retrieve results
 
-    Fetch methods are only available if the last operation produced results,
+    Fetch methods are only available if the current result set contains results,
     e.g. a :sql:`SELECT` or a command with :sql:`RETURNING`. They will raise
     an exception if used with operations that don't return result, such as an
     :sql:`INSERT` with no :sql:`RETURNING` or an :sql:`ALTER TABLE`.
@@ -244,7 +244,7 @@ The `!Cursor` class
             for record in cursor:
                 ...
 
-        syntax will iterate on the records in the current recordset.
+        syntax will iterate on the records in the current result set.
 
     .. autoattribute:: row_factory
 
@@ -263,10 +263,9 @@ The `!Cursor` class
     .. attribute:: pgresult
         :type: Optional[psycopg.pq.PGresult]
 
-        The result returned by the last query and currently exposed by the
-        cursor, if available, else `!None`.
+        Representation of the current result set, if available, else `!None`.
 
-        It can be used to obtain low level info about the last query result
+        It can be used to obtain low level info about the current result set
         and to access to features not currently wrapped by Psycopg.
 
 

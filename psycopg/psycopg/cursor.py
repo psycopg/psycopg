@@ -179,9 +179,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def fetchone(self) -> Row | None:
         """
-        Return the next record from the current recordset.
+        Return the next record from the current result set.
 
-        Return `!None` the recordset is finished.
+        Return `!None` the result set is finished.
 
         :rtype: Row | None, with Row defined by `row_factory`
         """
@@ -193,7 +193,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def fetchmany(self, size: int = 0) -> list[Row]:
         """
-        Return the next `!size` records from the current recordset.
+        Return the next `!size` records from the current result set.
 
         `!size` default to `!self.arraysize` if not specified.
 
@@ -213,7 +213,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def fetchall(self) -> list[Row]:
         """
-        Return all the remaining records from the current recordset.
+        Return all the remaining records from the current result set.
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
