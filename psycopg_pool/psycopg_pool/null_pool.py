@@ -40,6 +40,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         check: ConnectionCB[CT] | None = None,
         reset: ConnectionCB[CT] | None = None,
         name: str | None = None,
+        close_returns: bool = False,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
@@ -49,6 +50,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         num_workers: int = 3,
     ):  # Note: min_size default value changed to 0.
 
+        # close_returns=True makes no sense
         super().__init__(
             conninfo,
             open=open,
@@ -60,6 +62,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             min_size=min_size,
             max_size=max_size,
             name=name,
+            close_returns=False,
             timeout=timeout,
             max_waiting=max_waiting,
             max_lifetime=max_lifetime,
