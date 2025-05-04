@@ -24,7 +24,7 @@ from psycopg.pq import TransactionStatus
 from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Self
+from ._compat import PSYCOPG_VERSION, AsyncPoolConnection, Self
 from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, agather, asleep
 from ._acompat import aspawn, current_task_name, ensure_async
 from .sched_async import AsyncScheduler
@@ -51,6 +51,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         check: AsyncConnectionCB[ACT] | None = None,
         reset: AsyncConnectionCB[ACT] | None = None,
         name: str | None = None,
+        close_returns: bool = False,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
@@ -59,6 +60,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         reconnect_failed: AsyncConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
+        if close_returns and PSYCOPG_VERSION < (3, 3):
+            if connection_class is AsyncConnection:
+                connection_class = cast(type[ACT], AsyncPoolConnection)
+            else:
+                raise TypeError(
+                    "Using 'close_returns=True' and a non-standard 'connection_class'"
+                    " requires psycopg 3.3 or newer."
+                )
+
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -86,6 +96,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             min_size=min_size,
             max_size=max_size,
             name=name,
+            close_returns=close_returns,
             timeout=timeout,
             max_waiting=max_waiting,
             max_lifetime=max_lifetime,
