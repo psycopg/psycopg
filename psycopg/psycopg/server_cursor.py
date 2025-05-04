@@ -242,8 +242,8 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     def __del__(self) -> None:
         if not self.closed:
             warn(
-                f"the server-side cursor {self} was deleted while still open."
-                " Please use 'with' or '.close()' to close the cursor properly",
+                f"the {type(self).__name__} at 0x{id(self):x} was deleted while still"
+                " open. Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
@@ -377,8 +377,8 @@ class AsyncServerCursor(
     def __del__(self) -> None:
         if not self.closed:
             warn(
-                f"the server-side cursor {self} was deleted while still open."
-                " Please use 'with' or '.close()' to close the cursor properly",
+                f"the {type(self).__name__} at 0x{id(self):x} was deleted while still"
+                " open. Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 

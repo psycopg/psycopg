@@ -148,7 +148,7 @@ class BaseConnection(Generic[Row]):
             return
 
         warn(
-            f"connection {self} was deleted while still open."
+            f"the {type(self).__name__} at 0x{id(self):x} was deleted while still open."
             " Please use 'with' or '.close()' to close the connection",
             ResourceWarning,
         )
