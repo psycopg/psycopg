@@ -497,3 +497,12 @@ def test_cancellation_in_queue(dsn):
         with p.connection() as conn:
             cur = conn.execute("select 1")
             assert cur.fetchone() == (1,)
+
+
+def test_close_returns(dsn):
+    # Mostly test the interface; close is close even if it goes via putconn().
+    with pool.NullConnectionPool(dsn, close_returns=True) as p:
+        conn = p.getconn()
+        assert not conn.closed
+        conn.close()
+        assert conn.closed
