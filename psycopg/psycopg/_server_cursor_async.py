@@ -1,5 +1,5 @@
 """
-psycopg async server-side cursor objects.
+psycopg server-side cursor (async).
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -71,6 +71,9 @@ class AsyncServerCursor(
             )
 
     async def close(self) -> None:
+        """
+        Close the current cursor and free associated resources.
+        """
         async with self._conn.lock:
             if self.closed:
                 return
@@ -86,6 +89,9 @@ class AsyncServerCursor(
         binary: bool | None = None,
         **kwargs: Any,
     ) -> Self:
+        """
+        Open a cursor to execute a query to the database.
+        """
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         if self._pgconn.pipeline_status:
@@ -104,6 +110,7 @@ class AsyncServerCursor(
     async def executemany(
         self, query: Query, params_seq: Iterable[Params], *, returning: bool = True
     ) -> None:
+        """Method not implemented for server-side cursors."""
         raise e.NotSupportedError("executemany not supported on server-side cursors")
 
     async def fetchone(self) -> Row | None:
