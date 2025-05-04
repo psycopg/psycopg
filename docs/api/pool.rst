@@ -98,6 +98,15 @@ The `!ConnectionPool` class
                  want to perform a simple check.
    :type check: `Callable[[Connection], None]`
 
+   :param close_returns: If `!True`, calling `~psycopg.Connection.close()` on
+                         the connection will not actually close it, but it
+                         will return the connection to the pool, like in
+                         `~ConnectionPool.putconn()`. Use it if you want to
+                         use Psycopg pool with SQLAlchemy. See
+                         :ref:`pool-sqlalchemy`.
+
+   :type close_returns: `!bool`, default: `!False`
+
    :param reset: A callback to reset a function after it has been returned to
                  the pool. The connection is guaranteed to be passed to the
                  `!reset()` function in "idle" state (no transaction). When
@@ -166,8 +175,11 @@ The `!ConnectionPool` class
         added `!check` parameter to the constructor.
 
    .. versionchanged:: 3.2
-        The class is generic and `!connection_class` provides types type
+        the class is generic and `!connection_class` provides types type
         variable. See :ref:`pool-generic`.
+
+   .. versionchanged:: 3.3
+        added `!close_returns` parameter to the constructor.
 
    .. warning::
 
@@ -297,6 +309,9 @@ Only the functions and parameters with different signature from
 
    .. versionchanged:: 3.2
         The `!reconnect_failed` parameter can be `!async`.
+
+   .. versionchanged:: 3.3
+        added `!close_returns` parameter to the constructor.
 
    .. warning::
 

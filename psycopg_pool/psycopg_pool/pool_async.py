@@ -66,7 +66,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             else:
                 raise TypeError(
                     "Using 'close_returns=True' and a non-standard 'connection_class'"
-                    " requires psycopg 3.3 or newer."
+                    " requires psycopg 3.3 or newer. Please check the docs at"
+                    " https://www.psycopg.org/psycopg3/docs/advanced/pool.html"
+                    "#pool-sqlalchemy for a workaround."
                 )
 
         self.connection_class = connection_class

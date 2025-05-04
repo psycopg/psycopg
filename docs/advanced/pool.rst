@@ -429,3 +429,70 @@ Metric                  Meaning
  ``connections_lost``   Number of connections lost identified by
                         `~ConnectionPool.check()` or by the `!check` callback
 ======================= =====================================================
+
+
+.. _pool-sqlalchemy:
+
+Integration with SQLAlchemy
+---------------------------
+
+.. versionadded:: 3.3
+
+If you want to use SQLAlchemy__ with psycopg's connection pool you can use the
+SQLAlchemy's NullPool__ feature, using the pool's `~ConnectionPool.getconn`
+as `!creator` function. However, SQLAlchemy expects that calling
+`~psycopg.Connection.close()` on the connection will return the connection to
+the pool, which is not Psycopg's default behaviour.
+
+.. __: https://sqlalchemy.org
+.. __: https://docs.sqlalchemy.org/en/20/core/pooling.html#sqlalchemy.pool.NullPool
+
+Since `!psycopg_pool` version 3.3, the `!close_returns` parameter of the pool
+allows to change this behaviour, telling its connections to return to the
+pool, instead of closing, when `!close()` is called.
+
+For example:
+
+.. code:: python
+
+    import sqlalchemy.pool
+    import psycopg_pool
+
+    db_url = "postgresql://postgres:postgres@hostname:port/database"
+
+    pgpool = psycopg_pool.ConnectionPool(conninfo=db_url, close_returns=True)
+
+    engine = sqlalchemy.create_engine(
+        url=db_url.replace("postgresql://", "postgresql+psycopg://"),
+        poolclass=sqlalchemy.pool.NullPool,
+        creator=pgpool.getconn,
+    )
+
+If you want to integrate the Psycopg pool with SQLAlchemy using a `!psycopg_pool`
+version older than 3.3, you will need to create a subclass of the
+`~psycopg.Connection` or `~psycopg.AsyncConnection` class, overriding the
+`!close()` method, with an implementation similar to the following:
+
+.. code:: python
+
+    class MyConnection(psycopg.AsyncConnection):
+        # If you need to subclass a sync connection, just drop the
+        # 'async' and 'await' keywords from this example.
+        async def close(self) -> None:
+            if pool := getattr(self, "_pool", None):
+                # Connection currently checked out from the pool.
+                # Instead of closing it, return it to the pool.
+                await pool.putconn(self)
+            else:
+                # Connection not part of any pool, or currently into the pool.
+                # Close the connection for real.
+                await super().close()
+
+
+Using a connection implementing this method you will not need to specify
+`!close_returns` in the pool constructor, but just `!connection_class`; the
+example above would be modified as:
+
+.. code:: python
+
+    pgpool = psycopg_pool.ConnectionPool(conninfo=db_url, connection_class=MyConnection)
