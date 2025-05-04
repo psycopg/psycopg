@@ -174,6 +174,7 @@ async def test_reset(dsn):
             cur = await conn.execute("show timezone")
             assert (await cur.fetchone()) == ("UTC",)
             pids.append(conn.info.backend_pid)
+            assert conn._pool is p
 
     async with pool.AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
@@ -185,6 +186,7 @@ async def test_reset(dsn):
             assert resets == 0
             await conn.execute("set timezone to '+2:00'")
             pids.append(conn.info.backend_pid)
+            assert conn._pool is p
 
         await gather(t)
         await p.wait()
