@@ -28,8 +28,8 @@ from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from ._capabilities import capabilities
-from .server_cursor import AsyncServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
+from ._server_cursor_async import AsyncServerCursor
 
 if True:  # ASYNC
     import sys
