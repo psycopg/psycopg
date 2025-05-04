@@ -382,10 +382,14 @@ def test_row_factory(conn):
 
     cur = conn.cursor("foo", row_factory=my_row_factory, scrollable=True)
     cur.execute("select generate_series(1, 3) as x")
+    assert cur.rownumber == 0
     recs = cur.fetchall()
+    assert cur.rownumber == 3
     cur.scroll(0, "absolute")
+    assert cur.rownumber == 0
     while rec := cur.fetchone():
         recs.append(rec)
+    assert cur.rownumber == 3
     assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 
     cur.scroll(0, "absolute")
@@ -458,17 +462,26 @@ def test_cant_scroll_by_default(conn):
 def test_scroll(conn):
     cur = conn.cursor("tmp", scrollable=True)
     cur.execute("select generate_series(0,9)")
+    assert cur.rownumber == 0
     cur.scroll(2)
+    assert cur.rownumber == 2
     assert cur.fetchone() == (2,)
+    assert cur.rownumber == 3
     cur.scroll(2)
+    assert cur.rownumber == 5
     assert cur.fetchone() == (5,)
+    assert cur.rownumber == 6
     cur.scroll(2, mode="relative")
+    assert cur.rownumber == 8
     assert cur.fetchone() == (8,)
     cur.scroll(9, mode="absolute")
+    assert cur.rownumber == 9
     assert cur.fetchone() == (9,)
+    assert cur.rownumber == 10
 
     with pytest.raises(ValueError):
         cur.scroll(9, mode="wat")
+        assert cur.rownumber == 10
     cur.close()
 
 
