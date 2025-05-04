@@ -149,3 +149,8 @@ class AsyncServerCursor(
     async def scroll(self, value: int, mode: str = "relative") -> None:
         async with self._conn.lock:
             await self._conn.wait(self._scroll_gen(value, mode))
+        # Postgres doesn't have a reliable way to report a cursor out of bound
+        if mode == "relative":
+            self._pos += value
+        else:
+            self._pos = value
