@@ -248,14 +248,17 @@ obj = {curs}
         ("many", "list[{type}]"),
         ("all", "list[{type}]"),
         ("iter", "{type}"),
+        ("next", "{type}"),
     ],
 )
 def test_fetch_type(conn_class, server_side, factory, type, fetch, typemod, mypy):
     if "Async" in conn_class:
         async_ = "async "
         await_ = "await "
+        next_ = "anext"
     else:
         async_ = await_ = ""
+        next_ = "next"
 
     curs = f"conn.cursor({factory})"
     if server_side:
@@ -273,6 +276,8 @@ curs = {curs}
         stmts += f"obj = {await_} curs.fetchall()"
     elif fetch == "iter":
         stmts += f"{async_}for obj in curs: pass"
+    elif fetch == "next":
+        stmts += f"obj = {await_} {next_}(curs)"
     else:
         pytest.fail(f"unexpected fetch: {fetch}")
 

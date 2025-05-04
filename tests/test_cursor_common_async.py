@@ -160,6 +160,14 @@ async def test_execute_sql(aconn):
     assert (await cur.fetchone()) == ("hello",)
 
 
+async def test_next(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert await anext(cur) == (1,)
+    with pytest.raises(StopAsyncIteration):
+        await anext(cur)
+
+
 async def test_query_parse_cache_size(aconn):
     cur = aconn.cursor()
     cls = type(cur)

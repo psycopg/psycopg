@@ -239,12 +239,20 @@ The `!Cursor` class
 
     .. note::
 
-        Cursors are iterable objects, so just using the::
+        Cursors are iterators, so just using the::
 
             for record in cursor:
                 ...
 
         syntax will iterate on the records in the current result set.
+
+        .. versionchanged:: 3.3
+
+            it is now possible to use `!next(cursor)`. Previously, cursors were
+            iterables__, not iterators__.
+
+            .. __: https://docs.python.org/3/glossary.html#term-iterable
+            .. __: https://docs.python.org/3/glossary.html#term-iterator
 
     .. autoattribute:: row_factory
 

@@ -38,6 +38,8 @@ annotations such as `!Connection[Any]` and `!Cursor[Any]`.
 
    rec = cur.fetchone()     # type is tuple[Any, ...] | None
 
+   rec = next(cur)          # type is tuple[Any, ...]
+
    recs = cur.fetchall()    # type is List[tuple[Any, ...]]
 
 
@@ -64,6 +66,56 @@ cursors and annotate the returned objects accordingly. See
 
    drec = dcur.fetchone()
    # drec type is dict[str, Any] | None
+
+
+.. _typing-fetchone:
+
+The ``fetchone()`` frustration
+------------------------------
+
+.. versionchanged:: 3.3
+
+If you use a static type checker and you are 100% sure that the cursor will
+exactly one record, it is frustrating to be told that the returned row might
+be `!None`. For example:
+
+.. code:: python
+
+    import psycopg
+    from psycopg.rows import scalar_row
+
+    def count_records() -> int:
+        conn = psycopg.connect()
+        cur = conn.cursor(row_factory=scalar_row)
+        cur.execute("SELECT count(*) FROM mytable")
+        rv: int = cur.fetchone()  # mypy error here
+        return rv
+
+The :sql:`count(*)` will always return a record with a number, even if the
+table is empty (it will just report 0). However, Mypy will report an error
+such as *incompatible types in assignment (expression has type "Any | None",
+variable has type "int")*. In order to work around the error you will need
+to use an `!if`, an `!assert` or some other workaround (like ``(rv,) =
+cur.fetchall()`` or some other horrible trick).
+
+Since Psycopg 3.3, cursors are iterables__, therefore they support the
+`next` function. A `!next(cur)` will behave like `!cur.fetchone()`, but it
+is guaranteed to return a row (in case there are no rows in the result set it
+will not return anything but will raise `!StopIteration`). Therefore the
+function above can terminate with:
+
+.. code:: python
+
+    def count_records() -> int:
+        ...
+        rv: int = next(cur)
+        return rv
+
+and your static checker will be happy.
+
+Similarly, in async code, you can use an `!await` `anext`\ `!(cur)` expression.
+
+.. __: https://docs.python.org/3/glossary.html#term-iterable
 
 
 .. _pool-generic:

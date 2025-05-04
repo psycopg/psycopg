@@ -162,6 +162,14 @@ def test_execute_sql(conn):
     assert cur.fetchone() == ("hello",)
 
 
+def test_next(conn):
+    cur = conn.cursor()
+    cur.execute("select 1")
+    assert next(cur) == (1,)
+    with pytest.raises(StopIteration):
+        next(cur)
+
+
 def test_query_parse_cache_size(conn):
     cur = conn.cursor()
     cls = type(cur)

@@ -28,7 +28,9 @@ INTRANS = pq.TransactionStatus.INTRANS
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
 
-    __slots__ = "_name _scrollable _withhold _described itersize _format".split()
+    __slots__ = """_name _scrollable _withhold _described itersize _format
+        _iter_rows _page_pos
+    """.split()
 
     def __init__(self, name: str, scrollable: bool | None, withhold: bool):
         self._name = name
@@ -37,6 +39,10 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         self._described = False
         self.itersize: int = DEFAULT_ITERSIZE
         self._format = TEXT
+
+        # Hold the state during iteration: a fetched page and position within it
+        self._iter_rows: list[Row] | None = None
+        self._page_pos = 0
 
     def __repr__(self) -> str:
         # Insert the name as the second word
@@ -91,6 +97,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             yield from self._close_gen()
             self._described = False
 
+        self._iter_rows = None
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
         self._execute_send(pgq, force_extended=True)
