@@ -28,7 +28,7 @@ The Psycopg version documented here has *official and tested* support for:
   - Python 3.7 supported before Psycopg 3.2
   - Python 3.6 supported before Psycopg 3.1
 
-- PyPy: from version 3.9 to 3.10
+- PyPy: from version 3.9 to 3.11
 
   - **Note:** Only the pure Python version is supported.
 

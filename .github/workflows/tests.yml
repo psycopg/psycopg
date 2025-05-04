@@ -57,6 +57,7 @@ jobs:
           # Test with PyPy.
           - {impl: python, python: "pypy3.9", postgres: "postgres:13"}
           - {impl: python, python: "pypy3.10", postgres: "postgres:14"}
+          - {impl: python, python: "pypy3.11", postgres: "postgres:15"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
