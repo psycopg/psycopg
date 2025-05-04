@@ -26,10 +26,11 @@ from .transaction import AsyncTransaction, Rollback, Transaction
 from .cursor_async import AsyncCursor
 from ._capabilities import Capabilities, capabilities
 from .client_cursor import AsyncClientCursor, ClientCursor
-from .server_cursor import AsyncServerCursor, ServerCursor
+from ._server_cursor import ServerCursor
 from ._connection_base import BaseConnection, Notify
 from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
+from ._server_cursor_async import AsyncServerCursor
 
 # Set the logger to a quiet default, can be enabled if needed
 if (logger := logging.getLogger("psycopg")).level == logging.NOTSET:

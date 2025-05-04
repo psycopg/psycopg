@@ -31,7 +31,7 @@ from ._pipeline import Pipeline
 from .generators import notifies
 from .transaction import Transaction
 from ._capabilities import capabilities
-from .server_cursor import ServerCursor
+from ._server_cursor import ServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
 
 if TYPE_CHECKING:

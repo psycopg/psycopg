@@ -16,7 +16,8 @@ from .cursor import Cursor
 from ._queries import PostgresQuery
 from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
-from .server_cursor import AsyncServerCursor, ServerCursor
+from ._server_cursor import ServerCursor
+from ._server_cursor_async import AsyncServerCursor
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
