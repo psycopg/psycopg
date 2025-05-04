@@ -166,6 +166,7 @@ def test_queue(pool_cls, dsn):
     def worker(n):
         t0 = time()
         with p.connection() as conn:
+            assert conn._pool is p
             conn.execute("select pg_sleep(0.2)")
             pid = conn.info.backend_pid
         t1 = time()
