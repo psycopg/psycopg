@@ -21,6 +21,8 @@ Psycopg 3.2.8 (unreleased)
   `AsyncServerCursor` (:ticket:`#1066`).
 - Fix interval parsing with days or other parts and negative time in C module
   (:ticket:`#1071`).
+- Make sure that intervals with days and months have the same epoch as
+  PostgreSQL (:ticket:`#1073`).
 
 
 Current release
