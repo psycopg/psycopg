@@ -448,7 +448,12 @@ def test_optimised_adapters():
         for n1 in dir(mod):
             if not isinstance((obj := getattr(mod, n1)), type):
                 continue
-            if not issubclass(obj, (Dumper, Loader)):
+            try:
+                if not issubclass(obj, (Dumper, Loader)):
+                    continue
+            except TypeError:
+                # On Python 3.10 'collections.abc.Callable' raises:
+                # TypeError: issubclass() arg 1 must be a class
                 continue
             c_adapters.pop(obj.__name__, None)
 
