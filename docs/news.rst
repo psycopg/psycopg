@@ -29,6 +29,7 @@ Psycopg 3.2.8 (unreleased)
   `AsyncServerCursor` (:ticket:`#1066`).
 - Fix interval parsing with days or other parts and negative time in C module
   (:ticket:`#1071`).
+- Don't process further connection attempts after Ctrl-C (:ticket:`#1077`).
 
 
 Psycopg 3.2.7
