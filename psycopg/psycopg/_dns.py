@@ -141,7 +141,7 @@ class Rfc2782Resolver:
         host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
         hosts_in = host_arg.split(",")
         port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
-        if len((ports_in := port_arg.split(","))) == 1:
+        if len(ports_in := port_arg.split(",")) == 1:
             # If only one port is specified, it applies to all the hosts.
             ports_in *= len(hosts_in)
         if len(ports_in) != len(hosts_in):

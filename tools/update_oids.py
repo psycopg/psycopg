@@ -35,7 +35,7 @@ ROOT = Path(__file__).parent.parent
 def main() -> None:
     opt = parse_cmdline()
 
-    if CrdbConnection.is_crdb((conn := psycopg.connect(opt.dsn, autocommit=True))):
+    if CrdbConnection.is_crdb(conn := psycopg.connect(opt.dsn, autocommit=True)):
         conn = CrdbConnection.connect(opt.dsn, autocommit=True)
         update_crdb_python_oids(conn)
     else:

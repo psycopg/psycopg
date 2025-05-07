@@ -157,7 +157,7 @@ class Faker:
                     try:
                         cur.execute(self._insert_field_stmt(j), (val,))
                     except psycopg.DatabaseError as e:
-                        if len((r := repr(val))) > 200:
+                        if len(r := repr(val)) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
                             f"value {r!r} at record {i} column0 {j} failed insert: {e}"
@@ -181,7 +181,7 @@ class Faker:
                     try:
                         await acur.execute(self._insert_field_stmt(j), (val,))
                     except psycopg.DatabaseError as e:
-                        if len((r := repr(val))) > 200:
+                        if len(r := repr(val)) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
                             f"value {r!r} at record {i} column0 {j} failed insert: {e}"
