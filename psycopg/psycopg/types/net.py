@@ -6,13 +6,12 @@ Adapters for network types.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypeAlias
 
 from .. import _oids
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from .._compat import TypeAlias
 
 if TYPE_CHECKING:
     import ipaddress

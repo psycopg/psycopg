@@ -6,12 +6,12 @@ Protocol objects representing different implementations of the same classes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol, Union
+from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeAlias, Union
 from collections.abc import Generator, Mapping, Sequence
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import LiteralString, TypeAlias, TypeVar
+from ._compat import LiteralString, TypeVar
 
 if TYPE_CHECKING:
     from . import sql  # noqa: F401

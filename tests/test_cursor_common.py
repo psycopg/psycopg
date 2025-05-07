@@ -8,6 +8,7 @@ Tests common to psycopg.Cursor and its subclasses.
 import weakref
 import datetime as dt
 from typing import Any
+from contextlib import closing
 
 import pytest
 from packaging.version import parse as ver
@@ -19,7 +20,6 @@ from psycopg.types import TypeInfo
 
 from . import _test_cursor
 from .utils import raiseif
-from .acompat import closing
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
 

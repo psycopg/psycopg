@@ -19,13 +19,13 @@ from __future__ import annotations
 import re
 import argparse
 import subprocess as sp
+from typing import TypeAlias
 from pathlib import Path
 
 import psycopg
 from psycopg.pq import version_pretty
 from psycopg.crdb import CrdbConnection
 from psycopg.rows import TupleRow
-from psycopg._compat import TypeAlias
 
 Connection: TypeAlias = psycopg.Connection[TupleRow]
 

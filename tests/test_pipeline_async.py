@@ -11,7 +11,7 @@ import psycopg
 from psycopg import errors as e
 from psycopg import pq
 
-from .acompat import anext, is_async
+from .acompat import is_async
 
 pytestmark = [
     pytest.mark.pipeline,

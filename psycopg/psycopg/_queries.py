@@ -7,7 +7,7 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple
+from typing import TYPE_CHECKING, Any, Callable, NamedTuple, TypeAlias, TypeGuard
 from functools import lru_cache
 from collections.abc import Mapping, Sequence
 
@@ -16,7 +16,6 @@ from . import pq
 from .abc import Buffer, Params, Query
 from .sql import Composable
 from ._enums import PyFormat
-from ._compat import TypeAlias, TypeGuard
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:

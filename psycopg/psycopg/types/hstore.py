@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from struct import Struct
+from typing import TypeAlias
 from functools import cache
 
 from .. import errors as e
@@ -16,7 +17,6 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from .._oids import TEXT_OID
 from ..adapt import Loader, PyFormat, RecursiveDumper, RecursiveLoader
-from .._compat import TypeAlias
 from .._typeinfo import TypeInfo
 from .._encodings import conn_encoding
 

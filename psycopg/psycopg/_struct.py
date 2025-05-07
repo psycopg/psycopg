@@ -7,11 +7,10 @@ Utility functions to deal with binary structs.
 from __future__ import annotations
 
 import struct
-from typing import Callable, Protocol, cast
+from typing import Callable, Protocol, TypeAlias, cast
 
 from . import errors as e
 from .abc import Buffer
-from ._compat import TypeAlias
 
 PackInt: TypeAlias = Callable[[int], bytes]
 UnpackInt: TypeAlias = Callable[[Buffer], "tuple[int]"]

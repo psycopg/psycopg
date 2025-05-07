@@ -9,14 +9,14 @@ information to the adapters if needed.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, TypeAlias, overload
 from collections.abc import Iterator, Sequence
 
 from . import errors as e
 from . import sql
 from .abc import AdaptContext, Query
 from .rows import dict_row
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 from ._typemod import TypeModifier
 from ._encodings import conn_encoding
 

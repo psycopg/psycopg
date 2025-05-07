@@ -6,10 +6,10 @@ Types used in the psycopg_pool package
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable, TypeAlias, Union
 from collections.abc import Awaitable
 
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401

@@ -15,10 +15,10 @@ import queue
 import asyncio
 import logging
 import threading
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 from collections.abc import Coroutine
 
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 
 logger = logging.getLogger("psycopg.pool")
 T = TypeVar("T")

@@ -8,12 +8,10 @@ when generating the sync version.
 
 from __future__ import annotations
 
-import sys
 import time
 import queue
 import asyncio
 import inspect
-import builtins
 import threading
 import contextlib
 from typing import Any
@@ -39,23 +37,6 @@ def is_async(obj):
     if not isinstance(obj, type):
         obj = type(obj)
     return "Async" in obj.__name__
-
-
-if sys.version_info >= (3, 10):
-    anext = builtins.anext
-    aclosing = contextlib.aclosing
-
-else:
-
-    async def anext(it):
-        return await it.__anext__()
-
-    @contextlib.asynccontextmanager
-    async def aclosing(thing):
-        try:
-            yield thing
-        finally:
-            await thing.aclose()
 
 
 async def alist(it):

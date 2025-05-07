@@ -5,7 +5,7 @@ Adapters for the enum type.
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeAlias, cast
 from functools import cache
 from collections.abc import Mapping, Sequence
 
@@ -14,7 +14,7 @@ from .. import postgres, sql
 from ..pq import Format
 from ..abc import AdaptContext, Query
 from ..adapt import Buffer, Dumper, Loader
-from .._compat import TypeAlias, TypeVar
+from .._compat import TypeVar
 from .._typeinfo import TypeInfo
 from .._encodings import conn_encoding
 

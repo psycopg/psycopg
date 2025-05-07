@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 from collections import deque
 
 from . import errors as e
 from . import pq
 from .abc import PipelineCommand, PQGen
-from ._compat import Self, TypeAlias
+from ._compat import Self
 from .pq.misc import connection_summary
 from .generators import fetch_many, pipeline_communicate, send
 from ._capabilities import capabilities

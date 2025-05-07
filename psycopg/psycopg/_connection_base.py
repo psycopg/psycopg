@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import TYPE_CHECKING, Callable, Generic, NamedTuple
+from typing import TYPE_CHECKING, Callable, Generic, NamedTuple, TypeAlias
 from weakref import ReferenceType, ref
 from warnings import warn
 from functools import partial
@@ -22,7 +22,7 @@ from ._tpc import Xid
 from .rows import Row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import LiteralString, Self, TypeAlias, TypeVar
+from ._compat import LiteralString, Self, TypeVar
 from .pq.misc import connection_summary
 from ._pipeline import BasePipeline
 from ._preparing import PrepareManager

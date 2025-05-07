@@ -7,7 +7,7 @@ Adapters for JSON types.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 from functools import cache
 
 from .. import _oids, abc
@@ -15,7 +15,6 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import AdaptersMap, Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError
-from .._compat import TypeAlias
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
 JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]

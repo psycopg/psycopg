@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import functools
 from typing import TYPE_CHECKING, Any, Callable, NamedTuple, NoReturn, Protocol
+from typing import TypeAlias
 from collections import namedtuple
 from collections.abc import Sequence
 
 from . import errors as e
 from . import pq
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:

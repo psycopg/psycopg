@@ -7,13 +7,12 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 from collections import OrderedDict, deque
 from collections.abc import Sequence
 
 from . import pq
 from .abc import PQGen
-from ._compat import TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
