@@ -713,8 +713,16 @@ class TestInterval:
             ("60d", "2 month"),
             ("-90d", "-3 month"),
             ("186d", "6 mons 6 days"),
+            ("174d", "6 mons -6 days"),
             ("736d", "2 years 6 days"),
+            ("724d", "2 years -6 days"),
+            ("330d", "1 years -1 month"),
             ("83063d,81640s,447000m", "1993534:40:40.447"),
+            ("-1d,64800s", "41 days -990:00:00"),
+            ("0s", "10 days -240:00:00"),
+            ("20d", "10 days 240:00:00"),
+            ("0d", "-10 days 240:00:00"),
+            ("-20d", "-10 days -240:00:00"),
         ],
     )
     @pytest.mark.parametrize("fmt_out", pq.Format)
