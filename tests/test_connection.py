@@ -24,6 +24,8 @@ from ._test_connection import testctx  # noqa: F401  # fixture
 from ._test_connection import conninfo_params_timeout, tx_params, tx_params_isolation
 from ._test_connection import tx_values_map
 
+MULTI_FAILURE_MESSAGE = "Multiple connection attempts failed. All failures were:"
+
 
 def test_connect(conn_cls, dsn):
     conn = conn_cls.connect(dsn)
@@ -35,6 +37,45 @@ def test_connect(conn_cls, dsn):
 def test_connect_bad(conn_cls):
     with pytest.raises(psycopg.OperationalError):
         conn_cls.connect("dbname=nosuchdb")
+
+
+@pytest.mark.slow
+def test_connect_error_single_host_original_message_preserved(conn_cls, proxy):
+    with proxy.deaf_listen():
+        with pytest.raises(psycopg.OperationalError) as e:
+            conn_cls.connect(proxy.client_dsn, connect_timeout=2)
+
+    msg = str(e)
+    assert "connection timeout expired" in msg
+    assert MULTI_FAILURE_MESSAGE not in msg
+
+
+@pytest.mark.slow
+def test_connect_error_multi_hosts_each_message_preserved(conn_cls):
+    # IPv4 address blocks reserved for documentation.
+    # https://datatracker.ietf.org/doc/rfc5737/
+    args = {"host": "192.0.2.1,198.51.100.1", "port": "1234,5678"}
+    with pytest.raises(psycopg.OperationalError) as e:
+        conn_cls.connect(**args, connect_timeout=2)
+
+    msg = str(e.value)
+    assert MULTI_FAILURE_MESSAGE in msg
+
+    host1, host2 = args["host"].split(",")
+    port1, port2 = args["port"].split(",")
+
+    msg_lines = msg.splitlines()
+
+    expected_host1 = f"host: '{host1}', port: '{port1}', hostaddr: '{host1}'"
+    expected_host2 = f"host: '{host2}', port: '{port2}', hostaddr: '{host2}'"
+    expected_error = "connection timeout expired"
+
+    assert any(
+        (expected_host1 in line and expected_error in line for line in msg_lines)
+    )
+    assert any(
+        (expected_host2 in line and expected_error in line for line in msg_lines)
+    )
 
 
 def test_connect_str_subclass(conn_cls, dsn):
