@@ -700,8 +700,10 @@ cdef char *_call_bytes(PGconn pgconn, conn_bytes_f func) except NULL:
     if not _ensure_pgconn(pgconn):
         return NULL
     cdef char *rv = func(pgconn._pgconn_ptr)
-    assert rv is not NULL
-    return rv
+    if rv is not NULL:
+        return rv
+    else:
+        return b""
 
 
 cdef int _call_int(PGconn pgconn, conn_int_f func) except -2:
