@@ -1,11 +1,11 @@
 [build-system]
 requires = [
-    # Note: pinning these versions strictly because of the setuptools warning:
+    # Note: pinning this version strictly because of the setuptools warning:
     #
     #   `[tool.setuptools.ext-modules]` in `pyproject.toml` is still
     #   *experimental* and likely to change in future releases
     #
-    "setuptools == 75.6.0",
+    "setuptools == 80.3.1",
     "wheel >= 0.37",
     "tomli >= 2.0.1; python_version < '3.11'",
 ]
@@ -25,10 +25,11 @@ cython-requires = ["Cython >= 3.0.0"]
 name = "psycopg-c"
 description = "PostgreSQL database adapter for Python -- C optimisation distribution"
 version = "3.3.0.dev1"
+license = "LGPL-3.0-only"
+license-files = ["LICENSE.txt"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
@@ -50,9 +51,6 @@ requires-python = ">= 3.10"
 name = "Daniele Varrazzo"
 email = "daniele.varrazzo@gmail.com"
 
-[project.license]
-text = "GNU Lesser General Public License v3 (LGPLv3)"
-
 [project.urls]
 Homepage = "https://psycopg.org/"
 Documentation = "https://psycopg.org/psycopg3/docs/"
@@ -72,7 +70,6 @@ packages = [
     "psycopg_c.types",
 ]
 zip-safe = false
-license-files = ["LICENSE.txt"]
 include-package-data = true
 
 [tool.setuptools.package-data]
