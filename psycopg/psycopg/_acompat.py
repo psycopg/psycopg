@@ -13,13 +13,13 @@ from __future__ import annotations
 import queue
 import asyncio
 import threading
-from typing import Any, Callable
-from collections.abc import Coroutine
+from typing import Any, TypeAlias
+from collections.abc import Callable, Coroutine
 
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 
 Worker: TypeAlias = threading.Thread
-AWorker: TypeAlias = "asyncio.Task[None]"
+AWorker: TypeAlias = asyncio.Task[None]
 T = TypeVar("T")
 
 

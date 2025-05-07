@@ -7,20 +7,19 @@ Support for prepared statements
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 from collections import OrderedDict, deque
 from collections.abc import Sequence
 
 from . import pq
 from .abc import PQGen
-from ._compat import TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
-Key: TypeAlias = "tuple[bytes, tuple[int, ...]]"
+Key: TypeAlias = tuple[bytes, tuple[int, ...]]
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
@@ -49,7 +48,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._to_flush = deque["bytes | None"]()
+        self._to_flush = deque[bytes | None]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:

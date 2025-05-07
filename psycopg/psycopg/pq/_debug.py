@@ -30,8 +30,9 @@ Suggested usage::
 
 import inspect
 import logging
-from typing import Any, Callable
+from typing import Any
 from functools import wraps
+from collections.abc import Callable
 
 from . import PGconn, abc
 from .misc import connection_summary
@@ -56,7 +57,7 @@ class PGconnDebug:
         return f"<{cls} {info} at 0x{id(self):x}>"
 
     def __getattr__(self, attr: str) -> Any:
-        if callable((value := getattr(self._pgconn, attr))):
+        if callable(value := getattr(self._pgconn, attr)):
             return debugging(value)
         else:
             logger.info("PGconn.%s -> %s", attr, value)

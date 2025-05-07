@@ -19,13 +19,13 @@ from __future__ import annotations
 import re
 import argparse
 import subprocess as sp
+from typing import TypeAlias
 from pathlib import Path
 
 import psycopg
 from psycopg.pq import version_pretty
 from psycopg.crdb import CrdbConnection
 from psycopg.rows import TupleRow
-from psycopg._compat import TypeAlias
 
 Connection: TypeAlias = psycopg.Connection[TupleRow]
 
@@ -35,7 +35,7 @@ ROOT = Path(__file__).parent.parent
 def main() -> None:
     opt = parse_cmdline()
 
-    if CrdbConnection.is_crdb((conn := psycopg.connect(opt.dsn, autocommit=True))):
+    if CrdbConnection.is_crdb(conn := psycopg.connect(opt.dsn, autocommit=True)):
         conn = CrdbConnection.connect(opt.dsn, autocommit=True)
         update_crdb_python_oids(conn)
     else:

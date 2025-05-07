@@ -65,7 +65,7 @@ def find_libpq_full_path() -> str | None:
                 import subprocess as sp
 
                 libdir = sp.check_output(["pg_config", "--libdir"]).strip().decode()
-                if not os.path.exists((libname := os.path.join(libdir, "libpq.dylib"))):
+                if not os.path.exists(libname := os.path.join(libdir, "libpq.dylib")):
                     libname = None
             except Exception as ex:
                 logger.debug("couldn't use pg_config to find libpq: %s", ex)
@@ -169,7 +169,7 @@ def connection_summary(pgconn: abc.PGconn) -> str:
             # before upgrading the ConnStatus enum.
             status = f"status={pgconn.status} (unkndown)"
 
-    if sparts := " ".join(("%s=%s" % part for part in parts)):
+    if sparts := " ".join("%s=%s" % part for part in parts):
         sparts = f" ({sparts})"
     return f"[{status}]{sparts}"
 

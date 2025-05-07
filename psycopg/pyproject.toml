@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=49.2.0", "wheel>=0.37"]
+requires = ["setuptools>=80.3.1", "wheel>=0.37"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,10 +15,11 @@ version = "3.3.0.dev1"
 #
 # NOTE: you can use `tools/bump_version.py` to maintain versions.
 
+license = "LGPL-3.0-only"
+license-files = ["LICENSE.txt"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
@@ -43,9 +44,6 @@ dependencies = [
 [[project.authors]]
 name = "Daniele Varrazzo"
 email = "daniele.varrazzo@gmail.com"
-
-[project.license]
-text = "GNU Lesser General Public License v3 (LGPLv3)"
 
 [project.urls]
 Homepage = "https://psycopg.org/"
@@ -99,7 +97,6 @@ docs = [
 
 [tool.setuptools]
 zip-safe = false
-license-files = ["LICENSE.txt"]
 include-package-data = true
 
 [tool.setuptools.package-data]

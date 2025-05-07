@@ -11,7 +11,7 @@ dependencies problems).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, DefaultDict
+from typing import TYPE_CHECKING, Any, DefaultDict, TypeAlias
 from collections import defaultdict
 from collections.abc import Sequence
 
@@ -21,7 +21,6 @@ from . import pq
 from .abc import AdaptContext, Buffer, LoadFunc, NoneType, PyFormat
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
-from ._compat import TypeAlias
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -31,8 +30,8 @@ if TYPE_CHECKING:
     from ._connection_base import BaseConnection
 
 DumperCache: TypeAlias = "dict[DumperKey, abc.Dumper]"
-OidDumperCache: TypeAlias = "dict[int, abc.Dumper]"
-LoaderCache: TypeAlias = "dict[int, abc.Loader]"
+OidDumperCache: TypeAlias = dict[int, abc.Dumper]
+LoaderCache: TypeAlias = dict[int, abc.Loader]
 
 TEXT = pq.Format.TEXT
 PY_TEXT = PyFormat.TEXT

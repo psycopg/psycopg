@@ -6,18 +6,18 @@ Protocol objects representing different implementations of the same classes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol, Union
-from collections.abc import Generator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, Union
+from collections.abc import Callable, Generator, Mapping, Sequence
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import LiteralString, TypeAlias, TypeVar
+from ._compat import LiteralString, TypeVar
 
 if TYPE_CHECKING:
-    from . import sql  # noqa: F401
+    from . import sql
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
-    from .waiting import Ready, Wait  # noqa: F401
+    from .waiting import Ready, Wait
     from ._adapters_map import AdaptersMap
     from ._connection_base import BaseConnection
 
@@ -40,7 +40,7 @@ ConnMapping: TypeAlias = Mapping[str, ConnParam]
 
 RV = TypeVar("RV")
 
-PQGenConn: TypeAlias = Generator["tuple[int, Wait]", "Ready | int", RV]
+PQGenConn: TypeAlias = Generator[tuple[int, "Wait"], "Ready | int", RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
@@ -63,7 +63,7 @@ class WaitFunc(Protocol):
 
 # Adaptation types
 
-DumpFunc: TypeAlias = Callable[[Any], "Buffer | None"]
+DumpFunc: TypeAlias = Callable[[Any], Buffer | None]
 LoadFunc: TypeAlias = Callable[[Buffer], Any]
 
 

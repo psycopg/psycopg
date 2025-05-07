@@ -17,10 +17,10 @@ import logging
 from os import getpid
 from ctypes import POINTER, Array, addressof, byref, c_char_p, c_int, c_size_t, c_ulong
 from ctypes import c_void_p, cast, create_string_buffer, py_object, string_at
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 from typing import cast as t_cast
 from weakref import ref
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from . import _pq_ctypes as impl
 from .. import errors as e

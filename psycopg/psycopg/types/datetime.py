@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import re
 import struct
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 from datetime import date, datetime, time, timedelta, timezone
+from collections.abc import Callable
 
 from .. import _oids
 from ..pq import Format

@@ -20,7 +20,8 @@ from __future__ import annotations
 import logging
 from time import monotonic
 from heapq import heappop, heappush
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from ._task import Task
 from ._acompat import Event, Lock

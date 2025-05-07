@@ -15,10 +15,10 @@ import queue
 import asyncio
 import logging
 import threading
-from typing import Any, Callable
-from collections.abc import Coroutine
+from typing import Any, TypeAlias
+from collections.abc import Callable, Coroutine
 
-from ._compat import TypeAlias, TypeVar
+from ._compat import TypeVar
 
 logger = logging.getLogger("psycopg.pool")
 T = TypeVar("T")
@@ -31,7 +31,7 @@ ALock = asyncio.Lock
 sleep = time.sleep
 
 Worker: TypeAlias = threading.Thread
-AWorker: TypeAlias = "asyncio.Task[None]"
+AWorker: TypeAlias = asyncio.Task[None]
 
 
 def current_thread_name() -> str:

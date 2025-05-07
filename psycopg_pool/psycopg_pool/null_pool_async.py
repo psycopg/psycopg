@@ -27,7 +27,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         self,
         conninfo: str = "",
         *,
-        connection_class: type[ACT] = cast("type[ACT]", AsyncConnection),
+        connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 0,  # Note: min_size default value changed to 0.
         max_size: int | None = None,

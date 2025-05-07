@@ -6,11 +6,6 @@ compatibility functions for different Python versions
 
 import sys
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias, TypeGuard
-else:
-    from typing_extensions import TypeAlias, TypeGuard
-
 if sys.version_info >= (3, 11):
     from typing import LiteralString, Self
 else:
@@ -24,7 +19,5 @@ else:
 __all__ = [
     "LiteralString",
     "Self",
-    "TypeAlias",
-    "TypeGuard",
     "TypeVar",
 ]

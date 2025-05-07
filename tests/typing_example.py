@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 from dataclasses import dataclass
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor, Connection, Cursor
 from psycopg import ServerCursor, connect, rows

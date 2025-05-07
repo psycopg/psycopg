@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from struct import Struct
+from typing import TypeAlias
 from functools import cache
 
 from .. import errors as e
@@ -16,7 +17,6 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from .._oids import TEXT_OID
 from ..adapt import Loader, PyFormat, RecursiveDumper, RecursiveLoader
-from .._compat import TypeAlias
 from .._typeinfo import TypeInfo
 from .._encodings import conn_encoding
 
@@ -46,7 +46,7 @@ _I2B = [i.to_bytes(4, "big") for i in range(64)]
 """Lookup list for small ints to bytes conversions."""
 
 
-Hstore: TypeAlias = "dict[str, str | None]"
+Hstore: TypeAlias = dict[str, str | None]
 
 
 class BaseHstoreDumper(RecursiveDumper):

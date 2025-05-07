@@ -114,6 +114,9 @@ When dropping end-of-life Python versions
 
 - Bump versions in the ``tests/constraints.txt`` file if it is necessary.
 
+- bump ``build-system.requires`` in ``*/pyproject.toml``. Install the packages
+  with ``pip install ./psycopg*/`` and check eventual warnings.
+
 - You may grep throughout the project for occurrences of a version to be dropped.
   However, favouring smaller pull requests is convenient and easy to review.
   An example for grepping `end-of-life <https://endoflife.date/python>` Python 3.8::
