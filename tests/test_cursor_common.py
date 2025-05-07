@@ -893,3 +893,20 @@ def test_error_no_result(conn):
         psycopg.ProgrammingError, match="last operation.*result status: EMPTY_QUERY"
     ):
         cur.fetchone()
+
+
+def test_row_maker_returns_none(conn):
+    cur = conn.cursor(row_factory=rows.scalar_row)
+    query = "values (null), (0)"
+    recs = [None, 0]
+
+    cur.execute(query)
+    assert [cur.fetchone() for _ in range(len(recs))] == recs
+    cur.execute(query)
+    assert cur.fetchmany(len(recs)) == recs
+    cur.execute(query)
+    assert cur.fetchall() == recs
+    cur.execute(query)
+    assert list(cur) == recs
+    stream = cur.stream(query)
+    assert list(stream) == recs

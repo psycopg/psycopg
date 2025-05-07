@@ -901,3 +901,20 @@ async def test_error_no_result(aconn):
         psycopg.ProgrammingError, match="last operation.*result status: EMPTY_QUERY"
     ):
         await cur.fetchone()
+
+
+async def test_row_maker_returns_none(aconn):
+    cur = aconn.cursor(row_factory=rows.scalar_row)
+    query = "values (null), (0)"
+    recs = [None, 0]
+
+    await cur.execute(query)
+    assert [await cur.fetchone() for _ in range(len(recs))] == recs
+    await cur.execute(query)
+    assert await cur.fetchmany(len(recs)) == recs
+    await cur.execute(query)
+    assert await cur.fetchall() == recs
+    await cur.execute(query)
+    assert await alist(cur) == recs
+    stream = cur.stream(query)
+    assert await alist(stream) == recs
