@@ -891,17 +891,17 @@ cdef class IntervalLoader(CLoader):
         cdef const char *sep
         cdef const char *end = ptr + length
 
-        # If there are spaces, there is a [+|-]n [days|months|years]
         while True:
+            # If there are spaces, there is a [+|-]n [days|months|years]
+            sep = strchr(ptr, b' ')
+            if sep == NULL or sep > end:
+                break
+
             if ptr[0] == b'-' or ptr[0] == b'+':
                 sign = ptr[0]
                 ptr += 1
             else:
                 sign = 0
-
-            sep = strchr(ptr, b' ')
-            if sep == NULL or sep > end:
-                break
 
             val = 0
             ptr = _parse_date_values(ptr, end, &val, 1)
@@ -929,10 +929,18 @@ cdef class IntervalLoader(CLoader):
             else:
                 break
 
-        # Parse the time part. An eventual sign was already consumed in the loop
+        # Parse the time part if present
         cdef int64_t vals[3]
-        memset(vals, 0, sizeof(vals))
         if ptr != NULL:
+            memset(vals, 0, sizeof(vals))
+
+            # Parse the sign of the time part.
+            if ptr[0] == b'-' or ptr[0] == b'+':
+                sign = ptr[0]
+                ptr += 1
+            else:
+                sign = 0
+
             ptr = _parse_date_values(ptr, end, vals, ARRAYSIZE(vals))
             if ptr == NULL:
                 s = bytes(data).decode("utf8", "replace")
@@ -941,15 +949,18 @@ cdef class IntervalLoader(CLoader):
             secs = vals[2] + 60 * (vals[1] + 60 * vals[0])
 
             if secs > 86_400:
-                days += secs // 86_400
+                if sign == b'-':
+                    days -= secs // 86_400
+                else:
+                    days += secs // 86_400
                 secs %= 86_400
 
             if ptr[0] == b'.':
                 ptr = _parse_micros(ptr + 1, &us)
 
-        if sign == b'-':
-            secs = -secs
-            us = -us
+            if sign == b'-':
+                secs = -secs
+                us = -us
 
         try:
             return cdt.timedelta_new(days, secs, us)
