@@ -6,8 +6,8 @@ Protocol objects representing different implementations of the same classes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeAlias, Union
-from collections.abc import Generator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, Union
+from collections.abc import Callable, Generator, Mapping, Sequence
 
 from . import pq
 from ._enums import PyFormat as PyFormat

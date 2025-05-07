@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import re
 import struct
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from functools import cache
 from collections import namedtuple
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 
 from .. import abc, postgres, pq, sql
 from .._oids import TEXT_OID

@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 import sys
 import operator
-from typing import Callable
 from contextlib import contextmanager
+from collections.abc import Callable
 
 import pytest
 

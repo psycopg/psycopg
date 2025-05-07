@@ -9,8 +9,9 @@ from __future__ import annotations
 import re
 import struct
 from math import prod
-from typing import Any, Callable, cast
+from typing import Any, cast
 from functools import cache
+from collections.abc import Callable
 
 from .. import errors as e
 from .. import postgres, pq

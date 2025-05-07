@@ -6,7 +6,8 @@ Adapters for network types.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
+from collections.abc import Callable
 
 from .. import _oids
 from ..pq import Format

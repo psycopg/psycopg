@@ -6,8 +6,8 @@ Types used in the psycopg_pool package
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, TypeAlias, Union
-from collections.abc import Awaitable
+from typing import TYPE_CHECKING, TypeAlias, Union
+from collections.abc import Awaitable, Callable
 
 from ._compat import TypeVar
 

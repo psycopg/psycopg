@@ -30,8 +30,9 @@ Suggested usage::
 
 import inspect
 import logging
-from typing import Any, Callable
+from typing import Any
 from functools import wraps
+from collections.abc import Callable
 
 from . import PGconn, abc
 from .misc import connection_summary

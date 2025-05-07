@@ -7,8 +7,9 @@ Adapters for JSON types.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, TypeAlias
+from typing import Any, TypeAlias
 from functools import cache
+from collections.abc import Callable
 
 from .. import _oids, abc
 from .. import errors as e

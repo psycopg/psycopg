@@ -20,10 +20,10 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, NoReturn, TypeAlias, TypeGuard
+from typing import TYPE_CHECKING, Any, NoReturn, TypeAlias, TypeGuard
 from asyncio import CancelledError
 from dataclasses import dataclass, field, fields
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from .pq.abc import PGconn, PGresult
 from .pq._enums import ConnStatus, DiagnosticField, PipelineStatus, TransactionStatus

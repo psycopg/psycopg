@@ -7,7 +7,8 @@ Utility functions to deal with binary structs.
 from __future__ import annotations
 
 import struct
-from typing import Callable, Protocol, TypeAlias, cast
+from typing import Protocol, TypeAlias, cast
+from collections.abc import Callable
 
 from . import errors as e
 from .abc import Buffer

@@ -10,8 +10,9 @@ import sys
 import struct
 from abc import ABC, abstractmethod
 from math import log
-from typing import TYPE_CHECKING, Any, Callable, DefaultDict, cast
+from typing import TYPE_CHECKING, Any, DefaultDict, cast
 from decimal import Context, Decimal, DefaultContext
+from collections.abc import Callable
 
 from .. import _oids
 from .. import errors as e

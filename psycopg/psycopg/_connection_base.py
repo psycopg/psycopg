@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import TYPE_CHECKING, Callable, Generic, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Generic, NamedTuple, TypeAlias
 from weakref import ReferenceType, ref
 from warnings import warn
 from functools import partial
 from collections import deque
+from collections.abc import Callable
 
 from . import errors as e
 from . import generators, postgres, pq

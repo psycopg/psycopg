@@ -7,9 +7,9 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, TypeAlias, TypeGuard
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, TypeGuard
 from functools import lru_cache
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from . import errors as e
 from . import pq
