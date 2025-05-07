@@ -51,6 +51,16 @@ Code = "https://github.com/psycopg/psycopg"
 file = "README.rst"
 content-type = "text/x-rst"
 
+[project.optional-dependencies]
+test = [
+    "anyio >= 4.0",
+    "mypy >= 1.14",
+    "pproxy >= 2.7",
+    "pytest >= 6.2.5",
+    "pytest-cov >= 3.0",
+    "pytest-randomly >= 3.5",
+]
+
 [tool.setuptools]
 zip-safe = false
 include-package-data = true

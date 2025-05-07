@@ -139,6 +139,48 @@ jobs:
 
   # }}}
 
+  pool-integration:  # {{{
+    # Test the current pool version with older psycopg versions
+    runs-on: ubuntu-latest
+    if: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {psycopg: "3.3", python: "3.13", postgres: "postgres:17"}
+          - {psycopg: "3.2", python: "3.12", postgres: "postgres:17"}
+
+    env:
+      DEPS: psycopg<${{ matrix.psycopg }} ./psycopg_pool[test]
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres password=password"
+      MARKERS: "pool"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Start PostgreSQL service
+        # Note: this would love to be a service, but I don't see a way to pass
+        # the args to the docker run command line.
+        run: |
+          docker pull ${{ matrix.postgres }}
+          docker run --rm -d --name postgres -p 5432:5432 \
+            -e POSTGRES_PASSWORD=password ${{ matrix.postgres }} \
+            -c max_prepared_transactions=10
+
+      - name: Install Python packages
+        run: pip install $DEPS
+
+      - name: Run tests
+        run: ./tools/ci/ci_test.sh
+
+
+  # }}}
+
   macos-14:  # {{{
     runs-on: macos-14
     if: true
