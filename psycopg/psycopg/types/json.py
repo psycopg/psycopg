@@ -17,8 +17,8 @@ from ..pq import Format
 from ..adapt import AdaptersMap, Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError
 
-JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
-JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]
+JsonDumpsFunction: TypeAlias = Callable[[Any], str | bytes]
+JsonLoadsFunction: TypeAlias = Callable[[str | bytes], Any]
 
 
 def set_json_dumps(

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from ._connection_base import BaseConnection
 
-Key: TypeAlias = "tuple[bytes, tuple[int, ...]]"
+Key: TypeAlias = tuple[bytes, tuple[int, ...]]
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
@@ -48,7 +48,7 @@ class PrepareManager:
         # Counter to generate prepared statements names
         self._prepared_idx = 0
 
-        self._to_flush = deque["bytes | None"]()
+        self._to_flush = deque[bytes | None]()
 
     @staticmethod
     def key(query: PostgresQuery) -> Key:

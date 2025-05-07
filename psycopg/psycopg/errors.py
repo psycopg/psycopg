@@ -31,7 +31,7 @@ from .pq._enums import ConnStatus, DiagnosticField, PipelineStatus, TransactionS
 if TYPE_CHECKING:
     from .pq.misc import ConninfoOption, PGnotify
 
-ErrorInfo: TypeAlias = "PGresult | dict[int, bytes | None] | None"
+ErrorInfo: TypeAlias = PGresult | dict[int, bytes | None] | None
 
 _sqlcodes: dict[str, type[Error]] = {}
 

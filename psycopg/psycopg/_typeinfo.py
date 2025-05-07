@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
 T = TypeVar("T", bound="TypeInfo")
-RegistryKey: TypeAlias = "str | int | tuple[type, int]"
+RegistryKey: TypeAlias = str | int | tuple[type, int]
 
 
 class TypeInfo:

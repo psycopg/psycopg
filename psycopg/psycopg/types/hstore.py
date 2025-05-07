@@ -46,7 +46,7 @@ _I2B = [i.to_bytes(4, "big") for i in range(64)]
 """Lookup list for small ints to bytes conversions."""
 
 
-Hstore: TypeAlias = "dict[str, str | None]"
+Hstore: TypeAlias = dict[str, str | None]
 
 
 class BaseHstoreDumper(RecursiveDumper):

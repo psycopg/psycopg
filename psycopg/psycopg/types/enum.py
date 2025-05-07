@@ -23,13 +23,13 @@ if TYPE_CHECKING:
 
 E = TypeVar("E", bound=Enum)
 
-EnumDumpMap: TypeAlias = "dict[E, bytes]"
-EnumLoadMap: TypeAlias = "dict[bytes, E]"
-EnumMapping: TypeAlias = "Mapping[E, str] | Sequence[tuple[E, str]] | None"
+EnumDumpMap: TypeAlias = dict[E, bytes]
+EnumLoadMap: TypeAlias = dict[bytes, E]
+EnumMapping: TypeAlias = Mapping[E, str] | Sequence[tuple[E, str]] | None
 
 # Hashable versions
-_HEnumDumpMap: TypeAlias = "tuple[tuple[E, bytes], ...]"
-_HEnumLoadMap: TypeAlias = "tuple[tuple[bytes, E], ...]"
+_HEnumDumpMap: TypeAlias = tuple[tuple[E, bytes], ...]
+_HEnumLoadMap: TypeAlias = tuple[tuple[bytes, E], ...]
 
 TEXT = Format.TEXT
 BINARY = Format.BINARY
@@ -143,7 +143,7 @@ def register_enum(
         raise TypeError("no info passed. Is the requested enum available?")
 
     if enum is None:
-        enum = cast("type[E]", _make_enum(info.name, tuple(info.labels)))
+        enum = cast(type[E], _make_enum(info.name, tuple(info.labels)))
 
     info.enum = enum
     adapters = context.adapters if context else postgres.adapters

@@ -12,7 +12,7 @@ from collections.abc import Awaitable, Callable
 from ._compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing import Any  # noqa: F401
+    from typing import Any
 
     from psycopg import AsyncConnection, Connection  # noqa: F401
     from psycopg.rows import TupleRow  # noqa: F401

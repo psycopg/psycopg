@@ -123,7 +123,7 @@ async def test_copy_in_records(aconn, format):
     await ensure_table_async(cur, sample_tabledef)
 
     async with cur.copy(f"copy copy_in from stdin {copyopt(format)}") as copy:
-        row: "tuple[Any, ...]"
+        row: tuple[Any, ...]
         for row in sample_records:
             if format == pq.Format.BINARY:
                 row = tuple(Int4(i) if isinstance(i, int) else i for i in row)

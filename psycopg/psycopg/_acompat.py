@@ -19,7 +19,7 @@ from collections.abc import Callable, Coroutine
 from ._compat import TypeVar
 
 Worker: TypeAlias = threading.Thread
-AWorker: TypeAlias = "asyncio.Task[None]"
+AWorker: TypeAlias = asyncio.Task[None]
 T = TypeVar("T")
 
 

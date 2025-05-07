@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from ._connection_base import BaseConnection
 
 DumperCache: TypeAlias = "dict[DumperKey, abc.Dumper]"
-OidDumperCache: TypeAlias = "dict[int, abc.Dumper]"
-LoaderCache: TypeAlias = "dict[int, abc.Loader]"
+OidDumperCache: TypeAlias = dict[int, abc.Dumper]
+LoaderCache: TypeAlias = dict[int, abc.Loader]
 
 TEXT = pq.Format.TEXT
 PY_TEXT = PyFormat.TEXT

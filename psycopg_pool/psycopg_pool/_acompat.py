@@ -31,7 +31,7 @@ ALock = asyncio.Lock
 sleep = time.sleep
 
 Worker: TypeAlias = threading.Thread
-AWorker: TypeAlias = "asyncio.Task[None]"
+AWorker: TypeAlias = asyncio.Task[None]
 
 
 def current_thread_name() -> str:
