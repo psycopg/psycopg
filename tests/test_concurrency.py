@@ -15,6 +15,7 @@ import pytest
 
 import psycopg
 from psycopg import errors as e
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 
 @pytest.mark.slow
@@ -515,3 +516,52 @@ def test_transaction_concurrency(conn, what):
     t1.join()
     evs[2].set()
     t2.join()
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
+)
+@pytest.mark.crdb("skip")
+def test_break_attempts(dsn, proxy):
+    with proxy.deaf_listen():
+        # Prepare a connection string that will fail the first attempt
+        # but will succeed the second.
+        dsn1 = conninfo_to_dict(proxy.client_dsn)
+        dsn2 = conninfo_to_dict(dsn)
+        dsn = dsn1.copy()
+        for k in "host port hostaddr".split():
+            if k in dsn1 or k in dsn2:
+                dsn[k] = f"{dsn1.get(k) or ''},{dsn2.get(k) or ''}"
+        dsn["connect_timeout"] = 3
+        dsn = make_conninfo(**dsn)
+
+        # Run a script to try to connect with this connection string
+        script = f"import psycopg; print(psycopg.connect({dsn!r}))"
+        proc = None
+        stdout = stderr = ""
+
+        def run_process():
+            nonlocal proc, stdout, stderr
+            cmdline = [sys.executable, "-s", "-c", script]
+            proc = sp.Popen(cmdline, text=True, stdout=sp.PIPE, stderr=sp.PIPE)
+            stdout, stderr = proc.communicate()
+
+        t = threading.Thread(target=run_process)
+        t.start()
+        t0 = time.time()
+        time.sleep(1)
+        assert proc, "process didn't start?"
+
+        # Send the running script a ctrl-c before the second attempt is made
+        proc.send_signal(signal.SIGINT)
+        proc.wait()
+        t1 = time.time()
+
+    # Check that we didn't try the second attempt
+    assert t1 - t0 < 2.5
+    assert proc.returncode != 0
+    if sys.implementation.name != "pypy":  # unexpected, but hey.
+        assert "KeyboardInterrupt" in stderr
+    assert stdout == ""
