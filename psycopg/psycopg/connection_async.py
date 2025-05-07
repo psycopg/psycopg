@@ -117,7 +117,7 @@ class AsyncConnection(BaseConnection[Row]):
                 conninfo = make_conninfo("", **attempt)
                 gen = cls._connect_gen(conninfo, timeout=timeout)
                 rv = await waiting.wait_conn_async(gen, interval=_WAIT_INTERVAL)
-            except e._NO_TRACEBACK as ex:
+            except e.Error as ex:
                 if len(attempts) > 1:
                     logger.debug(
                         "connection attempt failed: host: %r port: %r, hostaddr %r: %s",
@@ -127,6 +127,8 @@ class AsyncConnection(BaseConnection[Row]):
                         str(ex),
                     )
                 last_ex = ex
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
             else:
                 break
 

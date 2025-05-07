@@ -789,8 +789,7 @@ class PGconn:
         if not self._pgconn_ptr:
             raise e.OperationalError("the connection is closed")
         rv = func(self._pgconn_ptr)
-        assert rv is not None
-        return rv
+        return rv if rv is not None else b""
 
     def _call_int(self, func: Callable[[impl.PGconn_struct], int]) -> int:
         """
