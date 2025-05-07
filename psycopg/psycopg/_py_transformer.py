@@ -312,12 +312,14 @@ class Transformer(AdaptContext):
 
         return records
 
-    def load_row(self, row: int, make_row: RowMaker[Row]) -> Row | None:
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Row:
         if not (res := self._pgresult):
-            return None
+            raise e.InterfaceError("result not set")
 
-        if not 0 <= row < self._ntuples:
-            return None
+        if not 0 <= row <= self._ntuples:
+            raise e.InterfaceError(
+                f"row must be included between 0 and {self._ntuples}"
+            )
 
         record: list[Any] = [None] * self._nfields
         for col in range(self._nfields):
