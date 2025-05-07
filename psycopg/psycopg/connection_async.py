@@ -111,29 +111,45 @@ class AsyncConnection(BaseConnection[Row]):
         timeout = timeout_from_conninfo(params)
         rv = None
         attempts = await conninfo_attempts_async(params)
+        connection_errors: list[tuple[e.Error, str]] = []
         for attempt in attempts:
             try:
                 conninfo = make_conninfo("", **attempt)
                 gen = cls._connect_gen(conninfo, timeout=timeout)
                 rv = await waiting.wait_conn_async(gen, interval=_WAIT_INTERVAL)
             except e.Error as ex:
-                if len(attempts) > 1:
-                    logger.debug(
-                        "connection attempt failed: host: %r port: %r, hostaddr %r: %s",
-                        attempt.get("host"),
-                        attempt.get("port"),
-                        attempt.get("hostaddr"),
-                        str(ex),
-                    )
-                last_ex = ex
+                attempt_details = "host: {}, port: {}, hostaddr: {}".format(
+                    repr(attempt.get("host")),
+                    repr(attempt.get("port")),
+                    repr(attempt.get("hostaddr")),
+                )
+                connection_errors.append((ex, attempt_details))
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
             else:
                 break
 
         if not rv:
-            assert last_ex
-            raise last_ex.with_traceback(None)
+            last_exception, _ = connection_errors[-1]
+            if len(connection_errors) == 1:
+                raise last_exception.with_traceback(None)
+            else:
+                formatted_attempts = []
+                for error, attempt_details in connection_errors:
+                    formatted_attempts.append(f"- {attempt_details}: {error}")
+
+                # Create a new exception with the same type as the last one, containing
+                # all attempt errors while preserving backward compatibility.
+                last_exception_type = type(last_exception)
+
+                message_lines = [
+                    f"{last_exception}",
+                    "Multiple connection attempts failed. All failures were:",
+                ]
+                message_lines.extend(formatted_attempts)
+                enhanced_message = "\n".join(message_lines)
+                enhanced_exception = last_exception_type(enhanced_message)
+                raise enhanced_exception.with_traceback(None)
 
         rv._autocommit = bool(autocommit)
         if row_factory:
