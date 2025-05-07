@@ -618,14 +618,21 @@ class IntervalLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse interval {s!r}")
 
+        ye: int | bytes
+        mo: int | bytes
         ye, mo, da, sgn, ho, mi, se = m.groups()
         days = 0
         seconds = 0.0
+        all_months = 0
 
         if ye:
-            days += 365 * int(ye)
+            ye = int(ye)
+            days += 365 * ye
+            all_months += 12 * ye
         if mo:
-            days += 30 * int(mo)
+            mo = int(mo)
+            days += 30 * mo
+            all_months += mo
         if da:
             days += int(da)
 
@@ -633,6 +640,12 @@ class IntervalLoader(Loader):
             seconds = 3600 * int(ho) + 60 * int(mi) + float(se)
             if sgn == b"-":
                 seconds = -seconds
+
+        # Postgres adds 0.25 days every 12 months to approximate leap years
+        if all_months >= 12:
+            seconds += (6 * 60 * 60) * (all_months // 12)
+        elif all_months <= -12:
+            seconds -= (6 * 60 * 60) * (all_months // -12)
 
         try:
             return timedelta(days=days, seconds=seconds)
@@ -654,15 +667,19 @@ class IntervalBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> timedelta:
         micros, days, months = _unpack_interval(data)
+        hours = 0
         if months > 0:
             years, months = divmod(months, 12)
             days = days + 30 * months + 365 * years
+            # Postgres adds 0.25 days every 12 months to approximate leap years
+            hours = 6 * years
         elif months < 0:
             years, months = divmod(-months, 12)
             days = days - 30 * months - 365 * years
+            hours = -6 * years
 
         try:
-            return timedelta(days=days, microseconds=micros)
+            return timedelta(days=days, hours=hours, microseconds=micros)
         except OverflowError as e:
             raise DataError(f"can't parse interval: {e}") from None
 
