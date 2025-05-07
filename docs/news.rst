@@ -19,6 +19,8 @@ Psycopg 3.2.8 (unreleased)
   the local timezone (:ticket:`#1058`).
 - Fix `~Cursor.rownumber` after using `~AsyncServerCursor.scroll()` on
   `AsyncServerCursor` (:ticket:`#1066`).
+- Fix interval parsing with days or other parts and negative time in C module
+  (:ticket:`#1071`).
 
 
 Current release
