@@ -492,12 +492,14 @@ cdef class Transformer:
                 Py_DECREF(<object>brecord)
         return records
 
-    def load_row(self, int row, object make_row) -> Row | None:
+    def load_row(self, int row, object make_row) -> Row:
         if self._pgresult is None:
-            return None
+            raise e.InterfaceError("result not set")
 
         if not 0 <= row < self._ntuples:
-            return None
+            raise e.InterfaceError(
+                f"row must be included between 0 and {self._ntuples}"
+            )
 
         cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
         # cheeky access to the internal PGresult structure
