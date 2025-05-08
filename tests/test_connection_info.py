@@ -44,6 +44,17 @@ def test_port(conn):
         conn.info.port
 
 
+@pytest.mark.skipif(psycopg.pq.__impl__ != "python", reason="can't monkeypatch C")
+def test_blank_port(conn, monkeypatch):
+    monkeypatch.setenv("PGPORT", "9999")
+    monkeypatch.setattr(
+        psycopg.pq._pq_ctypes, "PQport", lambda self: b""  # type: ignore[attr-defined]
+    )
+    assert conn.pgconn.port == b""
+    # assume 5432 is the compiled value
+    assert conn.info.port == 5432
+
+
 def test_get_params(conn, dsn):
     info = conn.info.get_parameters()
     for k, v in conninfo_to_dict(dsn).items():
