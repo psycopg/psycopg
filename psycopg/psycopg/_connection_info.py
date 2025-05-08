@@ -41,19 +41,14 @@ class ConnectionInfo:
     @property
     def port(self) -> int:
         """The port of the active connection. See :pq:`PQport()`."""
-        if sport := self._get_pgconn_attr("port"):
-            return int(sport)
-        return self._get_compiled_port()
+        if port := self._get_pgconn_attr("port"):
+            return int(port)
 
-    def _get_compiled_port(sef) -> int:
         # As per docs: an empty string means the build default, not e.g.
         # something configured by PGPORT
         # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-PORT
-        for info in pq.Conninfo().get_defaults():
-            if info.keyword == b"port":
-                if info.compiled:
-                    return int(info.compiled)
-                break
+        elif port := pq.misc.get_compiled_port():
+            return int(port)
 
         raise e.InternalError("couldn't find the connection port")
 

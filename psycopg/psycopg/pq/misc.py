@@ -155,8 +155,8 @@ def connection_summary(pgconn: abc.PGconn) -> str:
         # Put together the (CONNECTION)
         if not pgconn.host.startswith(b"/"):
             parts.append(("host", pgconn.host.decode()))
-        if pgconn.port != b"5432":
-            parts.append(("port", pgconn.port.decode()))
+        if (port := pgconn.port.decode() or get_compiled_port()) != "5432":
+            parts.append(("port", port))
         if pgconn.user != pgconn.db:
             parts.append(("user", pgconn.user.decode()))
         parts.append(("database", pgconn.db.decode()))
@@ -186,3 +186,13 @@ def version_pretty(version: int) -> str:
         return f"{major}.{patch}"
     else:
         return f"{major}.{minor}.{patch}"
+
+
+@cache
+def get_compiled_port() -> str:
+    """Return the default port compiled with the libpq."""
+
+    from psycopg._conninfo_utils import get_param_def
+
+    info = get_param_def("port")
+    return info.compiled if info and info.compiled else ""
