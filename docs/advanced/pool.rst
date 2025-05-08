@@ -451,22 +451,35 @@ Since `!psycopg_pool` version 3.3, the `!close_returns` parameter of the pool
 allows to change this behaviour, telling its connections to return to the
 pool, instead of closing, when `!close()` is called.
 
-For example:
+For example, the initialization in an async application may look like:
 
 .. code:: python
 
-    import sqlalchemy.pool
     import psycopg_pool
+    import sqlalchemy.pool
+    import sqlalchemy.ext.asyncio
 
     db_url = "postgresql://postgres:postgres@hostname:port/database"
 
-    pgpool = psycopg_pool.ConnectionPool(conninfo=db_url, close_returns=True)
+    async def main():
+        # Create and open a Psycopg pool
+        pgpool = psycopg_pool.AsyncConnectionPool(
+            conninfo=db_url, open=False, close_returns=True
+        )
+        await mypool.open()
 
-    engine = sqlalchemy.create_engine(
-        url=db_url.replace("postgresql://", "postgresql+psycopg://"),
-        poolclass=sqlalchemy.pool.NullPool,
-        creator=pgpool.getconn,
-    )
+        # Create a SQLAlchemy engine using the pool just created
+        engine = sqlalchemy.ext.asyncio.create_async_engine(
+            url=db_url.replace("postgresql://", "postgresql+psycopg://"),
+            poolclass=sqlalchemy.pool.NullPool,
+            async_creator=pgpool.getconn,
+        )
+
+        # Use the `engine` in the rest of your application.
+        await run_my_app(engine)
+
+    if __name__ == "__main__":
+        asyncio.run(main())
 
 If you want to integrate the Psycopg pool with SQLAlchemy using a `!psycopg_pool`
 version older than 3.3, you will need to create a subclass of the
@@ -475,7 +488,7 @@ version older than 3.3, you will need to create a subclass of the
 
 .. code:: python
 
-    class MyConnection(psycopg.AsyncConnection):
+    class MyAsyncConnection(psycopg.AsyncConnection):
         # If you need to subclass a sync connection, just drop the
         # 'async' and 'await' keywords from this example.
         async def close(self) -> None:
@@ -488,11 +501,12 @@ version older than 3.3, you will need to create a subclass of the
                 # Close the connection for real.
                 await super().close()
 
-
 Using a connection implementing this method you will not need to specify
 `!close_returns` in the pool constructor, but just `!connection_class`; the
 example above would be modified as:
 
 .. code:: python
 
-    pgpool = psycopg_pool.ConnectionPool(conninfo=db_url, connection_class=MyConnection)
+    pgpool = psycopg_pool.AsyncConnectionPool(
+        conninfo=db_url, open=False, connection_class=MyAsyncConnection
+    )
