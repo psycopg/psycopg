@@ -54,6 +54,8 @@ def test_blank_port(conn, monkeypatch):
     # assume 5432 is the compiled value
     assert conn.info.port == 5432
 
+    assert "port=" not in repr(conn)
+
 
 def test_get_params(conn, dsn):
     info = conn.info.get_parameters()
