@@ -560,3 +560,19 @@ async def test_stolen_cursor_close(aconn):
     await cur1.execute("declare test cursor for select generate_series(1, 6)")
     cur2 = aconn.cursor("test")
     await cur2.close()
+
+
+async def test_row_maker_returns_none(aconn):
+    query = "values (null), (0)"
+    recs = [None, 0]
+    async with aconn.cursor("test", row_factory=rows.scalar_row) as cur:
+        await cur.execute(query)
+        assert [await cur.fetchone() for _ in range(len(recs))] == recs
+        await cur.execute(query)
+        assert await cur.fetchmany(len(recs)) == recs
+        await cur.execute(query)
+        assert await cur.fetchall() == recs
+        await cur.execute(query)
+        assert await alist(cur) == recs
+        stream = cur.stream(query)
+        assert await alist(stream) == recs

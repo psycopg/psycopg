@@ -554,3 +554,19 @@ def test_stolen_cursor_close(conn):
     cur1.execute("declare test cursor for select generate_series(1, 6)")
     cur2 = conn.cursor("test")
     cur2.close()
+
+
+def test_row_maker_returns_none(conn):
+    query = "values (null), (0)"
+    recs = [None, 0]
+    with conn.cursor("test", row_factory=rows.scalar_row) as cur:
+        cur.execute(query)
+        assert [cur.fetchone() for _ in range(len(recs))] == recs
+        cur.execute(query)
+        assert cur.fetchmany(len(recs)) == recs
+        cur.execute(query)
+        assert cur.fetchall() == recs
+        cur.execute(query)
+        assert list(cur) == recs
+        stream = cur.stream(query)
+        assert list(stream) == recs

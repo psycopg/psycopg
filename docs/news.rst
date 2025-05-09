@@ -22,6 +22,8 @@ Psycopg 3.2.8 (unreleased)
 - Fix interval parsing with days or other parts and negative time in C module
   (:ticket:`#1071`).
 - Don't process further connection attempts after Ctrl-C (:ticket:`#1077`).
+- Fix cursors to correctly iterate over rows even if their row factory
+  returns `None` (:ticket:`#1073`).
 
 
 Current release

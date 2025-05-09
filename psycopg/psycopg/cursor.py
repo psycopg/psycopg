@@ -150,11 +150,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     self._stream_send_gen(query, params, binary=binary, size=size)
                 )
                 first = True
-                while self._conn.wait(self._stream_fetchone_gen(first)):
-                    for pos in range(size):
-                        if (rec := self._tx.load_row(pos, self._make_row)) is None:
-                            break
-                        yield rec
+                while res := self._conn.wait(self._stream_fetchone_gen(first)):
+                    for pos in range(res.ntuples):
+                        yield self._tx.load_row(pos, self._make_row)
                     first = False
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
@@ -185,10 +183,12 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         :rtype: Row | None, with Row defined by `row_factory`
         """
         self._fetch_pipeline()
-        self._check_result_for_fetch()
-        if (record := self._tx.load_row(self._pos, self._make_row)) is not None:
+        res = self._check_result_for_fetch()
+        if self._pos < res.ntuples:
+            record = self._tx.load_row(self._pos, self._make_row)
             self._pos += 1
-        return record
+            return record
+        return None
 
     def fetchmany(self, size: int = 0) -> list[Row]:
         """
@@ -199,13 +199,12 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
         self._fetch_pipeline()
-        self._check_result_for_fetch()
-        assert self.pgresult
+        res = self._check_result_for_fetch()
 
         if not size:
             size = self.arraysize
         records = self._tx.load_rows(
-            self._pos, min(self._pos + size, self.pgresult.ntuples), self._make_row
+            self._pos, min(self._pos + size, res.ntuples), self._make_row
         )
         self._pos += len(records)
         return records
@@ -217,20 +216,17 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
         self._fetch_pipeline()
-        self._check_result_for_fetch()
-        assert self.pgresult
-        records = self._tx.load_rows(self._pos, self.pgresult.ntuples, self._make_row)
-        self._pos = self.pgresult.ntuples
+        res = self._check_result_for_fetch()
+        records = self._tx.load_rows(self._pos, res.ntuples, self._make_row)
+        self._pos = res.ntuples
         return records
 
     def __iter__(self) -> Iterator[Row]:
         self._fetch_pipeline()
-        self._check_result_for_fetch()
+        res = self._check_result_for_fetch()
 
-        def load(pos: int) -> Row | None:
-            return self._tx.load_row(pos, self._make_row)
-
-        while (row := load(self._pos)) is not None:
+        while self._pos < res.ntuples:
+            row = self._tx.load_row(self._pos, self._make_row)
             self._pos += 1
             yield row
 
