@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from datetime import tzinfo
 
+from . import errors as e
 from . import pq
 from ._tz import get_tzinfo
 from .conninfo import make_conninfo
@@ -40,7 +41,16 @@ class ConnectionInfo:
     @property
     def port(self) -> int:
         """The port of the active connection. See :pq:`PQport()`."""
-        return int(self._get_pgconn_attr("port"))
+        if port := self._get_pgconn_attr("port"):
+            return int(port)
+
+        # As per docs: an empty string means the build default, not e.g.
+        # something configured by PGPORT
+        # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-PORT
+        elif port := pq.misc.get_compiled_port():
+            return int(port)
+
+        raise e.InternalError("couldn't find the connection port")
 
     @property
     def dbname(self) -> str:

@@ -32,6 +32,8 @@ Psycopg 3.2.8 (unreleased)
 - Don't process further connection attempts after Ctrl-C (:ticket:`#1077`).
 - Fix cursors to correctly iterate over rows even if their row factory
   returns `None` (:ticket:`#1073`).
+- Fix `ConnectionInfo.port` when the port is specified as an empty string
+  (:ticket:`#1078`).
 
 
 Psycopg 3.2.7
