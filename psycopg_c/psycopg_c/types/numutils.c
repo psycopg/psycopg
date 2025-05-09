@@ -15,32 +15,10 @@
 /*
  * 64-bit integers
  */
-#ifdef HAVE_LONG_INT_64
-/* Plain "long int" fits, use it */
+typedef uint64_t uint64;
+typedef int64_t int64;
 
-# ifndef HAVE_INT64
-typedef long int int64;
-# endif
-# ifndef HAVE_UINT64
-typedef unsigned long int uint64;
-# endif
-# define INT64CONST(x)  (x##L)
-# define UINT64CONST(x) (x##UL)
-#elif defined(HAVE_LONG_LONG_INT_64)
-/* We have working support for "long long int", use that */
-
-# ifndef HAVE_INT64
-typedef long long int int64;
-# endif
-# ifndef HAVE_UINT64
-typedef unsigned long long int uint64;
-# endif
-# define INT64CONST(x)  (x##LL)
-# define UINT64CONST(x) (x##ULL)
-#else
-/* neither HAVE_LONG_INT_64 nor HAVE_LONG_LONG_INT_64 */
-# error must have a working 64-bit integer datatype
-#endif
+#define UINT64CONST(x) UINT64_C(x)
 
 
 #ifndef HAVE__BUILTIN_CLZ
@@ -90,13 +68,15 @@ static inline int
 pg_leftmost_one_pos64(uint64_t word)
 {
 #ifdef HAVE__BUILTIN_CLZ
-#if defined(HAVE_LONG_INT_64)
+
+#if SIZEOF_LONG == 8
 	return 63 - __builtin_clzl(word);
-#elif defined(HAVE_LONG_LONG_INT_64)
+#elif SIZEOF_LONG_LONG == 8
 	return 63 - __builtin_clzll(word);
 #else
-#error must have a working 64-bit integer datatype
+#error "cannot find integer type of the same size as uint64_t"
 #endif
+
 #else							/* !HAVE__BUILTIN_CLZ */
 	int			shift = 64 - 8;
 
