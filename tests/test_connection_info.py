@@ -3,7 +3,6 @@ import datetime as dt
 import pytest
 
 import psycopg
-import psycopg.pq._pq_ctypes
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg._encodings import pg2pyenc
 
@@ -47,6 +46,9 @@ def test_port(conn):
 
 @pytest.mark.skipif(psycopg.pq.__impl__ != "python", reason="can't monkeypatch C")
 def test_blank_port(conn, monkeypatch):
+
+    import psycopg.pq._pq_ctypes
+
     monkeypatch.setenv("PGPORT", "9999")
     monkeypatch.setattr(psycopg.pq._pq_ctypes, "PQport", lambda self: b"")
     assert conn.pgconn.port == b""
