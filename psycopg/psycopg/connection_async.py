@@ -113,20 +113,24 @@ class AsyncConnection(BaseConnection[Row]):
         attempts = await conninfo_attempts_async(params)
         connection_errors: list[tuple[e.Error, str]] = []
         for attempt in attempts:
+            tlog = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            logger.debug("connection attempt: host=%r port=%r hostaddr=%r", *tlog)
             try:
                 conninfo = make_conninfo("", **attempt)
                 gen = cls._connect_gen(conninfo, timeout=timeout)
                 rv = await waiting.wait_conn_async(gen, interval=_WAIT_INTERVAL)
             except e.Error as ex:
-                attempt_details = "host: {}, port: {}, hostaddr: {}".format(
-                    repr(attempt.get("host")),
-                    repr(attempt.get("port")),
-                    repr(attempt.get("hostaddr")),
+                logger.debug(
+                    "connection failed: host=%r port=%r hostaddr=%r: %s",
+                    *tlog,
+                    str(ex),
                 )
+                attempt_details = "host: %r, port: %r, hostaddr: %r" % tlog
                 connection_errors.append((ex, attempt_details))
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
             else:
+                logger.debug("connection succeeded: host=%r port=%r hostaddr=%r", *tlog)
                 break
 
         if not rv:
