@@ -581,3 +581,10 @@ def test_row_maker_returns_none(conn):
         assert list(cur) == recs
         stream = cur.stream(query)
         assert list(stream) == recs
+
+
+@pytest.mark.parametrize("count", [1])
+def test_results_after_execute(conn, count):
+    with conn.cursor() as cur:
+        cur.execute(";".join(["select 1"] * count))
+        assert list(cur.results()) == [cur] * count
