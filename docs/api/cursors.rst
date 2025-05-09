@@ -122,17 +122,13 @@ The `!Cursor` class
             using a pattern such as::
 
                 cur.executemany(query, records)
-                ids = []
-                while True:
-                    ids.append(cur.fetchone()[0])
-                    if not cur.nextset():
-                        break
+                ids = [cur.fetchone()[0] for _ in cur.results()]
 
         .. warning::
 
             More explicitly, `!fetchall()` alone will not return all the
             values returned! You must iterate on the results using
-            `!nextset()`.
+            `!results()`.
 
         If `!returning=False`, the value of `rowcount` is set to the cumulated
         number of rows affected by queries. If `!returning=True`, `!rowcount`
@@ -266,6 +262,26 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
+    .. automethod:: results
+
+        The iterator yields the cursor itself upon iteration, but the cursor
+        state changes, in a way equivalent to calling `nextset()` in a loop.
+        Therefore you can ignore the result of the iteration if you are consuming
+        `!results()` in a loop::
+
+                for _ in cursor.results():
+                    for row in cursor:
+                        ...
+
+        or make use of it for example using `map()` to consume the iterator::
+
+                def cursor_consumer(cur: Cursor) -> Any:
+                    ...
+
+                map(cursor_consumer, cursor.results())
+
+        .. versionadded:: 3.3
+
     .. automethod:: scroll
 
     .. attribute:: pgresult
@@ -538,6 +554,7 @@ semantic with an `!async` interface. The main interface is described in
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
+    .. automethod:: results
     .. automethod:: scroll
 
     .. note::
