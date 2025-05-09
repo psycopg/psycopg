@@ -40,7 +40,7 @@ case "$libpq" in
         ;;
 
     master)
-        setup_repo 17 pgdg-snapshot
+        setup_repo 18 pgdg-snapshot
         pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 | awk '{print $2}')
         apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
