@@ -910,3 +910,18 @@ def test_row_maker_returns_none(conn):
     assert list(cur) == recs
     stream = cur.stream(query)
     assert list(stream) == recs
+
+
+@pytest.mark.parametrize("count", [1, 2])
+def test_results_after_execute(conn, count):
+    with conn.cursor() as cur:
+        cur.execute(";".join(["select 1"] * count))
+        assert list(cur.results()) == [cur] * count
+
+
+@pytest.mark.parametrize("count", [0, 1, 2])
+@pytest.mark.parametrize("returning", [False, True])
+def test_results_after_executemany(conn, count, returning):
+    with conn.cursor() as cur:
+        cur.executemany("select 1", [()] * count, returning=returning)
+        assert list(cur.results()) == [cur] * returning * count

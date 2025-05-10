@@ -175,6 +175,21 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     except Exception:
                         pass
 
+    def results(self) -> Iterator[Self]:
+        """
+        Iterate across multiple record sets received by the cursor.
+
+        Multiple record sets are received after using `executemany()` with
+        `!returning=True` or using `execute()` with more than one query in the
+        command.
+        """
+        if self.pgresult:
+            while True:
+                yield self
+
+                if not self.nextset():
+                    break
+
     def fetchone(self) -> Row | None:
         """
         Return the next record from the current result set.
