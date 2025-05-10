@@ -192,21 +192,21 @@ jobs:
       - name: Download and configure Django
         run: |
           pip download --no-deps --no-binary :all: ${{ matrix.pip_django }}
-          mkdir django_home
-          case $(file --brief --mime-type Django*) in
+          mkdir workdir
+          case $(file --brief --mime-type [Dd]jango*) in
             application/gzip)
-              tar -C django_home -xzf Django*
+              tar -C workdir -xzf [Dd]jango*
               ;;
             application/zip)
-              unzip -d django_home -q Django*
+              unzip -d workdir -q [Dd]jango*
               ;;
             *)
-              echo "Unexpected format for $(file --mime-type Django*)" >&2
+              echo "Unexpected format for $(file --mime-type [Dd]jango*)" >&2
               exit 1
               ;;
           esac
-          mv django_home/$( ls django_home ) django_home/django
-          cat << HERE > django_home/django/tests/test_postgresql.py
+          mv workdir/$( ls workdir ) workdir/django
+          cat << HERE > workdir/django/tests/test_postgresql.py
           DATABASES = {
               "default": {
                   "ENGINE": "django.db.backends.postgresql",
@@ -237,12 +237,12 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ matrix.python-version }}-pip-${{ hashFiles('django_home/django/tests/requirements/py3.txt', 'django_home/django/setup.cfg') }}
+          key: ${{ matrix.python-version }}-pip-${{ hashFiles('workdir/django/tests/requirements/py3.txt', 'workdir/django/setup.cfg') }}
           restore-keys: |
             ${{ matrix.python-version }}-pip-
 
       - name: Install Django and dependencies
-        working-directory: django_home/django
+        working-directory: workdir/django
         run: |
           # pylibmc wheel package not available from Python 3.12.
           # https://github.com/lericson/pylibmc/issues/288
@@ -254,5 +254,5 @@ jobs:
           pip install -r tests/requirements/py3.txt
 
       - name: Run Django tests
-        working-directory: django_home/django/tests
+        working-directory: workdir/django/tests
         run: ./runtests.py --settings=test_postgresql postgres_tests backends queries
