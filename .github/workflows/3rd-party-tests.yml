@@ -21,6 +21,7 @@ jobs:
   sqlalchemy:
     # linux should be enough to test if everything works.
     runs-on: ubuntu-latest
+    if: true
     strategy:
       fail-fast: false
       matrix:
@@ -115,6 +116,7 @@ jobs:
   django:
     # linux should be enough to test if everything works.
     runs-on: ubuntu-latest
+    if: true
     strategy:
       fail-fast: false
       matrix:
@@ -122,24 +124,30 @@ jobs:
           # what version of django to download is defined in the "include"
           # section below, in the variable pip_django
           - git_main
-          - lts
+          - lts4
+          - lts5
         impl:
           - c
           - python
         include:
           - django_label: git_main
             pip_django: git+https://github.com/django/django.git#egg=Django
-          # TODO: Needs updating with new LTS releases, is this something we want?
-          #       Also needs consideration against which python we wanna test.
-          #       Current logic is test oldest in lts and newest in main
-          - django_label: lts
-            pip_django: "'Django>=4.2,<4.3'"
+          - django_label: lts4
+            pip_django: "'Django >= 4.2, < 4.3'"
+          - django_label: lts5
+            pip_django: "'Django >= 5.2, < 5.3'"
 
           # Test with min and max Python supported versions
-          - django_label: lts
+          - django_label: lts4
+            impl: c
+            python-version: "3.11"
+          - django_label: lts4
+            impl: python
+            python-version: "3.12"
+          - django_label: lts5
             impl: c
             python-version: "3.10"
-          - django_label: lts
+          - django_label: lts5
             impl: python
             python-version: "3.13"
           - django_label: git_main
