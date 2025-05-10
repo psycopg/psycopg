@@ -34,6 +34,9 @@ Psycopg 3.2.8 (unreleased)
   returns `None` (:ticket:`#1073`).
 - Fix `ConnectionInfo.port` when the port is specified as an empty string
   (:ticket:`#1078`).
+- Report all the attempts error messages in the exception raised for a
+  connection failure (:ticket:`#1069`).
+- Improve logging on connection (:ticket:`#1085`).
 - Add support for PostgreSQL 18 libpq (:ticket:`#1082`).
 
 
