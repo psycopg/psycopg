@@ -28,7 +28,7 @@ env:
   LIBPQ_VERSION: "17.5"
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.4.1"
+  OPENSSL_VERSION: "3.5.0"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
