@@ -230,3 +230,55 @@ integration between your Python program and your PostgreSQL database:
 - If you want to customise how Python values and PostgreSQL types are mapped
   into each other, beside the :ref:`basic type mapping <types-adaptation>`,
   you can :ref:`configure your types <adaptation>`.
+
+
+.. _logging:
+
+Connection logging
+------------------
+
+Psycopg uses the `logging` module to report the operations happening at
+connection time. If you experience slowness or random failures on connection
+you can set the ``psycopg`` logger at ``DEBUG`` level to read the operations
+performed.
+
+A very simple example of logging configuration may be the following:
+
+.. code:: python
+
+    import logging
+    import psycopg
+
+    logger = logging.getLogger()
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
+
+    logging.getLogger("psycopg").setLevel(logging.DEBUG)
+
+    psycopg.connect("host=192.0.2.1,localhost connect_timeout=10")
+
+In this example Psycopg will first try to connect to a non responsive server,
+only stopping after hitting the timeout, and will move on to a working server.
+The resulting log might look like:
+
+.. code:: text
+
+    2045-05-10 11:45:54,364 DEBUG connection attempt: host: '192.0.2.1', port: None, hostaddr: '192.0.2.1'
+    2045-05-10 11:45:54,365 DEBUG connection started: <psycopg_c.pq.PGconn [STARTED] at 0x79dff6d26160>
+    2045-05-10 11:45:54,365 DEBUG connection polled: <psycopg_c.pq.PGconn [MADE] at 0x79dff6d26160>
+    2045-05-10 11:46:04,392 DEBUG connection failed: host: '192.0.2.1', port: None, hostaddr: '192.0.2.1': connection timeout expired
+    2045-05-10 11:46:04,392 DEBUG connection attempt: host: 'localhost', port: None, hostaddr: '127.0.0.1'
+    2045-05-10 11:46:04,393 DEBUG connection started: <psycopg_c.pq.PGconn [STARTED] at 0x79dff6d26160>
+    2045-05-10 11:46:04,394 DEBUG connection polled: <psycopg_c.pq.PGconn [MADE] at 0x79dff6d26160>
+    2045-05-10 11:46:04,394 DEBUG connection polled: <psycopg_c.pq.PGconn [SSL_STARTUP] at 0x79dff6d26160>
+    2045-05-10 11:46:04,411 DEBUG connection polled: <psycopg_c.pq.PGconn [SSL_STARTUP] at 0x79dff6d26160>
+    2045-05-10 11:46:04,413 DEBUG connection polled: <psycopg_c.pq.PGconn [SSL_STARTUP] at 0x79dff6d26160>
+    2045-05-10 11:46:04,423 DEBUG connection polled: <psycopg_c.pq.PGconn [MADE] at 0x79dff6d26160>
+    2045-05-10 11:46:04,424 DEBUG connection polled: <psycopg_c.pq.PGconn [AWAITING_RESPONSE] at 0x79dff6d26160>
+    2045-05-10 11:46:04,426 DEBUG connection polled: <psycopg_c.pq.PGconn [IDLE] (host=localhost database=piro) at 0x79dff6d26160>
+    2045-05-10 11:46:04,426 DEBUG connection succeeded: host: 'localhost', port: None, hostaddr: '127.0.0.1'
+
+Please note that a connection attempt might try to reach different servers:
+either explicitly because the connection string specifies `multiple hosts`__,
+or implicitly, because the DNS resolves an host name to multiple IPs.
+
+.. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-MULTIPLE-HOSTS
