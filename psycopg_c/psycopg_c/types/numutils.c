@@ -21,7 +21,7 @@ typedef int64_t int64;
 #define UINT64CONST(x) UINT64_C(x)
 
 
-#ifndef HAVE__BUILTIN_CLZ
+#if !defined(HAVE__BUILTIN_CLZ) || (SIZEOF_LONG != 8 && SIZEOF_LONG_LONG != 8)
 static const uint8_t pg_leftmost_one_pos[256] = {
 	0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
 	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -62,29 +62,24 @@ static const char DIGIT_TABLE[200] = {
 
 /*
  * pg_leftmost_one_pos64
- *		As above, but for a 64-bit word.
+ *		Returns the position of the most significant set bit in "word",
+ *		measured from the least significant bit.  word must not be 0.
  */
 static inline int
 pg_leftmost_one_pos64(uint64_t word)
 {
-#ifdef HAVE__BUILTIN_CLZ
-
-#if SIZEOF_LONG == 8
+#if defined(HAVE__BUILTIN_CLZ) && SIZEOF_LONG == 8
 	return 63 - __builtin_clzl(word);
-#elif SIZEOF_LONG_LONG == 8
+#elif defined(HAVE__BUILTIN_CLZ) && SIZEOF_LONG_LONG == 8
 	return 63 - __builtin_clzll(word);
 #else
-#error "cannot find integer type of the same size as uint64_t"
-#endif
-
-#else							/* !HAVE__BUILTIN_CLZ */
 	int			shift = 64 - 8;
 
 	while ((word >> shift) == 0)
 		shift -= 8;
 
 	return shift + pg_leftmost_one_pos[(word >> shift) & 255];
-#endif							/* HAVE__BUILTIN_CLZ */
+#endif
 }
 
 
