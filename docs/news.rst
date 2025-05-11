@@ -18,8 +18,11 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
-Psycopg 3.2.8 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.2.8
+^^^^^^^^^^^^^
 
 - Fix `DateFromTicks` and `TimeFromTicks` return values to return a date and a
   time referred to the UTC timezone rather than to the local timezone. For
