@@ -20,8 +20,11 @@ from psycopg.errors import get_base_exception
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+Error = namedtuple("Error", "sqlstate errlabel clsname basename")
+
 
 def main():
+    # Note: add "master" for a preview
     classes, errors = fetch_errors("9.6 10 11 12 13 14 15 16 17".split())
 
     fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
@@ -64,13 +67,16 @@ def parse_errors_txt(url):
     return classes, errors
 
 
-errors_txt_url = (
-    "http://git.postgresql.org/gitweb/?p=postgresql.git;a=blob_plain;"
-    "f=src/backend/utils/errcodes.txt;hb=%s"
-)
+def tag_from_version(version: str) -> str:
+    if version == "master":
+        return version
 
-
-Error = namedtuple("Error", "sqlstate errlabel clsname basename")
+    tver = tuple(map(int, version.split()[0].split(".")))
+    tag = "%s%s_STABLE" % (
+        (tver[0] >= 10 and "REL_" or "REL"),
+        version.replace(".", "_"),
+    )
+    return tag
 
 
 def fetch_errors(versions):
@@ -79,12 +85,12 @@ def fetch_errors(versions):
 
     for version in versions:
         logger.info("fetching errors from version %s", version)
-        tver = tuple(map(int, version.split()[0].split(".")))
-        tag = "%s%s_STABLE" % (
-            (tver[0] >= 10 and "REL_" or "REL"),
-            version.replace(".", "_"),
+        tag = tag_from_version(version)
+        url = (
+            "https://raw.githubusercontent.com/postgres/postgres"
+            f"/refs/heads/{tag}/src/backend/utils/errcodes.txt"
         )
-        c1, e1 = parse_errors_txt(errors_txt_url % tag)
+        c1, e1 = parse_errors_txt(url)
         classes.update(c1)
 
         for c, cerrs in e1.items():
