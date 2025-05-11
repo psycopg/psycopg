@@ -89,6 +89,7 @@ cdef extern from "libpq-fe.h":
         CONNECTION_CHECK_TARGET
         CONNECTION_CHECK_STANDBY
         CONNECTION_ALLOCATED
+        CONNECTION_AUTHENTICATING
 
     ctypedef enum PGTransactionStatusType:
         PQTRANS_IDLE
