@@ -6,7 +6,11 @@ on:
     # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
     branches:
       - "*"
-  pull_request:
+  # Note: trying to exclude pull requests because it results in duplicate job
+  # on the commits belonging to pull requests.
+  # pull_request:
+  schedule:
+    - cron: '18 6 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}

@@ -1,6 +1,9 @@
 name: Build source packages
 
 on:
+  push:
+    paths:
+      - '.github/workflows/packages-src.yml'
   workflow_dispatch:
   schedule:
     - cron: '37 6 * * sun'

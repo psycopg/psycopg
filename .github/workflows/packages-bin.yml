@@ -16,10 +16,10 @@ name: Build binary packages
 # ref: https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#delete-github-actions-caches-for-a-repository-using-a-cache-key
 
 on:
-  workflow_dispatch:
-  pull_request:
+  push:
     paths:
       - '.github/workflows/packages-bin.yml'
+  workflow_dispatch:
   schedule:
     - cron: '28 7 * * sun'
 

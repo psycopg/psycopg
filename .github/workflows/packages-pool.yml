@@ -1,9 +1,12 @@
 name: Build pool packages
 
 on:
+  push:
+    paths:
+      - '.github/workflows/packages-pool.yml'
   workflow_dispatch:
   schedule:
-    - cron: '28 6 * * sun'
+    - cron: '43 6 * * sun'
 
 jobs:
 
