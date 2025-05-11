@@ -15,13 +15,15 @@ import queue
 import asyncio
 import logging
 import threading
-from typing import Any, TypeAlias
+from typing import Any, ParamSpec, TypeAlias, overload
+from inspect import isawaitable
 from collections.abc import Callable, Coroutine
 
 from ._compat import TypeVar
 
 logger = logging.getLogger("psycopg.pool")
 T = TypeVar("T")
+P = ParamSpec("P")
 
 # Re-exports
 Event = threading.Event
@@ -160,3 +162,24 @@ def asleep(seconds: float) -> Coroutine[Any, Any, None]:
     Equivalent to asyncio.sleep(), converted to time.sleep() by async_to_sync.
     """
     return asyncio.sleep(seconds)
+
+
+@overload
+async def ensure_async(
+    f: Callable[P, Coroutine[Any, Any, T]], *args: P.args, **kwargs: P.kwargs
+) -> T: ...
+
+
+@overload
+async def ensure_async(f: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T: ...
+
+
+async def ensure_async(
+    f: Callable[P, T] | Callable[P, Coroutine[Any, Any, T]],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> T:
+    rv = f(*args, **kwargs)
+    if isawaitable(rv):
+        rv = await rv
+    return rv

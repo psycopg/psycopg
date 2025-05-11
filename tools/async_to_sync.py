@@ -332,6 +332,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
     }
     _skip_imports = {
         "acompat": {"alist", "anext"},
+        "_acompat": {"ensure_async"},
     }
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
@@ -359,6 +360,9 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         match node:
             case ast.Call(func=ast.Name(id="cast")):
                 node.args[0] = self._convert_if_literal_string(node.args[0])
+
+            case ast.Call(func=ast.Name(id="ensure_async")):
+                node.func = node.args.pop(0)
 
         self.generic_visit(node)
         return node

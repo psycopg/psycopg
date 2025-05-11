@@ -26,7 +26,7 @@ from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Self
 from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, agather, asleep
-from ._acompat import aspawn, current_task_name
+from ._acompat import aspawn, current_task_name, ensure_async
 from .sched_async import AsyncScheduler
 
 if True:  # ASYNC
@@ -598,13 +598,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not self._reconnect_failed:
             return
 
-        if True:  # ASYNC
-            if asyncio.iscoroutinefunction(self._reconnect_failed):
-                await self._reconnect_failed(self)
-            else:
-                self._reconnect_failed(self)
-        else:
-            self._reconnect_failed(self)
+        await ensure_async(self._reconnect_failed, self)
 
     def run_task(self, task: MaintenanceTask) -> None:
         """Run a maintenance task in a worker."""
