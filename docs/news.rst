@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.2.8 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.8
+^^^^^^^^^^^^^
 
 - Fix `DateFromTicks` and `TimeFromTicks` return values to return a date and a
   time referred to the UTC timezone rather than to the local timezone. For
@@ -31,9 +31,6 @@ Psycopg 3.2.8 (unreleased)
 - Improve logging on connection (:ticket:`#1085`).
 - Add support for PostgreSQL 18 libpq (:ticket:`#1082`).
 
-
-Current release
----------------
 
 Psycopg 3.2.7
 ^^^^^^^^^^^^^
