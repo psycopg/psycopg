@@ -470,7 +470,7 @@ For example, the initialization in an async application may look like:
 
         # Create a SQLAlchemy engine using the pool just created
         engine = sqlalchemy.ext.asyncio.create_async_engine(
-            url=db_url.replace("postgresql://", "postgresql+psycopg://"),
+            url="postgresql+psycopg://",
             poolclass=sqlalchemy.pool.NullPool,
             async_creator=pgpool.getconn,
         )
