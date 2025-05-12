@@ -243,7 +243,7 @@ integration between your Python program and your PostgreSQL database:
 Connection logging
 ------------------
 
-Psycopg uses the `logging` module to report the operations happening at
+Psycopg uses the stdlib `logging` module to report the operations happening at
 connection time. If you experience slowness or random failures on connection
 you can set the ``psycopg`` logger at ``DEBUG`` level to read the operations
 performed.
@@ -255,7 +255,6 @@ A very simple example of logging configuration may be the following:
     import logging
     import psycopg
 
-    logger = logging.getLogger()
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 
     logging.getLogger("psycopg").setLevel(logging.DEBUG)
@@ -285,6 +284,6 @@ The resulting log might look like:
 
 Please note that a connection attempt might try to reach different servers:
 either explicitly because the connection string specifies `multiple hosts`__,
-or implicitly, because the DNS resolves an host name to multiple IPs.
+or implicitly, because the DNS resolves the host name to multiple IPs.
 
 .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-MULTIPLE-HOSTS
