@@ -301,7 +301,6 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
-      PG_VERSION: "17.4"
 
     defaults:
       run:
@@ -334,18 +333,23 @@ jobs:
         if: ${{ github.event_name == 'schedule' }}
         run: echo "NOT_MARKERS=$NOT_MARKERS refcount" >> $GITHUB_ENV
 
-      - uses: prefix-dev/setup-pixi@v0.8.8
+      - name: Export GitHub Actions cache environment variables
+      # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+        uses: actions/github-script@v7
         with:
-          run-install: false
+          script: |
+            const path = require('path')
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
 
-      - run: pixi global install libpq=${{ env.PG_VERSION }}
-
-      - name: 'add libpq.dll to path'
-        run: echo "$(pg_config.exe --bindir)" >> $GITHUB_PATH
-
-      - name: Install delvewheel
+      - name: Install libpq from vcpkg and install pg_config.exe stub
         run: .\tools\build\wheel_win32_before_build.bat
         shell: powershell
+        env:
+          # cache vcpkg
+          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
