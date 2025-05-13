@@ -21,6 +21,13 @@ Psycopg 3.3.0 (unreleased)
 Current release
 ---------------
 
+Psycopg 3.2.9
+^^^^^^^^^^^^^
+
+- Revert the libpq included in the binary packages from conda forge to vcpkg
+  because GSS connection crashes (:ticket:`#1088`).
+
+
 Psycopg 3.2.8
 ^^^^^^^^^^^^^
 
