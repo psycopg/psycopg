@@ -24,7 +24,9 @@ backend-path = ["build_backend"]
 # TODO: When the bug is solved we will remove the upper bound of the version
 # and just exclude the known broken versions, or we will establish a new
 # lower bound.
-cython-requires = ["Cython >= 3.0.0, < 3.1.0"]
+# Left out to support free-threading, should be fixed very soon
+# cython-requires = ["Cython >= 3.0.0, < 3.1.0"]
+cython-requires = ["Cython >= 3.1.0"]
 
 [project]
 name = "psycopg-c"

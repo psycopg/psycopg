@@ -4,6 +4,7 @@ Tests dealing with concurrency issues.
 
 import os
 import sys
+import sysconfig
 import time
 import queue
 import signal
@@ -562,6 +563,10 @@ def test_break_attempts(dsn, proxy):
     # Check that we didn't try the second attempt
     assert t1 - t0 < 2.5
     assert proc.returncode != 0
-    if sys.implementation.name != "pypy":  # unexpected, but hey.
+    # this assertion does not work in pypy or with the GIL enabled
+    # (in the latter case, stderr is global state and isn't safe to
+    # use)
+    gil_disabled = sysconfig.get_config_var("Py_GIL_DISABLED")
+    if sys.implementation.name != "pypy" and not gil_disabled:
         assert "KeyboardInterrupt" in stderr
     assert stdout == ""

@@ -561,7 +561,7 @@ def test_stats_usage(pool_cls, dsn):
         assert stats["requests_queued"] == 4
         assert 850 <= stats["requests_wait_ms"] <= 950
         assert stats["requests_errors"] == 1
-        assert 1150 <= stats["usage_ms"] <= 1250
+        assert 1150 <= stats["usage_ms"] <= 1350  # no-gil: 1302
         assert stats.get("returns_bad", 0) == 0
 
         with p.connection() as conn:
