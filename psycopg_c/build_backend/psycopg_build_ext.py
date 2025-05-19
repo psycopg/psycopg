@@ -12,6 +12,8 @@ import sys
 import subprocess as sp
 from distutils import log
 from distutils.command.build_ext import build_ext
+from Cython.Compiler.Version import version as cython_version
+from packaging.version import Version
 
 
 def get_config(what: str) -> str:
@@ -56,11 +58,16 @@ class psycopg_build_ext(build_ext):
                     if fext == ".c" and os.path.exists(base + ".pyx"):
                         ext.sources[i] = base + ".pyx"
 
+            
+            compiler_directives = {
+                "always_allow_keywords": False,
+            }
+            if Version(cython_version) >= Version("3.1.0"):
+                compiler_directives["freethreading_compatible"] = True
+
             self.distribution.ext_modules = cythonize(
                 self.distribution.ext_modules,
                 language_level=3,
-                compiler_directives={
-                    "always_allow_keywords": False,
-                },
+                compiler_directives=compiler_directives,
                 annotate=False,  # enable to get an html view of the C module
             )
