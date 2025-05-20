@@ -9,7 +9,7 @@ from __future__ import annotations
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, overload
 from collections.abc import Iterable, Iterator, Sequence
 
 from .pq import Escaping
@@ -201,25 +201,21 @@ class SQL(Composable):
         SELECT "foo", "bar" FROM "table"
     """
 
-    _obj: "LiteralString | Template"
+    _obj: LiteralString
     _formatter = string.Formatter()
 
-    def __init__(self, obj: LiteralString | Template):
+    def __init__(self, obj: LiteralString):
         super().__init__(obj)
-        if not isinstance(obj, (str, Template)):
-            raise TypeError(
-                f"SQL values must be strings or Template, got {obj!r} instead"
-            )
+        if not isinstance(obj, str):
+            raise TypeError(f"SQL values must be strings, got {obj!r} instead")
 
     def as_string(self, context: AdaptContext | None = None) -> str:
-        if isinstance(self._obj, Template):
-            raise NotImplementedError("TODO: support template strings")
         return self._obj
 
     def as_bytes(self, context: AdaptContext | None = None) -> bytes:
         conn = context.connection if context else None
         enc = conn_encoding(conn)
-        return self.as_string().encode(enc)
+        return self._obj.encode(enc)
 
     def format(self, *args: Any, **kwargs: Any) -> Composed:
         """
@@ -256,15 +252,11 @@ class SQL(Composable):
             SELECT * FROM "people" WHERE name = 'O''Rourke'
 
         """
-        if isinstance(self._obj, Template):
-            raise NotImplementedError("TODO: support template strings")
-
         rv: list[Composable] = []
         autonum: int | None = 0
         # TODO: this is probably not the right way to whitelist pre
         # pyre complains. Will wait for mypy to complain too to fix.
         pre: LiteralString
-
         for pre, name, spec, conv in self._formatter.parse(self._obj):
             if spec:
                 raise ValueError("no format specification supported by SQL")
@@ -297,14 +289,25 @@ class SQL(Composable):
 
         return Composed(rv)
 
-    def join(self, seq: Iterable[Any]) -> Composed:
+    @overload
+    def join(self, seq: Iterable[Template]) -> Template: ...
+
+    @overload
+    def join(self, seq: Iterable[Any]) -> Composed: ...
+
+    def join(self, seq: Iterable[Any]) -> Composed | Template:
         """
         Join a sequence of `Composable`.
 
-        :param seq: the elements to join. Elements that are not `Composable`
-            will be considered `Literal`.
+        :param seq: the elements to join.
 
         Use the `!SQL` object's string to separate the elements in `!seq`.
+        Elements that are not `Composable` will be considered `Literal`.
+
+        If the arguments are `Template` instance, return a `Template` joining
+        all the items. Note that arguments must either be all templates or
+        none should be.
+
         Note that `Composed` objects are iterable too, so they can be used as
         argument for this method.
 
@@ -315,18 +318,30 @@ class SQL(Composable):
             >>> print(snip.as_string(conn))
             "foo", "bar", "baz"
         """
-        rv = []
+
         it = iter(seq)
         try:
-            rv.append(next(it))
+            first = next(it)
         except StopIteration:
-            pass
-        else:
-            for i in it:
-                rv.append(self)
-                rv.append(i)
+            return Composed([])
 
-        return Composed(rv)
+        if isinstance(first, Template):
+            items = list(first)
+            for t in it:
+                if not isinstance(t, Template):
+                    raise TypeError(f"can't mix Template and {type(t).__name__}")
+                items.append(self._obj)
+                items.extend(t)
+            return Template(*items)
+
+        cs = [first]
+        for i in it:
+            if isinstance(i, Template):
+                raise TypeError(f"can't mix Template and {type(i).__name__}")
+            cs.append(self)
+            cs.append(i)
+
+        return Composed(cs)
 
 
 class Identifier(Composable):

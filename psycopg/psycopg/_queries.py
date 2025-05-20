@@ -31,6 +31,7 @@ FMT_TEXT = PyFormat.TEXT.value
 FMT_BINARY = PyFormat.BINARY.value
 FMT_IDENT = "i"
 FMT_LITERAL = "l"
+FMT_SQL = "sql"
 
 
 class QueryPart(NamedTuple):
@@ -99,7 +100,7 @@ class BaseQuery(ABC):
         else:
             raise TypeError(
                 "query parameters should be a sequence or a mapping,"
-                f" got {type(vars).__name__}"
+                f" got {type(vars).__qualname__}"
             )
         return sequence
 
@@ -214,6 +215,14 @@ class PostgresQuery(BaseQuery):
         params: list[Any] = []
         seen: dict[tuple[str, int], tuple[bytes, PyFormat]] = {}
 
+        def check_format(item: Interpolation, want_fmt: str) -> None:
+            if item.format_spec == want_fmt:
+                return
+            fmt = f":{item.format_spec}" if item.format_spec else ""
+            cls = type(item.value)
+            msg = f"{cls.__module__}.{cls.__qualname__} require format ':{want_fmt}'"
+            raise e.ProgrammingError(f"{msg}; got '{{{item.expression}{fmt}}}'")
+
         def process(t: Template) -> None:
             for item in t:
                 if isinstance(item, str):
@@ -228,11 +237,7 @@ class PostgresQuery(BaseQuery):
                     )
 
                 if isinstance(item.value, Template):
-                    if item.format_spec:
-                        raise e.ProgrammingError(
-                            "nested templates don't support format; got"
-                            f" '{{{item.expression}:{item.format_spec}}}'"
-                        )
+                    check_format(item, FMT_SQL)
                     process(item.value)
                     continue
 
@@ -244,12 +249,12 @@ class PostgresQuery(BaseQuery):
                     if not isinstance(item.value, str):
                         raise TypeError(
                             "identifier values must be strings; got"
-                            f" {type(item.value).__name__}"
+                            f" {type(item.value).__qualname__}"
                             f" in {{{item.expression}:{fmt}}} instead"
                         )
                     chunks.append(sql.Identifier(item.value).as_bytes(self._tx))
                     continue
-                elif fmt == "l":
+                elif fmt == FMT_LITERAL:
                     chunks.append(sql.Literal(item.value).as_bytes(self._tx))
                     continue
 
@@ -276,50 +281,23 @@ class PostgresQuery(BaseQuery):
 
         def process_composable(item: Interpolation) -> None:
             if isinstance(item.value, sql.Identifier):
-                if item.format_spec and item.format_spec != FMT_IDENT:
-                    raise e.ProgrammingError(
-                        f"{type(item.value).__name__} objects can only have"
-                        f" '{FMT_IDENT}' format, if specified;"
-                        f" got {{{item.expression}:{item.format_spec}}}"
-                    )
+                check_format(item, FMT_IDENT)
                 chunks.append(item.value.as_bytes(self._tx))
                 return
 
             elif isinstance(item.value, sql.Literal):
-                if item.format_spec not in ("", FMT_AUTO, FMT_TEXT, FMT_LITERAL):
-                    raise e.ProgrammingError(
-                        f"{type(item.value).__name__} objects cannot have format"
-                        f" '{item.format_spec}' format;"
-                        f" got {{{item.expression}:{item.format_spec}}}"
-                    )
+                check_format(item, FMT_LITERAL)
                 chunks.append(item.value.as_bytes(self._tx))
                 return
 
-            elif isinstance(item.value, sql.SQL):
-                if item.format_spec:
-                    raise e.ProgrammingError(
-                        f"{type(item.value).__name__} objects cannot have a format;"
-                        f" got {{{item.expression}:{item.format_spec}}}"
-                    )
+            elif isinstance(item.value, (sql.SQL, sql.Composed)):
+                check_format(item, FMT_SQL)
                 chunks.append(item.value.as_bytes(self._tx))
-                return
-
-            elif isinstance(item.value, sql.Composed):
-                if item.format_spec:
-                    raise e.ProgrammingError(
-                        f"{type(item.value).__name__} objects cannot have a format;"
-                        f" got {{{item.expression}:{item.format_spec}}}"
-                    )
-                for obj in item.value:
-                    if isinstance(obj, sql.Literal) and isinstance(obj._obj, Template):
-                        process(obj._obj)
-                    else:
-                        chunks.append(obj.as_bytes(self._tx))
                 return
 
             else:
                 raise e.ProgrammingError(
-                    f"{type(item.value).__name__} not supported in string templates"
+                    f"{type(item.value).__qualname__} not supported in string templates"
                 )
 
         process(query)

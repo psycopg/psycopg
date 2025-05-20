@@ -106,16 +106,14 @@ async def test_format_literal(aconn):
 
 async def test_nested(aconn):
     part = t"{vint} as foo"
-    cur = await aconn.execute(t"select {part}")
+    cur = await aconn.execute(t"select {part:sql}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b"select $1 as foo"
     assert cur._query.types == (psycopg.adapters.types["smallint"].oid,)
     assert cur._query.params == [b"\x00\x10"]
     assert cur._query.formats == [Format.BINARY]
 
-    with pytest.raises(
-        psycopg.ProgrammingError, match="nested templates don't support format"
-    ):
+    with pytest.raises(psycopg.ProgrammingError, match="Template.*':sql'"):
         cur = await aconn.execute(t"select {part:s}")
 
 
@@ -134,32 +132,42 @@ async def test_scope(aconn):
 
 async def test_sql(aconn):
     part = sql.SQL("foo")
-    cur = await aconn.execute(t"select {vint} as {part}")
+    cur = await aconn.execute(t"select {vint} as {part:sql}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b"select $1 as foo"
 
-    with pytest.raises(psycopg.ProgrammingError, match="cannot have a format"):
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.SQL.*':sql'"):
         await aconn.execute(t"select {vint} as {part:i}")
-
-
-async def test_sql_identifier(aconn):
-    part = sql.Identifier("foo")
-    cur = await aconn.execute(t"select {vint} as {part}")
-    assert await cur.fetchone() == (16,)
-    assert cur._query.query == b'select $1 as "foo"'
-
-    with pytest.raises(psycopg.ProgrammingError, match="can only have 'i' format"):
-        await aconn.execute(t"select {vint} as {part:s}")
 
 
 async def test_sql_composed(aconn):
     part = sql.SQL("{} as {}").format(vint, sql.Identifier("foo"))
-    cur = await aconn.execute(t"select {part}")
+    cur = await aconn.execute(t"select {part:sql}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b'select 16 as "foo"'
 
-    with pytest.raises(psycopg.ProgrammingError, match="cannot have a format"):
-        await aconn.execute(t"select {part:i}")
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Composed.*':sql'"):
+        await aconn.execute(t"select {part}")
+
+
+async def test_sql_identifier(aconn):
+    part = sql.Identifier("foo")
+    cur = await aconn.execute(t"select {vint} as {part:i}")
+    assert await cur.fetchone() == (16,)
+    assert cur._query.query == b'select $1 as "foo"'
+
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Identifier.*':i'"):
+        await aconn.execute(t"select {vint} as {part}")
+
+
+async def test_sql_literal(aconn):
+    lit = sql.Literal(42)
+    cur = await aconn.execute(t"select {lit:l} as foo")
+    assert await cur.fetchone() == (42,)
+    assert cur._query.query == b'select 42 as foo'
+
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Literal.*':l'"):
+        await aconn.execute(t"select {lit} as foo")
 
 
 async def test_sql_placeholder(aconn):
@@ -181,7 +189,7 @@ async def test_template_join(aconn):
 async def test_sql_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
     fields = sql.SQL(',').join(ts)
-    cur = await aconn.execute(t"select {fields}")
+    cur = await aconn.execute(t"select {fields:sql}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
     assert cur.description[2].name == "baz"

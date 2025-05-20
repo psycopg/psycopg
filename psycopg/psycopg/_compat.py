@@ -24,6 +24,12 @@ if sys.version_info >= (3, 14):
 else:
 
     class Template:
+        strings: tuple[str]
+        interpolations: tuple[Interpolation]
+
+        def __new__(cls, *args: str | Interpolation) -> Self:
+            return cls()
+
         def __iter__(self) -> Iterator[str | Interpolation]:
             return
             yield
