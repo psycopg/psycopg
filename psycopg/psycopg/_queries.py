@@ -247,16 +247,23 @@ class PostgresQuery(BaseQuery):
 
                 if (fmt := item.format_spec or FMT_AUTO) == FMT_IDENT:
                     if not isinstance(item.value, str):
-                        raise TypeError(
+                        raise e.ProgrammingError(
                             "identifier values must be strings; got"
                             f" {type(item.value).__qualname__}"
-                            f" in {{{item.expression}:{fmt}}} instead"
+                            f" in {{{item.expression}:{fmt}}}"
                         )
                     chunks.append(sql.Identifier(item.value).as_bytes(self._tx))
                     continue
                 elif fmt == FMT_LITERAL:
                     chunks.append(sql.Literal(item.value).as_bytes(self._tx))
                     continue
+                elif fmt == FMT_SQL:
+                    # It must have been processed already
+                    raise e.ProgrammingError(
+                        "sql values must be sql.Composite, sql.SQL, or Template;"
+                        f" got {type(item.value).__qualname__}"
+                        f" in {{{item.expression}:{fmt}}}"
+                    )
 
                 try:
                     pyfmt = PyFormat(fmt)
