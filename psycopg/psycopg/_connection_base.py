@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 import logging
-from typing import TYPE_CHECKING, Generic, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias
 from weakref import ReferenceType, ref
 from warnings import warn
 from functools import partial
@@ -135,7 +135,7 @@ class BaseConnection(Generic[Row]):
         self._deferrable: bool | None = None
         self._begin_statement = b""
 
-    def __del__(self) -> None:
+    def __del__(self, __warn: Any = warn) -> None:
         # If fails on connection we might not have this attribute yet
         if not hasattr(self, "pgconn"):
             return
@@ -148,9 +148,9 @@ class BaseConnection(Generic[Row]):
         if hasattr(self, "_pool"):
             return
 
-        warn(
-            f"connection {self} was deleted while still open."
-            " Please use 'with' or '.close()' to close the connection",
+        __warn(
+            f"{object.__repr__(self)} was deleted while still open."
+            " Please use 'with' or '.close()' to close the connection properly",
             ResourceWarning,
         )
 

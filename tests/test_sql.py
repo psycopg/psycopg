@@ -493,6 +493,10 @@ class TestSQL:
         assert isinstance(obj, sql.Composed)
         assert obj.as_string(conn) == '"foo", bar, 42'
 
+        obj = sql.SQL(", ").join(["foo", "bar", 42])
+        assert isinstance(obj, sql.Composed)
+        assert obj.as_string(conn) == """'foo', 'bar', 42"""
+
         obj = sql.SQL(", ").join([])
         assert obj == sql.Composed([])
 
