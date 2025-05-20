@@ -106,14 +106,14 @@ async def test_format_literal(aconn):
 
 async def test_nested(aconn):
     part = t"{vint} as foo"
-    cur = await aconn.execute(t"select {part:sql}")
+    cur = await aconn.execute(t"select {part:q}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b"select $1 as foo"
     assert cur._query.types == (psycopg.adapters.types["smallint"].oid,)
     assert cur._query.params == [b"\x00\x10"]
     assert cur._query.formats == [Format.BINARY]
 
-    with pytest.raises(psycopg.ProgrammingError, match="Template.*':sql'"):
+    with pytest.raises(psycopg.ProgrammingError, match="Template.*':q'"):
         cur = await aconn.execute(t"select {part:s}")
 
 
@@ -132,21 +132,21 @@ async def test_scope(aconn):
 
 async def test_sql(aconn):
     part = sql.SQL("foo")
-    cur = await aconn.execute(t"select {vint} as {part:sql}")
+    cur = await aconn.execute(t"select {vint} as {part:q}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b"select $1 as foo"
 
-    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.SQL.*':sql'"):
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.SQL.*':q'"):
         await aconn.execute(t"select {vint} as {part:i}")
 
 
 async def test_sql_composed(aconn):
     part = sql.SQL("{} as {}").format(vint, sql.Identifier("foo"))
-    cur = await aconn.execute(t"select {part:sql}")
+    cur = await aconn.execute(t"select {part:q}")
     assert await cur.fetchone() == (16,)
     assert cur._query.query == b'select 16 as "foo"'
 
-    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Composed.*':sql'"):
+    with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Composed.*':q'"):
         await aconn.execute(t"select {part}")
 
 
@@ -189,7 +189,7 @@ async def test_template_join(aconn):
 async def test_sql_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
     fields = sql.SQL(',').join(ts)
-    cur = await aconn.execute(t"select {fields:sql}")
+    cur = await aconn.execute(t"select {fields:q}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
     assert cur.description[2].name == "baz"

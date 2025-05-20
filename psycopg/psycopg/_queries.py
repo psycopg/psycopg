@@ -31,7 +31,7 @@ FMT_TEXT = PyFormat.TEXT.value
 FMT_BINARY = PyFormat.BINARY.value
 FMT_IDENT = "i"
 FMT_LITERAL = "l"
-FMT_SQL = "sql"
+FMT_SQL = "q"
 
 
 class QueryPart(NamedTuple):
