@@ -288,12 +288,12 @@ class SQL(Composable):
 
         return Composed(rv)
 
-    def join(self, seq: Iterable[Composable]) -> Composed:
+    def join(self, seq: Iterable[Any]) -> Composed:
         """
         Join a sequence of `Composable`.
 
-        :param seq: the elements to join.
-        :type seq: iterable of `!Composable`
+        :param seq: the elements to join. Elements that are not `Composable`
+            will be considered `Literal`.
 
         Use the `!SQL` object's string to separate the elements in `!seq`.
         Note that `Composed` objects are iterable too, so they can be used as
