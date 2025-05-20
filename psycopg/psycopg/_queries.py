@@ -239,13 +239,11 @@ class PostgresQuery(BaseQuery):
                 if isinstance(item.value, Template):
                     check_format(item, FMT_SQL)
                     process(item.value)
-                    continue
 
-                if isinstance(item.value, sql.Composable):
+                elif isinstance(item.value, sql.Composable):
                     process_composable(item)
-                    continue
 
-                if (fmt := item.format_spec or FMT_AUTO) == FMT_IDENT:
+                elif (fmt := item.format_spec or FMT_AUTO) == FMT_IDENT:
                     if not isinstance(item.value, str):
                         raise e.ProgrammingError(
                             "identifier values must be strings; got"
@@ -253,10 +251,10 @@ class PostgresQuery(BaseQuery):
                             f" in {{{item.expression}:{fmt}}}"
                         )
                     chunks.append(sql.Identifier(item.value).as_bytes(self._tx))
-                    continue
+
                 elif fmt == FMT_LITERAL:
                     chunks.append(sql.Literal(item.value).as_bytes(self._tx))
-                    continue
+
                 elif fmt == FMT_SQL:
                     # It must have been processed already
                     raise e.ProgrammingError(
@@ -265,26 +263,30 @@ class PostgresQuery(BaseQuery):
                         f" in {{{item.expression}:{fmt}}}"
                     )
 
-                try:
-                    pyfmt = PyFormat(fmt)
-                except ValueError:
-                    raise e.ProgrammingError(
-                        f"format '{fmt}' not supported in query;"
-                        f" got '{{{item.expression}:{fmt}}}'"
-                    )
-                if (key := (item.expression, id(item.value))) not in seen:
-                    ph = b"$%d" % (len(seen) + 1)
-                    seen[key] = (ph, pyfmt)
-                    chunks.append(ph)
-                    formats.append(pyfmt)
-                    params.append(item.value)
                 else:
-                    if seen[key][1] != fmt:
-                        raise e.ProgrammingError(
-                            f"placeholders '{{{item.expression}}}'"
-                            " cannot have different formats"
-                        )
-                    chunks.append(seen[key][0])
+                    process_variable(item, fmt)
+
+        def process_variable(item: Interpolation, fmt: str) -> None:
+            try:
+                pyfmt = PyFormat(fmt)
+            except ValueError:
+                raise e.ProgrammingError(
+                    f"format '{fmt}' not supported in query;"
+                    f" got '{{{item.expression}:{fmt}}}'"
+                )
+            if (key := (item.expression, id(item.value))) not in seen:
+                ph = b"$%d" % (len(seen) + 1)
+                seen[key] = (ph, pyfmt)
+                chunks.append(ph)
+                formats.append(pyfmt)
+                params.append(item.value)
+            else:
+                if seen[key][1] != fmt:
+                    raise e.ProgrammingError(
+                        f"placeholders '{{{item.expression}}}'"
+                        " cannot have different formats"
+                    )
+                chunks.append(seen[key][0])
 
         def process_composable(item: Interpolation) -> None:
             if isinstance(item.value, sql.Identifier):
