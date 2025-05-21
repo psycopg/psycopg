@@ -558,10 +558,10 @@ def test_break_attempts(dsn, proxy):
         proc.send_signal(signal.SIGINT)
         proc.wait()
         t1 = time.time()
+        t.join()
 
     # Check that we didn't try the second attempt
     assert t1 - t0 < 2.5
     assert proc.returncode != 0
-    if sys.implementation.name != "pypy":  # unexpected, but hey.
-        assert "KeyboardInterrupt" in stderr
+    assert "KeyboardInterrupt" in stderr
     assert stdout == ""
