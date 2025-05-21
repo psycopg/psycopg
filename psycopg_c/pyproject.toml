@@ -19,12 +19,7 @@ backend-path = ["build_backend"]
 
 [cython-backend]
 # These packages are only installed if there are pyx files to compile.
-
-# Don't install Cython 3.1: https://github.com/cython/cython/issues/6850
-# TODO: When the bug is solved we will remove the upper bound of the version
-# and just exclude the known broken versions, or we will establish a new
-# lower bound.
-cython-requires = ["Cython >= 3.0.0, < 3.1.0"]
+cython-requires = ["Cython >= 3.1.1"]
 
 [project]
 name = "psycopg-c"
