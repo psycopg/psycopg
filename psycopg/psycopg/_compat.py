@@ -4,7 +4,10 @@ compatibility functions for different Python versions
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import sys
+from typing import Any, Iterator
 
 if sys.version_info >= (3, 11):
     from typing import LiteralString, Self
@@ -21,10 +24,21 @@ if sys.version_info >= (3, 14):
 else:
 
     class Template:
-        pass
+        strings: tuple[str]
+        interpolations: tuple[Interpolation]
+
+        def __new__(cls, *args: str | Interpolation) -> Self:
+            return cls()
+
+        def __iter__(self) -> Iterator[str | Interpolation]:
+            return
+            yield
 
     class Interpolation:
-        pass
+        value: Any
+        expression: str
+        format_spec: str
+        conversion: str | None
 
 
 __all__ = [
