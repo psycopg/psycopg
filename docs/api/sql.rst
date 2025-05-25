@@ -139,6 +139,11 @@ The `!sql` objects are in the following inheritance hierarchy:
 
     .. automethod:: join
 
+        .. versionchanged:: 3.3
+
+            Added support for `~string.templatelib.Template` sequences.
+            See :ref:`nested template strings <tstring-template-nested>`.
+
 
 .. autoclass:: Identifier
 
