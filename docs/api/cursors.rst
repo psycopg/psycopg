@@ -62,8 +62,10 @@ The `!Cursor` class
     .. automethod:: execute
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
+        :type query: `~typing.LiteralString`, `!bytes`, `sql.SQL`, `sql.Composed`,
+            or `~string.templatelib.Template`
         :param params: The parameters to pass to the query, if any.
+            Can't be specified if ``query`` is a `!Template`.
         :type params: Sequence or Mapping
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
@@ -89,7 +91,7 @@ The `!Cursor` class
     .. automethod:: executemany
 
         :param query: The query to execute
-        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
+        :type query: `~typing.LiteralString`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params_seq: The parameters to pass to the query
         :type params_seq: Sequence of Sequences or Mappings
         :param returning: If `!True`, fetch the results of the queries executed
@@ -421,8 +423,10 @@ The `!ServerCursor` class
     .. automethod:: execute
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
+        :type query: `~typing.LiteralString`, `!bytes`, `sql.SQL`, `sql.Composed`,
+            or `~string.templatelib.Template`
         :param params: The parameters to pass to the query, if any.
+            Can't be specified if ``query`` is a `!Template`.
         :type params: Sequence or Mapping
         :param binary: Specify whether the server should return data in binary
             format (`!True`) or in text format (`!False`). By default

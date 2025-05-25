@@ -10,18 +10,6 @@ Template string queries
 
 .. versionadded:: 3.3
 
-.. warning::
-
-    This is an experimental feature, still `under active development`__ and
-    only documented here for preview. Details may change before Psycopg 3.3
-    release.
-
-    .. __: https://github.com/psycopg/psycopg/pull/1054
-
-    Template strings are a Python language feature under active development
-    too, planned for release in Python 3.14. Template string queries are
-    currently tested in Python 3.14 beta 1.
-
 Psycopg can process queries expressed as `template strings`__ defined in
 :pep:`750` and implemented for the first time in Python 3.14.
 
@@ -89,12 +77,12 @@ The supported specifiers for query composition are:
 
 - ``i``: the parameter is an identifier_, for example a table or column name.
   The parameter must be a string or a `sql.Identifier` instance.
-- ``l``: the parameter is a literal value, which will be composed to the
+- ``l``: the parameter is a literal value, which will be merged to the
   query on the client. This allows to parametrize statements that :ref:`don't
   support parametrization in PostgreSQL <server-side-binding>`.
 - ``q``: the parameter is a snippet of statement to be included verbatim in
-  the query. The parameter must be another template string or a `sql.SQL`
-  instance.
+  the query. The parameter must be another template string or a
+  `sql.SQL`\/\ `~sql.Composed` instance.
 
 .. _identifier: https://www.postgresql.org/docs/current/sql-syntax-lexical.html
                 #SQL-SYNTAX-IDENTIFIERS
@@ -149,7 +137,8 @@ be written as:
     ) -> list[User]:
         filters = []
         if ids is not None:
-            filters.append(t"u.id = any({list(ids)})")
+            ids = list(ids)
+            filters.append(t"u.id = ANY({ids})")
         if name_pattern is not None:
             filters.append(t"u.name ~* {name_pattern}")
         if group_id is not None:
