@@ -6,6 +6,8 @@ import psycopg
 from psycopg import sql
 from psycopg.pq import Format
 
+from .acompat import alist
+
 vstr = "hello"
 vint = 16
 
@@ -194,6 +196,16 @@ async def test_sql_join(aconn):
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
     assert cur.description[2].name == "baz"
+
+
+async def test_copy(aconn):
+    cur = aconn.cursor()
+    n = 3
+    async with cur.copy(
+        t"copy (select * from generate_series(1, {3})) to stdout"
+    ) as copy:
+        data = await alist(copy.rows())
+    assert data == [("1",), ("2",), ("3",)]
 
 
 async def test_client_cursor(aconn):
