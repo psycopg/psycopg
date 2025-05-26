@@ -19,6 +19,7 @@ the database <usage>` or :ref:`loading data using COPY <copy>`.
     install
     usage
     params
+    tstrings
     adapt
     pgtypes
     transactions
