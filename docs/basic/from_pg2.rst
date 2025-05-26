@@ -156,7 +156,7 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
 
 .. warning::
 
-    You cannot executeA multiple statements in the same query:
+    You cannot execute multiple statements in the same query:
 
     - when retrieving a :ref:`binary result <binary-data>` (such as using
       ``.execute(..., binary=True)``;
