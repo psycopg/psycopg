@@ -22,6 +22,7 @@ else:
 if sys.version_info >= (3, 14):
     from string.templatelib import Interpolation, Template
 else:
+    from dataclasses import dataclass
 
     class Template:
         strings: tuple[str]
@@ -34,11 +35,12 @@ else:
             return
             yield
 
+    @dataclass
     class Interpolation:
         value: Any
         expression: str
-        format_spec: str
         conversion: str | None
+        format_spec: str
 
 
 __all__ = [

@@ -217,3 +217,11 @@ async def test_raw_cursor(aconn):
     cur = psycopg.AsyncRawCursor(aconn)
     with pytest.raises(psycopg.NotSupportedError):
         await cur.execute(t"select {vint}, {vstr} as {vstr:i}")
+
+async def test_server_cursor(aconn):
+    async with psycopg.AsyncServerCursor(aconn, "test") as cur:
+        await cur.execute(t"select {vint}, {vstr} as {vstr:i}")
+        assert await cur.fetchone() == (vint, vstr)
+        assert cur.description[1].name == vstr
+        assert b"$2" in cur._query.query
+        assert b"$3" not in cur._query.query
