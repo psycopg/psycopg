@@ -71,11 +71,10 @@ Format specifiers
 
 Format specifiers can be associated to template strings interpolation using a
 ``:`` in the placeholder, for example in ``{id:b}``. Psycopg supports a few
-format specifiers specifying `how to pass a parameter to the server`__ and a few
-format specifiers specifying how to compose query parts on the client, in a
-way similar to what can be obtained using the `psycopg.sql` objects.
-
-.. __: http://localhost:8000/basic/params.html#binary-parameters-and-results
+format specifiers specifying :ref:`how to pass a parameter to the server
+<binary-data>` and a few format specifiers specifying how to compose query
+parts on the client, in a way similar to what can be obtained using the
+`psycopg.sql` objects.
 
 The supported specifiers for parameter formats are:
 
@@ -114,7 +113,7 @@ hence with single quotes).
 .. _NOTIFY: https://www.postgresql.org/docs/current/sql-notify.html
 
 The :sql:`NOTIFY` command cannot be parametrized by PostgreSQL, so it must be
-composed entirely on the server side. Using template strings this could be as
+composed entirely on the client side. Using template strings this could be as
 simple as:
 
 .. code:: python
