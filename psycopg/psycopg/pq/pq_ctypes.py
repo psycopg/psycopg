@@ -27,9 +27,6 @@ from .. import errors as e
 from .misc import ConninfoOption, PGnotify, PGresAttDesc, _clean_error_message
 from .misc import connection_summary
 from ._enums import ConnStatus, ExecStatus, Format, Trace
-
-# Imported locally to call them from __del__ methods
-from ._pq_ctypes import PQcancelFinish, PQclear, PQfinish, PQfreeCancel, PQstatus
 from .._encodings import pg2pyenc
 
 if TYPE_CHECKING:
@@ -40,6 +37,10 @@ __impl__ = "python"
 logger = logging.getLogger("psycopg")
 
 OK = ConnStatus.OK
+
+# note_on_del: functions called on __del__ are imported as local values to
+# avoid warnings on interpreter shutdown in case the module is gc'd before the
+# object is destroyed.
 
 
 def version() -> int:
@@ -95,10 +96,10 @@ class PGconn:
 
         self._procpid = getpid()
 
-    def __del__(self) -> None:
+    def __del__(self, __getpid: Callable[[], int] = getpid) -> None:
         # Close the connection only if it was created in this process,
         # not if this object is being GC'd after fork.
-        if getpid() == self._procpid:
+        if __getpid() == self._procpid:  # see note_on_del
             self.finish()
 
     def __repr__(self) -> str:
@@ -125,10 +126,10 @@ class PGconn:
     def connect_poll(self) -> int:
         return self._call_int(impl.PQconnectPoll)
 
-    def finish(self) -> None:
+    def finish(self, __PQfinish: Any = impl.PQfinish) -> None:
         self._pgconn_ptr, p = None, self._pgconn_ptr
         if p:
-            PQfinish(p)
+            __PQfinish(p)
 
     @property
     def pgconn_ptr(self) -> int | None:
@@ -206,8 +207,8 @@ class PGconn:
         return self._call_bytes(impl.PQoptions)
 
     @property
-    def status(self) -> int:
-        return PQstatus(self._pgconn_ptr)
+    def status(self, __PQstatus: Any = impl.PQstatus) -> int:
+        return __PQstatus(self._pgconn_ptr)
 
     @property
     def transaction_status(self) -> int:
@@ -828,13 +829,16 @@ class PGresult:
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        status = ExecStatus(self.status)
-        return f"<{cls} [{status.name}] at 0x{id(self):x}>"
+        try:
+            status = ExecStatus(self.status).name
+        except ValueError:
+            status = f"{self.status} (status unknown)"
+        return f"<{cls} [{status}] at 0x{id(self):x}>"
 
-    def clear(self) -> None:
+    def clear(self, __PQclear: Any = impl.PQclear) -> None:
         self._pgresult_ptr, p = None, self._pgresult_ptr
         if p:
-            PQclear(p)
+            __PQclear(p)  # see note_on_del
 
     @property
     def pgresult_ptr(self) -> int | None:
@@ -1000,7 +1004,7 @@ class PGcancelConn:
         self._ensure_pgcancelconn()
         impl.PQcancelReset(self.pgcancelconn_ptr)
 
-    def finish(self) -> None:
+    def finish(self, __PQcancelFinish: Any = impl.PQcancelFinish) -> None:
         """
         Free the data structure created by `PQcancelCreate()`.
 
@@ -1010,7 +1014,7 @@ class PGcancelConn:
         """
         self.pgcancelconn_ptr, p = None, self.pgcancelconn_ptr
         if p:
-            PQcancelFinish(p)
+            __PQcancelFinish(p)  # see note_on_del
 
     def _ensure_pgcancelconn(self) -> None:
         if not self.pgcancelconn_ptr:
@@ -1032,7 +1036,7 @@ class PGcancel:
     def __del__(self) -> None:
         self.free()
 
-    def free(self) -> None:
+    def free(self, __PQfreeCancel: Any = impl.PQfreeCancel) -> None:
         """
         Free the data structure created by :pq:`PQgetCancel()`.
 
@@ -1042,7 +1046,7 @@ class PGcancel:
         """
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
         if p:
-            PQfreeCancel(p)
+            __PQfreeCancel(p)  # see note_on_del
 
     def cancel(self) -> None:
         """Requests that the server abandon processing of the current command.
