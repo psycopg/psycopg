@@ -125,7 +125,7 @@ The `!ConnectionPool` class
    :param max_lifetime: The maximum lifetime of a connection in the pool, in
                         seconds. Connections used for longer get closed and
                         replaced by a new one. The amount is reduced by a
-                        random 10% to avoid mass eviction.
+                        random amount up to 5% to avoid mass eviction.
    :type max_lifetime: `!float`, default: 1 hour
 
    :param max_idle: Maximum time, in seconds, that a connection can stay unused
