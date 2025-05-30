@@ -170,6 +170,12 @@ class Connection(BaseConnection[Row]):
         """Close the database connection."""
         if self.closed:
             return
+
+        pool = getattr(self, "_pool", None)
+        if pool and getattr(pool, "close_returns", False):
+            pool.putconn(self)
+            return
+
         self._closed = True
 
         # TODO: maybe send a cancel on close, if the connection is ACTIVE?
