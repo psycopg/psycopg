@@ -69,7 +69,7 @@ pool = [
 ]
 test = [
     "anyio >= 4.0",
-    "mypy >= 1.14",
+    "mypy >= 1.16",
     "pproxy >= 2.7",
     "pytest >= 6.2.5",
     "pytest-cov >= 3.0",

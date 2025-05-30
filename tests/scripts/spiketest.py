@@ -105,7 +105,7 @@ class DelayedConnection(psycopg.Connection[Row]):
     """A connection adding a delay to the connection time."""
 
     @classmethod
-    def connect(cls, conninfo, conn_delay=0, **kwargs):
+    def connect(cls, conninfo, conn_delay=0, **kwargs):  # type: ignore[override]
         t0 = time.time()
         conn = super().connect(conninfo, **kwargs)
         t1 = time.time()
