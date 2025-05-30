@@ -726,6 +726,13 @@ class StackedDiagnosticsAccessedWithoutActiveHandler(DatabaseError,
     pass
 
 
+# Class 10 - XQuery Error
+
+class InvalidArgumentForXquery(DatabaseError,
+    code='10608', name='INVALID_ARGUMENT_FOR_XQUERY'):
+    pass
+
+
 # Class 20 - Case Not Found
 
 class CaseNotFound(ProgrammingError,
@@ -1577,6 +1584,10 @@ class UndefinedFile(OperationalError,
 
 class DuplicateFile(OperationalError,
     code='58P02', name='DUPLICATE_FILE'):
+    pass
+
+class FileNameTooLong(OperationalError,
+    code='58P03', name='FILE_NAME_TOO_LONG'):
     pass
 
 

@@ -81,8 +81,6 @@ When a new PostgreSQL major version is released
   -  ``.github/workflows/packages-bin.yml``.
   -  ``.github/workflows/tests.yml``.
 
-- Bump the version in ``tools/ci/wheel_win32_before_build.bat``.
-
 - Update the documented versions in:
 
   - ``docs/basic/install.rst``;
