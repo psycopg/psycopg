@@ -177,6 +177,21 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     except Exception:
                         pass
 
+    async def results(self) -> AsyncIterator[Self]:
+        """
+        Iterate across multiple record sets received by the cursor.
+
+        Multiple record sets are received after using `executemany()` with
+        `!returning=True` or using `execute()` with more than one query in the
+        command.
+        """
+        if self.pgresult:
+            while True:
+                yield self
+
+                if not self.nextset():
+                    break
+
     async def fetchone(self) -> Row | None:
         """
         Return the next record from the current result set.
