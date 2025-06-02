@@ -18,6 +18,7 @@ from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
 from .acompat import is_async, skip_async, skip_sync, sleep
+from .fix_crdb import crdb_anydb
 from .test_adapt import make_bin_dumper, make_dumper
 from ._test_cursor import my_row_factory
 from ._test_connection import testctx  # noqa: F401  # fixture
@@ -34,6 +35,7 @@ def test_connect(conn_cls, dsn):
     conn.close()
 
 
+@crdb_anydb
 def test_connect_bad(conn_cls, dsn):
     with pytest.raises(psycopg.OperationalError):
         conn_cls.connect(dsn, dbname="nosuchdb")
