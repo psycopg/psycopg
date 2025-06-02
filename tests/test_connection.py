@@ -34,9 +34,9 @@ def test_connect(conn_cls, dsn):
     conn.close()
 
 
-def test_connect_bad(conn_cls):
+def test_connect_bad(conn_cls, dsn):
     with pytest.raises(psycopg.OperationalError):
-        conn_cls.connect("dbname=nosuchdb")
+        conn_cls.connect(dsn, dbname="nosuchdb")
 
 
 @pytest.mark.slow

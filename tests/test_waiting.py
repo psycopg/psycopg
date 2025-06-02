@@ -8,6 +8,7 @@ import pytest
 import psycopg
 from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
+from psycopg.conninfo import make_conninfo
 
 skip_if_not_linux = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="non-Linux platform"
@@ -39,7 +40,7 @@ def test_wait_conn(dsn, timeout):
 
 
 def test_wait_conn_bad(dsn):
-    gen = generators.connect("dbname=nosuchdb")
+    gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):
         waiting.wait_conn(gen)
 
@@ -155,7 +156,7 @@ async def test_wait_conn_async(dsn, timeout):
 
 @pytest.mark.anyio
 async def test_wait_conn_async_bad(dsn):
-    gen = generators.connect("dbname=nosuchdb")
+    gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):
         await waiting.wait_conn_async(gen)
 
