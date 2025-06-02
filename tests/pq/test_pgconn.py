@@ -16,6 +16,7 @@ import pytest
 import psycopg
 import psycopg.generators
 from psycopg import pq
+from psycopg.conninfo import make_conninfo
 
 if TYPE_CHECKING:
     from psycopg.pq.abc import PGcancelConn, PGconn
@@ -49,8 +50,8 @@ def test_connectdb(dsn):
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
 
-def test_connectdb_error():
-    conn = pq.PGconn.connect(b"dbname=psycopg_test_not_for_real")
+def test_connectdb_error(dsn):
+    conn = pq.PGconn.connect(make_conninfo(dsn, dbname="nosuchdb").encode())
     assert conn.status == pq.ConnStatus.BAD
 
 
@@ -179,7 +180,7 @@ def test_ping(dsn):
     rv = pq.PGconn.ping(dsn.encode())
     assert rv == pq.Ping.OK
 
-    rv = pq.PGconn.ping(b"port=9999")
+    rv = pq.PGconn.ping(make_conninfo(dsn, port=9999, connect_timeout=3).encode())
     assert rv == pq.Ping.NO_RESPONSE
 
 

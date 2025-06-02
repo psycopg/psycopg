@@ -31,9 +31,9 @@ async def test_connect(aconn_cls, dsn):
     await conn.close()
 
 
-async def test_connect_bad(aconn_cls):
+async def test_connect_bad(aconn_cls, dsn):
     with pytest.raises(psycopg.OperationalError):
-        await aconn_cls.connect("dbname=nosuchdb")
+        await aconn_cls.connect(dsn, dbname="nosuchdb")
 
 
 @pytest.mark.slow

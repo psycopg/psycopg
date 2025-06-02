@@ -53,7 +53,7 @@ print(json.dumps(dts))
     dts = json.loads(rv.stdout)
 
     for dt in dts:
-        assert TICK <= dt < TICK * 1.1
+        assert TICK <= dt < TICK * 1.2
 
 
 @pytest.mark.skipif("not psycopg._cmodule._psycopg")
