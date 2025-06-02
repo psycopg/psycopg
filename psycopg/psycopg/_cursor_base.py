@@ -16,6 +16,7 @@ from . import pq
 from .abc import ConnectionType, Params, PQGen, Query
 from .rows import Row, RowMaker
 from ._column import Column
+from ._compat import Template
 from .pq.misc import connection_summary
 from ._queries import PostgresClientQuery, PostgresQuery
 from ._preparing import Prepare
@@ -391,7 +392,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query()
 
         # Merge the params client-side
-        if params:
+        if params or isinstance(statement, Template):
             pgq = PostgresClientQuery(self._tx)
             pgq.convert(statement, params)
             statement = pgq.query
