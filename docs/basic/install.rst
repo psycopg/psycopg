@@ -33,7 +33,7 @@ The Psycopg version documented here has *official and tested* support for:
   - PyPy 3.9 supported before Psycopg 3.3
   - **Note:** Only the pure Python version is supported.
 
-- PostgreSQL: from version 10 to 17
+- PostgreSQL: from version 10 to 18
 
   - **Note:** PostgreSQL `currently supported release`__ are actively tested
     in the CI. Out-of-support releases are supported on a best-effort basis.
