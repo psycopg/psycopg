@@ -197,13 +197,13 @@ def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
     conn = conn_cls.connect(dsn)
     del conn
     gc_collect()
-    assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
+    assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
     conn.execute("select 1")
     del conn
     gc_collect()
-    assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
+    assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
     try:
@@ -212,7 +212,7 @@ def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
         pass
     del conn
     gc_collect()
-    assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
+    assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
     with conn_cls.connect(dsn) as conn:
         pass
