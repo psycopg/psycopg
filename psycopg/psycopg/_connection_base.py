@@ -376,12 +376,13 @@ class BaseConnection(Generic[Row]):
         enc = self.pgconn._encoding
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
 
-        # `_notifies_backlog` is None if the `notifies()` generator is running
-        if (d := self._notifies_backlog) is not None:
-            d.append(n)
-
-        for cb in self._notify_handlers:
-            cb(n)
+        if self._notify_handlers:
+            for cb in self._notify_handlers:
+                cb(n)
+        else:
+            # `_notifies_backlog` is None if the `notifies()` generator is running
+            if (d := self._notifies_backlog) is not None:
+                d.append(n)
 
     @property
     def prepare_threshold(self) -> int | None:
