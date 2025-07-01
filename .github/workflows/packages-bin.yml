@@ -73,7 +73,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
@@ -147,7 +147,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
@@ -218,7 +218,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
