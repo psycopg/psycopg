@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from types import CodeType
+from types import CodeType  # noqa[F401]
 from typing import Any, Callable
 from warnings import warn
 from threading import Lock
@@ -22,7 +22,7 @@ from .._compat import TypeAlias
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
 JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]
-_AdapterKey: TypeAlias = tuple[type, CodeType]
+_AdapterKey: TypeAlias = "tuple[type, CodeType]"
 
 logger = logging.getLogger("psycopg")
 

@@ -269,7 +269,7 @@ def test_load_leak_with_local_functions(dsn, binary, pgtype, caplog):
 
     def register(conn: psycopg.Connection) -> None:
 
-        def f(x: str | bytes) -> Any:
+        def f(x: "str | bytes") -> Any:
             return json.loads(x)
 
         set_json_loads(f, conn)
