@@ -34,7 +34,7 @@ class ConnStatus(IntEnum):
     CHECK_TARGET = auto()
     CHECK_STANDBY = auto()
     ALLOCATED = auto()  # Only for cancel connections.
-    """Connection to the server hasn't been initiated yet."""
+    AUTHENTICATING = auto()
 
 
 class PollingStatus(IntEnum):
@@ -257,3 +257,15 @@ class Trace(IntFlag):
 
     REGRESS_MODE = 2
     """Redact some fields, e.g. OIDs, from messages."""
+
+
+class AuthData(IntEnum):
+    """
+    Enum to represent the available OAuth hook types.
+    """
+
+    PROMPT_OAUTH_DEVICE = 0
+    """user must visit a device-authorization URL."""
+
+    OAUTH_BEARER_TOKEN = auto()
+    """Server requests an OAuth Bearer token."""
