@@ -89,6 +89,9 @@ class PGconn(Protocol):
     def protocol_version(self) -> int: ...
 
     @property
+    def full_protocol_version(self) -> int: ...
+
+    @property
     def server_version(self) -> int: ...
 
     @property

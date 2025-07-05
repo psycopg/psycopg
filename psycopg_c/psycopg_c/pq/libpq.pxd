@@ -139,6 +139,7 @@ cdef extern from "libpq-fe.h":
     PGTransactionStatusType PQtransactionStatus(const PGconn *conn)
     const char *PQparameterStatus(const PGconn *conn, const char *paramName)
     int PQprotocolVersion(const PGconn *conn)
+    int PQfullProtocolVersion(const PGconn *conn)
     int PQserverVersion(const PGconn *conn)
     char *PQerrorMessage(const PGconn *conn)
     int PQsocket(const PGconn *conn) nogil
@@ -366,5 +367,9 @@ typedef struct pg_cancel_conn PGcancelConn;
 #define PQcancelReset(cancelConn) 0
 #define PQcancelFinish(cancelConn) 0
 #define PQsetChunkedRowsMode(conn, chunkSize) 0
+#endif
+
+#if PG_VERSION_NUM < 180000
+#define PQfullProtocolVersion(conn) 0
 #endif
 """
