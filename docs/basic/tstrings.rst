@@ -10,18 +10,6 @@ Template string queries
 
 .. versionadded:: 3.3
 
-.. warning::
-
-    This is an experimental feature, still `under active development`__ and
-    only documented here for preview. Details may change before Psycopg 3.3
-    release.
-
-    .. __: https://github.com/psycopg/psycopg/pull/1054
-
-    Template strings are a Python language feature under active development
-    too, planned for release in Python 3.14. Template string queries are
-    currently tested in Python 3.14 beta 1.
-
 Psycopg can process queries expressed as `template strings`__ defined in
 :pep:`750` and implemented for the first time in Python 3.14.
 
@@ -149,7 +137,7 @@ be written as:
     ) -> list[User]:
         filters = []
         if ids is not None:
-            filters.append(t"u.id = any({list(ids)})")
+            filters.append(t"u.id = ANY({list(ids)})")
         if name_pattern is not None:
             filters.append(t"u.name ~* {name_pattern}")
         if group_id is not None:
