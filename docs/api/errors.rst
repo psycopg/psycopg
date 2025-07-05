@@ -241,6 +241,9 @@ SQLSTATE  Exception                                          Base exception
 ---------------------------------------------------------------------------------
 ``0Z000`` `!DiagnosticsException`                            `!DatabaseError`
 ``0Z002`` `!StackedDiagnosticsAccessedWithoutActiveHandler`  `!DatabaseError`
+**Class 10** - XQuery Error
+---------------------------------------------------------------------------------
+``10608`` `!InvalidArgumentForXquery`                        `!ProgrammingError`
 **Class 20** - Case Not Found
 ---------------------------------------------------------------------------------
 ``20000`` `!CaseNotFound`                                    `!ProgrammingError`
@@ -487,6 +490,7 @@ SQLSTATE  Exception                                          Base exception
 ``58030`` `!IoError`                                         `!OperationalError`
 ``58P01`` `!UndefinedFile`                                   `!OperationalError`
 ``58P02`` `!DuplicateFile`                                   `!OperationalError`
+``58P03`` `!FileNameTooLong`                                 `!OperationalError`
 **Class 72** - Snapshot Failure
 ---------------------------------------------------------------------------------
 ``72000`` `!SnapshotTooOld`                                  `!DatabaseError`
@@ -544,3 +548,7 @@ SQLSTATE  Exception                                          Base exception
 
 .. versionadded:: 3.2.3
     Exception `!TransactionTimeout`, introduced in PostgreSQL 17.
+
+.. versionadded:: NOMERGE
+    Exception `!InvalidArgumentForXquery`, `FileNameTooLong`, introduced in
+    PostgreSQL 18.

@@ -18,12 +18,31 @@ class Capabilities:
     def __init__(self) -> None:
         self._cache: dict[str, str] = {}
 
+    def has_full_protocol_version(self, check: bool = False) -> bool:
+        """Check if the `PGconn.full_protocol_version()` method is implemented.
+
+        If the method is implemented, then `ConnectionInfo.full_protocol_version`
+        will return a meaningful value.
+
+        The feature requires libpq 18.0 and greater.
+        """
+        return self._has_feature(
+            "pq.PGconn.full_protocol_version()", 180000, check=check
+        )
+
     def has_encrypt_password(self, check: bool = False) -> bool:
         """Check if the `PGconn.encrypt_password()` method is implemented.
 
         The feature requires libpq 10.0 and greater.
         """
         return self._has_feature("pq.PGconn.encrypt_password()", 100000, check=check)
+
+    def has_service(self, check: bool = False) -> bool:
+        """Check if the `ConnectionInfo.service` attribute is implemented.
+
+        The feature requires libpq 18.0 and greater.
+        """
+        return self._has_feature("Connection.info.service", 180000, check=check)
 
     def has_hostaddr(self, check: bool = False) -> bool:
         """Check if the `ConnectionInfo.hostaddr` attribute is implemented.

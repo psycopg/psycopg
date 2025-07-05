@@ -11,7 +11,9 @@ except ImportError:
     pass
 
 caps = [
+    ("has_full_protocol_version", "pq.PGconn.full_protocol_version()", 18),
     ("has_encrypt_password", "pq.PGconn.encrypt_password()", 10),
+    ("has_service", "Connection.info.service", 18),
     ("has_hostaddr", "Connection.info.hostaddr", 12),
     ("has_pipeline", "Connection.pipeline()", 14),
     ("has_set_trace_flags", "PGconn.set_trace_flags()", 14),
