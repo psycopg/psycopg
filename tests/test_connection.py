@@ -17,7 +17,7 @@ from psycopg import pq
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .acompat import is_async, skip_async, skip_sync, sleep
+from .acompat import skip_async, skip_sync, sleep
 from .fix_crdb import crdb_anydb
 from .test_adapt import make_bin_dumper, make_dumper
 from ._test_cursor import my_row_factory
@@ -182,42 +182,39 @@ def test_cursor_closed(conn):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    pq.__impl__ in ("c", "binary")
-    and sys.version_info[:2] == (3, 12)
-    and (not is_async(__name__)),
-    reason="Something with Exceptions, C, Python 3.12",
-)
 def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
-    conn = conn_cls.connect(dsn)
-    conn.close()
-    del conn
+    # First create all the connections to test, to avoid some to reuse the same
+    # address, resulting in an omitted warning.
+    conn1 = conn_cls.connect(dsn)
+    conn2 = conn_cls.connect(dsn)
+    conn3 = conn_cls.connect(dsn)
+    conn4 = conn_cls.connect(dsn)
+
+    with conn_cls.connect(dsn) as conn5:
+        pass
+    del conn5
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
-    conn = conn_cls.connect(dsn)
-    del conn
+    conn1.close()
+    del conn1
+    assert not recwarn, [str(w.message) for w in recwarn.list]
+
+    del conn2
     gc_collect()
     assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
-    conn = conn_cls.connect(dsn)
-    conn.execute("select 1")
-    del conn
+    conn3.execute("select 1")
+    del conn3
     gc_collect()
     assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
-    conn = conn_cls.connect(dsn)
     try:
-        conn.execute("select wat")
+        conn4.execute("select wat")
     except psycopg.ProgrammingError:
         pass
-    del conn
+    del conn4
     gc_collect()
     assert conn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
-
-    with conn_cls.connect(dsn) as conn:
-        pass
-    del conn
-    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 @pytest.mark.usefixtures("testctx")

@@ -14,7 +14,7 @@ from psycopg import pq
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .acompat import asleep, is_async, skip_async, skip_sync
+from .acompat import asleep, skip_async, skip_sync
 from .fix_crdb import crdb_anydb
 from .test_adapt import make_bin_dumper, make_dumper
 from ._test_cursor import my_row_factory
@@ -177,42 +177,39 @@ async def test_cursor_closed(aconn):
 # TODO: the INERROR started failing in the C implementation in Python 3.12a7
 # compiled with Cython-3.0.0b3, not before.
 @pytest.mark.slow
-@pytest.mark.xfail(
-    pq.__impl__ in ("c", "binary")
-    and sys.version_info[:2] == (3, 12)
-    and not is_async(__name__),
-    reason="Something with Exceptions, C, Python 3.12",
-)
 async def test_connection_warn_close(aconn_cls, dsn, recwarn, gc_collect):
-    conn = await aconn_cls.connect(dsn)
-    await conn.close()
-    del conn
+    # First create all the connections to test, to avoid some to reuse the same
+    # address, resulting in an omitted warning.
+    conn1 = await aconn_cls.connect(dsn)
+    conn2 = await aconn_cls.connect(dsn)
+    conn3 = await aconn_cls.connect(dsn)
+    conn4 = await aconn_cls.connect(dsn)
+
+    async with await aconn_cls.connect(dsn) as conn5:
+        pass
+    del conn5
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
-    conn = await aconn_cls.connect(dsn)
-    del conn
+    await conn1.close()
+    del conn1
+    assert not recwarn, [str(w.message) for w in recwarn.list]
+
+    del conn2
     gc_collect()
     assert aconn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
-    conn = await aconn_cls.connect(dsn)
-    await conn.execute("select 1")
-    del conn
+    await conn3.execute("select 1")
+    del conn3
     gc_collect()
     assert aconn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
 
-    conn = await aconn_cls.connect(dsn)
     try:
-        await conn.execute("select wat")
+        await conn4.execute("select wat")
     except psycopg.ProgrammingError:
         pass
-    del conn
+    del conn4
     gc_collect()
     assert aconn_cls.__name__ in str(recwarn.pop(ResourceWarning).message)
-
-    async with await aconn_cls.connect(dsn) as conn:
-        pass
-    del conn
-    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 @pytest.mark.usefixtures("testctx")
