@@ -196,6 +196,17 @@ def test_db(pgconn):
         pgconn.db
 
 
+@pytest.mark.libpq(">= 18")
+def test_service(pgconn):
+    assert isinstance(pgconn.service, bytes)
+
+
+@pytest.mark.libpq("< 18")
+def test_service_notimpl(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.service
+
+
 def test_user(pgconn):
     user = [o.val for o in pgconn.info if o.keyword == b"user"][0]
     assert pgconn.user == user
@@ -304,6 +315,20 @@ def test_protocol_version(pgconn):
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         pgconn.protocol_version
+
+
+@pytest.mark.libpq(">= 18")
+def test_full_protocol_version(pgconn):
+    assert pgconn.full_protocol_version >= 30000
+    pgconn.finish()
+    with pytest.raises(psycopg.OperationalError):
+        pgconn.full_protocol_version
+
+
+@pytest.mark.libpq("< 18")
+def test_full_protocol_version_notimpl(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.full_protocol_version
 
 
 def test_server_version(pgconn):

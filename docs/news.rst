@@ -15,6 +15,8 @@ Psycopg 3.3.0 (unreleased)
 
 - Cursors are now iterators, not only iterables. This means you can call
   ``next(cur)`` to fetch the next row (:ticket:`#1064`).
+- Add support for functions :pq:`PQfullProtocolVersion`, :pq:`PQservice`,
+  available in libpq v18 (:ticket:`#1079`).
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 

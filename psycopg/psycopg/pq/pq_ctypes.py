@@ -178,6 +178,10 @@ class PGconn:
         return self._call_bytes(impl.PQdb)
 
     @property
+    def service(self) -> bytes:
+        return self._call_bytes(impl.PQservice)
+
+    @property
     def user(self) -> bytes:
         return self._call_bytes(impl.PQuser)
 
@@ -235,6 +239,10 @@ class PGconn:
     @property
     def protocol_version(self) -> int:
         return self._call_int(impl.PQprotocolVersion)
+
+    @property
+    def full_protocol_version(self) -> int:
+        return self._call_int(impl.PQfullProtocolVersion)
 
     @property
     def server_version(self) -> int:

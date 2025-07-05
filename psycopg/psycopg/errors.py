@@ -47,6 +47,7 @@ class FinishedPGconn:
     info: list[ConninfoOption] = field(default_factory=list)
 
     db: bytes = b""
+    service: bytes = b""
     user: bytes = b""
     password: bytes = b""
     host: bytes = b""
@@ -61,6 +62,7 @@ class FinishedPGconn:
     error_message: bytes = b""
     _encoding: str = "utf-8"
     protocol_version: int = 0
+    full_protocol_version: int = 0
     server_version: int = 0
 
     backend_pid: int = 0
