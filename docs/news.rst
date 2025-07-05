@@ -25,6 +25,8 @@ Psycopg 3.3.0 (unreleased)
 
 - Add `pq.PGconn.used_gssapi` attribute and `Capabilities.has_used_gssapi()`
   function (:ticket:`#1138`).
+- Add support for the :pq:`PQfullProtocolVersion()` function, introduced in
+  libpq v18 (:ticket:`#1079`).
 
 .. rubric:: Other changes
 

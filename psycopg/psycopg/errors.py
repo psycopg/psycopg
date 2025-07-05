@@ -61,6 +61,7 @@ class FinishedPGconn:
     error_message: bytes = b""
     _encoding: str = "utf-8"
     protocol_version: int = 0
+    full_protocol_version: int = 0
     server_version: int = 0
 
     backend_pid: int = 0
