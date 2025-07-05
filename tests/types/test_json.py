@@ -1,5 +1,7 @@
 import json
+import logging
 from copy import deepcopy
+from typing import Any
 
 import pytest
 
@@ -211,6 +213,89 @@ def test_load_customise_context(conn, binary, pgtype):
     got = cur2.fetchone()[0]
     assert got["foo"] == "bar"
     assert got["answer"] == 42
+
+
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_dump_leak_with_local_functions(dsn, binary, pgtype, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    # Note: private implementation, it might change
+    from psycopg.types.json import _dumpers_cache
+
+    # A function with no closure is cached on the code, so lambdas are not
+    # different items.
+
+    def register(conn: psycopg.Connection) -> None:
+        set_json_dumps(lambda x: json.dumps(x), conn)
+
+    with psycopg.connect(dsn) as conn1:
+        register(conn1)
+    assert (size1 := len(_dumpers_cache))
+
+    with psycopg.connect(dsn) as conn2:
+        register(conn2)
+    size2 = len(_dumpers_cache)
+
+    assert size1 == size2
+    assert not caplog.records
+
+    # A function with a closure won't be cached, but will cause a warning
+
+    def register2(conn: psycopg.Connection, skipkeys: bool) -> None:
+        def f(x: Any) -> str:
+            return json.dumps(x, skipkeys=skipkeys)
+
+        set_json_dumps(f, conn)
+
+    with psycopg.connect(dsn) as conn3:
+        register2(conn3, False)
+    size3 = len(_dumpers_cache)
+
+    assert size2 == size3
+    assert caplog.records
+
+
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_load_leak_with_local_functions(dsn, binary, pgtype, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    # Note: private implementation, it might change
+    from psycopg.types.json import _loaders_cache
+
+    # A function with no closure is cached on the code, so lambdas are not
+    # different items.
+
+    def register(conn: psycopg.Connection) -> None:
+
+        def f(x: "str | bytes") -> Any:
+            return json.loads(x)
+
+        set_json_loads(f, conn)
+
+    with psycopg.connect(dsn) as conn1:
+        register(conn1)
+    assert (size1 := len(_loaders_cache))
+
+    with psycopg.connect(dsn) as conn2:
+        register(conn2)
+    size2 = len(_loaders_cache)
+
+    assert size1 == size2
+    assert not caplog.records
+
+    # A function with a closure won't be cached, but will cause a warning
+
+    def register2(conn: psycopg.Connection, parse_float: Any) -> None:
+        set_json_dumps(lambda x: json.dumps(x, parse_float=parse_float), conn)
+
+    with psycopg.connect(dsn) as conn3:
+        register2(conn3, None)
+    size3 = len(_loaders_cache)
+
+    assert size2 == size3
+    assert caplog.records
 
 
 def my_dumps(obj):
