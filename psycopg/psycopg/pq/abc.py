@@ -86,6 +86,9 @@ class PGconn(Protocol):
     def _encoding(self) -> str: ...
 
     @property
+    def protocol_version(self) -> int: ...
+
+    @property
     def server_version(self) -> int: ...
 
     @property
