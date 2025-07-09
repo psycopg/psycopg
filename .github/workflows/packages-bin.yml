@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64, i686, ppc64le, aarch64]
+        arch: [x86_64, ppc64le, aarch64]
         pyver: [cp310, cp311, cp312, cp313]
         platform: [manylinux, musllinux]
 
@@ -73,12 +73,11 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
           CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux2014
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
@@ -147,7 +146,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
@@ -183,7 +182,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Might want to add win32, untested at the moment.
         arch: [win_amd64]
         pyver: [cp310, cp311, cp312, cp313]
 
@@ -218,7 +216,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.3
+        uses: pypa/cibuildwheel@v3.0.0
         with:
           package-dir: psycopg_binary
         env:
