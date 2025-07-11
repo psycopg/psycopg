@@ -332,15 +332,23 @@ documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
 Notifications are received as instances of `Notify`. If you are reserving a
-connection only to receive notifications, the simplest way is to consume the
-`Connection.notifies` generator. The generator can be stopped using
-`!close()`. Starting from Psycopg 3.2, the method supports options to receive
-notifications only for a certain time or up to a certain number.
+connection **only** to receive notifications, the simplest way is to consume 
+the `Connection.notifies` generator. The generator can be stopped using
+`!close()`. 
+
+Starting from Psycopg 3.2, the method supports options to receive 
+notifications only for a certain time (``timeout``) and/or up to a certain 
+number (``stop_after``)
 
 .. note::
 
     You don't need an `AsyncConnection` to handle notifications: a normal
     blocking `Connection` is perfectly valid.
+
+.. note::
+
+    With ``stop_after=1`` you might actually receive more than one 
+    notification, as it possible they arrive in the same packet.
 
 The following example will print notifications and stop when one containing
 the ``"stop"`` message is received.
@@ -392,6 +400,21 @@ received immediately, but only during a connection operation, such as a query.
     print(conn.execute("SELECT 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
+
+It's possible to combine ``notifies`` and ``add_notify_handler()``. Which 
+allows you to use the generator to receive notifications as soon as possible. 
+But you won't be losing notifications, while performing connection operations,
+with the handler.
+
+.. code:: python
+
+    deck = collections.deque()
+    conn.execute("LISTEN mychan;")
+    conn.add_notify_handler(deck.append)
+    while True:
+        deck.extend(conn.notifies(timeout=30.0, stop_after=1))
+        while deck:
+            print(deck.popleft())
 
 
 .. index:: disconnections
