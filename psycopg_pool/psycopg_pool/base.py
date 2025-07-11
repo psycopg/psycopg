@@ -79,6 +79,7 @@ class BasePool:
         self._nconns = min_size  # currently in the pool, out, being prepared
         self._pool = deque()
         self._stats = Counter[str]()
+        self._drained_at = 0.0
 
         # Min number of connections in the pool in a max_idle unit of time.
         # It is reset periodically by the ShrinkPool scheduled task.
@@ -196,7 +197,8 @@ class BasePool:
 
         Add some randomness to avoid mass reconnection.
         """
-        conn._expire_at = monotonic() + self._jitter(self.max_lifetime, -0.05, 0.0)
+        conn._created_at = t = monotonic()
+        conn._expire_at = t + self._jitter(self.max_lifetime, -0.05, 0.0)
 
 
 class AttemptWithBackoff:

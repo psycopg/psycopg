@@ -248,6 +248,10 @@ The `!ConnectionPool` class
 
       .. versionadded:: 3.2
 
+   .. automethod:: drain
+
+      .. versionadded:: 3.3
+
    .. automethod:: get_stats
    .. automethod:: pop_stats
 
