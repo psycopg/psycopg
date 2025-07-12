@@ -270,7 +270,7 @@ def pipeline_communicate(
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef int cires
     cdef int status
-    cdef int ready
+    cdef int cready
     cdef libpq.PGresult *pgres
     cdef list res = []
     cdef list results = []
@@ -278,11 +278,17 @@ def pipeline_communicate(
 
     while True:
         while True:
+            # I don't quite get why, but we can receive a None upon async
+            # task cancellation. See #1005.
             ready = yield WAIT_RW
-            if ready:
+            if ready is None:
+                continue
+
+            cready = ready
+            if cready:
                 break
 
-        if ready & READY_R:
+        if cready & READY_R:
             with nogil:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
@@ -325,7 +331,7 @@ def pipeline_communicate(
                     else:
                         res.append(r)
 
-        if ready & READY_W:
+        if cready & READY_W:
             pgconn.flush()
             if not commands:
                 break
