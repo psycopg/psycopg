@@ -589,8 +589,7 @@ async def test_row_maker_returns_none(aconn):
         assert await alist(stream) == recs
 
 
-@pytest.mark.parametrize("count", [1])
-async def test_results_after_execute(aconn, count):
-    async with aconn.cursor() as cur:
-        await cur.execute(";".join(["select 1"] * count))
-        assert await alist(cur.results()) == [cur] * count
+async def test_results_after_execute(aconn):
+    async with aconn.cursor("test") as cur:
+        await cur.execute("select 1")
+        assert await alist(cur.results()) == [cur]
