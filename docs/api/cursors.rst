@@ -110,7 +110,7 @@ The `!Cursor` class
             Using the usual `~Cursor.fetchone()`, `~Cursor.fetchall()`, you
             will be able to read the records returned *by the first query
             executed only*. In order to read the results of the following
-            queries you can call `~Cursor.nextset()` to move to the following
+            queries you can call `nextset()` or `results()` to move across the
             result set.
 
             A typical use case for `!executemany(returning=True)` might be to
@@ -128,7 +128,7 @@ The `!Cursor` class
 
             More explicitly, `!fetchall()` alone will not return all the
             values returned! You must iterate on the results using
-            `!results()`.
+            `results()`.
 
         If `!returning=False`, the value of `rowcount` is set to the cumulated
         number of rows affected by queries. If `!returning=True`, `!rowcount`
@@ -281,6 +281,9 @@ The `!Cursor` class
                 map(cursor_consumer, cursor.results())
 
         .. versionadded:: 3.3
+
+            In previous version you may call `nextset()` in a loop until it
+            returns a false value.
 
     .. automethod:: scroll
 
