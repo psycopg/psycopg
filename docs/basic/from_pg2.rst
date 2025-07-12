@@ -198,19 +198,14 @@ result of the last statement is returned::
 In Psycopg 3 instead, all the results are available. After running the query,
 the first result will be readily available in the cursor and can be consumed
 using the usual `!fetch*()` methods. In order to access the following
-results, you can use the `Cursor.nextset()` method::
+results, you can use the `Cursor.results()` method (or `~Cursor.nextset()`
+before Psycopg 3.3)::
 
     >>> cur_pg3.execute("SELECT 1; SELECT 2")
-    >>> cur_pg3.fetchone()
+    >>> for _ in cur_pg3.results():
+    ...    print(cur_pg3.fetchone())
     (1,)
-
-    >>> cur_pg3.nextset()
-    True
-    >>> cur_pg3.fetchone()
     (2,)
-
-    >>> cur_pg3.nextset()
-    None  # no more results
 
 Remember though that you cannot use server-side bindings to :ref:`execute more
 than one statement in the same query <multi-statements>`, if you are passing

@@ -587,3 +587,9 @@ async def test_row_maker_returns_none(aconn):
         assert await alist(cur) == recs
         stream = cur.stream(query)
         assert await alist(stream) == recs
+
+
+async def test_results_after_execute(aconn):
+    async with aconn.cursor("test") as cur:
+        await cur.execute("select 1")
+        assert await alist(cur.results()) == [cur]

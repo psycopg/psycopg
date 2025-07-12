@@ -910,3 +910,29 @@ def test_row_maker_returns_none(conn):
     assert list(cur) == recs
     stream = cur.stream(query)
     assert list(stream) == recs
+
+
+@pytest.mark.parametrize("count", [1, 3])
+def test_results_after_execute(conn, count):
+    with conn.cursor() as cur:
+        cur.execute(
+            ";".join((f"select * from generate_series(1, {i})" for i in range(count)))
+        )
+        ress = list((res.fetchall() for res in cur.results()))
+        assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
+
+
+@pytest.mark.parametrize("count", [0, 1, 3])
+@pytest.mark.parametrize("returning", [False, True])
+def test_results_after_executemany(conn, count, returning):
+    with conn.cursor() as cur:
+        cur.executemany(
+            ph(cur, "select * from generate_series(1, %s)"),
+            [(i,) for i in range(count)],
+            returning=returning,
+        )
+        ress = list((res.fetchall() for res in cur.results()))
+        if returning:
+            assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
+        else:
+            assert ress == []
