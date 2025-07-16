@@ -16,6 +16,9 @@ Psycopg 3.3.0 (unreleased)
 - Cursors are now iterators, not only iterables. This means you can call
   ``next(cur)`` to fetch the next row (:ticket:`#1064`).
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
+- Add `Cursor.results()` to iterate over the result sets of the queries
+  executed though `~Cursor.executemany()` or `~Cursor.execute()`
+  (:ticket:`#1080`).
 
 
 Psycopg 3.2.10 (unreleased)

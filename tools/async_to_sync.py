@@ -264,6 +264,16 @@ class AsyncToSync(ast.NodeTransformer):  # type: ignore
         self.generic_visit(node)
         return node
 
+    def visit_GeneratorExp(self, node: ast.GeneratorExp) -> ast.AST:
+        if isinstance(node.elt, ast.Await):
+            node.elt = node.elt.value
+
+        for gen in node.generators:
+            if gen.is_async:
+                gen.is_async = 0
+
+        return node
+
 
 class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
     names_map = {

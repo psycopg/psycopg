@@ -581,3 +581,9 @@ def test_row_maker_returns_none(conn):
         assert list(cur) == recs
         stream = cur.stream(query)
         assert list(stream) == recs
+
+
+def test_results_after_execute(conn):
+    with conn.cursor("test") as cur:
+        cur.execute("select 1")
+        assert list(cur.results()) == [cur]

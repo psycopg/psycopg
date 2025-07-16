@@ -918,3 +918,29 @@ async def test_row_maker_returns_none(aconn):
     assert await alist(cur) == recs
     stream = cur.stream(query)
     assert await alist(stream) == recs
+
+
+@pytest.mark.parametrize("count", [1, 3])
+async def test_results_after_execute(aconn, count):
+    async with aconn.cursor() as cur:
+        await cur.execute(
+            ";".join(f"select * from generate_series(1, {i})" for i in range(count))
+        )
+        ress = await alist(await res.fetchall() async for res in cur.results())
+        assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
+
+
+@pytest.mark.parametrize("count", [0, 1, 3])
+@pytest.mark.parametrize("returning", [False, True])
+async def test_results_after_executemany(aconn, count, returning):
+    async with aconn.cursor() as cur:
+        await cur.executemany(
+            ph(cur, "select * from generate_series(1, %s)"),
+            [(i,) for i in range(count)],
+            returning=returning,
+        )
+        ress = await alist(await res.fetchall() async for res in cur.results())
+        if returning:
+            assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
+        else:
+            assert ress == []
