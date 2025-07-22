@@ -58,6 +58,11 @@ class ConnectionInfo:
         return self._get_pgconn_attr("db")
 
     @property
+    def service(self) -> str:
+        """The service name of the connection. See :pq:`PQservice()`."""
+        return self._get_pgconn_attr("service")
+
+    @property
     def user(self) -> str:
         """The user name of the connection. See :pq:`PQuser()`."""
         return self._get_pgconn_attr("user")
@@ -151,6 +156,24 @@ class ConnectionInfo:
         An integer representing the server version. See :pq:`PQserverVersion()`.
         """
         return self.pgconn.server_version
+
+    @property
+    def full_protocol_version(self) -> int:
+        """
+        An integer representing the server full protocol version.
+
+        Return a value in the format described in :pq:`PQfullProtocolVersion()`.
+
+        Only meaningful if the libpq used is version 18 or greater. If the
+        version is lesser than that, return the value reported by
+        :pq:`PQprotocolVersion()` (but in the same format as above, e.g. 30000
+        for version 3). You can use `Capabilities.has_full_protocol_version()`
+        to verify if the value can be considered reliable.
+        """
+        try:
+            return self.pgconn.full_protocol_version
+        except e.NotSupportedError:
+            return self.pgconn.protocol_version * 10000
 
     @property
     def backend_pid(self) -> int:
