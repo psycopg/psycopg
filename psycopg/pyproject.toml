@@ -83,7 +83,7 @@ dev = [
     "flake8 >= 4.0",
     "isort[colors] >= 6.0",
     "isort-psycopg",
-    "mypy >= 1.14",
+    "mypy >= 1.17",
     "pre-commit >= 4.0.1",
     "types-setuptools >= 57.4",
     "types-shapely >= 2.0",
