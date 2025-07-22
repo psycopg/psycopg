@@ -128,7 +128,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
-    r = Range(min, max, bounds)  # type: ignore[var-annotated]
+    r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.execute(
         f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in.value}",
@@ -176,7 +176,7 @@ def test_load_builtin_array(conn, pgtype, fmt_out):
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
-    r = Range(min, max, bounds)  # type: ignore[var-annotated]
+    r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select {pgtype}(%s::{sub}, %s::{sub}, %s)", (min, max, bounds))
