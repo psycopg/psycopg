@@ -62,7 +62,10 @@ disallow_untyped_defs = false
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = "tests.scripts.spiketest"
+module = [
+    "tests.scripts.spiketest",
+    "tests.types.test_range",
+]
 warn_unused_ignores = false  # for mypy 1.14 on Python 3.8
 
 [tool.codespell]
