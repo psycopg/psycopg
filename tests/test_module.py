@@ -35,7 +35,21 @@ def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
     conn.close()
 
 
-def test_version(mypy):
+def test_version():
+    from psycopg import __version__
+
+    assert __version__.startswith("3.")
+
+
+@pytest.mark.skipif(_psycopg is None, reason="C module test")
+def test_version_c():
+    # can be psycopg_c, psycopg_binary
+    packagename = _psycopg.__name__.split(".")[0]
+    cpackage = __import__(packagename)
+    assert cpackage.__version__.startswith("3.")
+
+
+def test_version_static(mypy):
     cp = mypy.run_on_source(
         """\
 from psycopg import __version__
@@ -46,7 +60,7 @@ assert __version__
 
 
 @pytest.mark.skipif(_psycopg is None, reason="C module test")
-def test_version_c(mypy):
+def test_version_c_static(mypy):
     # can be psycopg_c, psycopg_binary
     cpackage = _psycopg.__name__.split(".")[0]
 
