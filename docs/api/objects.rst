@@ -52,6 +52,10 @@ Connection information
         second group of digits is always 00. For example, version 9.3.5 is
         returned as 90305, version 10.2 as 100002.
 
+    .. autoattribute:: full_protocol_version
+
+        .. versionadded:: 3.3
+
     .. autoattribute:: error_message
 
     .. automethod:: get_parameters
@@ -80,6 +84,15 @@ Connection information
 
     .. autoattribute:: port
     .. autoattribute:: dbname
+
+    .. autoattribute:: service
+
+        Only available if the libpq used is from PostgreSQL 18 or newer.
+        Raise `~psycopg.NotSupportedError` otherwise. You can use the
+        `~Capabilities.has_service` capability to check for support.
+
+        .. versionadded:: 3.3
+
     .. autoattribute:: user
     .. autoattribute:: password
     .. autoattribute:: options
@@ -146,7 +159,16 @@ Libpq capabilities information
 
     .. versionadded:: 3.2
 
+    .. automethod:: has_full_protocol_version
+
+        .. versionadded:: 3.3
+
     .. automethod:: has_encrypt_password
+
+    .. automethod:: has_service
+
+        .. versionadded:: 3.3
+
     .. automethod:: has_hostaddr
     .. automethod:: has_pipeline
     .. automethod:: has_set_trace_flags

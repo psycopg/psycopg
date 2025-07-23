@@ -11,7 +11,7 @@ from .fix_crdb import crdb_encoding
 
 @pytest.mark.parametrize(
     "attr",
-    [("dbname", "db"), "host", "hostaddr", "user", "password", "options"],
+    [("dbname", "db"), "service", "host", "hostaddr", "user", "password", "options"],
 )
 def test_attrs(conn, attr):
     if isinstance(attr, tuple):
@@ -22,6 +22,9 @@ def test_attrs(conn, attr):
     if info_attr == "hostaddr" and psycopg.pq.version() < 120000:
         pytest.skip("hostaddr not supported on libpq < 12")
 
+    if info_attr == "service" and psycopg.pq.version() < 180000:
+        pytest.skip("service not supported on libpq < 18")
+
     info_val = getattr(conn.info, info_attr)
     pgconn_val = getattr(conn.pgconn, pgconn_attr).decode()
     assert info_val == pgconn_val
@@ -29,6 +32,12 @@ def test_attrs(conn, attr):
     conn.close()
     with pytest.raises(psycopg.OperationalError):
         getattr(conn.info, info_attr)
+
+
+@pytest.mark.libpq("< 18")
+def test_service_not_supported(conn):
+    with pytest.raises(psycopg.NotSupportedError):
+        conn.info.service
 
 
 @pytest.mark.libpq("< 12")
@@ -42,6 +51,13 @@ def test_port(conn):
     conn.close()
     with pytest.raises(psycopg.OperationalError):
         conn.info.port
+
+
+def test_full_protocol_version(conn):
+    assert conn.info.full_protocol_version >= 30000
+    conn.close()
+    with pytest.raises(psycopg.OperationalError):
+        conn.info.full_protocol_version
 
 
 @pytest.mark.skipif(psycopg.pq.__impl__ != "python", reason="can't monkeypatch C")
