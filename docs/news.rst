@@ -15,6 +15,7 @@ Psycopg 3.2.10 (unreleased)
 - Fix memory leak when lambda/local functions are used as argument for
   `~.psycopg.types.json.set_json_dumps()`, `~.psycopg.types.json.set_json_loads()`
   (:ticket:`#1108`).
+- Fix `psycopg_binary.__version__`.
 
 
 Current release
