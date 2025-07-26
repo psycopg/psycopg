@@ -52,7 +52,6 @@ class MyRow(dict[str, Any]):
 
 
 def test_generic_connection_type(dsn):
-
     def configure(conn: psycopg.Connection[Any]) -> None:
         set_autocommit(conn, True)
 
@@ -85,12 +84,10 @@ def test_generic_connection_type(dsn):
 
 
 def test_non_generic_connection_type(dsn):
-
     def configure(conn: psycopg.Connection[Any]) -> None:
         set_autocommit(conn, True)
 
     class MyConnection(psycopg.Connection[MyRow]):
-
         def __init__(self, *args: Any, **kwargs: Any):
             kwargs["row_factory"] = class_row(MyRow)
             super().__init__(*args, **kwargs)
@@ -647,7 +644,6 @@ def test_uniform_use(dsn):
 @pytest.mark.slow
 @pytest.mark.timing
 def test_resize(dsn):
-
     def sampler():
         sleep(0.05)  # ensure sampling happens after shrink check
         while True:
@@ -1024,7 +1020,6 @@ def test_check_backoff(dsn, caplog, monkeypatch):
 @pytest.mark.slow
 @pytest.mark.parametrize("status", ["ERROR", "INTRANS"])
 def test_check_returns_an_ok_connection(dsn, status):
-
     def check(conn):
         if status == "ERROR":
             conn.execute("wat")
@@ -1055,7 +1050,6 @@ def test_override_close(dsn):
     # https://github.com/psycopg/psycopg/issues/1046
 
     class MyConnection(psycopg.Connection[Row]):
-
         def close(self) -> None:
             if pool := getattr(self, "_pool", None):
                 # Connection currently checked out from the pool.
@@ -1095,7 +1089,6 @@ def test_close_returns(dsn):
 
 @pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
 def test_close_returns_custom_class(dsn):
-
     class MyConnection(psycopg.Connection):
         pass
 
@@ -1115,9 +1108,34 @@ def test_close_returns_custom_class(dsn):
 
 @pytest.mark.skipif(PSYCOPG_VERSION >= (3, 3), reason="psycopg < 3.3 behaviour")
 def test_close_returns_custom_class_old(dsn):
-
     class MyConnection(psycopg.Connection):
         pass
 
     with pytest.raises(TypeError, match="close_returns=True"):
         pool.ConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+def test_close_returns_no_loop(dsn):
+    p = pool.ConnectionPool(
+        dsn,
+        min_size=1,
+        max_size=1,
+        close_returns=True,
+        max_lifetime=0.05,
+        open=False,
+    )
+    p.open()
+    conn = p.getconn()
+    sleep(0.1)
+    assert len(p._pool) == 0
+    sleep(0.1)  # wait for the connection to expire
+    conn.close()
+    sleep(0.1)
+    assert len(p._pool) == 1
+    conn = p.getconn()
+    sleep(0.1)
+    assert len(p._pool) == 0
+    conn.close()
+    sleep(0.1)
+    assert len(p._pool) == 1
