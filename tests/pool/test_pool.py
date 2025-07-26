@@ -1122,16 +1122,20 @@ def test_close_returns_no_loop(dsn):
         min_size=1,
         max_size=1,
         close_returns=True,
-        max_lifetime=0.1,
+        max_lifetime=0.05,
         open=False,
     )
     p.open()
     conn = p.getconn()
+    sleep(0.1)
     assert len(p._pool) == 0
-    sleep(0.2)  # wait for the connection to expire
+    sleep(0.1)  # wait for the connection to expire
     conn.close()
+    sleep(0.1)
     assert len(p._pool) == 1
     conn = p.getconn()
+    sleep(0.1)
     assert len(p._pool) == 0
     conn.close()
+    sleep(0.1)
     assert len(p._pool) == 1
