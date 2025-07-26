@@ -17,6 +17,13 @@ psycopg_pool 3.3.0 (unreleased)
   (:ticket:`#1046`).
 
 
+psycopg_pool 3.2.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix infinite loop with connections modified to return on close
+  (:ticket:`#1124`).
+
+
 Current release
 ---------------
 
