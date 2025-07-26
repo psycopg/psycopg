@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import weakref
 from time import time
@@ -1082,7 +1083,6 @@ async def test_override_close(dsn):
 
 
 async def test_close_returns(dsn):
-
     async with pool.AsyncConnectionPool(dsn, min_size=2, close_returns=True) as p:
         await p.wait()
         assert len(p._pool) == 2
@@ -1122,3 +1122,25 @@ async def test_close_returns_custom_class_old(dsn):
 
     with pytest.raises(TypeError, match="close_returns=True"):
         pool.AsyncConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+async def test_close_returns_no_loop(dsn):
+    p = pool.AsyncConnectionPool(
+        dsn,
+        min_size=1,
+        max_size=1,
+        close_returns=True,
+        max_lifetime=0.1,
+        open=False,
+    )
+    await p.open()
+    conn = await p.getconn()
+    assert len(p._pool) == 0
+    await asyncio.sleep(0.2)  # wait for the connection to expire
+    await conn.close()
+    assert len(p._pool) == 1
+    conn = await p.getconn()
+    assert len(p._pool) == 0
+    await conn.close()
+    assert len(p._pool) == 1
