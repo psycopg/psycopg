@@ -1121,3 +1121,23 @@ def test_close_returns_custom_class_old(dsn):
 
     with pytest.raises(TypeError, match="close_returns=True"):
         pool.ConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+def test_close_returns_no_loop(dsn):
+    with pool.ConnectionPool(
+        dsn, min_size=1, close_returns=True, max_lifetime=0.05
+    ) as p:
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        sleep(0.1)  # wait for the connection to expire
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1

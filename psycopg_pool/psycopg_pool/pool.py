@@ -449,6 +449,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         # Close the connections that were still in the pool
         for conn in connections:
+            conn._pool = None
             conn.close()
 
         # Signal to eventual clients in the queue that business is closed.
@@ -521,6 +522,7 @@ class ConnectionPool(Generic[CT], BasePool):
             # Check for expired connections
             if conn._expire_at <= monotonic():
                 logger.info("discarding expired connection %s", conn)
+                conn._pool = None
                 conn.close()
                 self.run_task(AddConnection(self))
                 continue
@@ -700,6 +702,7 @@ class ConnectionPool(Generic[CT], BasePool):
         if conn._expire_at <= monotonic():
             self.run_task(AddConnection(self))
             logger.info("discarding expired connection")
+            conn._pool = None
             conn.close()
             return
 
@@ -773,10 +776,12 @@ class ConnectionPool(Generic[CT], BasePool):
                     ex,
                     conn,
                 )
+                conn._pool = None
                 conn.close()
         elif status == TransactionStatus.ACTIVE:
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
+            conn._pool = None
             conn.close()
 
         if self._reset:
@@ -789,6 +794,7 @@ class ConnectionPool(Generic[CT], BasePool):
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
+                conn._pool = None
                 conn.close()
 
     def _shrink_pool(self) -> None:
@@ -813,6 +819,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 nconns_min,
                 self.max_idle,
             )
+            to_close._pool = None
             to_close.close()
 
     def _get_measures(self) -> dict[str, int]:

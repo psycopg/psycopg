@@ -1122,3 +1122,23 @@ async def test_close_returns_custom_class_old(dsn):
 
     with pytest.raises(TypeError, match="close_returns=True"):
         pool.AsyncConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+async def test_close_returns_no_loop(dsn):
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, close_returns=True, max_lifetime=0.05
+    ) as p:
+        conn = await p.getconn()
+        await asleep(0.1)
+        assert len(p._pool) == 0
+        await asleep(0.1)  # wait for the connection to expire
+        await conn.close()
+        await asleep(0.1)
+        assert len(p._pool) == 1
+        conn = await p.getconn()
+        await asleep(0.1)
+        assert len(p._pool) == 0
+        await conn.close()
+        await asleep(0.1)
+        assert len(p._pool) == 1
