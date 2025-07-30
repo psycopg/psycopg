@@ -276,10 +276,10 @@ def test_first_notify_not_lost(conn, conn_cls, dsn, query_between):
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.parametrize("sleep_on", ["server", "client"])
-def test_notify_query_notify(conn_cls, dsn, sleep_on):
+@pytest.mark.parametrize("listen_by", ["callback", "generator"])
+def test_notify_query_notify(conn_cls, dsn, sleep_on, listen_by):
     e = Event()
-    by_gen: list[int] = []
-    by_cb: list[int] = []
+    notifies: list[int] = []
     workers = []
 
     def notifier():
@@ -291,12 +291,14 @@ def test_notify_query_notify(conn_cls, dsn, sleep_on):
 
     def listener():
         with conn_cls.connect(dsn, autocommit=True) as conn:
-            conn.add_notify_handler(lambda n: by_cb.append(int(n.payload)))
+            if listen_by == "callback":
+                conn.add_notify_handler(lambda n: notifies.append(int(n.payload)))
 
             conn.execute("listen counter")
             e.set()
             for n in conn.notifies(timeout=0.2):
-                by_gen.append(int(n.payload))
+                if listen_by == "generator":
+                    notifies.append(int(n.payload))
 
             if sleep_on == "server":
                 conn.execute("select pg_sleep(0.2)")
@@ -305,11 +307,12 @@ def test_notify_query_notify(conn_cls, dsn, sleep_on):
                 sleep(0.2)
 
             for n in conn.notifies(timeout=0.2):
-                by_gen.append(int(n.payload))
+                if listen_by == "generator":
+                    notifies.append(int(n.payload))
 
     workers.append(spawn(listener))
     e.wait()
     workers.append(spawn(notifier))
     gather(*workers)
 
-    assert list(range(3)) == by_cb == by_gen, f"by_gen={by_gen!r}, by_cb={by_cb!r}"
+    assert notifies == list(range(3))
