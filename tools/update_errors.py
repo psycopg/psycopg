@@ -25,7 +25,7 @@ Error = namedtuple("Error", "sqlstate errlabel clsname basename")
 
 def main():
     # Note: add "master" for a preview
-    classes, errors = fetch_errors("9.6 10 11 12 13 14 15 16 17".split())
+    classes, errors = fetch_errors("9.6 10 11 12 13 14 15 16 17 18".split())
 
     fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
     update_file(fn, generate_module_data(classes, errors))

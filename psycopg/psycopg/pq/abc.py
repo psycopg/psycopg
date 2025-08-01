@@ -49,6 +49,9 @@ class PGconn(Protocol):
     def db(self) -> bytes: ...
 
     @property
+    def service(self) -> bytes: ...
+
+    @property
     def user(self) -> bytes: ...
 
     @property
@@ -87,6 +90,9 @@ class PGconn(Protocol):
 
     @property
     def protocol_version(self) -> int: ...
+
+    @property
+    def full_protocol_version(self) -> int: ...
 
     @property
     def server_version(self) -> int: ...
