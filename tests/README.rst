@@ -69,6 +69,18 @@ Test options
   ``PGconn`` functions.
 
 
+Testing in parallel
+-------------------
+
+It is possible to run the test suite in parallel using pytest-xdist. This
+can speed things up depending on the number of CPU cores available::
+
+    pip install pytest-xdist
+    for ((i=0; i<$(nproc); i++)); do createdb psycopg_test_gw$i; done
+    export PSYCOPG_TEST_DSN="dbname=psycopg_test"
+    pytest -n auto
+
+
 Testing in docker
 -----------------
 

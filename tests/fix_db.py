@@ -93,6 +93,14 @@ def session_dsn(request):
     if (dsn := request.config.getoption("--test-dsn")) is None:
         pytest.skip("skipping test as no --test-dsn")
 
+    # If using xdist, add _gwN suffix to database name for worker isolation.
+    workerid = getattr(request.config, "workerinput", {}).get("workerid")
+    if workerid:
+        conninfo_dict = conninfo_to_dict(dsn)
+        dbname = conninfo_dict.pop("dbname", "postgres")
+        assert isinstance(dbname, str)
+        dsn = make_conninfo(dsn, dbname=dbname + f"_{workerid}")
+
     warm_up_database(dsn)
     return dsn
 
