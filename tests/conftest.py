@@ -62,6 +62,9 @@ def pytest_sessionstart(session):
     # In case of segfault, pytest doesn't get a chance to write failed tests
     # in the cache. As a consequence, retries would find no test failed and
     # assume that all tests passed in the previous run, making the whole test pass.
+    # When using pytest-xdist, only the controller should manage the cache.
+    if hasattr(session.config, "workerinput"):
+        return
     if (cache := session.config.cache).get("segfault", False):
         session.warn(Warning("Previous run resulted in segfault! Not running any test"))
         session.warn(Warning("(delete '.pytest_cache/v/segfault' to clear this state)"))
@@ -92,6 +95,9 @@ allow_fail_messages: list[str] = []
 
 def pytest_sessionfinish(session, exitstatus):
     # Mark the test run successful (in the sense -weak- that we didn't segfault).
+    # When using pytest-xdist, only the controller should manage the cache.
+    if hasattr(session.config, "workerinput"):
+        return
     session.config.cache.set("segfault", False)
 
 
