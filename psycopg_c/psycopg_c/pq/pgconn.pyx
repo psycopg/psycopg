@@ -127,6 +127,13 @@ cdef class PGconn:
         return _call_bytes(self, libpq.PQdb)
 
     @property
+    def service(self) -> bytes:
+        _check_supported("PQservice", 180000)
+        _ensure_pgconn(self)
+        cdef char *rv = libpq.PQservice(self._pgconn_ptr)
+        return rv if rv is not NULL else b""
+
+    @property
     def user(self) -> bytes:
         return _call_bytes(self, libpq.PQuser)
 
@@ -195,6 +202,12 @@ cdef class PGconn:
     @property
     def protocol_version(self) -> int:
         return _call_int(self, libpq.PQprotocolVersion)
+
+    @property
+    def full_protocol_version(self) -> int:
+        _check_supported("PQfullProtocolVersion", 180000)
+        _ensure_pgconn(self)
+        return libpq.PQfullProtocolVersion(self._pgconn_ptr)
 
     @property
     def server_version(self) -> int:
