@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.3.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add `!close_returns` for :ref:`integration with SQLAlchemy <pool-sqlalchemy>`
+  (:ticket:`#1046`).
+
+
 Current release
 ---------------
 

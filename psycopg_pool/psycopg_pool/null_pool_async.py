@@ -36,6 +36,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         check: AsyncConnectionCB[ACT] | None = None,
         reset: AsyncConnectionCB[ACT] | None = None,
         name: str | None = None,
+        close_returns: bool = False,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
@@ -55,6 +56,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             min_size=min_size,
             max_size=max_size,
             name=name,
+            close_returns=False,  # close_returns=True makes no sense
             timeout=timeout,
             max_waiting=max_waiting,
             max_lifetime=max_lifetime,
