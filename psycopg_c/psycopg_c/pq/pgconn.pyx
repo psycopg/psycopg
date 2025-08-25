@@ -220,6 +220,11 @@ cdef class PGconn:
         return bool(libpq.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
+    def used_gssapi(self) -> bool:
+        _check_supported("PQconnectionUsedGSSAPI", 160000)
+        return bool(libpq.PQconnectionUsedGSSAPI(self._pgconn_ptr))
+
+    @property
     def ssl_in_use(self) -> bool:
         return bool(_call_int(self, <conn_int_f>libpq.PQsslInUse))
 
