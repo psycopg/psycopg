@@ -30,6 +30,15 @@ Psycopg 3.3.0 (unreleased)
 
 .. rubric:: Other changes
 
+- Disable default GSSAPI preferential connection in the binary package
+  (:ticket:`#1136`).
+
+  .. warning::
+
+    Please explicitly set the gssencmode_ connection parameter or the
+    :envvar:`PGGSSENCMODE` environment variable to interact reliably with the
+    GSSAPI.
+
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
@@ -72,9 +81,11 @@ Psycopg 3.2.10 (unreleased)
 
     In a future Psycopg version the default in the binary package will be
     changed to ``disable``. If you need to interact with the GSSAPI reliably
-    you should explicitly set the ``gssencmode`` parameter in the connection
+    you should explicitly set the gssencmode_ parameter in the connection
     string or the :envvar:`PGGSSENCMODE` environment variable to ``prefer`` or
     ``require``.
+
+.. _gssencmode: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
 
 
 Current release

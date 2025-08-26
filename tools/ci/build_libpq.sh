@@ -233,6 +233,24 @@ if [ ! -d "${postgres_dir}" ]; then
 
     pushd "${postgres_dir}"
 
+    # Change the gssencmode default to 'disable' to avoid various troubles
+    # related to unwanted GSSAPI interaction. See #1136.
+    patch -f -p1 <<HERE
+diff --git a/src/interfaces/libpq/fe-connect.c b/src/interfaces/libpq/fe-connect.c
+index 454d2ea3fb7..52c64ba3292 100644
+--- a/src/interfaces/libpq/fe-connect.c
++++ b/src/interfaces/libpq/fe-connect.c
+@@ -132,7 +132,7 @@ static int	ldapServiceLookup(const char *purl, PQconninfoOption *options,
+ #define DefaultSSLNegotiation	"postgres"
+ #ifdef ENABLE_GSS
+ #include "fe-gssapi-common.h"
+-#define DefaultGSSMode "prefer"
++#define DefaultGSSMode "disable"
+ #else
+ #define DefaultGSSMode "disable"
+ #endif
+HERE
+
     if [ "$ID" != "macos" ]; then
         # Match the default unix socket dir default with what defined on Ubuntu and
         # Red Hat, which seems the most common location
