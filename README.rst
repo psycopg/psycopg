@@ -9,7 +9,7 @@ Installation
 
 Quick version::
 
-    pip install "psycopg[binary,pool]"      # install binary dependencies
+    pip install "psycopg[binary,pool]"
 
 For further information about installation please check `the documentation`__.
 
