@@ -67,7 +67,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
+          # NOMERGE
+          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}-gssencmode-disable
 
       - name: Create the binary package source tree
         run: python3 ./tools/ci/copy_to_binary.py
@@ -140,7 +141,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}
+          # NOMERGE
+          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}-gssencmode-disable
 
       - name: Create the binary package source tree
         run: python3 ./tools/ci/copy_to_binary.py
