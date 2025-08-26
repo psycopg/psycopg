@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 
@@ -16,6 +17,13 @@ def test_version():
 
 def test_build_version():
     assert pq.__build_version__ and pq.__build_version__ >= 70400
+
+
+@pytest.mark.skipif('pq.__impl__ != "binary"')
+@pytest.mark.skipif(sys.platform == "win32", reason="libpq currently not built by us")
+def test_gssencmode_default():
+    d = [d for d in pq.Conninfo.get_defaults() if d.keyword == b"gssencmode"][0]
+    assert (d.compiled or b"").decode() == "disable"
 
 
 @pytest.mark.skipif("not os.environ.get('PSYCOPG_TEST_WANT_LIBPQ_BUILD')")
