@@ -377,6 +377,17 @@ def test_used_password(pgconn, dsn, monkeypatch):
     pgconn.used_password
 
 
+@pytest.mark.libpq(">= 16")
+def test_used_gssapi(pgconn):
+    assert isinstance(pgconn.used_gssapi, bool)
+
+
+@pytest.mark.libpq("< 16")
+def test_used_gssapi_not_suppored(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.used_gssapi
+
+
 def test_ssl_in_use(pgconn):
     assert isinstance(pgconn.ssl_in_use, bool)
 

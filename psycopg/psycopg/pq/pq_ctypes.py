@@ -269,6 +269,14 @@ class PGconn:
         return bool(impl.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
+    def used_gssapi(self) -> bool:
+        """True if the connection authentication method used GSSAPI.
+
+        See :pq:`PQconnectionUsedGSSAPI` for details.
+        """
+        return bool(impl.PQconnectionUsedGSSAPI(self._pgconn_ptr))
+
+    @property
     def ssl_in_use(self) -> bool:
         return self._call_bool(impl.PQsslInUse)
 

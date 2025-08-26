@@ -13,12 +13,22 @@ Future releases
 Psycopg 3.3.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. rubric:: New top-level features
+
 - Cursors are now iterators, not only iterables. This means you can call
   ``next(cur)`` to fetch the next row (:ticket:`#1064`).
-- Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 - Add `Cursor.results()` to iterate over the result sets of the queries
   executed though `~Cursor.executemany()` or `~Cursor.execute()`
   (:ticket:`#1080`).
+
+.. rubric:: New libpq wrapper features
+
+- Add `pq.PGconn.used_gssapi` attribute and `Capabilities.has_used_gssapi()`
+  function (:ticket:`#1138`).
+
+.. rubric:: Other changes
+
+- Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
 Psycopg 3.2.10 (unreleased)
