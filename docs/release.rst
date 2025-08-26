@@ -89,6 +89,34 @@ When a new PostgreSQL major version is released
   - ``content/features/contents.lr`` in the psycopg-website repository.
 
 
+Adding new libpq wrapper methods
+--------------------------------
+
+The ```psycopg.pq` module is a thin wrapper around the libpq, only doing the
+minimal work to make the library somewhat Pythonic (e.g. converting types and
+raising exceptions instead of returning error values).
+
+When new functionalities are added to the libpq we often want to expose them
+to Python (either to allow Python users to use them directly or to build new
+features on top of them). The procedure touches several files, in order to
+add function wrappers to both the Python and the C implementation of the
+libpq, to the objects interfaces and every object implementing them, and
+eventually to bubble up to some Python object.
+
+It is polite to add new top-level objects interfaces (such as
+``connection.info`` or ``Capabilities`` only on minor releases (3.x), but if
+we need to add a libpq function wrapper to solve an issue we can do it in a
+bugfix release, without documenting it (e.g. ``PQconnectionUsedGSSAPI`` was
+added in 3.2.10 but only advertised in 3.3).
+
+You can use `PR 1140`__ as a reference for the work to do (code, tests,
+documentation). In this MR, the changes in the first commit are suitable to
+introduce a new function in a bugfix release, the second commit changes make
+the new functionality public.
+
+.. __: https://github.com/psycopg/psycopg/pull/1140/
+
+
 When a new Python major version is released
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
