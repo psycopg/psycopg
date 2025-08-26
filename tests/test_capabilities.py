@@ -15,6 +15,7 @@ caps = [
     ("has_hostaddr", "Connection.info.hostaddr", 12),
     ("has_pipeline", "Connection.pipeline()", 14),
     ("has_set_trace_flags", "PGconn.set_trace_flags()", 14),
+    ("has_used_gssapi", "PGconn.used_gssapi", 16),
     ("has_cancel_safe", "Connection.cancel_safe()", 17),
     ("has_stream_chunked", "Cursor.stream() with 'size' parameter greater than 1", 17),
     ("has_send_close_prepared", "PGconn.send_close_prepared()", 17),

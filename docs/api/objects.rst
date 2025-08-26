@@ -150,6 +150,10 @@ Libpq capabilities information
     .. automethod:: has_hostaddr
     .. automethod:: has_pipeline
     .. automethod:: has_set_trace_flags
+    .. automethod:: has_used_gssapi
+
+        .. versionadded:: 3.3
+
     .. automethod:: has_cancel_safe
 
         .. note::

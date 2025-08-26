@@ -91,6 +91,9 @@ Objects wrapping libpq structures and functions
     .. automethod:: get_cancel
     .. autoattribute:: needs_password
     .. autoattribute:: used_password
+    .. autoattribute:: used_gssapi
+
+        .. versionadded:: 3.3
 
     .. automethod:: encrypt_password
 

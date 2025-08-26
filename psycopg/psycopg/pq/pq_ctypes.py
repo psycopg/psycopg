@@ -270,6 +270,10 @@ class PGconn:
 
     @property
     def used_gssapi(self) -> bool:
+        """True if the connection authentication method used GSSAPI.
+
+        See :pq:`PQconnectionUsedGSSAPI` for details.
+        """
         return bool(impl.PQconnectionUsedGSSAPI(self._pgconn_ptr))
 
     @property
