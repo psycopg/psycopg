@@ -9,7 +9,6 @@ Installation
 
 Quick version::
 
-    pip install --upgrade pip               # upgrade pip to at least 20.3
     pip install "psycopg[binary,pool]"      # install binary dependencies
 
 For further information about installation please check `the documentation`__.
