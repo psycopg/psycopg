@@ -30,6 +30,7 @@ from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from ._capabilities import capabilities
 from ._pipeline_async import AsyncPipeline
+from ._conninfo_utils import gssapi_requested
 from ._connection_base import BaseConnection, CursorRow, Notify
 from ._server_cursor_async import AsyncServerCursor
 
@@ -141,6 +142,21 @@ class AsyncConnection(BaseConnection[Row]):
             lines.append("Multiple connection attempts failed. All failures were:")
             lines.extend(f"- {descr}: {error}" for error, descr in conn_errors)
             raise type(last_ex)("\n".join(lines)).with_traceback(None)
+
+        if (
+            capabilities.has_used_gssapi()
+            and rv.pgconn.used_gssapi
+            and not gssapi_requested(params)
+        ):
+            warnings.warn(
+                "the connection was obtained using the GSSAPI relying on the"
+                " 'gssencmode=prefer' libpq default. The value for this default might"
+                " be 'disable' instead, in certain psycopg[binary] implementations."
+                " If you wish to interact with the GSSAPI reliably please set the"
+                " 'gssencmode' parameter in the connection string or the"
+                " 'PGGSSENCMODE' environment variable to 'prefer' or 'require'",
+                RuntimeWarning,
+            )
 
         rv._autocommit = bool(autocommit)
         if row_factory:
