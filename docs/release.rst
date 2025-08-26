@@ -92,7 +92,7 @@ When a new PostgreSQL major version is released
 Adding new libpq wrapper methods
 --------------------------------
 
-The ```psycopg.pq` module is a thin wrapper around the libpq, only doing the
+The ``psycopg.pq`` module is a thin wrapper around the libpq, only doing the
 minimal work to make the library somewhat Pythonic (e.g. converting types and
 raising exceptions instead of returning error values).
 
