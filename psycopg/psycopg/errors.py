@@ -66,6 +66,7 @@ class FinishedPGconn:
     backend_pid: int = 0
     needs_password: bool = False
     used_password: bool = False
+    used_gssapi: bool = False
     ssl_in_use: bool = False
 
     nonblocking: int = 0

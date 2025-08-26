@@ -259,6 +259,13 @@ PQconnectionUsedPassword = pq.PQconnectionUsedPassword
 PQconnectionUsedPassword.argtypes = [PGconn_ptr]
 PQconnectionUsedPassword.restype = c_int
 
+if libpq_version >= 160000:
+    PQconnectionUsedGSSAPI = pq.PQconnectionUsedGSSAPI
+    PQconnectionUsedGSSAPI.argtypes = [PGconn_ptr]
+    PQconnectionUsedGSSAPI.restype = c_int
+else:
+    PQconnectionUsedGSSAPI = not_supported_before("PQconnectionUsedGSSAPI", 160000)
+
 PQsslInUse = pq.PQsslInUse
 PQsslInUse.argtypes = [PGconn_ptr]
 PQsslInUse.restype = c_int

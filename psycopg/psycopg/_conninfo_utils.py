@@ -120,3 +120,8 @@ def is_ip_address(s: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def gssapi_requested(params: ConnDict) -> bool:
+    """Return `true` if `gssencmode` was specified explicitly."""
+    return bool(get_param(params, "gssencmode"))
