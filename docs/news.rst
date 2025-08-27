@@ -46,6 +46,7 @@ Psycopg 3.3.0 (unreleased)
 Psycopg 3.2.11 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix spurious readiness flags in some of the wait functions (:ticket:`#1141`).
 - Fix bad data on error in binary copy (:ticket:`#1147`).
 - Don't raise warning, and don't leak resources, if a builtin function is used
   as JSON dumper/loader function (:ticket:`#1165`).

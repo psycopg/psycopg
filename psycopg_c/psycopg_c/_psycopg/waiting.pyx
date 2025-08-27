@@ -88,8 +88,8 @@ retry_eintr:
 
     rv = 0;  /* success, maybe with timeout */
     if (select_rv >= 0) {
-        if (input_fd.events & POLLIN) { rv |= SELECT_EV_READ; }
-        if (input_fd.events & POLLOUT) { rv |= SELECT_EV_WRITE; }
+        if (input_fd.revents & POLLIN) { rv |= SELECT_EV_READ; }
+        if (input_fd.revents & POLLOUT) { rv |= SELECT_EV_WRITE; }
     }
 
 #else
