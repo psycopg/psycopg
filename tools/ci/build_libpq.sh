@@ -48,8 +48,7 @@ case "$ID" in
 
     alpine)
         apk upgrade
-        apk add --no-cache flex krb5-dev linux-pam-dev openldap-dev \
-            openssl-dev tzdata zlib-dev
+        apk add --no-cache flex krb5-dev krb5-libs linux-pam-dev openldap-dev             openssl-dev tzdata zlib-dev
         ;;
 
     macos)
