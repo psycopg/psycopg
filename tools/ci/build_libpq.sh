@@ -35,11 +35,6 @@ case "$(uname)" in
         ;;
 esac
 
-if [[ -f "${LIBPQ_BUILD_PREFIX}/lib/libpq.${library_suffix}" ]]; then
-    echo "libpq already available: build skipped" >&2
-    exit 0
-fi
-
 case "$ID" in
     centos)
         yum update -y
@@ -76,6 +71,10 @@ case "$ID" in
         ;;
 esac
 
+if [[ -f "${LIBPQ_BUILD_PREFIX}/lib/libpq.${library_suffix}" ]]; then
+    echo "libpq already available: build skipped" >&2
+    exit 0
+fi
 
 if [ "$ID" == "macos" ]; then
     make_configure_standard_flags=( \
