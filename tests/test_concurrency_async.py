@@ -410,6 +410,7 @@ def test_type_error_shadow(dsn):
 import sys
 import uuid
 import asyncio
+import selectors
 
 import psycopg
 
@@ -460,10 +461,17 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    kwargs = {{}}
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        if sys.version_info >= (3, 12):
+            kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+                selectors.SelectSelector()
+            )
+        else:
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     try:
-        asyncio.run(main())
+        asyncio.run(main(), **kwargs)
     finally:
         assert excs, "No exception raised by workers"
         for ex in excs:

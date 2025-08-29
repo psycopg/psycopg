@@ -6,6 +6,7 @@ import time
 import random
 import asyncio
 import logging
+import selectors
 from enum import Enum
 from typing import Any
 from argparse import ArgumentParser, Namespace
@@ -76,13 +77,18 @@ def main() -> None:
         elif name == Driver.psycopg_async:
             import psycopg
 
+            kwargs: dict[str, Any] = {}
             if sys.platform == "win32":
-                if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
+                if sys.version_info >= (3, 12):
+                    kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+                        selectors.SelectSelector()
+                    )
+                else:
                     asyncio.set_event_loop_policy(
                         asyncio.WindowsSelectorEventLoopPolicy()
                     )
 
-            asyncio.run(run_psycopg_async(psycopg, args))
+            asyncio.run(run_psycopg_async(psycopg, args), **kwargs)
 
         elif name == Driver.asyncpg:
             import asyncpg  # type: ignore
