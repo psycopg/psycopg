@@ -94,8 +94,8 @@ use the `psycopg.sql` module::
     # This will quote the user and the password using the right quotes
     # e.g.: ALTER USER "foo" SET PASSWORD 'bar'
     >>> conn.execute(
-    ...     sql.SQL("ALTER USER {} SET PASSWORD {}")
-    ...     .format(sql.Identifier(username), password))
+    ...     sql.SQL("ALTER USER {} SET PASSWORD {}"
+    ...     .format(sql.Identifier(username), password)))
 
 
 .. index::
