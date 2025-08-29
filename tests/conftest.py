@@ -71,8 +71,8 @@ def pytest_sessionstart(session):
 
 asyncio_options: dict[str, Any] = {}
 if sys.platform == "win32":
-    asyncio_options["loop_factory"] = (
-        asyncio.WindowsSelectorEventLoopPolicy().new_event_loop
+    asyncio_options["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+        selectors.SelectSelector()
     )
 
 
