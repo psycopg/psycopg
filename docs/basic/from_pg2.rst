@@ -144,7 +144,7 @@ can compose a multiple query on the client side and run them all in the same
 
     >>> from psycopg import sql
     >>> conn.execute(
-    ...     sql.SQL("INSERT INTO foo VALUES ({}); INSERT INTO foo values ({})"
+    ...     sql.SQL("INSERT INTO foo VALUES ({}); INSERT INTO foo values ({})")
     ...     .format(10, 20))
 
 or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
