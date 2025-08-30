@@ -122,15 +122,9 @@ serialized.
 
     On Windows, Psycopg is not compatible with the default
     `~asyncio.ProactorEventLoop`. Please use a different loop, for instance
-    the `~asyncio.SelectorEventLoop`.
+    the `~asyncio.SelectorEventLoop`. See `asyncio documentation`__ for details.
 
-    For instance, you can use, early in your program:
-
-    .. parsed-literal::
-
-        `asyncio.set_event_loop_policy`\ (
-            `asyncio.WindowsSelectorEventLoopPolicy`\ ()
-        )
+    .. __: https://docs.python.org/3.14/library/asyncio-eventloop.html#asyncio.SelectorEventLoop
 
 
 
