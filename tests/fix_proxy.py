@@ -1,9 +1,9 @@
 import os
+import sys
 import time
 import socket
 import logging
 import subprocess as sp
-from shutil import which
 from contextlib import contextmanager
 
 import pytest
@@ -73,12 +73,9 @@ class Proxy:
             return
 
         logging.info("starting proxy")
-
-        if not (pproxy := which("pproxy")):
-            raise ValueError("pproxy program not found")
-        cmdline = [pproxy, "--reuse"]
-        cmdline.extend(["-l", f"tunnel://:{self.client_port}"])
-        cmdline.extend(["-r", f"tunnel://{self.server_host}:{self.server_port}"])
+        cmdline = [sys.executable, "-m", "tests.pproxy_fix", "--reuse"]
+        cmdline += ["-l", f"tunnel://:{self.client_port}"]
+        cmdline += ["-r", f"tunnel://{self.server_host}:{self.server_port}"]
 
         self.proc = sp.Popen(cmdline, stdout=sp.DEVNULL)
         logging.info("proxy started")
