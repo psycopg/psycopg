@@ -54,7 +54,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -73,7 +73,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:
@@ -134,7 +134,7 @@ jobs:
 
     steps:
       - name: Checkout repos
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache libpq build
         uses: actions/cache@v4
@@ -146,7 +146,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:
@@ -193,7 +193,7 @@ jobs:
       # there are some other libpq in PATH
       - run: rm -rf c:/tools/php C:/Strawberry/c/bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Start PostgreSQL service for test
         run: |
@@ -216,7 +216,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:
