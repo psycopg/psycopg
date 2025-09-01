@@ -34,10 +34,7 @@ def format_row_binary(
     else:
         pos = PyByteArray_GET_SIZE(out)
 
-    # let's start from a nice chunk
-    # (larger than most fixed size; for variable ones, oh well, we'll resize it)
-    cdef char *target = CDumper.ensure_size(
-        out, pos, sizeof(berowlen) + 20 * rowlen)
+    cdef char *target = CDumper.ensure_size(out, pos, sizeof(berowlen))
 
     # Write the number of fields as network-order 16 bits
     memcpy(target, <void *>&berowlen, sizeof(berowlen))

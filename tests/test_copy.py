@@ -643,6 +643,18 @@ def test_description(conn):
         assert cur.description[2].name == "column_3"
 
 
+def test_binary_partial_row(conn):
+    cur = conn.cursor()
+    ensure_table(cur, "id serial primary key, num int4, arr int4[][]")
+    with pytest.raises(
+        psycopg.DataError, match="nested lists have inconsistent depths"
+    ):
+        with cur.copy("copy copy_in (num, arr) from stdin (format binary)") as copy:
+            copy.set_types(["int4", "int4[]"])
+            copy.write_row([15, None])
+            copy.write_row([16, [[None], None]])
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(pq.Format.TEXT, "sample_text"), (pq.Format.BINARY, "sample_binary")],
