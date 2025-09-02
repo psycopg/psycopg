@@ -20,6 +20,10 @@ pytest_plugins = (
     "tests.pool.fix_pool",
 )
 
+collect_ignore: list[str] = []
+if sys.version_info[:2] < (3, 14):
+    collect_ignore.append("test_tstring.py")
+
 
 def pytest_configure(config):
     markers = [
