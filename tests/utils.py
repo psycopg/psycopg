@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import re
 import sys
+import asyncio
 import operator
-from typing import Callable
+import selectors
+from typing import Any, Callable
 from contextlib import contextmanager
 
 if sys.version_info >= (3, 9):
@@ -189,3 +191,22 @@ def set_autocommit(conn, value):
         return conn.set_autocommit(value)
     else:
         raise TypeError(f"not a connection: {conn}")
+
+
+def windows_loop_factory() -> asyncio.AbstractEventLoop:
+    return asyncio.SelectorEventLoop(selectors.SelectSelector())
+
+
+def asyncio_run(coro: Any, *, debug: bool | None = None) -> Any:
+    # loop policies are deprecated from Python 3.14
+    # loop_factory was introduced in Python 3.12
+    kwargs: dict[str, Any] = {}
+    if sys.platform == "win32":
+        if sys.version_info >= (3, 12):
+            kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+                selectors.SelectSelector()
+            )
+        else:
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    return asyncio.run(coro, debug=debug, **kwargs)

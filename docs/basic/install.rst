@@ -22,7 +22,7 @@ Supported systems
 
 The Psycopg version documented here has *official and tested* support for:
 
-- Python: from version 3.8 to 3.13
+- Python: from version 3.8 to 3.14
 
   - Python 3.6 supported before Psycopg 3.1
   - Python 3.7 supported before Psycopg 3.2

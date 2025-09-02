@@ -597,7 +597,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             return
 
         if True:  # ASYNC
-            if asyncio.iscoroutinefunction(self._reconnect_failed):
+            import inspect
+
+            if inspect.iscoroutinefunction(self._reconnect_failed):
                 await self._reconnect_failed(self)
             else:
                 self._reconnect_failed(self)

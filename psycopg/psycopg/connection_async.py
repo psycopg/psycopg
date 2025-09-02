@@ -101,11 +101,13 @@ class AsyncConnection(BaseConnection[Row]):
             if sys.platform == "win32":
                 loop = asyncio.get_running_loop()
                 if isinstance(loop, asyncio.ProactorEventLoop):
+
+                    from ._compat import _asyncio_run_snippet
+
                     raise e.InterfaceError(
                         "Psycopg cannot use the 'ProactorEventLoop' to run in async"
                         " mode. Please use a compatible event loop, for instance by"
-                        " setting 'asyncio.set_event_loop_policy"
-                        "(WindowsSelectorEventLoopPolicy())'"
+                        + f" {_asyncio_run_snippet}"
                     )
 
         params = await cls._get_connection_params(conninfo, **kwargs)
