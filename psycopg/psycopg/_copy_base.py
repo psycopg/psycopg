@@ -286,9 +286,9 @@ class BinaryFormatter(Formatter):
             self._signature_sent = True
 
         if _psycopg:
-            # the c version does inplace writes thus has to increase the buffer prehand
-            # before a dumper might throw, which may corrupt the output buffer
-            # to ensure buffer integrity on row level we take the last good row end
+            # the c version writes data inplace thus has to increase the buffer
+            # prehand before a dumper might throw, which may corrupt the buffer
+            # to ensure buffer integrity on row level we take the last good row
             # and reset the buffer stripping the faulty row data
             current_length = len(self._write_buffer)
             try:
