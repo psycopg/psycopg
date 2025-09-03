@@ -347,8 +347,8 @@ def _format_row_binary(
     if out is None:
         out = bytearray()
 
-    out += _pack_int2(len(row))
     adapted = tx.dump_sequence(row, [PY_BINARY] * len(row))
+    out += _pack_int2(len(row))
     for b in adapted:
         if b is not None:
             out += _pack_int4(len(b))
