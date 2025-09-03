@@ -54,7 +54,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -134,7 +134,7 @@ jobs:
 
     steps:
       - name: Checkout repos
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache libpq build
         uses: actions/cache@v4
@@ -193,7 +193,7 @@ jobs:
       # there are some other libpq in PATH
       - run: rm -rf c:/tools/php C:/Strawberry/c/bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Start PostgreSQL service for test
         run: |
