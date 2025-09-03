@@ -285,7 +285,22 @@ class BinaryFormatter(Formatter):
             self._write_buffer += _binary_signature
             self._signature_sent = True
 
-        format_row_binary(row, self.transformer, self._write_buffer)
+        if _psycopg:
+            # the c version does inplace writes thus has to increase the buffer prehand
+            # before a dumper might throw, which may corrupt the output buffer
+            # to ensure buffer integrity on row level we take the last good row end
+            # and reset the buffer stripping the faulty row data
+            current_length = len(self._write_buffer)
+            try:
+                format_row_binary(row, self.transformer, self._write_buffer)
+            except Exception as e:
+                self._write_buffer = self._write_buffer[:current_length]
+                raise e
+        else:
+            # the python version manipulates the buffer late after the dumpers,
+            # thus no buffer correction is needed
+            format_row_binary(row, self.transformer, self._write_buffer)
+
         if len(self._write_buffer) > BUFFER_SIZE:
             buffer, self._write_buffer = self._write_buffer, bytearray()
             return buffer
@@ -348,8 +363,8 @@ def _format_row_binary(
     if out is None:
         out = bytearray()
 
-    out += _pack_int2(len(row))
     adapted = tx.dump_sequence(row, [PY_BINARY] * len(row))
+    out += _pack_int2(len(row))
     for b in adapted:
         if b is not None:
             out += _pack_int4(len(b))
