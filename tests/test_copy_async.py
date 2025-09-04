@@ -123,12 +123,12 @@ async def test_rows(aconn, format):
 @pytest.mark.parametrize("format", pq.Format)
 async def test_set_types(aconn, format):
     cur = aconn.cursor()
-    await ensure_table_async(cur, "id serial primary key, data jsonb")
+    await ensure_table_async(cur, "id serial primary key, data jsonb, data2 bigint")
     async with cur.copy(
-        f"copy copy_in (data) from stdin (format {format.name})"
+        f"copy copy_in (data, data2) from stdin (format {format.name})"
     ) as copy:
-        copy.set_types(["jsonb"])
-        await copy.write_row([{"foo": "bar"}])
+        copy.set_types(["jsonb", "bigint"])
+        await copy.write_row([{"foo": "bar"}, 123])
 
 
 async def test_set_custom_type(aconn, hstore):
