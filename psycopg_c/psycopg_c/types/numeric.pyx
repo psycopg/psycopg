@@ -48,6 +48,12 @@ int pg_lltoa(int64_t value, char *a);
     const int MAXINT8LEN
 
 
+# global to hold types considered as integer python types
+# _IntOrSubclassDumper and _MixedNumericDumper ctors
+# change it to int or (int, numpy.integer) once
+_int_classes = None
+
+
 cdef class _IntDumper(CDumper):
 
     format = PQ_TEXT
@@ -73,6 +79,16 @@ cdef class _IntDumper(CDumper):
 cdef class _IntOrSubclassDumper(_IntDumper):
 
     format = PQ_TEXT
+
+    def __cinit__(self, cls, context: AdaptContext | None = None):
+        global _int_classes
+
+        if _int_classes is None:
+            if "numpy" in sys.modules:
+                import numpy
+                _int_classes = (int, numpy.integer)
+            else:
+                _int_classes = int
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         return dump_int_or_sub_to_text(obj, rv, offset)
@@ -521,9 +537,6 @@ cdef class DecimalBinaryDumper(CDumper):
         return dump_decimal_to_numeric_binary(obj, rv, offset)
 
 
-_int_classes = None
-
-
 cdef class _MixedNumericDumper(CDumper):
 
     oid = oids.NUMERIC_OID
@@ -738,7 +751,7 @@ cdef Py_ssize_t dump_int_or_sub_to_text(
 
     # Ensure an int or a subclass. The 'is' type check is fast.
     # Passing a float must give an error, but passing an Enum should work.
-    if type(obj) is not int and not isinstance(obj, int):
+    if type(obj) is not int and not isinstance(obj, _int_classes):
         raise e.DataError(f"integer expected, got {type(obj).__name__!r}")
 
     val = PyLong_AsLongLongAndOverflow(obj, &overflow)
