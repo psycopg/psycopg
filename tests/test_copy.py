@@ -116,6 +116,15 @@ def test_rows(conn, format):
     assert conn.info.transaction_status == pq.TransactionStatus.INTRANS
 
 
+@pytest.mark.parametrize("format", pq.Format)
+def test_set_types(conn, format):
+    cur = conn.cursor()
+    ensure_table(cur, "id serial primary key, data jsonb")
+    with cur.copy(f"copy copy_in (data) from stdin (format {format.name})") as copy:
+        copy.set_types(["jsonb"])
+        copy.write_row([{"foo": "bar"}])
+
+
 def test_set_custom_type(conn, hstore):
     command = """copy (select '"a"=>"1", "b"=>"2"'::hstore) to stdout"""
     cur = conn.cursor()
