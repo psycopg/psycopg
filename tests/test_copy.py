@@ -119,10 +119,10 @@ def test_rows(conn, format):
 @pytest.mark.parametrize("format", pq.Format)
 def test_set_types(conn, format):
     cur = conn.cursor()
-    ensure_table(cur, "id serial primary key, data jsonb")
-    with cur.copy(f"copy copy_in (data) from stdin (format {format.name})") as copy:
-        copy.set_types(["jsonb"])
-        copy.write_row([{"foo": "bar"}])
+    ensure_table(cur, "id serial primary key, data jsonb, data2 bigint")
+    with cur.copy(f"copy copy_in (data, data2) from stdin (format {format.name})") as copy:
+        copy.set_types(["jsonb", "bigint"])
+        copy.write_row([{"foo": "bar"}, 123])
 
 
 def test_set_custom_type(conn, hstore):
