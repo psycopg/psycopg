@@ -118,11 +118,33 @@ def test_rows(conn, format):
 
 @pytest.mark.parametrize("format", pq.Format)
 def test_set_types(conn, format):
+    sample = ({"foo": "bar"}, 123)
     cur = conn.cursor()
-    ensure_table(cur, "id serial primary key, data jsonb")
-    with cur.copy(f"copy copy_in (data) from stdin (format {format.name})") as copy:
-        copy.set_types(["jsonb"])
-        copy.write_row([{"foo": "bar"}])
+    ensure_table(cur, "id serial primary key, data jsonb, data2 bigint")
+    with cur.copy(
+        f"copy copy_in (data, data2) from stdin (format {format.name})"
+    ) as copy:
+        copy.set_types(["jsonb", "bigint"])
+        copy.write_row(sample)
+    cur.execute("select data, data2 from copy_in")
+    data = cur.fetchone()
+    assert data == sample
+
+
+@pytest.mark.parametrize("format", pq.Format)
+@pytest.mark.parametrize("use_set_types", [True, False])
+def test_segfault_rowlen_mismatch(conn, format, use_set_types):
+    samples = [[123, 456], [123, 456, 789]]
+    cur = conn.cursor()
+    ensure_table(cur, "id serial primary key, data integer, data2 integer")
+    with pytest.raises(Exception):
+        with cur.copy(
+            f"copy copy_in (data, data2) from stdin (format {format.name})"
+        ) as copy:
+            if use_set_types:
+                copy.set_types(["integer", "integer"])
+            for row in samples:
+                copy.write_row(row)
 
 
 def test_set_custom_type(conn, hstore):
