@@ -268,6 +268,10 @@ class PGconn:
         return bool(impl.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
+    def used_gssapi(self) -> bool:
+        return bool(impl.PQconnectionUsedGSSAPI(self._pgconn_ptr))
+
+    @property
     def ssl_in_use(self) -> bool:
         return self._call_bool(impl.PQsslInUse)
 
