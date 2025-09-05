@@ -24,11 +24,11 @@ from ._compat import Self
 from ._acompat import ALock
 from .conninfo import conninfo_attempts_async, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
-from ._pipeline import AsyncPipeline
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from ._capabilities import capabilities
+from ._pipeline_async import AsyncPipeline
 from ._connection_base import BaseConnection, CursorRow, Notify
 from ._server_cursor_async import AsyncServerCursor
 

@@ -312,6 +312,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "__aiter__": "__iter__",
         "__anext__": "__next__",
         "_copy_async": "_copy",
+        "_pipeline_async": "_pipeline",
         "_server_cursor_async": "_server_cursor",
         "aclose": "close",
         "aclosing": "closing",
