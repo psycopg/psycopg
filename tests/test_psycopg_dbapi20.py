@@ -41,11 +41,6 @@ class PsycopgTPCTests(dbapi20_tpc.TwoPhaseCommitTests):
         return psycopg.connect(*self.connect_args)
 
 
-# Shut up warnings
-PsycopgTests.failUnless = PsycopgTests.assertTrue
-PsycopgTPCTests.assertEquals = PsycopgTPCTests.assertEqual
-
-
 @pytest.mark.parametrize(
     "typename, singleton",
     [

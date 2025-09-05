@@ -35,11 +35,20 @@ case "$(uname)" in
         ;;
 esac
 
+# Install packages required for test and wheels build, regardless of whether
+# we will build the libpq or not.
+case "$ID" in
+    alpine)
+        apk add --no-cache tzdata krb5-libs
+        ;;
+esac
+
 if [[ -f "${LIBPQ_BUILD_PREFIX}/lib/libpq.${library_suffix}" ]]; then
     echo "libpq already available: build skipped" >&2
     exit 0
 fi
 
+# Install packages required to build the libpq.
 case "$ID" in
     centos)
         yum update -y
@@ -49,7 +58,7 @@ case "$ID" in
     alpine)
         apk upgrade
         apk add --no-cache flex krb5-dev linux-pam-dev openldap-dev \
-            openssl-dev tzdata zlib-dev
+            openssl-dev zlib-dev
         ;;
 
     macos)

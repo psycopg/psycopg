@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, ppc64le, aarch64]
-        pyver: [cp310, cp311, cp312, cp313]
+        pyver: [cp310, cp311, cp312, cp313, cp314]
         platform: [manylinux, musllinux]
 
     steps:
@@ -73,7 +73,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:
@@ -130,7 +130,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64]
-        pyver: [cp310, cp311, cp312, cp313]
+        pyver: [cp310, cp311, cp312, cp313, cp314]
 
     steps:
       - name: Checkout repos
@@ -146,7 +146,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:
@@ -183,7 +183,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [win_amd64]
-        pyver: [cp310, cp311, cp312, cp313]
+        pyver: [cp310, cp311, cp312, cp313, cp314]
 
     defaults:
       run:
@@ -216,7 +216,7 @@ jobs:
         run: python3 ./tools/ci/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.0.0
+        uses: pypa/cibuildwheel@v3.1.4
         with:
           package-dir: psycopg_binary
         env:

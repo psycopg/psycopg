@@ -1,10 +1,11 @@
 # These tests relate to AsyncConnectionPool, but are not marked asyncio
 # because they rely on the pool initialization outside the asyncio loop.
 
-import sys
 import asyncio
 
 import pytest
+
+from tests.utils import asyncio_run as asyncio_run_
 
 try:
     import psycopg_pool as pool
@@ -67,11 +68,9 @@ def asyncio_run(recwarn, gc_collect):
     In certain runs, fd objects are leaked and the error will only be caught
     downstream, by some innocent test calling gc_collect().
     """
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     recwarn.clear()
     try:
-        yield asyncio.run
+        yield asyncio_run_
     finally:
         gc_collect()
         if recwarn:
