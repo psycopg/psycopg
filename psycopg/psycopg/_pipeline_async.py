@@ -1,5 +1,5 @@
 """
-commands pipeline management
+Psycopg AsyncPipeline object implementation.
 """
 
 # Copyright (C) 2021 The Psycopg Team
@@ -21,7 +21,7 @@ logger = logging.getLogger("psycopg")
 
 
 class AsyncPipeline(BasePipeline):
-    """Handler for async connection in pipeline mode."""
+    """Handler for (async) connection in pipeline mode."""
 
     __module__ = "psycopg"
     _conn: AsyncConnection[Any]
@@ -30,6 +30,9 @@ class AsyncPipeline(BasePipeline):
         super().__init__(conn)
 
     async def sync(self) -> None:
+        """Sync the pipeline, send any pending command and receive and process
+        all available results.
+        """
         try:
             async with self._conn.lock:
                 await self._conn.wait(self._sync_gen())

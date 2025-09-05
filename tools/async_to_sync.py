@@ -34,6 +34,7 @@ ALL_INPUTS = """
     psycopg/psycopg/_copy_async.py
     psycopg/psycopg/connection_async.py
     psycopg/psycopg/cursor_async.py
+    psycopg/psycopg/_pipeline_async.py
     psycopg/psycopg/_server_cursor_async.py
     psycopg_pool/psycopg_pool/null_pool_async.py
     psycopg_pool/psycopg_pool/pool_async.py
