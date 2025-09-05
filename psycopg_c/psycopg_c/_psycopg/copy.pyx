@@ -20,19 +20,15 @@ from psycopg import errors as e
 cdef int32_t _binary_null = -1
 
 
-def format_row_binary(
-    row: Sequence[Any], tx: Transformer, out: bytearray = None
+def _format_row_binary(
+    row: Sequence[Any], tx: Transformer, out: bytearray
 ) -> bytearray:
     """Convert a row of adapted data to the data to send for binary copy"""
     cdef Py_ssize_t rowlen = len(row)
     cdef uint16_t berowlen = endian.htobe16(<int16_t>rowlen)
 
-    cdef Py_ssize_t pos  # offset in 'out' where to write
-    if out is None:
-        out = PyByteArray_FromStringAndSize("", 0)
-        pos = 0
-    else:
-        pos = PyByteArray_GET_SIZE(out)
+    # offset in 'out' where to write
+    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
 
     # let's start from a nice chunk
     # (larger than most fixed size; for variable ones, oh well, we'll resize it)
@@ -96,6 +92,25 @@ def format_row_binary(
     return out
 
 
+def format_row_binary(
+    row: Sequence[Any], tx: Transformer, out: bytearray = None
+) -> bytearray:
+    cdef Py_ssize_t size
+    if out is None:
+        out = PyByteArray_FromStringAndSize("", 0)
+        size = 0
+    else:
+        size = PyByteArray_GET_SIZE(out)
+
+    try:
+        _format_row_binary(row, tx, out)
+    except Exception as e:
+        PyByteArray_Resize(out, size)
+        raise e
+
+    return out
+
+
 cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
     cdef char *target
     target = CDumper.ensure_size(out, pos[0], sizeof(_binary_null))
@@ -104,22 +119,11 @@ cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
     return 0
 
 
-def format_row_text(
-    row: Sequence[Any], tx: Transformer, out: bytearray = None
+def _format_row_text(
+    row: Sequence[Any], tx: Transformer, out: bytearray
 ) -> bytearray:
-    cdef Py_ssize_t pos  # offset in 'out' where to write
-    if out is None:
-        out = PyByteArray_FromStringAndSize("", 0)
-        pos = 0
-    else:
-        pos = PyByteArray_GET_SIZE(out)
-
-    cdef Py_ssize_t rowlen = len(row)
-
-    if rowlen == 0:
-        PyByteArray_Resize(out, pos + 1)
-        out[pos] = b"\n"
-        return out
+    # offset in 'out' where to write
+    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
 
     cdef Py_ssize_t size, tmpsize
     cdef char *buf
@@ -129,6 +133,7 @@ def format_row_text(
     cdef int with_tab
     cdef PyObject *fmt = <PyObject *>PG_TEXT
     cdef PyObject *row_dumper
+    cdef Py_ssize_t rowlen = len(row)
 
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
@@ -191,6 +196,32 @@ def format_row_text(
     # Resize to the final size, add the newline
     PyByteArray_Resize(out, pos + 1)
     out[pos] = b"\n"
+    return out
+
+
+def format_row_text(
+    row: Sequence[Any], tx: Transformer, out: bytearray = None
+) -> bytearray:
+    cdef Py_ssize_t size
+    if out is None:
+        out = PyByteArray_FromStringAndSize("", 0)
+        size = 0
+    else:
+        size = PyByteArray_GET_SIZE(out)
+
+    # exit early, if the row is empty
+    cdef Py_ssize_t rowlen = len(row)
+    if rowlen == 0:
+        PyByteArray_Resize(out, size + 1)
+        out[size] = b"\n"
+        return out
+
+    try:
+        _format_row_text(row, tx, out)
+    except Exception as e:
+        PyByteArray_Resize(out, size)
+        raise e
+
     return out
 
 

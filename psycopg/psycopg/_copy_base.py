@@ -285,21 +285,7 @@ class BinaryFormatter(Formatter):
             self._write_buffer += _binary_signature
             self._signature_sent = True
 
-        if _psycopg:
-            # the c version writes data inplace thus has to increase the buffer
-            # before a dumper might throw, which may corrupt the buffer
-            # to ensure buffer integrity on row level we take the last good row
-            # position and strip the faulty half-written row data
-            current_length = len(self._write_buffer)
-            try:
-                format_row_binary(row, self.transformer, self._write_buffer)
-            except Exception as e:
-                self._write_buffer = self._write_buffer[:current_length]
-                raise e
-        else:
-            # the python version manipulates the buffer late after the dumpers,
-            # thus no buffer correction is needed
-            format_row_binary(row, self.transformer, self._write_buffer)
+        format_row_binary(row, self.transformer, self._write_buffer)
 
         if len(self._write_buffer) > BUFFER_SIZE:
             buffer, self._write_buffer = self._write_buffer, bytearray()
