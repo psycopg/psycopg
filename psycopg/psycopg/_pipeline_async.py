@@ -15,44 +15,41 @@ from ._compat import Self
 from ._pipeline_base import BasePipeline
 
 if TYPE_CHECKING:
-    from .connection import Connection
+    from .connection_async import AsyncConnection
 
 logger = logging.getLogger("psycopg")
 
 
-class Pipeline(BasePipeline):
-    """Handler for connection in pipeline mode."""
+class AsyncPipeline(BasePipeline):
+    """Handler for async connection in pipeline mode."""
 
     __module__ = "psycopg"
-    _conn: Connection[Any]
+    _conn: AsyncConnection[Any]
 
-    def __init__(self, conn: Connection[Any]) -> None:
+    def __init__(self, conn: AsyncConnection[Any]) -> None:
         super().__init__(conn)
 
-    def sync(self) -> None:
-        """Sync the pipeline, send any pending command and receive and process
-        all available results.
-        """
+    async def sync(self) -> None:
         try:
-            with self._conn.lock:
-                self._conn.wait(self._sync_gen())
+            async with self._conn.lock:
+                await self._conn.wait(self._sync_gen())
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
-    def __enter__(self) -> Self:
-        with self._conn.lock:
-            self._conn.wait(self._enter_gen())
+    async def __aenter__(self) -> Self:
+        async with self._conn.lock:
+            await self._conn.wait(self._enter_gen())
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
         try:
-            with self._conn.lock:
-                self._conn.wait(self._exit_gen())
+            async with self._conn.lock:
+                await self._conn.wait(self._exit_gen())
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
