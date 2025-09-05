@@ -52,8 +52,9 @@ def format_row_binary(
 
     if not tx._row_dumpers:
         tx._row_dumpers = PyList_New(rowlen)
-
     dumpers = tx._row_dumpers
+    if len(dumpers) != rowlen:
+        raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
         item = row[i]
@@ -134,6 +135,8 @@ def format_row_text(
     if not tx._row_dumpers:
         tx._row_dumpers = PyList_New(rowlen)
     dumpers = tx._row_dumpers
+    if len(dumpers) != rowlen:
+        raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
