@@ -23,12 +23,12 @@ from ._enums import IsolationLevel
 from ._compat import Self
 from .conninfo import conninfo_attempts_async, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
-from ._pipeline import AsyncPipeline
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from ._capabilities import capabilities
 from ._conninfo_utils import gssapi_requested
+from ._pipeline_async import AsyncPipeline
 from ._connection_base import BaseConnection, CursorRow, Notify
 from ._server_cursor_async import AsyncServerCursor
 
@@ -446,6 +446,27 @@ class AsyncConnection(BaseConnection[Row]):
                 async with self.lock:
                     assert pipeline is self._pipeline
                     self._pipeline = None
+
+    @asynccontextmanager
+    async def _pipeline_nolock(self) -> AsyncIterator[AsyncPipeline]:
+        """like pipeline() but don't acquire a lock.
+
+        Assume that the caller is holding the lock.
+        """
+
+        # Currently only used internally by Cursor.executemany() in a branch
+        # in which we already established that the connection has no pipeline.
+        # If this changes we may relax the asserts.
+        assert not self._pipeline
+        # WARNING: reference loop, broken ahead.
+        pipeline = self._pipeline = AsyncPipeline(self, _no_lock=True)
+        try:
+            async with pipeline:
+                yield pipeline
+        finally:
+            assert pipeline.level == 0
+            assert pipeline is self._pipeline
+            self._pipeline = None
 
     async def wait(self, gen: PQGen[RV], interval: float | None = _WAIT_INTERVAL) -> RV:
         """

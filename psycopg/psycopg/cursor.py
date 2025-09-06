@@ -104,22 +104,23 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Execute the same command with a sequence of input data.
         """
         try:
-            if Pipeline.is_supported():
-                # If there is already a pipeline, ride it, in order to avoid
-                # sending unnecessary Sync.
-                with self._conn.lock:
-                    if p := self._conn._pipeline:
+            with self._conn.lock:
+                if Pipeline.is_supported():
+                    # If there is already a pipeline, ride it, in order to avoid
+                    # sending unnecessary Sync.
+                    if self._conn._pipeline:
                         self._conn.wait(
                             self._executemany_gen_pipeline(query, params_seq, returning)
                         )
-                # Otherwise, make a new one
-                if not p:
-                    with self._conn.pipeline(), self._conn.lock:
-                        self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
-                        )
-            else:
-                with self._conn.lock:
+                    else:
+                        # Otherwise, make a new one
+                        with self._conn._pipeline_nolock():
+                            self._conn.wait(
+                                self._executemany_gen_pipeline(
+                                    query, params_seq, returning
+                                )
+                            )
+                else:
                     self._conn.wait(
                         self._executemany_gen_no_pipeline(query, params_seq, returning)
                     )
