@@ -21,6 +21,7 @@ from .rows import AsyncRowFactory, Row, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self
+from ._acompat import ALock
 from .conninfo import conninfo_attempts_async, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
 from ._pipeline import AsyncPipeline
@@ -34,9 +35,6 @@ from ._server_cursor_async import AsyncServerCursor
 if True:  # ASYNC
     import sys
     import asyncio
-    from asyncio import Lock, to_thread
-else:
-    from threading import Lock
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -77,7 +75,7 @@ class AsyncConnection(BaseConnection[Row]):
     ):
         super().__init__(pgconn)
         self.row_factory = row_factory
-        self.lock = Lock()
+        self.lock = ALock()
         self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
 
@@ -311,7 +309,7 @@ class AsyncConnection(BaseConnection[Row]):
             )
         else:
             if True:  # ASYNC
-                await to_thread(self.cancel)
+                await asyncio.to_thread(self.cancel)
             else:
                 self.cancel()
 

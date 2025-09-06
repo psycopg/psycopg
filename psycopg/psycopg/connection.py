@@ -13,7 +13,6 @@ import logging
 from time import monotonic
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast, overload
-from threading import Lock
 from contextlib import contextmanager
 from collections.abc import Generator, Iterator
 
@@ -26,6 +25,7 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._compat import Self
+from ._acompat import Lock
 from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
 from ._pipeline import Pipeline
