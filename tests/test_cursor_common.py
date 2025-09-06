@@ -20,6 +20,7 @@ from psycopg.types import TypeInfo
 
 from . import _test_cursor
 from .utils import raiseif
+from .acompat import gather, spawn
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
 
@@ -459,6 +460,21 @@ def test_executemany_null_first(conn, fmt_in):
             ph(cur, f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})"),
             [[1, ""], [3, 4]],
         )
+
+
+@pytest.mark.slow
+def test_executemany_lock(conn):
+
+    def do_execmany():
+        with conn.cursor() as cur:
+            cur.executemany(ph(cur, "select pg_sleep(%s)"), [(0.1,) for _ in range(10)])
+
+    def do_exec():
+        with conn.cursor() as cur:
+            for i in range(100):
+                cur.execute("select 1")
+
+    gather(spawn(do_execmany), spawn(do_exec))
 
 
 def test_rowcount(conn):
