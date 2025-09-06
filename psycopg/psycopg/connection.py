@@ -13,7 +13,6 @@ import logging
 from time import monotonic
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast, overload
-from threading import Lock
 from contextlib import contextmanager
 from collections.abc import Generator, Iterator
 
@@ -26,6 +25,7 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._compat import Self
+from ._acompat import Lock
 from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
 from ._pipeline import Pipeline
@@ -403,6 +403,27 @@ class Connection(BaseConnection[Row]):
                 with self.lock:
                     assert pipeline is self._pipeline
                     self._pipeline = None
+
+    @contextmanager
+    def _pipeline_nolock(self) -> Iterator[Pipeline]:
+        """like pipeline() but don't acquire a lock.
+
+        Assume that the caller is holding the lock.
+        """
+
+        # Currently only used internally by Cursor.executemany() in a branch
+        # in which we already established that the connection has no pipeline.
+        # If this changes we may relax the asserts.
+        assert not self._pipeline
+        # WARNING: reference loop, broken ahead.
+        pipeline = self._pipeline = Pipeline(self, _no_lock=True)
+        try:
+            with pipeline:
+                yield pipeline
+        finally:
+            assert pipeline.level == 0
+            assert pipeline is self._pipeline
+            self._pipeline = None
 
     def wait(self, gen: PQGen[RV], interval: float | None = _WAIT_INTERVAL) -> RV:
         """

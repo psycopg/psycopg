@@ -20,6 +20,9 @@ from ._compat import TypeVar
 
 Worker: TypeAlias = threading.Thread
 AWorker: TypeAlias = asyncio.Task[None]
+Lock = threading.Lock
+ALock = asyncio.Lock
+
 T = TypeVar("T")
 
 
