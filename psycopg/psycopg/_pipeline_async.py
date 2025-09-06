@@ -20,27 +20,41 @@ if TYPE_CHECKING:
 logger = logging.getLogger("psycopg")
 
 
+class _DummyLock:
+    async def __aenter__(self) -> None:
+        pass
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
+
 class AsyncPipeline(BasePipeline):
     """Handler for (async) connection in pipeline mode."""
 
     __module__ = "psycopg"
     _conn: AsyncConnection[Any]
 
-    def __init__(self, conn: AsyncConnection[Any]) -> None:
+    def __init__(self, conn: AsyncConnection[Any], _no_lock: bool = False) -> None:
         super().__init__(conn)
+        self._lock = _DummyLock() if _no_lock else conn.lock
 
     async def sync(self) -> None:
         """Sync the pipeline, send any pending command and receive and process
         all available results.
         """
         try:
-            async with self._conn.lock:
+            async with self._lock:
                 await self._conn.wait(self._sync_gen())
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     async def __aenter__(self) -> Self:
-        async with self._conn.lock:
+        async with self._lock:
             await self._conn.wait(self._enter_gen())
         return self
 
@@ -51,7 +65,7 @@ class AsyncPipeline(BasePipeline):
         exc_tb: TracebackType | None,
     ) -> None:
         try:
-            async with self._conn.lock:
+            async with self._lock:
                 await self._conn.wait(self._exit_gen())
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one

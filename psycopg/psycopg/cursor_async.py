@@ -16,8 +16,8 @@ from .abc import Params, Query
 from .copy import AsyncCopy, AsyncWriter
 from .rows import AsyncRowFactory, Row, RowMaker
 from ._compat import Self
-from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
+from ._pipeline_async import AsyncPipeline
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
@@ -104,22 +104,23 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         Execute the same command with a sequence of input data.
         """
         try:
-            if Pipeline.is_supported():
-                # If there is already a pipeline, ride it, in order to avoid
-                # sending unnecessary Sync.
-                async with self._conn.lock:
-                    if p := self._conn._pipeline:
+            async with self._conn.lock:
+                if AsyncPipeline.is_supported():
+                    # If there is already a pipeline, ride it, in order to avoid
+                    # sending unnecessary Sync.
+                    if self._conn._pipeline:
                         await self._conn.wait(
                             self._executemany_gen_pipeline(query, params_seq, returning)
                         )
-                # Otherwise, make a new one
-                if not p:
-                    async with self._conn.pipeline(), self._conn.lock:
-                        await self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
-                        )
-            else:
-                async with self._conn.lock:
+                    # Otherwise, make a new one
+                    else:
+                        async with self._conn._pipeline_nolock():
+                            await self._conn.wait(
+                                self._executemany_gen_pipeline(
+                                    query, params_seq, returning
+                                )
+                            )
+                else:
                     await self._conn.wait(
                         self._executemany_gen_no_pipeline(query, params_seq, returning)
                     )

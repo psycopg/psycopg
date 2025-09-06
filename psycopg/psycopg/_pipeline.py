@@ -23,27 +23,42 @@ if TYPE_CHECKING:
 logger = logging.getLogger("psycopg")
 
 
+class _DummyLock:
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
+
 class Pipeline(BasePipeline):
     """Handler for (sync) connection in pipeline mode."""
 
     __module__ = "psycopg"
     _conn: Connection[Any]
 
-    def __init__(self, conn: Connection[Any]) -> None:
+    def __init__(self, conn: Connection[Any], _no_lock: bool = False) -> None:
         super().__init__(conn)
+        self._lock = _DummyLock() if _no_lock else conn.lock
 
     def sync(self) -> None:
         """Sync the pipeline, send any pending command and receive and process
         all available results.
         """
         try:
-            with self._conn.lock:
+            with self._lock:
                 self._conn.wait(self._sync_gen())
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     def __enter__(self) -> Self:
-        with self._conn.lock:
+        with self._lock:
             self._conn.wait(self._enter_gen())
         return self
 
@@ -54,7 +69,7 @@ class Pipeline(BasePipeline):
         exc_tb: TracebackType | None,
     ) -> None:
         try:
-            with self._conn.lock:
+            with self._lock:
                 self._conn.wait(self._exit_gen())
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
