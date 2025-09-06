@@ -35,6 +35,13 @@ env:
   # Latest release: https://www.openssl.org/source/
   OPENSSL_VERSION: "3.5.0"
 
+  # A string to differentiate build cacke keys to allow building different
+  # flavours of libpq in different branches without mixups. Currently used to
+  # make sure that libpq packages built for Psycopg 3.2 and 3.3 don't mix (in
+  # order to change the gssencmode default only on 3.3). We may use it for
+  # different reasons in the future.
+  PQ_FLAGS: "-gssencmode-disable"
+
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -67,7 +74,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
+          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/ci/copy_to_binary.py
@@ -140,7 +147,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}
+          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/ci/copy_to_binary.py

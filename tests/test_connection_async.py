@@ -13,6 +13,7 @@ from psycopg import errors as e
 from psycopg import pq
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
+from psycopg._conninfo_utils import get_param
 
 from .acompat import asleep, skip_async, skip_sync
 from .fix_crdb import crdb_anydb
@@ -966,3 +967,16 @@ async def test_connect_tsa_bad(aconn_cls, dsn, mode):
     params = conninfo_to_dict(dsn, target_session_attrs=mode)
     with pytest.raises(psycopg.OperationalError, match=mode):
         await aconn_cls.connect(**params)
+
+
+@pytest.mark.libpq(">= 16")
+@pytest.mark.skipif(pq.__impl__ != "python", reason="can't monkeypatch C module")
+async def test_implicit_gssapi_warning(aconn_cls, dsn, recwarn, monkeypatch):
+    if get_param(conninfo_to_dict(dsn), "gssencmode"):
+        pytest.skip("gssencmode parameter explicitly set in test connection string")
+
+    monkeypatch.setattr(pq.PGconn, "used_gssapi", lambda: True)
+    async with await aconn_cls.connect(dsn):
+        pass
+
+    assert "gssencmode" in str(recwarn.pop(RuntimeWarning).message)
