@@ -15,7 +15,7 @@ from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
 from .utils import raiseif
-from .acompat import aclosing, alist, anext
+from .acompat import aclosing, alist, anext, gather, spawn
 from .fix_crdb import crdb_encoding
 from ._test_cursor import _execmany, execmany, my_row_factory, ph  # noqa: F401
 
@@ -451,6 +451,22 @@ async def test_executemany_null_first(aconn, fmt_in):
             ph(cur, f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})"),
             [[1, ""], [3, 4]],
         )
+
+
+@pytest.mark.slow
+async def test_executemany_lock(aconn):
+    async def do_execmany():
+        async with aconn.cursor() as cur:
+            await cur.executemany(
+                ph(cur, "select pg_sleep(%s)"), [(0.1,) for _ in range(10)]
+            )
+
+    async def do_exec():
+        async with aconn.cursor() as cur:
+            for i in range(100):
+                await cur.execute("select 1")
+
+    await gather(spawn(do_execmany), spawn(do_exec))
 
 
 async def test_rowcount(aconn):

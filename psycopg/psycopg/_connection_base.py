@@ -23,9 +23,9 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Deque, LiteralString, Self, TypeAlias, TypeVar
 from .pq.misc import connection_summary
-from ._pipeline import BasePipeline
 from ._preparing import PrepareManager
 from ._capabilities import capabilities
+from ._pipeline_base import BasePipeline
 from ._connection_info import ConnectionInfo
 
 if TYPE_CHECKING:

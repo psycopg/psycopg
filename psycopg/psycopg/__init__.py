@@ -19,7 +19,7 @@ from ._column import Column
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING, Binary, Date
 from .dbapi20 import DateFromTicks, Time, TimeFromTicks, Timestamp, TimestampFromTicks
 from .version import __version__ as __version__  # noqa: F401
-from ._pipeline import AsyncPipeline, Pipeline
+from ._pipeline import Pipeline
 from .connection import Connection
 from .raw_cursor import AsyncRawCursor, AsyncRawServerCursor, RawCursor, RawServerCursor
 from .transaction import AsyncTransaction, Rollback, Transaction
@@ -27,6 +27,7 @@ from .cursor_async import AsyncCursor
 from ._capabilities import Capabilities, capabilities
 from .client_cursor import AsyncClientCursor, ClientCursor
 from ._server_cursor import ServerCursor
+from ._pipeline_async import AsyncPipeline
 from ._connection_base import BaseConnection, Notify
 from ._connection_info import ConnectionInfo
 from .connection_async import AsyncConnection
