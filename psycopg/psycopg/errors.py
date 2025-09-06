@@ -61,6 +61,7 @@ class FinishedPGconn:
     error_message: bytes = b""
     _encoding: str = "utf-8"
     protocol_version: int = 0
+    full_protocol_version: int = 0
     server_version: int = 0
 
     backend_pid: int = 0
@@ -579,6 +580,7 @@ def get_base_exception(sqlstate: str) -> type[Error]:
 _base_exc_map = {
     "08": OperationalError,  # Connection Exception
     "0A": NotSupportedError,  # Feature Not Supported
+    "10": ProgrammingError,  # XQuery Error
     "20": ProgrammingError,  # Case Not Foud
     "21": ProgrammingError,  # Cardinality Violation
     "22": DataError,  # Data Exception
@@ -725,6 +727,13 @@ class DiagnosticsException(DatabaseError,
 
 class StackedDiagnosticsAccessedWithoutActiveHandler(DatabaseError,
     code='0Z002', name='STACKED_DIAGNOSTICS_ACCESSED_WITHOUT_ACTIVE_HANDLER'):
+    pass
+
+
+# Class 10 - XQuery Error
+
+class InvalidArgumentForXquery(ProgrammingError,
+    code='10608', name='INVALID_ARGUMENT_FOR_XQUERY'):
     pass
 
 
@@ -1579,6 +1588,10 @@ class UndefinedFile(OperationalError,
 
 class DuplicateFile(OperationalError,
     code='58P02', name='DUPLICATE_FILE'):
+    pass
+
+class FileNameTooLong(OperationalError,
+    code='58P03', name='FILE_NAME_TOO_LONG'):
     pass
 
 
