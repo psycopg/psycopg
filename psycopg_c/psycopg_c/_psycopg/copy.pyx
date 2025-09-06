@@ -52,8 +52,9 @@ def format_row_binary(
 
     if not tx._row_dumpers:
         tx._row_dumpers = PyList_New(rowlen)
-
     dumpers = tx._row_dumpers
+    if len(dumpers) != rowlen:
+        raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
         item = row[i]
@@ -130,6 +131,13 @@ def format_row_text(
     cdef PyObject *fmt = <PyObject *>PG_TEXT
     cdef PyObject *row_dumper
 
+    # try to get preloaded dumpers from set_types
+    if not tx._row_dumpers:
+        tx._row_dumpers = PyList_New(rowlen)
+    dumpers = tx._row_dumpers
+    if len(dumpers) != rowlen:
+        raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
+
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
         with_tab = i > 0
@@ -139,7 +147,12 @@ def format_row_text(
             _append_text_none(out, &pos, with_tab)
             continue
 
-        row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+        row_dumper = PyList_GET_ITEM(dumpers, i)
+        if not row_dumper:
+            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+            Py_INCREF(<object>row_dumper)
+            PyList_SET_ITEM(dumpers, i, <object>row_dumper)
+
         if (<RowDumper>row_dumper).cdumper is not None:
             # A cdumper can resize if necessary and copy in place
             size = (<RowDumper>row_dumper).cdumper.cdump(
