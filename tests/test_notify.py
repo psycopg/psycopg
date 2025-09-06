@@ -223,7 +223,13 @@ def test_notifies_blocking(conn):
 
 
 @pytest.mark.slow
-def test_generator_and_handler(conn, conn_cls, dsn):
+def test_generator_and_handler(conn, conn_cls, dsn, recwarn):
+    # NOTE: we don't support generator+handlers anymore. So, if in the future
+    # this behaviour will change, we will not consider it a regression. However
+    # we will want to keep the warning check.
+
+    recwarn.clear()
+
     conn.set_autocommit(True)
     conn.execute("listen foo")
 
@@ -254,6 +260,9 @@ def test_generator_and_handler(conn, conn_cls, dsn):
 
     assert n1
     assert n2
+
+    msg = str(recwarn.pop(RuntimeWarning).message)
+    assert "notifies()" in msg
 
 
 @pytest.mark.parametrize("query_between", [True, False])
@@ -289,25 +298,41 @@ def test_notify_query_notify(conn_cls, dsn, sleep_on, listen_by):
                 conn.execute("select pg_notify('counter', %s)", (str(i),))
                 sleep(0.2)
 
-    def listener():
-        with conn_cls.connect(dsn, autocommit=True) as conn:
-            if listen_by == "callback":
+    def nap(conn):
+        if sleep_on == "server":
+            conn.execute("select pg_sleep(0.2)")
+        else:
+            assert sleep_on == "client"
+            sleep(0.2)
+
+    if listen_by == "callback":
+
+        def listener():
+            with conn_cls.connect(dsn, autocommit=True) as conn:
                 conn.add_notify_handler(lambda n: notifies.append(int(n.payload)))
 
-            conn.execute("listen counter")
-            e.set()
-            for n in conn.notifies(timeout=0.2):
-                if listen_by == "generator":
+                conn.execute("listen counter")
+                e.set()
+
+                nap(conn)
+                conn.execute("")
+                nap(conn)
+                conn.execute("")
+                nap(conn)
+                conn.execute("")
+
+    else:
+
+        def listener():
+            with conn_cls.connect(dsn, autocommit=True) as conn:
+                conn.execute("listen counter")
+                e.set()
+                for n in conn.notifies(timeout=0.2):
                     notifies.append(int(n.payload))
 
-            if sleep_on == "server":
-                conn.execute("select pg_sleep(0.2)")
-            else:
-                assert sleep_on == "client"
-                sleep(0.2)
+                nap(conn)
 
-            for n in conn.notifies(timeout=0.2):
-                if listen_by == "generator":
+                for n in conn.notifies(timeout=0.2):
                     notifies.append(int(n.payload))
 
     workers.append(spawn(listener))
