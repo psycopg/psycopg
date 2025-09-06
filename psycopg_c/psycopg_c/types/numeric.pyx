@@ -758,7 +758,7 @@ cdef Py_ssize_t dump_int_to_int2_binary(
     obj, bytearray rv, Py_ssize_t offset
 ) except -1:
     cdef int16_t val = <int16_t>PyLong_AsLongLong(obj)
-    cdef int16_t *buf = <int16_t *>CDumper.ensure_size(rv, offset, sizeof(obj))
+    cdef int16_t *buf = <int16_t *>CDumper.ensure_size(rv, offset, sizeof(val))
     cdef uint16_t beval = endian.htobe16(val)  # swap bytes if needed
     memcpy(buf, &beval, sizeof(beval))
     return sizeof(val)
