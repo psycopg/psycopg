@@ -7,6 +7,7 @@ Psycopg connection object (async version)
 from __future__ import annotations
 
 import logging
+import warnings
 from time import monotonic
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast, overload
@@ -362,6 +363,14 @@ class AsyncConnection(BaseConnection[Row]):
             interval = _WAIT_INTERVAL
 
         nreceived = 0
+
+        if self._notify_handlers:
+            warnings.warn(
+                "using 'notifies()' together with notifies handlers on the"
+                " same connection is not reliable."
+                " Please use only one of thees methods",
+                RuntimeWarning,
+            )
 
         async with self.lock:
             enc = self.pgconn._encoding

@@ -31,6 +31,8 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
+.. _psycopg-3.2.10:
+
 Psycopg 3.2.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -41,6 +43,24 @@ Psycopg 3.2.10 (unreleased)
   (:ticket:`#1108`).
 - Fix coordination of `~Cursor.executemany()` with other concurrent operations
   on other cursors (:ticket:`#1130`).
+- Fix leak receiving notifications if the `~Connection.notifies()` generator
+  is not called (:ticket:`#1091`).
+
+  .. warning::
+
+    This bugfix required the introduction of a change in :ref:`notifies
+    reception <async-notify>` behaviour.
+
+    If a notification is received when a handler is registered via
+    `~Connection.add_notify_handler()` and the `~Connection.notifies()`
+    generator is not running the notification will not be yielded by the
+    generator. This is a behaviour similar to before `Psycopg 3.2.4`_, but
+    *notifications are not lost if no handler is registered*.
+
+    Using both the generator and handlers to receive notifications on the same
+    connection is therefore deprecated and will now generate a runtime
+    warning.
+
 - Add support for Python 3.14 (:ticket:`#1053`).
 - Fix `psycopg_binary.__version__`.
 
@@ -97,11 +117,20 @@ Psycopg 3.2.5
 - 3x faster UUID loading thanks to C implementation (:tickets:`#447, #998`).
 
 
+.. _psycopg-3.2.4:
+
 Psycopg 3.2.4
 ^^^^^^^^^^^^^
 
 - Don't lose notifies received whilst the `~Connection.notifies()` iterator
   is not running (:ticket:`#962`).
+
+  .. warning::
+
+    If you were using notifications to bridge the time between issuing a LISTEN
+    on a channel and starting the iterator you might receive duplicate
+    notifications.
+
 - Make sure that the notifies callback is called during the use of the
   `~Connection.notifies()` generator (:ticket:`#972`).
 - Raise the correct error returned by the database (such as `!AdminShutdown`
