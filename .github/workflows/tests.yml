@@ -314,7 +314,8 @@ jobs:
   # }}}
 
   windows:  # {{{
-    runs-on: windows-latest
+    # TODO: move it back to windows-latest when the default runner switches.
+    runs-on: windows-2025
     if: true
 
     strategy:
