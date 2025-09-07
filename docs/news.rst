@@ -42,10 +42,13 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
+Current release
+---------------
+
 .. _psycopg-3.2.10:
 
-Psycopg 3.2.10 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.10
+^^^^^^^^^^^^^^
 
 - Fix `!TypeError` shadowing `~asyncio.CancelledError` upon task cancellation
   during pipeline execution (:ticket:`#1005`).
@@ -87,9 +90,6 @@ Psycopg 3.2.10 (unreleased)
 
 .. _gssencmode: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
 
-
-Current release
----------------
 
 Psycopg 3.2.9
 ^^^^^^^^^^^^^
