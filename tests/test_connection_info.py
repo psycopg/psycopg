@@ -44,6 +44,13 @@ def test_port(conn):
         conn.info.port
 
 
+def test_full_protocol_version(conn):
+    assert conn.info.full_protocol_version >= 30000
+    conn.close()
+    with pytest.raises(psycopg.OperationalError):
+        conn.info.full_protocol_version
+
+
 @pytest.mark.skipif(psycopg.pq.__impl__ != "python", reason="can't monkeypatch C")
 def test_blank_port(conn, monkeypatch):
 

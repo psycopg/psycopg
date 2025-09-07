@@ -306,6 +306,20 @@ def test_protocol_version(pgconn):
         pgconn.protocol_version
 
 
+@pytest.mark.libpq(">= 18")
+def test_full_protocol_version(pgconn):
+    assert pgconn.full_protocol_version >= 30000
+    pgconn.finish()
+    with pytest.raises(psycopg.OperationalError):
+        pgconn.full_protocol_version
+
+
+@pytest.mark.libpq("< 18")
+def test_full_protocol_version_notimpl(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.full_protocol_version
+
+
 def test_server_version(pgconn):
     assert pgconn.server_version >= 90400
     pgconn.finish()

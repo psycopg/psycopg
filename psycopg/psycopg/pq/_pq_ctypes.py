@@ -39,6 +39,17 @@ if sys.platform == "linux":
     fdopen.argtypes = (c_int, c_char_p)
     fdopen.restype = FILE_ptr
 
+
+def not_supported_before(fname: str, pgversion: int) -> Any:
+    def not_supported(*args: Any, **kwargs: Any) -> NoReturn:
+        raise NotSupportedError(
+            f"{fname} requires libpq from PostgreSQL {version_pretty(pgversion)} on"
+            f" the client; version {version_pretty(libpq_version)} available instead"
+        )
+
+    return not_supported
+
+
 # Get the libpq version to define what functions are available.
 
 PQlibVersion = pq.PQlibVersion
@@ -190,16 +201,6 @@ PQhost.argtypes = [PGconn_ptr]
 PQhost.restype = c_char_p
 
 
-def not_supported_before(fname: str, pgversion: int) -> Any:
-    def not_supported(*args: Any, **kwargs: Any) -> NoReturn:
-        raise NotSupportedError(
-            f"{fname} requires libpq from PostgreSQL {version_pretty(pgversion)} on"
-            f" the client; version {version_pretty(libpq_version)} available instead"
-        )
-
-    return not_supported
-
-
 if libpq_version >= 120000:
     PQhostaddr = pq.PQhostaddr
     PQhostaddr.argtypes = [PGconn_ptr]
@@ -234,6 +235,13 @@ PQparameterStatus.restype = c_char_p
 PQprotocolVersion = pq.PQprotocolVersion
 PQprotocolVersion.argtypes = [PGconn_ptr]
 PQprotocolVersion.restype = c_int
+
+if libpq_version >= 180000:
+    PQfullProtocolVersion = pq.PQfullProtocolVersion
+    PQfullProtocolVersion.argtypes = [PGconn_ptr]
+    PQfullProtocolVersion.restype = c_int
+else:
+    PQfullProtocolVersion = not_supported_before("PQfullProtocolVersion", 180000)
 
 PQserverVersion = pq.PQserverVersion
 PQserverVersion.argtypes = [PGconn_ptr]

@@ -238,6 +238,10 @@ class PGconn:
         return self._call_int(impl.PQprotocolVersion)
 
     @property
+    def full_protocol_version(self) -> int:
+        return self._call_int(impl.PQfullProtocolVersion)
+
+    @property
     def server_version(self) -> int:
         return self._call_int(impl.PQserverVersion)
 

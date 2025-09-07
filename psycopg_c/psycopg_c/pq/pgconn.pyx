@@ -197,6 +197,12 @@ cdef class PGconn:
         return _call_int(self, libpq.PQprotocolVersion)
 
     @property
+    def full_protocol_version(self) -> int:
+        _check_supported("PQfullProtocolVersion", 180000)
+        _ensure_pgconn(self)
+        return libpq.PQfullProtocolVersion(self._pgconn_ptr)
+
+    @property
     def server_version(self) -> int:
         return _call_int(self, libpq.PQserverVersion)
 
