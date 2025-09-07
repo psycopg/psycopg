@@ -29,8 +29,8 @@ from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from ._capabilities import capabilities
-from ._pipeline_async import AsyncPipeline
 from ._conninfo_utils import gssapi_requested
+from ._pipeline_async import AsyncPipeline
 from ._connection_base import BaseConnection, CursorRow, Notify
 from ._server_cursor_async import AsyncServerCursor
 
