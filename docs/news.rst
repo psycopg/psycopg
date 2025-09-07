@@ -7,13 +7,13 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
 .. _psycopg-3.2.10:
 
-Psycopg 3.2.10 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.10
+^^^^^^^^^^^^^^
 
 - Fix `!TypeError` shadowing `~asyncio.CancelledError` upon task cancellation
   during pipeline execution (:ticket:`#1005`).
@@ -53,9 +53,6 @@ Psycopg 3.2.10 (unreleased)
     string or the :envvar:`PGGSSENCMODE` environment variable to ``prefer`` or
     ``require``.
 
-
-Current release
----------------
 
 Psycopg 3.2.9
 ^^^^^^^^^^^^^
