@@ -219,7 +219,13 @@ async def test_notifies_blocking(aconn):
 
 
 @pytest.mark.slow
-async def test_generator_and_handler(aconn, aconn_cls, dsn):
+async def test_generator_and_handler(aconn, aconn_cls, dsn, recwarn):
+    # NOTE: we don't support generator+handlers anymore. So, if in the future
+    # this behaviour will change, we will not consider it a regression. However
+    # we will want to keep the warning check.
+
+    recwarn.clear()
+
     await aconn.set_autocommit(True)
     await aconn.execute("listen foo")
 
@@ -252,6 +258,9 @@ async def test_generator_and_handler(aconn, aconn_cls, dsn):
     assert n1
     assert n2
 
+    msg = str(recwarn.pop(RuntimeWarning).message)
+    assert "notifies()" in msg
+
 
 @pytest.mark.parametrize("query_between", [True, False])
 async def test_first_notify_not_lost(aconn, aconn_cls, dsn, query_between):
@@ -273,10 +282,10 @@ async def test_first_notify_not_lost(aconn, aconn_cls, dsn, query_between):
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.parametrize("sleep_on", ["server", "client"])
-async def test_notify_query_notify(aconn_cls, dsn, sleep_on):
+@pytest.mark.parametrize("listen_by", ["callback", "generator"])
+async def test_notify_query_notify(aconn_cls, dsn, sleep_on, listen_by):
     e = AEvent()
-    by_gen: list[int] = []
-    by_cb: list[int] = []
+    notifies: list[int] = []
     workers = []
 
     async def notifier():
@@ -286,27 +295,46 @@ async def test_notify_query_notify(aconn_cls, dsn, sleep_on):
                 await aconn.execute("select pg_notify('counter', %s)", (str(i),))
                 await asleep(0.2)
 
-    async def listener():
-        async with await aconn_cls.connect(dsn, autocommit=True) as aconn:
-            aconn.add_notify_handler(lambda n: by_cb.append(int(n.payload)))
+    async def nap(aconn):
+        if sleep_on == "server":
+            await aconn.execute("select pg_sleep(0.2)")
+        else:
+            assert sleep_on == "client"
+            await asleep(0.2)
 
-            await aconn.execute("listen counter")
-            e.set()
-            async for n in aconn.notifies(timeout=0.2):
-                by_gen.append(int(n.payload))
+    if listen_by == "callback":
 
-            if sleep_on == "server":
-                await aconn.execute("select pg_sleep(0.2)")
-            else:
-                assert sleep_on == "client"
-                await asleep(0.2)
+        async def listener():
+            async with await aconn_cls.connect(dsn, autocommit=True) as aconn:
+                aconn.add_notify_handler(lambda n: notifies.append(int(n.payload)))
 
-            async for n in aconn.notifies(timeout=0.2):
-                by_gen.append(int(n.payload))
+                await aconn.execute("listen counter")
+                e.set()
+
+                await nap(aconn)
+                await aconn.execute("")
+                await nap(aconn)
+                await aconn.execute("")
+                await nap(aconn)
+                await aconn.execute("")
+
+    else:
+
+        async def listener():
+            async with await aconn_cls.connect(dsn, autocommit=True) as aconn:
+                await aconn.execute("listen counter")
+                e.set()
+                async for n in aconn.notifies(timeout=0.2):
+                    notifies.append(int(n.payload))
+
+                await nap(aconn)
+
+                async for n in aconn.notifies(timeout=0.2):
+                    notifies.append(int(n.payload))
 
     workers.append(spawn(listener))
     await e.wait()
     workers.append(spawn(notifier))
     await gather(*workers)
 
-    assert list(range(3)) == by_cb == by_gen, f"{by_gen=}, {by_cb=}"
+    assert notifies == list(range(3))

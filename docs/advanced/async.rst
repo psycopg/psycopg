@@ -325,16 +325,33 @@ Because of the way transactions interact with notifications (see |NOTIFY|_
 documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
-Notifications are received as instances of `Notify`. If you are reserving a
-connection only to receive notifications, the simplest way is to consume the
-`Connection.notifies` generator. The generator can be stopped using
-`!close()`. Starting from Psycopg 3.2, the method supports options to receive
-notifications only for a certain time or up to a certain number.
-
 .. note::
 
     You don't need an `AsyncConnection` to handle notifications: a normal
     blocking `Connection` is perfectly valid.
+
+Notifications are received as instances of the `Notify` object. You can
+receive notifications using either the :ref:`notifies generator
+<notifies-generator>` or a :ref:`notifies handler <notifies-handlers>`.
+
+.. warning::
+
+    You should use only one of the two methods to receive notifications.
+
+    Since Psycopg 3.2.10 using the generator and handlers at the same time
+    raises a runtime warning.
+
+
+.. _notifies-generator:
+
+Notifies generator
+^^^^^^^^^^^^^^^^^^
+
+If you are reserving a connection only to receive notifications, the simplest
+way to receive them is to consume the `Connection.notifies()` generator. The
+generator can be stopped using its `!close()` method, or using the parameters
+`!timeout` or `!stop_after` to receive notifications only for a certain time
+or up to a certain number.
 
 The following example will print notifications and stop when one containing
 the ``"stop"`` message is received.
@@ -368,6 +385,31 @@ You may get output from the Python process such as::
     Notify(channel='mychan', payload='hey', pid=961823)
     Notify(channel='mychan', payload='stop', pid=961823)
     there, I stopped
+
+.. warning::
+
+    The behaviour of the notifies generator has changed slightly as problems
+    were found:
+
+    - Before Psycopg 3.2.4, notification received between calling
+      :sql:`LISTEN` and starting the generator were lost.
+
+    - Since :ref:`psycopg-3.2.4` such notifications are captured and yielded
+      by the generator once it is started. However this introduced a leak
+      (:ticket:`#1091`) and, if the generator is not regularly used, some
+      memory is allocated indefinitely.
+
+    - Since :ref:`psycopg-3.2.10` if a handler is registered then
+      notifications are not captured when the generator is not running. So the
+      behaviour is similar to pre-3.2.4 but *only if a handler is registered
+      too*. Therefore, using handlers and generators together starts seeming a
+      bad idea, hence it is since deprecated.
+
+
+.. _notifies-handlers:
+
+Notifies handlers
+^^^^^^^^^^^^^^^^^
 
 Alternatively, you can use `~Connection.add_notify_handler()` to register a
 callback function, which will be invoked whenever a notification is received,

@@ -383,6 +383,14 @@ class AsyncConnection(BaseConnection[Row]):
 
         nreceived = 0
 
+        if self._notify_handlers:
+            warnings.warn(
+                "using 'notifies()' together with notifies handlers on the"
+                " same connection is not reliable."
+                " Please use only one of thees methods",
+                RuntimeWarning,
+            )
+
         async with self.lock:
             enc = self.pgconn._encoding
 
