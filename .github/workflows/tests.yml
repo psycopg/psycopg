@@ -279,7 +279,8 @@ jobs:
   # }}}
 
   windows:  # {{{
-    runs-on: windows-latest
+    # TODO: move back to windows-latest once testing it works
+    runs-on: windows-2022
     if: true
 
     strategy:
