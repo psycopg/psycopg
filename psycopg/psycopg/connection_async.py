@@ -387,7 +387,7 @@ class AsyncConnection(BaseConnection[Row]):
             warnings.warn(
                 "using 'notifies()' together with notifies handlers on the"
                 " same connection is not reliable."
-                " Please use only one of thees methods",
+                " Please use only one of these methods",
                 RuntimeWarning,
             )
 
