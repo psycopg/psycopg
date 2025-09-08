@@ -21,6 +21,7 @@ repos:
         language: system
         entry: black --check --diff --color --quiet
         files: \.py[i]?$
+        exclude: tests/test_tstring.py
 
       - id: codespell
         name: codespell
@@ -32,9 +33,11 @@ repos:
         language: system
         entry: flake8
         files: \.py$
+        exclude: tests/test_tstring.py
 
       - id: mypy
         name: mypy
         language: system
         entry: mypy --pretty --follow-imports=silent
         files: \.py[i]?$
+        exclude: tests/test_tstring.py

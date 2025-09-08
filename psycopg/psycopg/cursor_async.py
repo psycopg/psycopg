@@ -13,10 +13,10 @@ from collections.abc import AsyncIterator, Iterable
 
 from . import errors as e
 from . import pq
-from .abc import Params, Query
+from .abc import Params, Query, QueryNoTemplate
 from .copy import AsyncCopy, AsyncWriter
 from .rows import AsyncRowFactory, Row, RowMaker
-from ._compat import Self
+from ._compat import Self, Template
 from ._cursor_base import BaseCursor
 from ._pipeline_async import AsyncPipeline
 
@@ -77,6 +77,25 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     def _make_row_maker(self) -> RowMaker[Row]:
         return self._row_factory(self)
+
+    @overload
+    async def execute(
+        self,
+        query: QueryNoTemplate,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    async def execute(
+        self,
+        query: Template,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self: ...
 
     async def execute(
         self,

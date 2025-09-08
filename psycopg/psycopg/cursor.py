@@ -16,10 +16,10 @@ from collections.abc import Iterable, Iterator
 
 from . import errors as e
 from . import pq
-from .abc import Params, Query
+from .abc import Params, Query, QueryNoTemplate
 from .copy import Copy, Writer
 from .rows import Row, RowFactory, RowMaker
-from ._compat import Self
+from ._compat import Self, Template
 from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
 
@@ -77,6 +77,25 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def _make_row_maker(self) -> RowMaker[Row]:
         return self._row_factory(self)
+
+    @overload
+    def execute(
+        self,
+        query: QueryNoTemplate,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def execute(
+        self,
+        query: Template,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self: ...
 
     def execute(
         self,

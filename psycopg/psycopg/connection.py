@@ -20,12 +20,13 @@ from collections.abc import Generator, Iterator
 from . import errors as e
 from . import pq, waiting
 from .abc import RV, AdaptContext, ConnDict, ConnParam, Params, PQGen, Query
+from .abc import QueryNoTemplate
 from ._tpc import Xid
 from .rows import Row, RowFactory, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
-from ._compat import Self
+from ._compat import Self, Template
 from ._acompat import Lock
 from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
@@ -251,6 +252,21 @@ class Connection(BaseConnection[Row]):
 
         return cur
 
+    @overload
+    def execute(
+        self,
+        query: QueryNoTemplate,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool = False,
+    ) -> Cursor[Row]: ...
+
+    @overload
+    def execute(
+        self, query: Template, *, prepare: bool | None = None, binary: bool = False
+    ) -> Cursor[Row]: ...
+
     def execute(
         self,
         query: Query,
@@ -265,7 +281,14 @@ class Connection(BaseConnection[Row]):
             if binary:
                 cur.format = BINARY
 
-            return cur.execute(query, params, prepare=prepare)
+            if isinstance(query, Template):
+                if params is not None:
+                    raise TypeError(
+                        "'execute()' with string template query doesn't support parameters"
+                    )
+                return cur.execute(query, prepare=prepare)
+            else:
+                return cur.execute(query, params, prepare=prepare)
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 

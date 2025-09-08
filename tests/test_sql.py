@@ -497,8 +497,8 @@ class TestSQL:
         assert isinstance(obj, sql.Composed)
         assert obj.as_string(conn) == """'foo', 'bar', 42"""
 
-        obj = sql.SQL(", ").join([])
-        assert obj == sql.Composed([])
+        obj2 = sql.SQL(", ").join([])
+        assert obj2 == sql.Composed([])
 
     def test_as_string(self, conn):
         assert sql.SQL("foo").as_string(conn) == "foo"

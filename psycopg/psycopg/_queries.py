@@ -12,11 +12,11 @@ from functools import lru_cache
 from collections.abc import Callable, Mapping, Sequence
 
 from . import errors as e
-from . import pq
-from .abc import Buffer, Params, Query
-from .sql import Composable
+from . import pq, sql
+from .abc import Buffer, Params, Query, QueryNoTemplate
 from ._enums import PyFormat
-from ._encodings import conn_encoding
+from ._compat import Template
+from ._tstrings import TemplateProcessor
 
 if TYPE_CHECKING:
     from .abc import Transformer
@@ -52,7 +52,6 @@ class PostgresQuery:
         self._want_formats: list[PyFormat] | None = None
         self.formats: Sequence[pq.Format] | None = None
 
-        self._encoding = conn_encoding(transformer.connection)
         self._parts: list[QueryPart]
         self.query = b""
         self._order: list[str] | None = None
@@ -64,12 +63,10 @@ class PostgresQuery:
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
-        if isinstance(query, str):
-            bquery = query.encode(self._encoding)
-        elif isinstance(query, Composable):
-            bquery = query.as_bytes(self._tx)
-        else:
-            bquery = query
+        if isinstance(query, Template):
+            return self._convert_template(query, vars)
+
+        query = self._ensure_bytes(query)
 
         if vars is not None:
             # Avoid caching queries extremely long or with a huge number of
@@ -78,7 +75,7 @@ class PostgresQuery:
             # numbers of tuples.
             # see https://github.com/psycopg/psycopg/discussions/628
             if (
-                len(bquery) <= MAX_CACHED_STATEMENT_LENGTH
+                len(query) <= MAX_CACHED_STATEMENT_LENGTH
                 and len(vars) <= MAX_CACHED_STATEMENT_PARAMS
             ):
                 f: _Query2Pg = _query2pg
@@ -86,10 +83,10 @@ class PostgresQuery:
                 f = _query2pg_nocache
 
             (self.query, self._want_formats, self._order, self._parts) = f(
-                bquery, self._encoding
+                query, self._tx.encoding
             )
         else:
-            self.query = bquery
+            self.query = query
             self._want_formats = self._order = None
 
         self.dump(vars)
@@ -126,7 +123,7 @@ class PostgresQuery:
         else:
             raise TypeError(
                 "query parameters should be a sequence or a mapping,"
-                f" got {type(vars).__name__}"
+                f" got {type(vars).__qualname__}"
             )
         return sequence
 
@@ -164,6 +161,32 @@ class PostgresQuery:
                     "query parameter missing:"
                     f" {', '.join(sorted(i for i in order or () if i not in vars))}"
                 )
+
+    def _ensure_bytes(self, query: QueryNoTemplate) -> bytes:
+        if isinstance(query, str):
+            return query.encode(self._tx.encoding)
+        elif isinstance(query, sql.Composable):
+            return query.as_bytes(self._tx)
+        else:
+            return query
+
+    def _convert_template(self, query: Template, vars: Params | None) -> None:
+        if vars is not None:
+            raise TypeError(
+                "'execute()' with string template query doesn't support parameters"
+            )
+
+        tp = TemplateProcessor(query, server_params=True, tx=self._tx)
+        tp.process()
+        self.query = tp.query
+        if tp.params:
+            self.params = self._tx.dump_sequence(tp.params, tp.formats)
+            self.types = self._tx.types or ()
+            self.formats = self._tx.formats
+        else:
+            self.params = None
+            self.types = ()
+            self.formats = None
 
 
 # The type of the _query2pg() and _query2pg_nocache() methods
@@ -244,25 +267,23 @@ class PostgresClientQuery(PostgresQuery):
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
-        if isinstance(query, str):
-            bquery = query.encode(self._encoding)
-        elif isinstance(query, Composable):
-            bquery = query.as_bytes(self._tx)
-        else:
-            bquery = query
+        if isinstance(query, Template):
+            return self._convert_template(query, vars)
+
+        query = self._ensure_bytes(query)
 
         if vars is not None:
             if (
-                len(bquery) <= MAX_CACHED_STATEMENT_LENGTH
+                len(query) <= MAX_CACHED_STATEMENT_LENGTH
                 and len(vars) <= MAX_CACHED_STATEMENT_PARAMS
             ):
                 f: _Query2PgClient = _query2pg_client
             else:
                 f = _query2pg_client_nocache
 
-            (self.template, self._order, self._parts) = f(bquery, self._encoding)
+            (self.template, self._order, self._parts) = f(query, self._tx.encoding)
         else:
-            self.query = bquery
+            self.query = query
             self._order = None
 
         self.dump(vars)
@@ -281,6 +302,17 @@ class PostgresClientQuery(PostgresQuery):
             self.query = self.template % self.params
         else:
             self.params = None
+
+    def _convert_template(self, query: Template, vars: Params | None) -> None:
+        if vars is not None:
+            raise TypeError(
+                "'execute()' with string template query doesn't support parameters"
+            )
+
+        tp = TemplateProcessor(query, server_params=False, tx=self._tx)
+        tp.process()
+        self.query = tp.query
+        self.params = tp.params
 
 
 _Query2PgClient: TypeAlias = Callable[
@@ -421,3 +453,32 @@ _ph_to_fmt = {
     b"t": PyFormat.TEXT,
     b"b": PyFormat.BINARY,
 }
+
+
+class PostgresRawQuery(PostgresQuery):
+    def convert(self, query: Query, vars: Params | None) -> None:
+        if isinstance(query, Template):
+            return self._convert_template(query, vars)
+
+        self.query = self._ensure_bytes(query)
+        self._want_formats = self._order = None
+        self.dump(vars)
+
+    def dump(self, vars: Params | None) -> None:
+        if vars is not None:
+            if not PostgresQuery.is_params_sequence(vars):
+                raise TypeError("raw queries require a sequence of parameters")
+            self._want_formats = [PyFormat.AUTO] * len(vars)
+
+            self.params = self._tx.dump_sequence(vars, self._want_formats)
+            self.types = self._tx.types or ()
+            self.formats = self._tx.formats
+        else:
+            self.params = None
+            self.types = ()
+            self.formats = None
+
+    def _convert_template(self, query: Template, vars: Params | None) -> None:
+        raise e.NotSupportedError(
+            f"{type(self).__name__} doesn't support template strings"
+        )

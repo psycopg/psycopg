@@ -8,6 +8,12 @@
 Passing parameters to SQL queries
 =================================
 
+.. note::
+
+   This way of passing queries has been the "classic" way for many years.
+   However, starting from Python 3.14, you might be interested in using the
+   more expressive :ref:`template string queries <template-strings>`.
+
 Most of the times, writing a program you will have to mix bits of SQL
 statements with values provided by the rest of the program:
 

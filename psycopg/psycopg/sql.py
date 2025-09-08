@@ -9,13 +9,13 @@ from __future__ import annotations
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, overload
 from collections.abc import Iterable, Iterator, Sequence
 
 from .pq import Escaping
 from .abc import AdaptContext
 from ._enums import PyFormat
-from ._compat import LiteralString
+from ._compat import LiteralString, Template
 from ._encodings import conn_encoding
 from ._transformer import Transformer
 
@@ -289,14 +289,25 @@ class SQL(Composable):
 
         return Composed(rv)
 
-    def join(self, seq: Iterable[Any]) -> Composed:
+    @overload
+    def join(self, seq: Iterable[Template]) -> Template: ...
+
+    @overload
+    def join(self, seq: Iterable[Any]) -> Composed: ...
+
+    def join(self, seq: Iterable[Any]) -> Composed | Template:
         """
         Join a sequence of `Composable`.
 
-        :param seq: the elements to join. Elements that are not `Composable`
-            will be considered `Literal`.
+        :param seq: the elements to join.
 
         Use the `!SQL` object's string to separate the elements in `!seq`.
+        Elements that are not `Composable` will be considered `Literal`.
+
+        If the arguments are `Template` instance, return a `Template` joining
+        all the items. Note that arguments must either be all templates or
+        none should be.
+
         Note that `Composed` objects are iterable too, so they can be used as
         argument for this method.
 
@@ -307,18 +318,30 @@ class SQL(Composable):
             >>> print(snip.as_string(conn))
             "foo", "bar", "baz"
         """
-        rv = []
+
         it = iter(seq)
         try:
-            rv.append(next(it))
+            first = next(it)
         except StopIteration:
-            pass
-        else:
-            for i in it:
-                rv.append(self)
-                rv.append(i)
+            return Composed([])
 
-        return Composed(rv)
+        if isinstance(first, Template):
+            items = list(first)
+            for t in it:
+                if not isinstance(t, Template):
+                    raise TypeError(f"can't mix Template and {type(t).__name__}")
+                items.append(self._obj)
+                items.extend(t)
+            return Template(*items)
+
+        cs = [first]
+        for i in it:
+            if isinstance(i, Template):
+                raise TypeError(f"can't mix Template and {type(i).__name__}")
+            cs.append(self)
+            cs.append(i)
+
+        return Composed(cs)
 
 
 class Identifier(Composable):
