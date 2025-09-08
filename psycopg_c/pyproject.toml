@@ -24,7 +24,7 @@ cython-requires = ["Cython >= 3.1.1"]
 [project]
 name = "psycopg-c"
 description = "PostgreSQL database adapter for Python -- C optimisation distribution"
-version = "3.3.0.dev1"
+version = "3.3.0.dev2"
 license = "LGPL-3.0-only"
 license-files = ["LICENSE.txt"]
 classifiers = [

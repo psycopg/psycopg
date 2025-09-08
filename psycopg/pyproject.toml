@@ -7,7 +7,7 @@ name = "psycopg"
 description = "PostgreSQL database adapter for Python"
 
 # STOP AND READ! if you change:
-version = "3.3.0.dev1"
+version = "3.3.0.dev2"
 # also change:
 # - `docs/news.rst` to declare this as the current version or an unreleased one;
 # - `psycopg_c/pyproject.toml` to the same version;
@@ -60,10 +60,10 @@ content-type = "text/x-rst"
 
 [project.optional-dependencies]
 c = [
-    "psycopg-c == 3.3.0.dev1; implementation_name != \"pypy\"",
+    "psycopg-c == 3.3.0.dev2; implementation_name != \"pypy\"",
 ]
 binary = [
-    "psycopg-binary == 3.3.0.dev1; implementation_name != \"pypy\"",
+    "psycopg-binary == 3.3.0.dev2; implementation_name != \"pypy\"",
 ]
 pool = [
     "psycopg-pool",
