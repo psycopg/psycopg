@@ -10,6 +10,25 @@ Template string queries
 
 .. versionadded:: 3.3
 
+.. warning::
+
+    This is an experimental feature, still under active development,
+    documented here for preview. Details may change before the final Psycopg
+    3.3 release.
+
+    Template strings are a Python language feature under development too,
+    planned for release in Python 3.14. Template string queries are currently
+    tested in Python 3.14 rc 2.
+
+    If you want to test the feature you can install a `test version of Pyscopg
+    from test pypi`__:
+
+    .. code:: shell
+
+        $ pip install -i https://test.pypi.org/simple/ "psycopg[binary]==3.3.0.dev1"
+
+    .. __: https://test.pypi.org/project/psycopg/3.3.0.dev1/
+
 Psycopg can process queries expressed as `template strings`__ defined in
 :pep:`750` and implemented for the first time in Python 3.14.
 
@@ -49,10 +68,15 @@ This statement has the same effect as a classic:
         (first_name, last_name),
     )
 
-as Psycopg will be able to send parameters separately from the query, or to
-compose the query on the client side using safe escaping rules, according to
-the :ref:`type of cursor <cursor-types>` used, but it is has the same
-readability of f-strings.
+but has a clear readability advantage because the Python variable names or
+expressions appear directly in the place where they will be used in the query
+(no more forgetting to add a placeholder when adding a field in an INSERT...).
+
+Like in normal queries, according to the :ref:`type of cursor <cursor-types>`
+used, Psycopg will either send parameters separately from the query, or will
+compose the query on the client side using safe escaping rules, guaranteeing
+protection from SQL injections.
+
 
 Format specifiers
 -----------------
@@ -91,7 +115,7 @@ The supported specifiers for query composition are:
 .. _tstring-template-notify:
 
 Example: NOTIFY
-^^^^^^^^^^^^^^^
+---------------
 
 The NOTIFY_ command takes a *channel* parameter (an identifier, so it must be
 quoted with double quotes if it contains any non-alphanumeric character), and
@@ -116,7 +140,7 @@ result in executing the statement ``NOTIFY "foo.bar", 'O''Reilly'``.
 .. _tstring-template-nested:
 
 Example: nested templates
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 A string template merges literal parts of the query with parameter. It is also
 possible to pass templates to templates in order to compose more and more
@@ -143,11 +167,10 @@ be written as:
             filters.append(t"u.name ~* {name_pattern}")
         if group_id is not None:
             filters.append(t"u.group_id = {group_id}")
-
         if not filters:
             raise TypeError("please specify at least one search parameter")
-        joined = sql.SQL(" AND ").join(filters)
 
+        joined = sql.SQL(" AND ").join(filters)
         cur = conn.cursor(row_factory=class_row(User))
         cur.execute(t"SELECT * FROM users AS u WHERE {joined:q}")
         return cur.fetchall()
