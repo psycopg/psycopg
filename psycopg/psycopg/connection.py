@@ -380,7 +380,7 @@ class Connection(BaseConnection[Row]):
 
         if self._notify_handlers:
             warnings.warn(
-                "using 'notifies()' together with notifies handlers on the same connection is not reliable. Please use only one of thees methods",
+                "using 'notifies()' together with notifies handlers on the same connection is not reliable. Please use only one of these methods",
                 RuntimeWarning,
             )
 
