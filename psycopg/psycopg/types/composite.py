@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import struct
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import Any, cast, Generic, NamedTuple, TypeVar, TYPE_CHECKING
 from functools import cache
 from collections import namedtuple
 from collections.abc import Callable, Iterator, Sequence
@@ -161,12 +161,7 @@ class BaseCompositeLoader(Loader):
         self._tx = Transformer(context)
 
     def _parse_record(self, data: abc.Buffer) -> Iterator[bytes | None]:
-        """
-        Split a non-empty representation of a composite type into components.
-
-        Terminators shouldn't be used in `!data` (so that both record and range
-        representations can be parsed).
-        """
+        """Split a non-empty representation of a composite type into components."""
         for m in self._re_tokenize.finditer(data):
             if m.group(1):
                 yield None
@@ -192,6 +187,7 @@ class BaseCompositeLoader(Loader):
 
 
 class RecordLoader(BaseCompositeLoader):
+
     def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         if data == b"()":
             return ()
@@ -203,7 +199,7 @@ class RecordLoader(BaseCompositeLoader):
         )
 
 
-class RecordBinaryLoader(Loader):
+class BaseBinaryCompositeLoader(Loader):
     format = pq.Format.BINARY
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
@@ -215,65 +211,124 @@ class RecordBinaryLoader(Loader):
         # records), oids might differ and we'd need separate transformers.
         self._txs: dict[tuple[int, ...], abc.Transformer] = {}
 
-    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
+    def _parse_record(self, data: abc.Buffer) -> tuple[Any, ...]:
         nfields = unpack_len(data, 0)[0]
+        if not nfields:
+            return ()
+
+        # Set the initial offset
         offset = 4
-        oids = []
-        record: list[Buffer | None] = []
-        for _ in range(nfields):
-            oid, length = _unpack_oidlen(data, offset)
+        # Pre-allocate sequences for the oids and the unpacked record
+        oids: list[int] = [0] * nfields
+        record: list[abc.Buffer | None] = [None] * nfields
+        # Walk through the buffer, 1 step per field.
+        for i in range(nfields):
+            # Get the OID for the field and the field length
+            oids[i], length = _unpack_oidlen(data, offset)
+            # OID is always 8 chars
             offset += 8
-            oids.append(oid)
+            # If the field has a lengnth, extract the bytes for the field value and step the offset forward.
             if length >= 0:
-                record.append(data[offset : offset + length])
+                record[i] = data[offset : offset + length]
                 offset += length
-            else:
-                record.append(None)
 
-        key = tuple(oids)
-        try:
-            tx = self._txs[key]
-        except KeyError:
-            tx = self._txs[key] = Transformer(self._ctx)
-            tx.set_loader_types(oids, self.format)
-
+        tx = self._get_transformer((*oids,))
         return tx.load_sequence(record)
 
+    def _get_transformer(self, key: tuple[int, ...]) -> abc.Transformer:
+        # micro-optimization - Prefer a membership check to a KeyError
+        #   try/except blocks are expensive in hot loops.
+        # Is there a more efficient key representation than a tuple?
+        if key in self._txs:
+            return self._txs[key]
 
-class CompositeLoader(RecordLoader):
-    factory: Callable[..., Any]
+        tx = Transformer(self._ctx)
+        tx.set_loader_types([*key], self.format)
+        self._txs[key] = tx
+        return tx
+
+
+class RecordBinaryLoader(BaseBinaryCompositeLoader):
+    format = pq.Format.BINARY
+
+    def load(self, data: abc.Buffer) -> tuple[Any, ...]:
+        return self._parse_record(data)
+
+
+InstanceT = TypeVar("InstanceT")
+
+
+class BaseInstanceLoader(BaseCompositeLoader, Generic[InstanceT]):
+    factory: Callable[..., InstanceT]
     fields_types: list[int]
     _types_set = False
 
-    def load(self, data: abc.Buffer) -> Any:
+    def load(self, data: abc.Buffer) -> InstanceT:
         if not self._types_set:
             self._config_types(data)
             self._types_set = True
 
-        if data == b"()":
-            return type(self).factory()
+        # Remove the parens
+        raw = data[1:-1]
+        # Default to empty args
+        args = ()
+        # If there are values provided, parse the record
+        if raw:
+            args = self._tx.load_sequence(tuple(self._parse_record(raw)))
 
-        return type(self).factory(
-            *self._tx.load_sequence(tuple(self._parse_record(data[1:-1])))
-        )
+        return self._load_instance(args)
 
     def _config_types(self, data: abc.Buffer) -> None:
         self._tx.set_loader_types(self.fields_types, self.format)
 
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        raise NotImplementedError()
 
-class CompositeBinaryLoader(RecordBinaryLoader):
-    format = pq.Format.BINARY
-    factory: Callable[..., Any]
 
-    def load(self, data: abc.Buffer) -> Any:
-        r = super().load(data)
-        return type(self).factory(*r)
+class CompositeLoader(BaseInstanceLoader[InstanceT]):
+
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        return self.factory(*args)
+
+
+class KeywordCompositeLoader(BaseInstanceLoader[InstanceT]):
+    fields_names: Sequence[str]
+
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        mapped = dict(zip(self.fields_names, args))
+        return self.factory(**mapped)
+
+
+class BaseBinaryInstanceLoader(BaseBinaryCompositeLoader, Generic[InstanceT]):
+    factory: Callable[..., InstanceT]
+
+    def load(self, data: abc.Buffer) -> InstanceT:
+        args = self._parse_record(data)
+        return self._load_instance(args)
+
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        raise NotImplementedError()
+
+
+class CompositeBinaryLoader(BaseBinaryInstanceLoader[InstanceT]):
+
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        return self.factory(*args)
+
+
+class KeywordCompositeBinaryLoader(BaseBinaryInstanceLoader[InstanceT]):
+    fields_names: Sequence[str]
+
+    def _load_instance(self, args: tuple[Any, ...]) -> InstanceT:
+        mapped = dict(zip(self.fields_names, args))
+        return self.factory(**mapped)
 
 
 def register_composite(
     info: CompositeInfo,
     context: abc.AdaptContext | None = None,
-    factory: Callable[..., Any] | None = None,
+    factory: Callable[..., InstanceT] | None = None,
+    use_keywords: bool = False,
 ) -> None:
     """Register the adapters to load and dump a composite type.
 
@@ -282,6 +337,8 @@ def register_composite(
         register it globally.
     :param factory: Callable to convert the sequence of attributes read from
         the composite into a Python object.
+    :param use_keywords: If `True`, load composite types using field names as keyword
+        arguments.
 
     .. note::
 
@@ -300,18 +357,29 @@ def register_composite(
     info.register(context)
 
     if not factory:
-        factory = _nt_from_info(info)
+        factory = cast("Callable[..., InstanceT]", _nt_from_info(info))
 
     adapters = context.adapters if context else postgres.adapters
 
+    fields = tuple(_as_python_identifier(n) for n in info.field_names)
     # generate and register a customized text loader
-    loader: type[BaseCompositeLoader]
-    loader = _make_loader(info.name, tuple(info.field_types), factory)
+    loader: type[BaseInstanceLoader[InstanceT]] = _make_loader(
+        info.name,
+        tuple(info.field_types),
+        factory,
+        fields,
+        use_keywords,
+    )
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    loader = _make_binary_loader(info.name, factory)
-    adapters.register_loader(info.oid, loader)
+    binary_loader: type[BaseBinaryInstanceLoader[InstanceT]] = _make_binary_loader(
+        info.name,
+        factory,
+        fields,
+        use_keywords,
+    )
+    adapters.register_loader(info.oid, binary_loader)
 
     # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
@@ -350,21 +418,32 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 
 @cache
 def _make_loader(
-    name: str, types: tuple[int, ...], factory: Callable[..., Any]
-) -> type[BaseCompositeLoader]:
+    name: str,
+    types: tuple[int, ...],
+    factory: Callable[..., InstanceT],
+    fields: tuple[str, ...],
+    use_keywords: bool,
+) -> type[BaseInstanceLoader[InstanceT]]:
+    base_cls = KeywordCompositeLoader if use_keywords else CompositeLoader
     return type(
         f"{name.title()}Loader",
-        (CompositeLoader,),
-        {"factory": factory, "fields_types": list(types)},
+        (base_cls,),
+        {"factory": factory, "fields_types": list(types), "fields_names": list(fields)},
     )
 
 
 @cache
 def _make_binary_loader(
-    name: str, factory: Callable[..., Any]
-) -> type[BaseCompositeLoader]:
+    name: str,
+    factory: Callable[..., InstanceT],
+    fields: tuple[str, ...],
+    use_keywords: bool,
+) -> type[BaseBinaryInstanceLoader[InstanceT]]:
+    base_cls = KeywordCompositeBinaryLoader if use_keywords else CompositeBinaryLoader
     return type(
-        f"{name.title()}BinaryLoader", (CompositeBinaryLoader,), {"factory": factory}
+        f"{name.title()}BinaryLoader",
+        (base_cls,),
+        {"factory": factory, "fields_names": list(fields)},
     )
 
 
