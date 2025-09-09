@@ -445,39 +445,35 @@ cdef class Transformer:
         cdef object records = PyList_New(row1 - row0)
 
         cdef PyObject *loader  # borrowed RowLoader
-        cdef tuple brecord
         row_loaders = self._row_loaders  # avoid an incref/decref per item
 
         for row in range(row0, row1):
-            brecord = PyTuple_New(self._nfields)
+            record = PyTuple_New(self._nfields)
             for col in range(self._nfields):
-                loader = PyList_GET_ITEM(row_loaders, col)
                 attval = &(ires.tuples[row][col])
                 if attval.len == -1:  # NULL_LEN
                     pyval = None
-                elif (<RowLoader>loader).cloader is not None:
-                    pyval = (<RowLoader>loader).cloader.cload(
-                        attval.value, attval.len)
                 else:
-                    b = PyMemoryView_FromObject(
-                        ViewBuffer._from_buffer(
-                            self._pgresult,
-                            <unsigned char *>attval.value, attval.len))
-                    pyval = PyObject_CallFunctionObjArgs(
-                        (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
+                    loader = PyList_GET_ITEM(row_loaders, col)
+                    if (<RowLoader>loader).cloader is not None:
+                        pyval = (<RowLoader>loader).cloader.cload(
+                            attval.value, attval.len)
+                    else:
+                        b = PyMemoryView_FromObject(
+                                ViewBuffer._from_buffer(
+                                    self._pgresult,
+                                    <unsigned char *>attval.value,
+                                    attval.len
+                                ))
+                        pyval = PyObject_CallFunctionObjArgs(
+                            (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
                 Py_INCREF(pyval)
-                PyTuple_SET_ITEM(<object>brecord, col, pyval)
-            Py_INCREF(brecord)
-            PyList_SET_ITEM(records, row - row0, brecord)
-
-        if make_row is not tuple:
-            for i in range(row1 - row0):
-                brecord = <tuple>PyList_GET_ITEM(records, i)
+                PyTuple_SET_ITEM(record, col, pyval)
+            if make_row is not tuple:
                 record = PyObject_CallFunctionObjArgs(
-                    make_row, <PyObject *>brecord, NULL)
-                Py_INCREF(record)
-                PyList_SET_ITEM(records, i, record)
-                Py_DECREF(<object>brecord)
+                    make_row, <PyObject *>record, NULL)
+            Py_INCREF(record)
+            PyList_SET_ITEM(records, row - row0, record)
         return records
 
     def load_row(self, int row, object make_row) -> Row:
