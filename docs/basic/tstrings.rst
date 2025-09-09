@@ -72,10 +72,20 @@ but has a clear readability advantage because the Python variable names or
 expressions appear directly in the place where they will be used in the query
 (no more forgetting to add a placeholder when adding a field in an INSERT...).
 
-Like in normal queries, according to the :ref:`type of cursor <cursor-types>`
-used, Psycopg will either send parameters separately from the query, or will
-compose the query on the client side using safe escaping rules, guaranteeing
-protection from SQL injections.
+With template strings it is also easy to parametrize parts of the query other
+than parameter values, for example tables or fields names:
+
+.. code:: python
+
+    cursor.execute(
+        t"INSERT INTO {table_name:i} (first_name, last_name) VALUES ({first_name}, {last_name})"
+    )
+
+The ``:i`` specifies to merge `!table_name` to the query on the client using
+the `identifier syntax`__ before continuing with the normal processing (which
+might involve preparing the query, sending the parameters separately, etc.)
+
+.. __: https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 
 
 Format specifiers
