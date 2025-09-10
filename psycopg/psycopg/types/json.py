@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from types import CodeType
+from types import BuiltinFunctionType, CodeType
 from typing import Any, TypeAlias
 from warnings import warn
 from threading import Lock
@@ -22,7 +22,7 @@ from ..errors import DataError
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], str | bytes]
 JsonLoadsFunction: TypeAlias = Callable[[str | bytes], Any]
-_AdapterKey: TypeAlias = tuple[type, CodeType]
+_AdapterKey: TypeAlias = tuple[type, CodeType | BuiltinFunctionType | type]
 
 logger = logging.getLogger("psycopg")
 
@@ -155,8 +155,12 @@ def _get_adapter_key(t: type, f: Callable[..., Any]) -> _AdapterKey | None:
     the same if a lambda if defined in a function, so we can use it as a more
     stable hash key.
     """
+    # A builtin is stable and has no cache so it's a good candidate as hash key.
+    if isinstance(f, (BuiltinFunctionType, type)):
+        return (t, f)
+
     # Check if there's an unexpected Python implementation that doesn't define
-    # these dunder attributes. If thta's the case, raise a warning, which will
+    # these dunder attributes. If that's the case, raise a warning, which will
     # crash our test suite and/or hopefully will be detected by the user.
     try:
         f.__code__
