@@ -476,6 +476,11 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         # return node
 
         self.generic_visit(node)
+
+        # Check if this is Awaitable[T]
+        if isinstance(node.value, ast.Name) and node.value.id == "Awaitable":
+            # Replace Awaitable[T] with just T
+            return node.slice if isinstance(node.slice, ast.AST) else node
         return node
 
     def _manage_async_generator(self, node: ast.Subscript) -> ast.AST | None:

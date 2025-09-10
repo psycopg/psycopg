@@ -1168,3 +1168,23 @@ async def test_override_close_no_loop_subclass(dsn):
         await conn.close()
         await asleep(0.1)
         assert len(p._pool) == 1
+
+
+async def test_get_config_rotates_connections(dsn):
+    config_rotation_counter = 0
+
+    async def rotating_config():
+        nonlocal config_rotation_counter
+        config_rotation_counter += 1
+        return dsn
+
+    p = pool.AsyncConnectionPool(
+        conninfo=rotating_config, min_size=2, max_lifetime=0.2, open=False
+    )
+
+    try:
+        await p.open()
+        await p.wait()
+        assert config_rotation_counter == 2
+    finally:
+        await p.close()
