@@ -6,12 +6,13 @@ Psycopg connection pool module (async version).
 
 from __future__ import annotations
 
+import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, cast
+from typing import Any, Generic, Callable, Awaitable, cast
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -44,6 +45,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
         kwargs: dict[str, Any] | None = None,
+        get_config: (
+            Callable[[], tuple[str, dict[str, Any]]]
+            | Callable[[], Awaitable[tuple[str, dict[str, Any]]]]
+            | None
+        ) = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -59,7 +65,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         reconnect_failed: AsyncConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
+        if conninfo is None and get_config is None:
+            raise TypeError("Either conninfo or get_config must be provided")
+
         self.connection_class = connection_class
+        self._get_config = get_config
         self._check = check
         self._configure = configure
         self._reset = reset
@@ -231,6 +241,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    async def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        if self._get_config is None:
+            return self.conninfo, self.kwargs
+
+        if inspect.iscoroutinefunction(self._get_config):
+            return await self._get_config()
+        else:
+            return self._get_config()
 
     async def _getconn_with_check_loop(self, deadline: float) -> ACT:
         attempt: AttemptWithBackoff | None = None
@@ -633,13 +652,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     async def _connect(self, timeout: float | None = None) -> ACT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo, kwargs = await self._getconn_params()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = await self.connection_class.connect(self.conninfo, **kwargs)
+            conn = await self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

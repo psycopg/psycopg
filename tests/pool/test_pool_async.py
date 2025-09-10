@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import weakref
 from time import time
@@ -1077,3 +1078,27 @@ async def test_override_close(dsn):
         assert len(p._pool) == 2
 
     assert conn.closed
+
+async def test_get_config_rotates_connections(dsn):
+    config_rotation_counter = 0
+
+    async def rotating_config():
+        nonlocal config_rotation_counter
+        config_rotation_counter += 1
+        return dsn, {}
+
+    async with pool.AsyncConnectionPool(
+        dsn,
+        get_config=rotating_config,
+        min_size=2,
+        max_lifetime=0.2,
+    ) as p:
+        # At pool start, no calls yet
+        assert config_rotation_counter == 0
+
+        # Let connections expire
+        await asleep(0.3)
+        await p.check()  # trigger pool maintenance
+
+        # Since min_size=2, get_config must have been called twice
+        assert config_rotation_counter == 2, "Connections should have rotated with new config"

@@ -1074,3 +1074,27 @@ def test_override_close(dsn):
         assert len(p._pool) == 2
 
     assert conn.closed
+
+def test_get_config_rotates_connections(dsn):
+    config_rotation_counter = 0
+
+    def rotating_config():
+        nonlocal config_rotation_counter
+        config_rotation_counter += 1
+        return dsn, {}
+
+    with pool.ConnectionPool(
+        dsn,
+        get_config=rotating_config,
+        min_size=2,
+        max_lifetime=0.2,
+    ) as p:
+        # At pool start, no calls yet
+        assert config_rotation_counter == 0
+
+        # Let connections expire
+        sleep(0.3)
+        p.check()  # trigger pool maintenance
+
+        # Since min_size=2, get_config must have been called twice
+        assert config_rotation_counter == 2, "Connections should have rotated with new config"
