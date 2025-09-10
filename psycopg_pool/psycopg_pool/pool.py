@@ -9,12 +9,13 @@ Psycopg connection pool module (sync version).
 
 from __future__ import annotations
 
+import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, cast
+from typing import Any, Generic, Callable, Awaitable, cast
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -42,6 +43,11 @@ class ConnectionPool(Generic[CT], BasePool):
         self,
         conninfo: str = "",
         *,
+        get_config: (
+            Callable[[], tuple[str, dict[str, Any]]]
+            | Callable[[], Awaitable[tuple[str, dict[str, Any]]]]
+            | None
+        ) = None,
         connection_class: type[CT] = cast(type[CT], Connection),
         kwargs: dict[str, Any] | None = None,
         min_size: int = 4,
@@ -59,6 +65,10 @@ class ConnectionPool(Generic[CT], BasePool):
         reconnect_failed: ConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
+        if conninfo is None and get_config is None:
+            raise TypeError("Either conninfo or get_config must be provided")
+
+        self._get_config = get_config
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -203,6 +213,14 @@ class ConnectionPool(Generic[CT], BasePool):
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        if self._get_config is None:
+            return self._conninfo, self._kwargs
+
+        if inspect.iscoroutinefunction(self._get_config):
+            raise TypeError("get_config must be sync for ConnectionPool")
+        return self._get_config()
 
     def _getconn_with_check_loop(self, deadline: float) -> CT:
         attempt: AttemptWithBackoff | None = None
@@ -587,13 +605,13 @@ class ConnectionPool(Generic[CT], BasePool):
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo, kwargs = self._getconn_params()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = self.connection_class.connect(self.conninfo, **kwargs)
+            conn = self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
