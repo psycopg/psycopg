@@ -25,6 +25,11 @@ from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
 from psycopg._encodings import conn_encoding
 
+
+cdef extern from "alloca.h":
+    void *alloca(Py_ssize_t size)
+
+
 NoneType = type(None)
 
 # internal structure: you are not supposed to know this. But it's worth some
@@ -424,6 +429,82 @@ cdef class Transformer:
         self.formats = pqformats
         return out
 
+    def load_rows_(self, int row0, int row1, object make_row) -> list[Row]:
+        if self._pgresult is None:
+            raise e.InterfaceError("result not set")
+
+        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
+            raise e.InterfaceError(
+                f"rows must be included between 0 and {self._ntuples}"
+            )
+
+        cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
+        # cheeky access to the internal PGresult structure
+        cdef pg_result_int *ires = <pg_result_int*>res
+
+        cdef int row
+        cdef int col
+        cdef PGresAttValue *attval
+        cdef object record  # not 'tuple' as it would check on assignment
+
+        cdef int rowcount = row1 - row0
+        cdef object records = PyList_New(rowcount)
+
+        cdef PyObject *loader  # borrowed RowLoader
+        cdef PyObject *brecord  # borrowed
+        cdef int advance
+        row_loaders = self._row_loaders  # avoid an incref/decref per item
+
+        while row0 < row1:
+            # TODO: make advance configurable
+            advance = 100 if row1 - row0 > 100 else row1 - row0
+            for row in range(advance):
+                record = PyTuple_New(self._nfields)
+                Py_INCREF(record)
+                PyList_SET_ITEM(records, row, record)
+            for col in range(self._nfields):
+                loader = PyList_GET_ITEM(row_loaders, col)
+                if (<RowLoader>loader).cloader is not None:
+                    for row in range(row0, row0+advance):
+                        brecord = PyList_GET_ITEM(records, row - row0)
+                        attval = &(ires.tuples[row][col])
+                        if attval.len == -1:  # NULL_LEN
+                            pyval = None
+                        else:
+                            pyval = (<RowLoader>loader).cloader.cload(
+                                attval.value, attval.len)
+
+                        Py_INCREF(pyval)
+                        PyTuple_SET_ITEM(<object>brecord, col, pyval)
+
+                else:
+                    for row in range(row0, row0+advance):
+                        brecord = PyList_GET_ITEM(records, row - row0)
+                        attval = &(ires.tuples[row][col])
+                        if attval.len == -1:  # NULL_LEN
+                            pyval = None
+                        else:
+                            b = PyMemoryView_FromObject(
+                                ViewBuffer._from_buffer(
+                                    self._pgresult,
+                                    <unsigned char *>attval.value, attval.len))
+                            pyval = PyObject_CallFunctionObjArgs(
+                                (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
+
+                        Py_INCREF(pyval)
+                        PyTuple_SET_ITEM(<object>brecord, col, pyval)
+            row0 += advance
+
+        if make_row is not tuple:
+            for i in range(rowcount):
+                brecord = PyList_GET_ITEM(records, i)
+                record = PyObject_CallFunctionObjArgs(
+                    make_row, <PyObject *>brecord, NULL)
+                Py_INCREF(record)
+                PyList_SET_ITEM(records, i, record)
+                Py_DECREF(<object>brecord)
+        return records
+
     def load_rows(self, int row0, int row1, object make_row) -> list[Row]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
@@ -444,8 +525,10 @@ cdef class Transformer:
 
         cdef object records = PyList_New(row1 - row0)
 
-        cdef PyObject *loader  # borrowed RowLoader
-        row_loaders = self._row_loaders  # avoid an incref/decref per item
+        # hacky but fastest access to loaders
+        cdef PyObject **loaders = <PyObject **>alloca(self._nfields * sizeof(PyObject *))
+        for col in range(self._nfields):
+            loaders[col] = PyList_GET_ITEM(self._row_loaders, col)
 
         for row in range(row0, row1):
             record = PyTuple_New(self._nfields)
@@ -454,9 +537,8 @@ cdef class Transformer:
                 if attval.len == -1:  # NULL_LEN
                     pyval = None
                 else:
-                    loader = PyList_GET_ITEM(row_loaders, col)
-                    if (<RowLoader>loader).cloader is not None:
-                        pyval = (<RowLoader>loader).cloader.cload(
+                    if (<RowLoader>loaders[col]).cloader is not None:
+                        pyval = (<RowLoader>loaders[col]).cloader.cload(
                             attval.value, attval.len)
                     else:
                         b = PyMemoryView_FromObject(
@@ -466,7 +548,7 @@ cdef class Transformer:
                                     attval.len
                                 ))
                         pyval = PyObject_CallFunctionObjArgs(
-                            (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
+                            (<RowLoader>loaders[col]).loadfunc, <PyObject *>b, NULL)
                 Py_INCREF(pyval)
                 PyTuple_SET_ITEM(record, col, pyval)
             if make_row is not tuple:
