@@ -10,12 +10,12 @@ Psycopg null connection pool module (sync version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import cast
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectFailedCB, ConnectionCB
+from .abc import CT, ConnectFailedCB, ConnectionCB, ConninfoParam, KwargsParam
 from .pool import AddConnection, ConnectionPool
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
@@ -29,10 +29,10 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: ConninfoParam = "",
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: KwargsParam | None = None,
         min_size: int = 0,
         max_size: int | None = None,
         open: bool | None = None,

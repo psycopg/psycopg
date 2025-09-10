@@ -15,6 +15,8 @@ psycopg_pool 3.3.0 (unreleased)
 
 - Add `!close_returns` for :ref:`integration with SQLAlchemy <pool-sqlalchemy>`
   (:ticket:`#1046`).
+- Allow `!conninfo` and `!kwargs` to be callable to allow connection
+  parameters# update (:ticket:`#851`).
 
 
 Current release

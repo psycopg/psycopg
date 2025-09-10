@@ -15,7 +15,7 @@ import queue
 import asyncio
 import logging
 import threading
-from typing import Any, ParamSpec, TypeAlias, overload
+from typing import Any, Awaitable, ParamSpec, TypeAlias, overload
 from inspect import isawaitable
 from collections.abc import Callable, Coroutine
 
@@ -166,7 +166,7 @@ def asleep(seconds: float) -> Coroutine[Any, Any, None]:
 
 @overload
 async def ensure_async(
-    f: Callable[P, Coroutine[Any, Any, T]], *args: P.args, **kwargs: P.kwargs
+    f: Callable[P, Awaitable[T]], *args: P.args, **kwargs: P.kwargs
 ) -> T: ...
 
 

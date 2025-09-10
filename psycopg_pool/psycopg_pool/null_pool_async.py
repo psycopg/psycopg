@@ -7,12 +7,13 @@ Psycopg null connection pool module (async version).
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import cast
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 
-from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB
+from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB, AsyncConninfoParam
+from .abc import AsyncKwargsParam
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import AEvent
@@ -23,12 +24,13 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT]):
+
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: AsyncConninfoParam = "",
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: AsyncKwargsParam | None = None,
         min_size: int = 0,  # Note: min_size default value changed to 0.
         max_size: int | None = None,
         open: bool | None = None,

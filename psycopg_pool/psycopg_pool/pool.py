@@ -24,7 +24,7 @@ from psycopg import Connection
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectFailedCB, ConnectionCB
+from .abc import CT, ConnectFailedCB, ConnectionCB, ConninfoParam, KwargsParam
 from .base import AttemptWithBackoff, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
@@ -40,10 +40,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: ConninfoParam = "",
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: KwargsParam | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -67,7 +67,8 @@ class ConnectionPool(Generic[CT], BasePool):
                 raise TypeError(
                     "Using 'close_returns=True' and a non-standard 'connection_class' requires psycopg 3.3 or newer. Please check the docs at https://www.psycopg.org/psycopg3/docs/advanced/pool.html#pool-sqlalchemy for a workaround."
                 )
-
+        self.conninfo = conninfo
+        self.kwargs = kwargs
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -90,8 +91,6 @@ class ConnectionPool(Generic[CT], BasePool):
         self._workers: list[Worker] = []
 
         super().__init__(
-            conninfo,
-            kwargs=kwargs,
             min_size=min_size,
             max_size=max_size,
             name=name,
@@ -599,13 +598,14 @@ class ConnectionPool(Generic[CT], BasePool):
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo = self._resolve_conninfo()
+        kwargs = self._resolve_kwargs()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = self.connection_class.connect(self.conninfo, **kwargs)
+            conn = self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
@@ -626,6 +626,23 @@ class ConnectionPool(Generic[CT], BasePool):
         # Set an expiry date, with some randomness to avoid mass reconnection
         self._set_connection_expiry_date(conn)
         return conn
+
+    def _resolve_conninfo(self) -> str:
+        """Resolve conninfo (static string, sync callable, or async callable)."""
+        if callable(self.conninfo):
+            return self.conninfo()
+
+        return self.conninfo or ""
+
+    def _resolve_kwargs(self) -> dict[str, Any]:
+        """Resolve kwargs (static dict, sync callable, or async callable)."""
+        if not self.kwargs:
+            return {}
+
+        if callable(self.kwargs):
+            return self.kwargs()
+
+        return self.kwargs
 
     def _add_connection(
         self, attempt: AttemptWithBackoff | None, growing: bool = False
