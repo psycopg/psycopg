@@ -26,8 +26,15 @@ from psycopg.rows import Row, RowMaker
 from psycopg._encodings import conn_encoding
 
 
-cdef extern from "alloca.h":
-    void *alloca(Py_ssize_t size)
+cdef extern from *:
+    """
+    #ifdef _WIN32
+    #include <malloc.h>
+    #else
+    #include <alloca.h>
+    #endif
+    """
+    void* alloca(size_t size)
 
 
 NoneType = type(None)
@@ -455,17 +462,17 @@ cdef class Transformer:
         cdef int advance
         row_loaders = self._row_loaders  # avoid an incref/decref per item
 
-        while row0 < row1:
-            # TODO: make advance configurable
-            advance = 100 if row1 - row0 > 100 else row1 - row0
-            for row in range(advance):
+        cdef int window = 100
+        for pr0 in range(row0, row1, window):
+            pr1 = min(pr0 + window, row1)
+            for row in range(pr0, pr1):
                 record = PyTuple_New(self._nfields)
                 Py_INCREF(record)
                 PyList_SET_ITEM(records, row, record)
             for col in range(self._nfields):
                 loader = PyList_GET_ITEM(row_loaders, col)
                 if (<RowLoader>loader).cloader is not None:
-                    for row in range(row0, row0+advance):
+                    for row in range(pr0, pr1):
                         brecord = PyList_GET_ITEM(records, row - row0)
                         attval = &(ires.tuples[row][col])
                         if attval.len == -1:  # NULL_LEN
@@ -478,7 +485,7 @@ cdef class Transformer:
                         PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
                 else:
-                    for row in range(row0, row0+advance):
+                    for row in range(pr0, pr1):
                         brecord = PyList_GET_ITEM(records, row - row0)
                         attval = &(ires.tuples[row][col])
                         if attval.len == -1:  # NULL_LEN
@@ -493,7 +500,6 @@ cdef class Transformer:
 
                         Py_INCREF(pyval)
                         PyTuple_SET_ITEM(<object>brecord, col, pyval)
-            row0 += advance
 
         if make_row is not tuple:
             for i in range(rowcount):
