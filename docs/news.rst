@@ -43,6 +43,13 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
+Psycopg 3.2.11 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Don't raise warning, and don't leak resources, if a builtin function is used
+  as JSON dumper/loader function (:ticket:`#1165`).
+
+
 Current release
 ---------------
 
