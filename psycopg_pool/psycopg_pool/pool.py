@@ -9,12 +9,13 @@ Psycopg connection pool module (sync version).
 
 from __future__ import annotations
 
+import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, cast
+from typing import Any, Generic, Callable, Awaitable, cast
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -40,10 +41,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], str] = "",
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -203,6 +204,30 @@ class ConnectionPool(Generic[CT], BasePool):
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    def _resolve_conninfo(self) -> str:
+        if callable(self.conninfo):
+            value = self.conninfo()
+            if not isinstance(value, str):
+                raise TypeError("conninfo callable must return a string")
+            return value
+        return self.conninfo
+
+    def _resolve_kwargs(self) -> dict[str, Any]:
+        if callable(self.kwargs):
+            value = self.kwargs()
+            if not isinstance(value, dict):
+                raise TypeError("kwargs callable must return a dict")
+            return value
+        return self.kwargs
+
+    def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        """
+        Returns the current connection parameters (conninfo, kwargs).
+        Called every time a new connection is created — allows for
+        dynamic password rotation or DSN updates.
+        """
+        return self._resolve_conninfo(), self._resolve_kwargs()
 
     def _getconn_with_check_loop(self, deadline: float) -> CT:
         attempt: AttemptWithBackoff | None = None
@@ -587,13 +612,13 @@ class ConnectionPool(Generic[CT], BasePool):
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo, kwargs = self._getconn_params()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = self.connection_class.connect(self.conninfo, **kwargs)
+            conn = self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

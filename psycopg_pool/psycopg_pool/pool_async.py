@@ -6,12 +6,13 @@ Psycopg connection pool module (async version).
 
 from __future__ import annotations
 
+import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, cast
+from typing import Any, Generic, Callable, Awaitable, cast, Coroutine
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -40,10 +41,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], Awaitable[str]],
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -231,6 +232,29 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             raise PoolTimeout(
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
+
+    async def _resolve_conninfo(self) -> Callable | str | Any:
+        """Resolve conninfo (static string, sync callable, or async callable)."""
+        if callable(self.conninfo):
+            if inspect.iscoroutinefunction(self.conninfo):
+                return await self.conninfo()
+            return self.conninfo()
+        return self.conninfo
+
+    async def _resolve_kwargs(self) -> dict[str, Any]:
+        """Resolve kwargs (static dict, sync callable, or async callable)."""
+        if not self.kwargs:
+            return {}
+
+        if callable(self.kwargs):
+            if inspect.iscoroutinefunction(self.kwargs):
+                return await self.kwargs()
+            return self.kwargs()
+
+        return self.kwargs
+
+    async def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        return await self._resolve_conninfo(), await self._resolve_kwargs()
 
     async def _getconn_with_check_loop(self, deadline: float) -> ACT:
         attempt: AttemptWithBackoff | None = None
@@ -633,13 +657,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     async def _connect(self, timeout: float | None = None) -> ACT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo, kwargs = await self._getconn_params()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = await self.connection_class.connect(self.conninfo, **kwargs)
+            conn = await self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
