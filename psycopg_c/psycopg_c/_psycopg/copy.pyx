@@ -10,6 +10,7 @@ from libc.string cimport memcpy
 from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_FromStringAndSize
 from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
 from cpython.memoryview cimport PyMemoryView_FromObject
+from cpython.tuple cimport PyTuple_GET_SIZE
 
 from psycopg_c.pq cimport ViewBuffer
 from psycopg_c._psycopg cimport endian
@@ -24,7 +25,13 @@ def format_row_binary(
     row: Sequence[Any], tx: Transformer, out: bytearray = None
 ) -> bytearray:
     """Convert a row of adapted data to the data to send for binary copy"""
-    cdef Py_ssize_t rowlen = len(row)
+    cdef Py_ssize_t rowlen
+    if type(row) is list:
+        rowlen = PyList_GET_SIZE(row)
+    elif type(row) is tuple:
+        rowlen = PyTuple_GET_SIZE(row)
+    else:
+        rowlen = len(row)
     cdef uint16_t berowlen = endian.htobe16(<int16_t>rowlen)
 
     cdef Py_ssize_t pos  # offset in 'out' where to write
@@ -53,7 +60,7 @@ def format_row_binary(
     if not tx._row_dumpers:
         tx._row_dumpers = PyList_New(rowlen)
     dumpers = tx._row_dumpers
-    if len(dumpers) != rowlen:
+    if PyList_GET_SIZE(dumpers) != rowlen:
         raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
@@ -115,7 +122,13 @@ def format_row_text(
     else:
         pos = PyByteArray_GET_SIZE(out)
 
-    cdef Py_ssize_t rowlen = len(row)
+    cdef Py_ssize_t rowlen
+    if type(row) is list:
+        rowlen = PyList_GET_SIZE(row)
+    elif type(row) is tuple:
+        rowlen = PyTuple_GET_SIZE(row)
+    else:
+        rowlen = len(row)
 
     if rowlen == 0:
         PyByteArray_Resize(out, pos + 1)
@@ -135,7 +148,7 @@ def format_row_text(
     if not tx._row_dumpers:
         tx._row_dumpers = PyList_New(rowlen)
     dumpers = tx._row_dumpers
-    if len(dumpers) != rowlen:
+    if PyList_GET_SIZE(dumpers) != rowlen:
         raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
