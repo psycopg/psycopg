@@ -12,7 +12,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, Callable, Awaitable, cast
+from typing import Any, Generic, Callable, Awaitable, cast, Coroutine
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -41,15 +41,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], Awaitable[str]],
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
-        kwargs: dict[str, Any] | None = None,
-        get_config: (
-            Callable[[], tuple[str, dict[str, Any]]]
-            | Callable[[], Awaitable[tuple[str, dict[str, Any]]]]
-            | None
-        ) = None,
+        kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -65,11 +60,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         reconnect_failed: AsyncConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
-        if conninfo is None and get_config is None:
-            raise TypeError("Either conninfo or get_config must be provided")
-
         self.connection_class = connection_class
-        self._get_config = get_config
         self._check = check
         self._configure = configure
         self._reset = reset
@@ -242,14 +233,28 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
 
-    async def _getconn_params(self) -> tuple[str, dict[str, Any]]:
-        if self._get_config is None:
-            return self.conninfo, self.kwargs
+    async def _resolve_conninfo(self) -> Callable | str | Any:
+        """Resolve conninfo (static string, sync callable, or async callable)."""
+        if callable(self.conninfo):
+            if inspect.iscoroutinefunction(self.conninfo):
+                return await self.conninfo()
+            return self.conninfo()
+        return self.conninfo
 
-        if inspect.iscoroutinefunction(self._get_config):
-            return await self._get_config()
-        else:
-            return self._get_config()
+    async def _resolve_kwargs(self) -> dict[str, Any]:
+        """Resolve kwargs (static dict, sync callable, or async callable)."""
+        if not self.kwargs:
+            return {}
+
+        if callable(self.kwargs):
+            if inspect.iscoroutinefunction(self.kwargs):
+                return await self.kwargs()
+            return self.kwargs()
+
+        return self.kwargs
+
+    async def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        return await self._resolve_conninfo(), await self._resolve_kwargs()
 
     async def _getconn_with_check_loop(self, deadline: float) -> ACT:
         attempt: AttemptWithBackoff | None = None
