@@ -170,6 +170,8 @@ cdef class Transformer:
         self._row_loaders = loaders
 
     def set_dumper_types(self, types: Sequence[int], format: PqFormat) -> None:
+        # NOTE: impl detail - final _row_dumpers must be a list type
+        # (assumed by format_row_binary and format_row_text)
         cdef Py_ssize_t ntypes = len(types)
         dumpers = PyList_New(ntypes)
         cdef int i
