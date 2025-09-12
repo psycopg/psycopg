@@ -65,6 +65,7 @@ disallow_untyped_calls = false
 module = [
     "tests.scripts.spiketest",
     "tests.types.test_range",
+    "tests.types.test_uuid",
 ]
 warn_unused_ignores = false  # for mypy 1.14 on Python 3.8
 
