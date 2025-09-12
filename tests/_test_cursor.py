@@ -15,8 +15,7 @@ from psycopg.rows import RowMaker
 
 @pytest.fixture(scope="session")
 def _execmany(svcconn):
-    cur = svcconn.cursor()
-    cur.execute(
+    svcconn.execute(
         """
         drop table if exists execmany;
         create table execmany (id serial primary key, num integer, data text)
@@ -26,8 +25,7 @@ def _execmany(svcconn):
 
 @pytest.fixture(scope="function")
 def execmany(svcconn, _execmany):
-    cur = svcconn.cursor()
-    cur.execute("truncate table execmany")
+    svcconn.execute("delete from execmany")
 
 
 def ph(cur: Any, query: str) -> str:
