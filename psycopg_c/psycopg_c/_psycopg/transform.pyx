@@ -25,19 +25,6 @@ from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
 from psycopg._encodings import conn_encoding
 
-
-cdef extern from *:
-    """
-    #ifdef _WIN32
-    #include <malloc.h>
-    #else
-    #include <alloca.h>
-    #endif
-    """
-    void* alloca(size_t size)
-
-ctypedef object (*cload_ptr)(CLoader, const char *, size_t)
-
 NoneType = type(None)
 
 # internal structure: you are not supposed to know this. But it's worth some
@@ -458,8 +445,7 @@ cdef class Transformer:
         cdef PGresAttValue *attval
         cdef object record  # not 'tuple' as it would check on assignment
 
-        cdef int rowcount = row1 - row0
-        cdef object records = PyList_New(rowcount)
+        cdef object records = PyList_New(row1 - row0)
 
         cdef PyObject *loader  # borrowed RowLoader
         cdef PyObject *brecord  # borrowed
@@ -505,83 +491,13 @@ cdef class Transformer:
                         PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
         if make_row is not tuple:
-            for i in range(rowcount):
+            for i in range(row1 - row0):
                 brecord = PyList_GET_ITEM(records, i)
                 record = PyObject_CallFunctionObjArgs(
                     make_row, <PyObject *>brecord, NULL)
                 Py_INCREF(record)
                 PyList_SET_ITEM(records, i, record)
                 Py_DECREF(<object>brecord)
-        return records
-
-    def load_rows_(self, int row0, int row1, object make_row) -> list[Row]:
-        if self._pgresult is None:
-            raise e.InterfaceError("result not set")
-
-        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
-            raise e.InterfaceError(
-                f"rows must be included between 0 and {self._ntuples}"
-            )
-
-        cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
-        # cheeky access to the internal PGresult structure
-        cdef pg_result_int *ires = <pg_result_int*>res
-
-        cdef int row
-        cdef int col
-        cdef PGresAttValue *attval
-        cdef object record  # not 'tuple' as it would check on assignment
-
-        cdef object records = PyList_New(row1 - row0)
-
-        # hacky but fastest access to loaders
-        #cdef int32_t *has_cloader = <int32_t *>alloca(self._nfields * sizeof(int32_t))
-        cdef cload_ptr *cloads = <cload_ptr*>alloca(self._nfields * sizeof(cload_ptr))
-        cdef PyObject **loadfuncs = <PyObject **>alloca(self._nfields * sizeof(PyObject *))
-        cdef PyObject *loader
-        for col in range(self._nfields):
-            #loaders[col] = PyList_GET_ITEM(self._row_loaders, col)
-            loader = PyList_GET_ITEM(self._row_loaders, col)
-            if (<RowLoader>loader).cloader is not None:
-                #has_cloader[col] = 1
-                cloads[col] = (<RowLoader>loader).cloader.cload
-            else:
-                #has_cloader[col] = 0
-                cloads[col] = NULL
-                loadfuncs[col] = <PyObject *>(<RowLoader>loader).loadfunc
-
-        for row in range(row0, row1):
-            record = PyTuple_New(self._nfields)
-            for col in range(self._nfields):
-                attval = &(ires.tuples[row][col])
-                if attval.len == -1:  # NULL_LEN
-                    pyval = None
-                else:
-                    if cloads[col]:
-                    #if has_cloader[col]:
-                    #if (<RowLoader>loaders[col]).cloader is not None:
-                        #pyval = (<RowLoader>loaders[col]).cloader.cload(
-                        #    attval.value, attval.len)
-                        pyval = cloads[col](None, attval.value, attval.len)
-                    else:
-                        #loader = PyList_GET_ITEM(self._row_loaders, col)
-                        b = PyMemoryView_FromObject(
-                                ViewBuffer._from_buffer(
-                                    self._pgresult,
-                                    <unsigned char *>attval.value,
-                                    attval.len
-                                ))
-                        #pyval = PyObject_CallFunctionObjArgs(
-                        #    (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
-                        pyval = PyObject_CallFunctionObjArgs(
-                            <object>loadfuncs[col], <PyObject *>b, NULL)
-                Py_INCREF(pyval)
-                PyTuple_SET_ITEM(record, col, pyval)
-            if make_row is not tuple:
-                record = PyObject_CallFunctionObjArgs(
-                    make_row, <PyObject *>record, NULL)
-            Py_INCREF(record)
-            PyList_SET_ITEM(records, row - row0, record)
         return records
 
     def load_row(self, int row, object make_row) -> Row:
