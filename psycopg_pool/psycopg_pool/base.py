@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from time import monotonic
 from random import random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Awaitable
 from collections import Counter, deque
 
 from psycopg import errors as e
@@ -44,7 +44,7 @@ class BasePool:
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], str] | Callable[[], Awaitable[str]],
         *,
         kwargs: dict[str, Any] | None,
         min_size: int,
@@ -67,7 +67,7 @@ class BasePool:
             raise ValueError("num_workers must be at least 1")
 
         self.conninfo = conninfo
-        self.kwargs: dict[str, Any] = kwargs or {}
+        self.kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | Callable[[], Awaitable[dict[str, Any]]] | None = kwargs or {}
         self.name = name
         self._min_size = min_size
         self._max_size = max_size

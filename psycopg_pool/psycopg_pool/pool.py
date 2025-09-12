@@ -41,15 +41,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], str] = "",
         *,
-        get_config: (
-            Callable[[], tuple[str, dict[str, Any]]]
-            | Callable[[], Awaitable[tuple[str, dict[str, Any]]]]
-            | None
-        ) = None,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -65,10 +60,6 @@ class ConnectionPool(Generic[CT], BasePool):
         reconnect_failed: ConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
-        if conninfo is None and get_config is None:
-            raise TypeError("Either conninfo or get_config must be provided")
-
-        self._get_config = get_config
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -214,13 +205,29 @@ class ConnectionPool(Generic[CT], BasePool):
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
 
-    def _getconn_params(self) -> tuple[str, dict[str, Any]]:
-        if self._get_config is None:
-            return self._conninfo, self._kwargs
+    def _resolve_conninfo(self) -> str:
+        if callable(self.conninfo):
+            value = self.conninfo()
+            if not isinstance(value, str):
+                raise TypeError("conninfo callable must return a string")
+            return value
+        return self.conninfo
 
-        if inspect.iscoroutinefunction(self._get_config):
-            raise TypeError("get_config must be sync for ConnectionPool")
-        return self._get_config()
+    def _resolve_kwargs(self) -> dict[str, Any]:
+        if callable(self.kwargs):
+            value = self.kwargs()
+            if not isinstance(value, dict):
+                raise TypeError("kwargs callable must return a dict")
+            return value
+        return self.kwargs
+
+    def _getconn_params(self) -> tuple[str, dict[str, Any]]:
+        """
+        Returns the current connection parameters (conninfo, kwargs).
+        Called every time a new connection is created — allows for
+        dynamic password rotation or DSN updates.
+        """
+        return self._resolve_conninfo(), self._resolve_kwargs()
 
     def _getconn_with_check_loop(self, deadline: float) -> CT:
         attempt: AttemptWithBackoff | None = None

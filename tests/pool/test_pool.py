@@ -1081,11 +1081,10 @@ def test_get_config_rotates_connections(dsn):
     def rotating_config():
         nonlocal config_rotation_counter
         config_rotation_counter += 1
-        return dsn, {}
+        return dsn
 
     with pool.ConnectionPool(
-        dsn,
-        get_config=rotating_config,
+        conninfo=rotating_config,
         min_size=2,
         max_lifetime=0.2,
     ) as p:
