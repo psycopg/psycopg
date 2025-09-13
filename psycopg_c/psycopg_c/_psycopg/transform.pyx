@@ -97,7 +97,7 @@ cdef class Transformer:
 
     cdef dict _oid_types
 
-    cdef public int _page_size
+    cdef public int _load_rows_page_size
 
     def __cinit__(self, context: "AdaptContext" | None = None):
         if context is not None:
@@ -110,7 +110,7 @@ cdef class Transformer:
 
         self.types = self.formats = None
         self._none_oid = -1
-        self._page_size = 100
+        self._load_rows_page_size = _load_rows_page_size
 
     @classmethod
     def from_context(cls, context: "AdaptContext" | None):
@@ -436,12 +436,14 @@ cdef class Transformer:
                 f"rows must be included between 0 and {self._ntuples}"
             )
 
+        if self._load_rows_page_size <= 0:
+            raise ValueError(f"_load_rows_page_size  must be positive")
+
         cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
         # cheeky access to the internal PGresult structure
         cdef pg_result_int *ires = <pg_result_int*>res
 
-        cdef int row
-        cdef int col
+        cdef int row, col, pr0, pr1
         cdef PGresAttValue *attval
         cdef object record  # not 'tuple' as it would check on assignment
 
@@ -449,15 +451,17 @@ cdef class Transformer:
 
         cdef PyObject *loader  # borrowed RowLoader
         cdef PyObject *brecord  # borrowed
+
         row_loaders = self._row_loaders  # avoid an incref/decref per item
 
-        cdef int page_size = self._page_size
-        for pr0 in range(row0, row1, page_size):
-            pr1 = min(pr0 + page_size, row1)
+        pr0 = row0
+        while pr0 < row1:
+            pr1 = min(pr0 + self._load_rows_page_size, row1)
             for row in range(pr0, pr1):
                 record = PyTuple_New(self._nfields)
                 Py_INCREF(record)
-                PyList_SET_ITEM(records, row, record)
+                PyList_SET_ITEM(records, row - row0, record)
+
             for col in range(self._nfields):
                 loader = PyList_GET_ITEM(row_loaders, col)
                 if (<RowLoader>loader).cloader is not None:
@@ -489,6 +493,8 @@ cdef class Transformer:
 
                         Py_INCREF(pyval)
                         PyTuple_SET_ITEM(<object>brecord, col, pyval)
+
+            pr0 += self._load_rows_page_size
 
         if make_row is not tuple:
             for i in range(row1 - row0):

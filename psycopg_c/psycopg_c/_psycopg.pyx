@@ -25,6 +25,7 @@ PG_AUTO = _py_Format.AUTO
 PG_TEXT = _py_Format.TEXT
 PG_BINARY = _py_Format.BINARY
 
+_load_rows_page_size = 100
 
 cdef extern from *:
     """
