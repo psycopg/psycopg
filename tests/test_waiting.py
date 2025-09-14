@@ -2,6 +2,7 @@ import sys
 import time
 import select  # noqa: used in pytest.mark.skipif
 import socket
+from threading import Event
 
 import pytest
 
@@ -9,6 +10,8 @@ import psycopg
 from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
 from psycopg.conninfo import make_conninfo
+
+from .acompat import gather, spawn
 
 skip_if_not_linux = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="non-Linux platform"
@@ -44,6 +47,42 @@ def test_wait_conn_bad(dsn):
     gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):
         waiting.wait_conn(gen)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("waitfn", waitfns)
+@skip_if_not_linux
+def test_wait_r(waitfn):
+    waitfn = getattr(waiting, waitfn)
+
+    port = None
+    ev = Event()
+
+    def writer():
+        ev.wait()
+        assert port
+        time.sleep(0.2)
+        with socket.create_connection(("127.0.0.1", port)):
+            pass
+
+    t = spawn(writer)
+
+    def gen():
+        r = yield waiting.Wait.R
+        return r
+
+    with socket.socket() as s:
+        s.bind(("", 0))
+        port = s.getsockname()[1]
+        s.listen()
+        ev.set()
+        t0 = time.time()
+        r = waitfn(gen(), s.fileno(), 0.3)
+        tf = time.time()
+        assert r == waiting.Ready.R
+        assert 0.2 <= tf - t0 < 0.3
+
+    gather(t)
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
