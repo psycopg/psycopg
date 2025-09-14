@@ -260,10 +260,9 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float | None = None) -> R
 
 if hasattr(selectors, "EpollSelector"):
     _epoll_evmasks = {
-        WAIT_R: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLERR,
-        WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT | select.EPOLLERR,
-        WAIT_RW: select.EPOLLONESHOT
-        | (select.EPOLLIN | select.EPOLLOUT | select.EPOLLERR),
+        WAIT_R: select.EPOLLONESHOT | select.EPOLLIN,
+        WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT,
+        WAIT_RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
     }
 else:
     _epoll_evmasks = {}
@@ -300,9 +299,9 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV
                     continue
                 ev = fileevs[0][1]
                 ready = 0
-                if ev & ~select.EPOLLOUT:
+                if ev & select.EPOLLIN:
                     ready = READY_R
-                if ev & ~select.EPOLLIN:
+                if ev & select.EPOLLOUT:
                     ready |= READY_W
                 s = gen.send(ready)
                 evmask = _epoll_evmasks[s]
@@ -347,9 +346,9 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
 
             ev = fileevs[0][1]
             ready = 0
-            if ev & ~select.POLLOUT:
+            if ev & select.POLLIN:
                 ready = READY_R
-            if ev & ~select.POLLIN:
+            if ev & select.POLLOUT:
                 ready |= READY_W
             s = gen.send(ready)
             evmask = _poll_evmasks[s]
