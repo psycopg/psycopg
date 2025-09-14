@@ -177,7 +177,7 @@ finally:
     cdef int wait_c_impl(int fileno, int wait, float timeout) except -1
 
 
-def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
+def wait_c(gen: PQGen[RV], int fileno, interval = 0.0) -> RV:
     """
     Wait for a generator using poll or select.
     """
@@ -186,11 +186,11 @@ def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
     cdef PyObject *pyready
 
     if interval is None:
-        cinterval = -1.0
-    else:
-        cinterval = <float>float(interval)
-        if cinterval < 0.0:
-            cinterval = -1.0
+        raise ValueError("indefinite wait not supported anymore")
+
+    cinterval = <float>float(interval)
+    if cinterval < 0.0:
+        cinterval = 0.0
 
     send = gen.send
 
