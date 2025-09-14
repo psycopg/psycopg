@@ -32,7 +32,7 @@ waitfns = [
 
 events = ["R", "W", "RW"]
 intervals = [pytest.param({}, id="blank")]
-intervals += [pytest.param({"interval": x}, id=str(x)) for x in [None, 0, 0.2, 10]]
+intervals += [pytest.param({"interval": x}, id=str(x)) for x in [0, 0.2, 10]]
 
 
 @pytest.mark.parametrize("timeout", intervals)
@@ -234,3 +234,15 @@ async def test_wait_async_bad(pgconn):
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         await waiting.wait_async(gen, socket)
+
+
+@pytest.mark.parametrize("waitfn", waitfns)
+def test_wait_timeout_none_unsupported(waitfn):
+    waitfn = getattr(waiting, waitfn)
+
+    def gen():
+        r = yield waiting.Wait.R
+        return r
+
+    with pytest.raises(ValueError):
+        waitfn(gen(), 1, None)

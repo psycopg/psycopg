@@ -35,7 +35,7 @@ READY_RW = Ready.RW
 logger = logging.getLogger(__name__)
 
 
-def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
+def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Wait for a generator using the best strategy available.
 
@@ -43,12 +43,14 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) ->
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If zero or None, wait indefinitely.
+        to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
 
     Consume `!gen`, scheduling `fileno` for completion when it is reported to
     block. Once ready again send the ready state back to `!gen`.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
     try:
         s = next(gen)
         with DefaultSelector() as sel:
@@ -68,23 +70,23 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float | None = None) ->
         return rv
 
 
-def wait_conn(gen: PQGenConn[RV], interval: float | None = None) -> RV:
+def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     """
     Wait for a connection generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If zero or None, wait indefinitely.
+        to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
     try:
         fileno, s = next(gen)
-        if not interval:
-            interval = None
         with DefaultSelector() as sel:
             sel.register(fileno, s)
             while True:
@@ -102,7 +104,7 @@ def wait_conn(gen: PQGenConn[RV], interval: float | None = None) -> RV:
         return rv
 
 
-async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
+async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -110,11 +112,14 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None)
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If None, wait indefinitely.
+        to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
+
     # Use an event to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
     ev = Event()
@@ -163,19 +168,22 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float | None = None)
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV], interval: float | None = None) -> RV:
+async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. If zero or None, wait indefinitely.
+        to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
+
     # Use an event to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
     ev = Event()
@@ -224,12 +232,14 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float | None = None) -> 
 # Specialised implementation of wait functions.
 
 
-def wait_select(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
+def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Wait for a generator using select where supported.
 
     BUG: on Linux, can't select on FD >= 1024. On Windows it's fine.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
     try:
         s = next(gen)
 
@@ -268,7 +278,7 @@ else:
     _epoll_evmasks = {}
 
 
-def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
+def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Wait for a generator using epoll where supported.
 
@@ -284,10 +294,12 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV
         export PSYCOPG_WAIT_FUNC=wait_epoll
         pytest tests/test_concurrency.py::test_concurrent_close
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
     try:
         s = next(gen)
 
-        if interval is None or interval < 0:
+        if interval < 0:
             interval = 0.0
 
         with select.epoll() as epoll:
@@ -322,16 +334,18 @@ else:
     _poll_evmasks = {}
 
 
-def wait_poll(gen: PQGen[RV], fileno: int, interval: float | None = None) -> RV:
+def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Wait for a generator using poll where supported.
 
     Parameters are like for `wait()`.
     """
+    if interval is None:
+        raise ValueError("indefinite wait not supported anymore")
     try:
         s = next(gen)
 
-        if interval is None or interval < 0:
+        if interval < 0:
             interval = 0
         else:
             interval = int(interval * 1000.0)
