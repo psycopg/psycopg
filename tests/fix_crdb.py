@@ -79,10 +79,6 @@ def crdb_scs_off(*args):
     return skip_crdb(*args, reason="standard_conforming_strings=off")
 
 
-def crdb_anydb(*args):
-    return skip_crdb(*args, reason="can connect to any db name")
-
-
 # mapping from reason description to ticket number
 _crdb_reasons = {
     "2-phase commit": 22329,

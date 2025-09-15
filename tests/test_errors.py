@@ -11,7 +11,7 @@ from psycopg import errors as e
 from psycopg import pq
 
 from .utils import eur
-from .fix_crdb import crdb_anydb, is_crdb
+from .fix_crdb import is_crdb
 
 
 def test_finishedpgconn(pgconn):
@@ -286,7 +286,7 @@ def test_unknown_sqlstate(conn):
     assert pexc.sqlstate == code
 
 
-@crdb_anydb
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 def test_pgconn_error(conn_cls, dsn):
     with pytest.raises(psycopg.OperationalError) as excinfo:
         conn_cls.connect(dsn, dbname="nosuchdb")
@@ -296,7 +296,7 @@ def test_pgconn_error(conn_cls, dsn):
     assert exc.pgconn.db == b"nosuchdb"
 
 
-@crdb_anydb
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 def test_pgconn_error_pickle(conn_cls, dsn):
     with pytest.raises(psycopg.OperationalError) as excinfo:
         conn_cls.connect(dsn, dbname="nosuchdb")

@@ -16,7 +16,6 @@ from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 from psycopg._conninfo_utils import get_param
 
 from .acompat import asleep, skip_async, skip_sync
-from .fix_crdb import crdb_anydb
 from .test_adapt import make_bin_dumper, make_dumper
 from ._test_cursor import my_row_factory
 from ._test_connection import testctx  # noqa: F401  # fixture
@@ -33,7 +32,7 @@ async def test_connect(aconn_cls, dsn):
     await conn.close()
 
 
-@crdb_anydb
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 async def test_connect_bad(aconn_cls, dsn):
     with pytest.raises(psycopg.OperationalError):
         await aconn_cls.connect(dsn, dbname="nosuchdb")
