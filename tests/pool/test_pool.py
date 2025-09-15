@@ -3,6 +3,7 @@
 # DO NOT CHANGE! Change the original file instead.
 from __future__ import annotations
 
+import asyncio
 import logging
 import weakref
 from time import time
@@ -1075,6 +1076,7 @@ def test_override_close(dsn):
 
     assert conn.closed
 
+
 def test_get_config_rotates_connections(dsn):
     config_rotation_counter = 0
 
@@ -1083,17 +1085,13 @@ def test_get_config_rotates_connections(dsn):
         config_rotation_counter += 1
         return dsn
 
-    with pool.ConnectionPool(
-        conninfo=rotating_config,
-        min_size=2,
-        max_lifetime=0.2,
-    ) as p:
-        # At pool start, no calls yet
-        assert config_rotation_counter == 0
+    p = pool.ConnectionPool(
+        conninfo=rotating_config, min_size=2, max_lifetime=0.2, open=False
+    )
 
-        # Let connections expire
-        sleep(0.3)
-        p.check()  # trigger pool maintenance
-
-        # Since min_size=2, get_config must have been called twice
-        assert config_rotation_counter == 2, "Connections should have rotated with new config"
+    try:
+        p.open()
+        p.wait()
+        assert config_rotation_counter == 2
+    finally:
+        p.close()

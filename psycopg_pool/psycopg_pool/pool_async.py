@@ -233,29 +233,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 f"couldn't get a connection after {timeout:.2f} sec"
             ) from None
 
-    async def _resolve_conninfo(self) -> Callable | str | Any:
-        """Resolve conninfo (static string, sync callable, or async callable)."""
-        if callable(self.conninfo):
-            if inspect.iscoroutinefunction(self.conninfo):
-                return await self.conninfo()
-            return self.conninfo()
-        return self.conninfo
-
-    async def _resolve_kwargs(self) -> dict[str, Any]:
-        """Resolve kwargs (static dict, sync callable, or async callable)."""
-        if not self.kwargs:
-            return {}
-
-        if callable(self.kwargs):
-            if inspect.iscoroutinefunction(self.kwargs):
-                return await self.kwargs()
-            return self.kwargs()
-
-        return self.kwargs
-
-    async def _getconn_params(self) -> tuple[str, dict[str, Any]]:
-        return await self._resolve_conninfo(), await self._resolve_kwargs()
-
     async def _getconn_with_check_loop(self, deadline: float) -> ACT:
         attempt: AttemptWithBackoff | None = None
 
@@ -657,7 +634,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     async def _connect(self, timeout: float | None = None) -> ACT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        conninfo, kwargs = await self._getconn_params()
+        conninfo, kwargs = await self._resolve_conninfo(), await self._resolve_kwargs()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
@@ -685,6 +662,22 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Set an expiry date, with some randomness to avoid mass reconnection
         self._set_connection_expiry_date(conn)
         return conn
+
+    async def _resolve_conninfo(self) -> Callable | str | Any:
+        """Resolve conninfo (static string, sync callable, or async callable)."""
+        if callable(self.conninfo):
+            return await ensure_async(self.conninfo)
+        return self.conninfo
+
+    async def _resolve_kwargs(self) -> dict[str, Any]:
+        """Resolve kwargs (static dict, sync callable, or async callable)."""
+        if not self.kwargs:
+            return {}
+
+        if callable(self.kwargs):
+            return await ensure_async(self.kwargs)
+
+        return self.kwargs
 
     async def _add_connection(
         self, attempt: AttemptWithBackoff | None, growing: bool = False
