@@ -10,8 +10,6 @@ from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
 from psycopg.conninfo import make_conninfo
 
-from .fix_crdb import crdb_anydb
-
 skip_if_not_linux = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="non-Linux platform"
 )
@@ -41,7 +39,7 @@ def test_wait_conn(dsn, timeout):
     assert conn.status == ConnStatus.OK
 
 
-@crdb_anydb
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 def test_wait_conn_bad(dsn):
     gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):
@@ -157,8 +155,8 @@ async def test_wait_conn_async(dsn, timeout):
     assert conn.status == ConnStatus.OK
 
 
-@crdb_anydb
 @pytest.mark.anyio
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 async def test_wait_conn_async_bad(dsn):
     gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):

@@ -19,8 +19,6 @@ import psycopg.generators
 from psycopg import pq
 from psycopg.conninfo import make_conninfo
 
-from ..fix_crdb import crdb_anydb
-
 if TYPE_CHECKING:
     from psycopg.pq.abc import PGcancelConn, PGconn
 
@@ -53,7 +51,7 @@ def test_connectdb(dsn):
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
 
-@crdb_anydb
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 def test_connectdb_error(dsn):
     conn = pq.PGconn.connect(make_conninfo(dsn, dbname="nosuchdb").encode())
     assert conn.status == pq.ConnStatus.BAD
