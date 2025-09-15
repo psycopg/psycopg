@@ -582,14 +582,14 @@ async def test_reconnect_after_grow_failed(proxy):
     async with pool.AsyncConnectionPool(
         proxy.client_dsn, min_size=4, reconnect_timeout=1.0, reconnect_failed=failed
     ) as p:
-        await ev.wait_timeout(2.0)
+        assert await ev.wait_timeout(2.0)
 
         with pytest.raises(pool.PoolTimeout):
             async with p.connection(timeout=0.5) as conn:
                 pass
 
         ev.clear()
-        await ev.wait_timeout(2.0)
+        assert await ev.wait_timeout(2.0)
 
         proxy.start()
 
@@ -619,7 +619,7 @@ async def test_refill_on_check(proxy):
 
         # Checking the pool will empty it
         await p.check()
-        await ev.wait_timeout(2.0)
+        assert await ev.wait_timeout(2.0)
         assert len(p._pool) == 0
 
         # Allow to connect again
@@ -969,7 +969,7 @@ async def test_cancellation_in_queue(dsn):
         tasks = [spawn(worker, (i,)) for i in range(nconns * 3)]
 
         # wait until the pool has served all the connections and clients are queued.
-        await ev.wait_timeout(3.0)
+        assert await ev.wait_timeout(3.0)
         for i in range(10):
             if p.get_stats().get("requests_queued", 0):
                 break
