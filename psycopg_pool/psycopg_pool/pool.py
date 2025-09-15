@@ -40,10 +40,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str | Callable[[], Awaitable[str]] | None = None,
+        conninfo: str | Callable[[], str] | None = None,
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
+        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | Callable[[], dict[str, Any]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -615,7 +615,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._set_connection_expiry_date(conn)
         return conn
 
-    def _resolve_conninfo(self) -> str:
+    def _resolve_conninfo(self) -> str | Any:
         """Resolve conninfo (static string, sync callable, or async callable)."""
         if callable(self.conninfo):
             return self.conninfo()

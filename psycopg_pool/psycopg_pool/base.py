@@ -44,7 +44,7 @@ class BasePool:
 
     def __init__(
         self,
-        conninfo: str | Callable[[], Awaitable[str]] | None = None,
+        conninfo: str | Callable[[], str] | Callable[[], Awaitable[str]] | None = None,
         *,
         kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
         min_size: int,
