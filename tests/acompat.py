@@ -115,7 +115,10 @@ class AEvent(asyncio.Event):
     """
 
     async def wait_timeout(self, timeout):
-        await asyncio.wait_for(self.wait(), timeout)
+        try:
+            return await asyncio.wait_for(self.wait(), timeout)
+        except asyncio.TimeoutError:
+            return False
 
 
 class Queue(queue.Queue):  # type: ignore[type-arg]  # can be dropped after Python 3.8

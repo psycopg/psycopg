@@ -684,7 +684,7 @@ async def test_cancellation_in_queue(pool_cls, dsn):
         tasks = [spawn(worker, (i,)) for i in range(nconns * 3)]
 
         # wait until the pool has served all the connections and clients are queued.
-        await ev.wait_timeout(3.0)
+        assert await ev.wait_timeout(3.0)
         for i in range(10):
             if p.get_stats().get("requests_queued", 0):
                 break
