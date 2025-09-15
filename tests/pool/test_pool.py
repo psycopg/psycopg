@@ -3,7 +3,6 @@
 # DO NOT CHANGE! Change the original file instead.
 from __future__ import annotations
 
-import asyncio
 import logging
 import weakref
 from time import time

@@ -9,7 +9,6 @@ Psycopg connection pool module (sync version).
 
 from __future__ import annotations
 
-import inspect
 import logging
 import warnings
 from abc import ABC, abstractmethod
