@@ -665,7 +665,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     async def _resolve_conninfo(self) -> str | Callable[[], Awaitable[str]] | Any:
         """Resolve conninfo (static string, sync callable, or async callable)."""
         if callable(self.conninfo):
-            return await ensure_async(self.conninfo)
+            return ensure_async(self.conninfo)
         return self.conninfo
 
     async def _resolve_kwargs(self) -> dict[str, Any] | Awaitable[dict[str, Any]]:
@@ -674,7 +674,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             return {}
 
         if callable(self.kwargs):
-            return await ensure_async(self.kwargs)
+            return ensure_async(self.kwargs)
 
         return self.kwargs
 
