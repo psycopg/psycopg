@@ -1078,6 +1078,7 @@ async def test_override_close(dsn):
 
     assert conn.closed
 
+
 async def test_get_config_rotates_connections(dsn):
     config_rotation_counter = 0
 

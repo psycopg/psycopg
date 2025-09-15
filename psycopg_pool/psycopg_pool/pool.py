@@ -40,7 +40,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str | Callable[[], Awaitable[str]],
+        conninfo: str | Callable[[], Awaitable[str]] | None = None,
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
         kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,

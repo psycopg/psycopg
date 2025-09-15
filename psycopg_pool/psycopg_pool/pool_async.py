@@ -11,7 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, Callable, Awaitable, cast
+from typing import Any, Awaitable, Callable, Generic, cast
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -40,7 +40,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     def __init__(
         self,
-        conninfo: str | Callable[[], Awaitable[str]],
+        conninfo: str | Callable[[], Awaitable[str]] | None = None,
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
         kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
