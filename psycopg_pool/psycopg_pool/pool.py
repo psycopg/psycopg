@@ -615,7 +615,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._set_connection_expiry_date(conn)
         return conn
 
-    def _resolve_conninfo(self) -> Callable | str | Any:
+    def _resolve_conninfo(self) -> Callable[[], Awaitable[str]] | str | Any:
         """Resolve conninfo (static string, sync callable, or async callable)."""
         if callable(self.conninfo):
             return self.conninfo()
