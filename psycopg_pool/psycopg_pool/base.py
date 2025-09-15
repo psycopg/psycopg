@@ -49,7 +49,7 @@ class BasePool:
         kwargs: (
             dict[str, Any]
             | Callable[[], dict[str, Any]]
-            | Awaitable[Callable[[], dict[str, Any]]]
+            | Callable[[], Awaitable[dict[str, Any]]]
             | None
         ) = None,
         min_size: int,

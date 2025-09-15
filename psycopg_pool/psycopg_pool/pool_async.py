@@ -669,7 +669,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         return self.conninfo
 
-    async def _resolve_kwargs(self) -> dict[str, Any]:
+    async def _resolve_kwargs(self) -> dict[str, Any] | Any:
         """Resolve kwargs (static dict, sync callable, or async callable)."""
         if not self.kwargs:
             return {}
