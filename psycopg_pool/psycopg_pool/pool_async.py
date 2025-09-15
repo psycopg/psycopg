@@ -12,7 +12,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, Callable, Awaitable, cast, Coroutine
+from typing import Any, Generic, Callable, Awaitable, cast
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque

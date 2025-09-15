@@ -1088,10 +1088,7 @@ async def test_get_config_rotates_connections(dsn):
         return dsn
 
     p = pool.AsyncConnectionPool(
-        conninfo=rotating_config,
-        min_size=2,
-        max_lifetime=0.2,
-        open=False
+        conninfo=rotating_config, min_size=2, max_lifetime=0.2, open=False
     )
 
     try:
