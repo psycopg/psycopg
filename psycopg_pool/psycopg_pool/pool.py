@@ -43,7 +43,7 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str | Callable[[], str] | None = None,
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | Callable[[], dict[str, Any]] | None = None,
+        kwargs: (dict[str, Any]| Callable[[], dict[str, Any]] | None) = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,

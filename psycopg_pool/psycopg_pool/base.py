@@ -46,7 +46,12 @@ class BasePool:
         self,
         conninfo: str | Callable[[], str] | Callable[[], Awaitable[str]] | None = None,
         *,
-        kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
+        kwargs: (
+            dict[str, Any]
+            | Callable[[], dict[str, Any]]
+            | Awaitable[Callable[[], dict[str, Any]]]
+            | None
+        ) = None,
         min_size: int,
         max_size: int | None,
         name: str | None,
