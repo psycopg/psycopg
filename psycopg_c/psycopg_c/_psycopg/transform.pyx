@@ -97,6 +97,8 @@ cdef class Transformer:
 
     cdef dict _oid_types
 
+    cdef public int _page_size
+
     def __cinit__(self, context: "AdaptContext" | None = None):
         if context is not None:
             self.adapters = context.adapters
@@ -108,6 +110,7 @@ cdef class Transformer:
 
         self.types = self.formats = None
         self._none_oid = -1
+        self._page_size = 100
 
     @classmethod
     def from_context(cls, context: "AdaptContext" | None):
@@ -441,46 +444,49 @@ cdef class Transformer:
         cdef object record  # not 'tuple' as it would check on assignment
 
         cdef object records = PyList_New(row1 - row0)
-        for row in range(row0, row1):
-            record = PyTuple_New(self._nfields)
-            Py_INCREF(record)
-            PyList_SET_ITEM(records, row - row0, record)
 
         cdef PyObject *loader  # borrowed RowLoader
         cdef PyObject *brecord  # borrowed
         row_loaders = self._row_loaders  # avoid an incref/decref per item
 
-        for col in range(self._nfields):
-            loader = PyList_GET_ITEM(row_loaders, col)
-            if (<RowLoader>loader).cloader is not None:
-                for row in range(row0, row1):
-                    brecord = PyList_GET_ITEM(records, row - row0)
-                    attval = &(ires.tuples[row][col])
-                    if attval.len == -1:  # NULL_LEN
-                        pyval = None
-                    else:
-                        pyval = (<RowLoader>loader).cloader.cload(
-                            attval.value, attval.len)
+        cdef int page_size = self._page_size
+        for pr0 in range(row0, row1, page_size):
+            pr1 = min(pr0 + page_size, row1)
+            for row in range(pr0, pr1):
+                record = PyTuple_New(self._nfields)
+                Py_INCREF(record)
+                PyList_SET_ITEM(records, row, record)
+            for col in range(self._nfields):
+                loader = PyList_GET_ITEM(row_loaders, col)
+                if (<RowLoader>loader).cloader is not None:
+                    for row in range(pr0, pr1):
+                        brecord = PyList_GET_ITEM(records, row - row0)
+                        attval = &(ires.tuples[row][col])
+                        if attval.len == -1:  # NULL_LEN
+                            pyval = None
+                        else:
+                            pyval = (<RowLoader>loader).cloader.cload(
+                                attval.value, attval.len)
 
-                    Py_INCREF(pyval)
-                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
+                        Py_INCREF(pyval)
+                        PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
-            else:
-                for row in range(row0, row1):
-                    brecord = PyList_GET_ITEM(records, row - row0)
-                    attval = &(ires.tuples[row][col])
-                    if attval.len == -1:  # NULL_LEN
-                        pyval = None
-                    else:
-                        b = PyMemoryView_FromObject(
-                            ViewBuffer._from_buffer(
-                                self._pgresult,
-                                <unsigned char *>attval.value, attval.len))
-                        pyval = PyObject_CallFunctionObjArgs(
-                            (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
+                else:
+                    for row in range(pr0, pr1):
+                        brecord = PyList_GET_ITEM(records, row - row0)
+                        attval = &(ires.tuples[row][col])
+                        if attval.len == -1:  # NULL_LEN
+                            pyval = None
+                        else:
+                            b = PyMemoryView_FromObject(
+                                ViewBuffer._from_buffer(
+                                    self._pgresult,
+                                    <unsigned char *>attval.value, attval.len))
+                            pyval = PyObject_CallFunctionObjArgs(
+                                (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 
-                    Py_INCREF(pyval)
-                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
+                        Py_INCREF(pyval)
+                        PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
         if make_row is not tuple:
             for i in range(row1 - row0):
