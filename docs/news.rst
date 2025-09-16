@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2.11 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Don't raise warning, and don't leak resources, if a builtin function is used
+  as JSON dumper/loader function (:ticket:`#1165`).
+
+
 Current release
 ---------------
 

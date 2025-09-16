@@ -10,7 +10,6 @@ import json
 import logging
 from types import CodeType  # noqa[F401]
 from typing import Any, Callable
-from warnings import warn
 from threading import Lock
 
 from .. import _oids, abc
@@ -22,7 +21,7 @@ from .._compat import TypeAlias
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], "str | bytes"]
 JsonLoadsFunction: TypeAlias = Callable[["str | bytes"], Any]
-_AdapterKey: TypeAlias = "tuple[type, CodeType]"
+_AdapterKey: TypeAlias = "tuple[type, Callable[..., Any] | CodeType]"
 
 logger = logging.getLogger("psycopg")
 
@@ -155,15 +154,14 @@ def _get_adapter_key(t: type, f: Callable[..., Any]) -> _AdapterKey | None:
     the same if a lambda if defined in a function, so we can use it as a more
     stable hash key.
     """
-    # Check if there's an unexpected Python implementation that doesn't define
-    # these dunder attributes. If thta's the case, raise a warning, which will
-    # crash our test suite and/or hopefully will be detected by the user.
+    # If this function has no code or closure, optimistically assume that it's
+    # an ok object and stable enough that will not cause a leak. for example it
+    # might be a C function (such as `orjson.loads()`).
     try:
         f.__code__
         f.__closure__
     except AttributeError:
-        warn(f"function {f} has no __code__ or __closure__.", RuntimeWarning)
-        return None
+        return (t, f)
 
     # If there is a closure, the same code might have different effects
     # according to the closure arguments. We could do something funny like

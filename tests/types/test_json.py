@@ -258,6 +258,33 @@ def test_dump_leak_with_local_functions(dsn, binary, pgtype, caplog):
 
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+@pytest.mark.parametrize("dumps", [str, len])
+def test_dumper_warning_builtin(dsn, binary, pgtype, dumps, caplog, recwarn):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    recwarn.clear()
+
+    # Note: private implementation, it might change
+    from psycopg.types.json import _dumpers_cache
+
+    # A function with no closure is cached on the code, so lambdas are not
+    # different items.
+
+    with psycopg.connect(dsn) as conn1:
+        set_json_dumps(dumps, conn1)
+    assert not recwarn
+    assert (size1 := len(_dumpers_cache))
+
+    with psycopg.connect(dsn) as conn2:
+        set_json_dumps(dumps, conn2)
+    size2 = len(_dumpers_cache)
+
+    assert size1 == size2
+    assert not caplog.records
+    assert not recwarn
+
+
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
 def test_load_leak_with_local_functions(dsn, binary, pgtype, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -296,6 +323,33 @@ def test_load_leak_with_local_functions(dsn, binary, pgtype, caplog):
 
     assert size2 == size3
     assert caplog.records
+
+
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+@pytest.mark.parametrize("loads", [str, len])
+def test_loader_warning_builtin(dsn, binary, pgtype, loads, caplog, recwarn):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    recwarn.clear()
+
+    # Note: private implementation, it might change
+    from psycopg.types.json import _loaders_cache
+
+    # A function with no closure is cached on the code, so lambdas are not
+    # different items.
+
+    with psycopg.connect(dsn) as conn1:
+        set_json_loads(loads, conn1)
+    assert not recwarn
+    assert (size1 := len(_loaders_cache))
+
+    with psycopg.connect(dsn) as conn2:
+        set_json_loads(loads, conn2)
+    size2 = len(_loaders_cache)
+
+    assert size1 == size2
+    assert not caplog.records
+    assert not recwarn
 
 
 def my_dumps(obj):
