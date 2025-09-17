@@ -347,6 +347,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
     _skip_imports = {
         "acompat": {"alist", "anext"},
         "_acompat": {"ensure_async"},
+        "typing": {"Awaitable"},
     }
 
     def visit_Module(self, node: ast.Module) -> ast.AST:
