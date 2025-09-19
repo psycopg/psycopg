@@ -1117,11 +1117,11 @@ async def test_get_config_rotates_connections(dsn):
             row1 = await conn1.execute("SHOW application_name")
             row2 = await conn2.execute("SHOW application_name")
 
-            name1 = (await row1.fetchone())[0]
-            name2 = (await row2.fetchone())[0]
+            name1 = await row1.fetchone()
+            name2 = await row2.fetchone()
 
-            assert name1 in app_names
-            assert name2 in app_names
+            assert name1[0] in app_names
+            assert name2[0] in app_names
 
             # Make sure that names are different.
             assert name1 != name2
