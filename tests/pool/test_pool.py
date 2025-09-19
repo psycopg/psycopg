@@ -1114,17 +1114,15 @@ def test_get_config_rotates_connections(dsn):
             row2 = conn2.execute("SHOW application_name")
 
             name1 = row1.fetchone()
-            name2 = row2.fetchone()
-
-            # Make sure that results are not null. linter forces to check that case.
             assert (
                 name1 is not None
             ), "first call to SHOW application_name returned no rows"
+            assert name1[0] in app_names
+
+            name2 = row2.fetchone()
             assert (
                 name2 is not None
             ), "second call to SHOW application_name returned no rows"
-
-            assert name1[0] in app_names
             assert name2[0] in app_names
 
             # Make sure that names are different.

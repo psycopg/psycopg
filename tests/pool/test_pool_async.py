@@ -1102,7 +1102,7 @@ async def test_get_config_rotates_connections(dsn):
         kwargs=rotating_kwargs,
         min_size=2,
         max_lifetime=0.2,
-        open=False
+        open=False,
     )
 
     try:
@@ -1118,13 +1118,15 @@ async def test_get_config_rotates_connections(dsn):
             row2 = await conn2.execute("SHOW application_name")
 
             name1 = await row1.fetchone()
-            name2 = await row2.fetchone()
-
-            # Make sure that results are not null. linter forces to check that case.
-            assert name1 is not None, "first call to SHOW application_name returned no rows"
-            assert name2 is not None, "second call to SHOW application_name returned no rows"
-
+            assert (
+                    name1 is not None
+            ), "first call to SHOW application_name returned no rows"
             assert name1[0] in app_names
+
+            name2 = await row2.fetchone()
+            assert (
+                name2 is not None
+            ), "second call to SHOW application_name returned no rows"
             assert name2[0] in app_names
 
             # Make sure that names are different.
