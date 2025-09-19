@@ -1119,7 +1119,7 @@ async def test_get_config_rotates_connections(dsn):
 
             name1 = await row1.fetchone()
             assert (
-                    name1 is not None
+                name1 is not None
             ), "first call to SHOW application_name returned no rows"
             assert name1[0] in app_names
 
