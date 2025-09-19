@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Generic, cast
+from typing import Any, Callable, Generic, cast
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -40,10 +40,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: str | Callable[[], str] | None = None,
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -587,13 +587,13 @@ class ConnectionPool(Generic[CT], BasePool):
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        kwargs = self.kwargs
+        conninfo, kwargs = (self._resolve_conninfo(), self._resolve_kwargs())
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn = self.connection_class.connect(self.conninfo, **kwargs)
+            conn = self.connection_class.connect(conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
@@ -614,6 +614,23 @@ class ConnectionPool(Generic[CT], BasePool):
         # Set an expiry date, with some randomness to avoid mass reconnection
         self._set_connection_expiry_date(conn)
         return conn
+
+    def _resolve_conninfo(self) -> str | Any:
+        """Resolve conninfo (static string, sync callable, or async callable)."""
+        if callable(self.conninfo):
+            return self.conninfo()
+
+        return self.conninfo
+
+    def _resolve_kwargs(self) -> dict[str, Any] | Any:
+        """Resolve kwargs (static dict, sync callable, or async callable)."""
+        if not self.kwargs:
+            return {}
+
+        if callable(self.kwargs):
+            return self.kwargs()
+
+        return self.kwargs
 
     def _add_connection(
         self, attempt: AttemptWithBackoff | None, growing: bool = False
