@@ -1163,4 +1163,3 @@ async def test_pool_wait_fails_with_reconnect_warning(dsn, caplog):
     assert reconnection_warnings, "Expected reconnection attempt logs"
     # Make sure that we saw not too many (backoff works)
     assert len(reconnection_warnings) < 5, "Too many attempts (likely busyloop)"
-

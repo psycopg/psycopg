@@ -1125,7 +1125,7 @@ def test_get_config_rotates_connections(dsn):
         p.close()
 
 
-def test_get_config_fails_with_exception(dsn, caplog):
+def test_pool_wait_fails_with_reconnect_warning(dsn, caplog):
 
     def failing_conninfo():
         raise RuntimeError("cannot build conninfo")
