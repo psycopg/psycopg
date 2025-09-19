@@ -1227,7 +1227,7 @@ async def test_get_config_rotates_connections(dsn):
         await p.close()
 
 
-async def test_pool_wait_fails_with_reconnect_warning(dsn, caplog):
+async def test_get_config_rise_exception(dsn, caplog):
 
     async def failing_conninfo():
         raise RuntimeError("cannot build conninfo")
