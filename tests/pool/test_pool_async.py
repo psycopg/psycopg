@@ -1120,7 +1120,7 @@ async def test_get_config_rotates_connections(dsn):
             name1 = await row1.fetchone()
             name2 = await row2.fetchone()
 
-            # Make sure that result is not null. linter forces to check that case.
+            # Make sure that results are not null. linter forces to check that case.
             assert name1 is not None, "first call to SHOW application_name returned no rows"
             assert name2 is not None, "second call to SHOW application_name returned no rows"
 
