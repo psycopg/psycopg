@@ -74,8 +74,6 @@ Module content
 
 .. autodata:: __build_version__
 
-.. autofunction:: error_message
-
 
 Objects wrapping libpq structures and functions
 -----------------------------------------------
