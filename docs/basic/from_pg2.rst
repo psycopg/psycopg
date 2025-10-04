@@ -19,6 +19,33 @@ differences to be aware of.
     writing a program that should work with both Psycopg 2 and 3.
 
 
+.. _install-difference:
+
+Which package to install?
+-------------------------
+
+.. important::
+
+    - If you were installing ``psycopg2-binary`` you should now install
+      ``psycopg[binary]`` instead.
+
+    - If you were installing ``psycopg2``, therefore your client has the
+      prerequisites to build the C extension yourself, you can install
+      ``psycopg[c]`` instead.
+
+Please see the :ref:`installation <installation>` section for all the details.
+
+Rationale: both the ``psycopg2`` and the ``psycopg2-binary`` distribution
+packages install the ``psycopg2`` Python package. This scenario is not well
+covered by Python packaging metadata, resulting in complex dependencies
+management and problems if both the packages are installed.
+
+In Psycopg 3 there is a clear "interface" package, ``psycopg``, and optional
+speed-up extensions that can be included in the dependencies of a service (but
+don't need to -- and shouldn't be -- included in the dependencies of a
+library). See :ref:`install-dependencies` for more details.
+
+
 .. _server-side-binding:
 
 Server-side binding

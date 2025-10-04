@@ -67,6 +67,10 @@ packages by running::
     pip install "psycopg[binary]"
 
 This will install a self-contained package with all the libraries needed.
+If you are coming from Psycopg 2, this is the equivalent of installing
+the ``psycopg2-binary`` package.
+
+
 **You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
 to update it beforehand.
 
@@ -142,6 +146,11 @@ If your build prerequisites are in place you can run::
 
     pip install "psycopg[c]"
 
+This will install a self-contained package with all the libraries needed.
+If you are coming from Psycopg 2, this is the equivalent of installing
+the ``psycopg2`` package, both in terms of build requirements and system
+dependencies at runtime.
+
 .. warning::
 
    The local installation is not supported by PyPy.
@@ -191,6 +200,8 @@ In order to use the pool you must install the ``pool`` extra, using ``pip
 install "psycopg[pool]"``, or install the `psycopg_pool` package separately,
 which would allow to specify the release to install more precisely.
 
+
+.. _install-dependencies:
 
 Handling dependencies
 ---------------------
