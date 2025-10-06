@@ -3,10 +3,11 @@
 Installation
 ============
 
-In short, if you use a :ref:`supported system<supported-systems>`::
+In short, if you use one of the :ref:`supported systems<supported-systems>`,
+run::
 
-    pip install --upgrade pip           # upgrade pip to at least 20.3
-    pip install "psycopg[binary]"       # remove [binary] for PyPy
+    pip install --upgrade pip
+    pip install "psycopg[binary]"
 
 and you should be :ref:`ready to start <module-usage>`. Read further for
 alternative ways to install.
@@ -24,14 +25,14 @@ The Psycopg version documented here has *official and tested* support for:
 
 - Python: from version 3.10 to 3.14
 
-  - Python 3.8 and 3.9 supported before Psycopg 3.3
-  - Python 3.7 supported before Psycopg 3.2
-  - Python 3.6 supported before Psycopg 3.1
+  - Python 3.8 and 3.9 are supported before Psycopg 3.3
+  - Python 3.7 is supported before Psycopg 3.2
+  - Python 3.6 is supported before Psycopg 3.1
 
 - PyPy: from version 3.10 to 3.11
 
-  - PyPy 3.9 supported before Psycopg 3.3
-  - **Note:** Only the pure Python version is supported.
+  - PyPy 3.9 is supported before Psycopg 3.3
+  - **Note:** Only the pure Python installation is currently supported.
 
 - PostgreSQL: from version 10 to 18
 
@@ -39,6 +40,8 @@ The Psycopg version documented here has *official and tested* support for:
     in the CI. Out-of-support releases are supported on a best-effort basis.
 
 - OS: Linux, macOS, Windows
+
+- Pip: 20.3 or newer
 
 .. __: https://www.postgresql.org/support/versioning/
 
@@ -56,7 +59,7 @@ database may use the same wire protocol as PostgreSQL) but we cannot guarantee
 the correct working or a smooth ride.
 
 
-.. _binary-install:
+.. _binary-installation:
 
 Binary installation
 -------------------
@@ -69,10 +72,6 @@ packages by running::
 This will install a self-contained package with all the libraries needed.
 If you are coming from Psycopg 2, this is the equivalent of installing
 the ``psycopg2-binary`` package.
-
-
-**You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
-to update it beforehand.
 
 .. seealso::
 
@@ -140,7 +139,7 @@ In order to perform a local installation you need some prerequisites:
 
 You **must be able** to troubleshoot an extension build, for instance you must
 be able to read your compiler's error message. If you are not, please don't
-try this and follow the `binary installation`_ instead.
+try this and use the :ref:`binary-installation` instead.
 
 If your build prerequisites are in place you can run::
 
@@ -166,25 +165,31 @@ If you simply install::
     pip install psycopg
 
 without ``[c]`` or ``[binary]`` extras you will obtain a pure Python
-implementation. This is particularly handy to debug and hack, but it still
-requires the system libpq to operate (which will be imported dynamically via
-`ctypes`).
+implementation. This is particularly handy for debugging and hacking.
+
+.. warning::
+
+   The pure Python installation is much slower than the
+   :ref:`binary-installation` or :ref:`local-installation`. It is likely
+   sufficient for local developments or small tasks but, for production loads,
+   you might want to install one of the speed-up extensions too.
 
 In order to use the pure Python installation you will need the ``libpq``
-installed in the system: for instance on Debian system you will probably
+PostgreSQL client library installed on your client (which will be imported
+dynamically via `ctypes`); for example on Debian systems you will probably
 need::
 
     sudo apt install libpq5
 
+If you are not able to fulfill this requirement please use a
+:ref:`binary-installation`, which packages its own copy of the ``libpq``.
+
 .. note::
 
-    The ``libpq`` is the client library used by :program:`psql`, the
+    The ``libpq`` is the client library also used by :program:`psql`, the
     PostgreSQL command line client, to connect to the database.  On most
     systems, installing :program:`psql` will install the ``libpq`` too as a
     dependency.
-
-If you are not able to fulfill this requirement please follow the `binary
-installation`_.
 
 
 .. _pool-installation:

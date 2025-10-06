@@ -65,14 +65,20 @@ requirements::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip install -e "./psycopg[dev,test]"    # for the base Python package
-    pip install -e ./psycopg_pool           # for the connection pool
-    pip install ./psycopg_c                 # for the C speedup module
+
+    # Install the base Psycopg package in editable mode
+    pip install --config-settings editable_mode=strict -e "./psycopg[dev,test]"
+
+    # Install the connection pool package in editable mode
+    pip install --config-settings editable_mode=strict -e ./psycopg_pool
+
+    # Install the C speedup extension
+    pip install ./psycopg_c
 
 .. __: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
 
-Please add ``--config-settings editable_mode=strict`` to the ``pip install -e``
-above if you experience `editable mode broken`__.
+The ``--config-settings editable_mode=strict`` will be probably required
+to work around the problem of the `editable mode broken`__.
 
 .. __: https://github.com/pypa/setuptools/issues/3557
 
