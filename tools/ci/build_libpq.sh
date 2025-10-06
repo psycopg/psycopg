@@ -118,7 +118,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
         if [ -z "${MACOSX_ARCHITECTURE:-}" ]; then
             ./config ${options[*]}
         else
-            ./configure "darwin64-$MACOSX_ARCHITECTURE-cc" ${options[*]}
+            ./config "darwin64-$MACOSX_ARCHITECTURE-cc" ${options[*]}
         fi
 
         make -s depend
