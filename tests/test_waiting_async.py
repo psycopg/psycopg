@@ -329,6 +329,36 @@ async def test_wait_large_fd(dsn, waitfn):
             f.close()
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("waitfn", waitfns)
+@pytest.mark.skipif(
+    "sys.platform == 'win32'", reason="Windows doesn't see the fd closed."
+)
+async def test_socket_closed(dsn, waitfn, pgconn):
+    waitfn = getattr(waiting, waitfn)
+
+    async def closer():
+        await asleep(0.5)
+        pgconn.finish()
+
+    t = spawn(closer)
+
+    pgconn.send_query(b"select pg_sleep(2)")
+    with pytest.raises(
+        psycopg.OperationalError, match="connection socket closed"
+    ) as ex:
+        t0 = time.time()
+        gen = generators.execute(pgconn)
+        await waitfn(gen, pgconn.socket, 0.1)
+
+    assert pgconn.status == ConnStatus.BAD
+    assert isinstance(ex.value.__cause__, OSError)
+    dt = time.time() - t0
+    await gather(t)
+
+    assert dt < 1.0
+
+
 @pytest.mark.parametrize("waitfn", waitfns)
 async def test_wait_timeout_none_unsupported(waitfn):
     waitfn = getattr(waiting, waitfn)
