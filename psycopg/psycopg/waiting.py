@@ -35,6 +35,24 @@ READY_RW = Ready.RW
 logger = logging.getLogger(__name__)
 
 
+if sys.platform != "win32":
+
+    def _check_fd_closed(fileno: int) -> None:
+        """
+        Raise OperationalError if the connection is lost.
+        """
+        try:
+            os.fstat(fileno)
+        except Exception as ex:
+            raise e.OperationalError("connection socket closed") from ex
+
+else:
+
+    # On windows we cannot use os.fstat() to check a socket.
+    def _check_fd_closed(fileno: int) -> None:
+        return
+
+
 def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Wait for a generator using the best strategy available.
@@ -57,10 +75,11 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
             sel.register(fileno, s)
             while True:
                 if not (rlist := sel.select(timeout=interval)):
+                    # Check if it was a timeout or we were disconnected
+                    _check_fd_closed(fileno)
                     gen.send(READY_NONE)
                     continue
 
-                sel.unregister(fileno)
                 ready = rlist[0][1]
                 s = gen.send(ready)
                 sel.register(fileno, s)
@@ -146,13 +165,10 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if interval is not None:
-                    try:
-                        await wait_for(ev.wait(), interval)
-                    except TimeoutError:
-                        pass
-                else:
-                    await ev.wait()
+                try:
+                    await wait_for(ev.wait(), interval)
+                except TimeoutError:
+                    pass
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -162,7 +178,7 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
 
     except OSError as ex:
         # Assume the connection was closed
-        raise e.OperationalError(str(ex))
+        raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
@@ -252,17 +268,21 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                 fnlist,
                 interval,
             )
+            if xl:
+                _check_fd_closed(fileno)
+                # Unlikely: the exception should have been raised above
+                raise e.OperationalError("connection socket closed")
             ready = 0
             if rl:
                 ready = READY_R
             if wl:
                 ready |= READY_W
-            if not ready:
-                gen.send(READY_NONE)
-                continue
 
             s = gen.send(ready)
 
+    except OSError as ex:
+        # This happens on macOS but not on Linux (the xl list is set)
+        raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
@@ -307,6 +327,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
             epoll.register(fileno, evmask)
             while True:
                 if not (fileevs := epoll.poll(interval)):
+                    _check_fd_closed(fileno)
                     gen.send(READY_NONE)
                     continue
                 ev = fileevs[0][1]
@@ -330,6 +351,7 @@ if hasattr(selectors, "PollSelector"):
         WAIT_W: select.POLLOUT,
         WAIT_RW: select.POLLIN | select.POLLOUT,
     }
+    POLL_BAD = ~(select.POLLIN | select.POLLOUT)
 else:
     _poll_evmasks = {}
 
@@ -359,6 +381,11 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                 continue
 
             ev = fileevs[0][1]
+            if ev & POLL_BAD:
+                _check_fd_closed(fileno)
+                # Unlikely: the exception should have been raised above
+                raise e.OperationalError("connection socket closed")
+
             ready = 0
             if ev & select.POLLIN:
                 ready = READY_R
