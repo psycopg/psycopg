@@ -25,12 +25,7 @@ case "$ID" in
         done) | sort | uniq
         ;;
 
-    centos)
-        echo "TODO!"
-        ;;
-
     *)
-        echo "$0: unexpected Linux distribution: '$ID'" >&2
-        exit 1
+        echo "$0: TODO! unexpected Linux distribution: '$ID'" >&2
         ;;
 esac
