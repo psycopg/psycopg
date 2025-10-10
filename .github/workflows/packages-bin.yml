@@ -25,7 +25,7 @@ on:
 
 env:
   # Latest release: https://www.postgresql.org/ftp/source/
-  LIBPQ_VERSION: "17.5"
+  LIBPQ_VERSION: "18.0"
   # Note: On windows the latest version can be found at
   # https://vcpkg.io/en/package/libpq
   # However the command line tool doesn't have a flag to specify to install
@@ -33,7 +33,7 @@ env:
   # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.5.0"
+  OPENSSL_VERSION: "3.5.4"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
