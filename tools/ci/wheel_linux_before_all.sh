@@ -34,7 +34,7 @@ case "$ID" in
         apt-get -y install libpq-dev flex
         ;;
 
-    centos)
+    centos | almalinux)
         "${dir}/build_libpq.sh" > /dev/null
         ;;
 

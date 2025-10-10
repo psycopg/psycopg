@@ -94,7 +94,7 @@ jobs:
           package-dir: psycopg_binary
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux2014
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           CIBW_ARCHS_LINUX: auto aarch64 ppc64le
