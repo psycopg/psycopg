@@ -134,7 +134,7 @@ retry_eintr:
     }
     else {
         tv.tv_sec = (int)timeout;
-        tv.tv_usec = (int)(((long)timeout * SEC_TO_US) % SEC_TO_US);
+        tv.tv_usec = (int)((long)(timeout * SEC_TO_US) % SEC_TO_US);
         tvptr = &tv;
     }
 
