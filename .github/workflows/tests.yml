@@ -70,9 +70,9 @@ jobs:
       MARKERS: ""
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
@@ -164,9 +164,9 @@ jobs:
       MARKERS: "pool"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -216,9 +216,9 @@ jobs:
       PG_VERSION: "17"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
@@ -279,9 +279,9 @@ jobs:
       PG_VERSION: "17"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -349,9 +349,9 @@ jobs:
       # there are some extra libpq.dll in PATH
       - run: rm -rf c:/tools/php C:/Strawberry/c/bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
@@ -374,7 +374,7 @@ jobs:
 
       - name: Export GitHub Actions cache environment variables
       # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const path = require('path')
@@ -441,9 +441,9 @@ jobs:
       PGOPTIONS: "-c autocommit_before_ddl=off"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
