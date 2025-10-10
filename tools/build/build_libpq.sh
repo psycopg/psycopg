@@ -116,9 +116,9 @@ if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
         options=(--prefix=${LIBPQ_BUILD_PREFIX} --openssldir=${LIBPQ_BUILD_PREFIX} \
             zlib -fPIC shared)
         if [ -z "${MACOSX_ARCHITECTURE:-}" ]; then
-            ./config $options
+            ./config ${options[*]}
         else
-            ./configure "darwin64-$MACOSX_ARCHITECTURE-cc" $options
+            ./config "darwin64-$MACOSX_ARCHITECTURE-cc" ${options[*]}
         fi
 
         make -s depend
