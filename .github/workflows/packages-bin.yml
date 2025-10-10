@@ -5,12 +5,21 @@ name: Build binary packages
 #
 # You can see the caches at https://github.com/psycopg/psycopg/actions/caches
 #
+# Or from the API:
+#
+#   curl -fsSL -X GET \
+#     -H "Accept: application/vnd.github+json" \
+#     -H "Authorization: Bearer $GITHUB_TOKEN" \
+#     -H "X-GitHub-Api-Version: 2022-11-28" \
+#     "https://api.github.com/repos/psycopg/psycopg/actions/caches" \
+#   | jq -r '.actions_caches[].key'
+#
 # You can delete a cache using:
 #
-#   curl -L -X DELETE
-#     -H "Accept: application/vnd.github+json"
-#     -H "Authorization: Bearer $GITHUB_TOKEN"
-#     -H "X-GitHub-Api-Version: 2022-11-28"
+#   curl -fsSL -X DELETE \
+#     -H "Accept: application/vnd.github+json" \
+#     -H "Authorization: Bearer $GITHUB_TOKEN" \
+#     -H "X-GitHub-Api-Version: 2022-11-28" \
 #     "https://api.github.com/repos/psycopg/psycopg/actions/caches?key=libpq-manylinux-ppc64le-17.2-3.4.0"
 #
 # ref: https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#delete-github-actions-caches-for-a-repository-using-a-cache-key
@@ -25,7 +34,7 @@ on:
 
 env:
   # Latest release: https://www.postgresql.org/ftp/source/
-  LIBPQ_VERSION: "17.5"
+  LIBPQ_VERSION: "17.6"
   # Note: On windows the latest version can be found at
   # https://vcpkg.io/en/package/libpq
   # However the command line tool doesn't have a flag to specify to install
@@ -33,7 +42,7 @@ env:
   # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.5.0"
+  OPENSSL_VERSION: "3.5.4"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
@@ -146,7 +155,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}
+          key: libpq-macos-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}-${{ env.LIBPQ_VERSION }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
