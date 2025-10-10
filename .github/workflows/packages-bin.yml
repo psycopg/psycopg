@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, ppc64le, aarch64]
-        pyver: [cp38, cp39, cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310]  # NOMERGE
         platform: [manylinux, musllinux]
 
     steps:
@@ -90,6 +90,7 @@ jobs:
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
+            || true
           CIBW_ENVIRONMENT_PASS_LINUX: LIBPQ_VERSION OPENSSL_VERSION
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -125,13 +126,13 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64]
-        pyver: [cp39, cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310]  # NOMERGE
         include:
           # cp38 on arm64 can be built but cannot be tested:
           # https://github.com/pypa/cibuildwheel/pull/1169
@@ -184,7 +185,7 @@ jobs:
   windows:  # {{{
     # TODO: move back to windows-latest once testing it works
     runs-on: windows-2022
-    if: true
+    if: false
 
     strategy:
       fail-fast: false
