@@ -286,6 +286,7 @@ class BinaryFormatter(Formatter):
             self._signature_sent = True
 
         format_row_binary(row, self.transformer, self._write_buffer)
+
         if len(self._write_buffer) > BUFFER_SIZE:
             buffer, self._write_buffer = self._write_buffer, bytearray()
             return buffer
@@ -348,8 +349,8 @@ def _format_row_binary(
     if out is None:
         out = bytearray()
 
-    out += _pack_int2(len(row))
     adapted = tx.dump_sequence(row, [PY_BINARY] * len(row))
+    out += _pack_int2(len(row))
     for b in adapted:
         if b is not None:
             out += _pack_int4(len(b))
