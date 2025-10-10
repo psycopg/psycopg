@@ -138,8 +138,10 @@ jobs:
             pip_django: git+https://github.com/django/django.git#egg=Django
           - django_label: lts4
             pip_django: "'Django >= 4.2, < 4.3'"
+            default_auto_fields: 'DEFAULT_AUTO_FIELD = "django.db.models.AutoField"'
           - django_label: lts5
             pip_django: "'Django >= 5.2, < 5.3'"
+            default_auto_fields: 'DEFAULT_AUTO_FIELD = "django.db.models.AutoField"'
 
           # Test with min and max Python supported versions
           - django_label: lts4
@@ -242,8 +244,7 @@ jobs:
               "django.contrib.auth.hashers.MD5PasswordHasher",
           ]
 
-          DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
-
+          ${{ matrix.default_auto_fields }}
           USE_TZ = False
           HERE
 
