@@ -288,6 +288,30 @@ def test_wait_timeout(pgconn, waitfn):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("waitfns", waitfns)
+def test_wait_no_busy_loop(pgconn, waitfns):
+    waitfn = getattr(waiting, waitfns)
+
+    pgconn.send_query(b"select pg_sleep(1)")
+    gen = generators.execute(pgconn)
+    ncalls = 0
+
+    def gen_wrapper():
+        nonlocal ncalls
+        try:
+            for x in gen:
+                res = yield x
+                ncalls += 1
+                gen.send(res)
+        except StopIteration as ex:
+            return ex.value
+
+    (res,) = waitfn(gen_wrapper(), pgconn.socket, 0.3)
+    assert res.status == ExecStatus.TUPLES_OK
+    assert ncalls < 5
+
+
+@pytest.mark.slow
 @pytest.mark.skipif(
     "sys.platform == 'win32'", reason="win32 works ok, but FDs are mysterious"
 )
