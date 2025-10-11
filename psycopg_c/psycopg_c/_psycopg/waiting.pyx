@@ -95,12 +95,10 @@ retry_eintr:
 
     rv = 0;  /* success, maybe with timeout */
     if (select_rv >= 0) {
-        if (input_fd.revents & ~(POLLIN | POLLOUT)) {
+        if (input_fd.revents & POLLIN) { rv |= SELECT_EV_READ; }
+        if (input_fd.revents & POLLOUT) { rv |= SELECT_EV_WRITE; }
+        if (!rv && (input_fd.revents & ~(POLLIN | POLLOUT))) {
             rv = CWAIT_SOCKET_ERROR;
-        }
-        else {
-            if (input_fd.revents & POLLIN) { rv |= SELECT_EV_READ; }
-            if (input_fd.revents & POLLOUT) { rv |= SELECT_EV_WRITE; }
         }
     }
 
