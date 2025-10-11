@@ -376,6 +376,29 @@ def test_socket_closed(dsn, waitfn, pgconn):
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
+def test_wait_remote_closed(proxy, conn_cls, waitfn):
+    waitfn = getattr(waiting, waitfn)
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn, autocommit=True) as conn:
+        conn.pgconn.send_query(b"select 1")
+        proxy.stop()
+        with pytest.raises(psycopg.OperationalError):
+            gen = generators.execute(conn.pgconn)
+            waitfn(gen, conn.pgconn.socket, 0.1)
+
+
+def test_remote_closed(proxy, conn_cls, caplog):
+    caplog.clear()
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        proxy.stop()
+        with pytest.raises(psycopg.OperationalError):
+            conn.execute("select 1")
+
+    assert not caplog.messages
+
+
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_timeout_none_unsupported(waitfn):
     waitfn = getattr(waiting, waitfn)
 

@@ -381,16 +381,18 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                 continue
 
             ev = fileevs[0][1]
-            if ev & POLL_BAD:
-                _check_fd_closed(fileno)
-                # Unlikely: the exception should have been raised above
-                raise e.OperationalError("connection socket closed")
 
             ready = 0
             if ev & select.POLLIN:
                 ready = READY_R
             if ev & select.POLLOUT:
                 ready |= READY_W
+
+            if not ready and ev & POLL_BAD:
+                _check_fd_closed(fileno)
+                # Unlikely: the exception should have been raised above
+                raise e.OperationalError("connection socket closed")
+
             s = gen.send(ready)
             evmask = _poll_evmasks[s]
             poll.modify(fileno, evmask)
