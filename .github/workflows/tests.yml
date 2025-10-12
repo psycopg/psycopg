@@ -31,7 +31,7 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.8", postgres: "postgres:18rc1", libpq: oldest}
+          - {impl: python, python: "3.8", postgres: "postgres:18", libpq: oldest}
           - {impl: python, python: "3.9", postgres: "postgres:17", libpq: master}
           - {impl: python, python: "3.10", postgres: "postgres:16"}
           - {impl: python, python: "3.11", postgres: "postgres:15"}
@@ -45,10 +45,10 @@ jobs:
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:16", libpq: newest}
           - {impl: c, python: "3.13", postgres: "postgres:17"}
-          - {impl: c, python: "3.14", postgres: "postgres:18rc1"}
+          - {impl: c, python: "3.14", postgres: "postgres:18"}
 
           - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:17"}
-          - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:18rc1"}
+          - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:18"}
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.12", ext: postgis, postgres: "postgis/postgis"}
           - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:14"}
