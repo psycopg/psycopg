@@ -157,7 +157,7 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
-            PG_VERSION=17
+            PG_VERSION=18
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
             LIBPQ_BUILD_PREFIX=/tmp/libpq.build
