@@ -31,7 +31,7 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.10", postgres: "postgres:18rc1", libpq: oldest}
+          - {impl: python, python: "3.10", postgres: "postgres:18", libpq: oldest}
           - {impl: python, python: "3.11", postgres: "postgres:17", libpq: master}
           - {impl: python, python: "3.12", postgres: "postgres:16", libpq: newest}
           - {impl: python, python: "3.13", postgres: "postgres:13"}
@@ -41,14 +41,14 @@ jobs:
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:16"}
           - {impl: c, python: "3.13", postgres: "postgres:17", libpq: newest}
-          - {impl: c, python: "3.14", postgres: "postgres:18rc1"}
+          - {impl: c, python: "3.14", postgres: "postgres:18"}
 
           - {impl: python, python: "3.10", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.10", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.12", ext: postgis, postgres: "postgis/postgis"}
           - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:15"}
           - {impl: c, python: "3.12", ext: numpy, postgres: "postgres:17"}
-          - {impl: c, python: "3.13", ext: gevent, postgres: "postgres:18rc1"}
+          - {impl: c, python: "3.13", ext: gevent, postgres: "postgres:18"}
 
           # Test with minimum dependencies versions
           # WARNING: when bumping min version, make sure that the dependencies
