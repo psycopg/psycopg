@@ -137,16 +137,16 @@ async def test_set_types(aconn, format):
 
 @pytest.mark.parametrize("format", pq.Format)
 @pytest.mark.parametrize("use_set_types", [True, False])
-async def test_segfault_rowlen_mismatch(aconn, format, use_set_types):
-    samples = [[123, 456], [123, 456, 789]]
+async def test_rowlen_mismatch(aconn, format, use_set_types):
+    samples = [["foo", "bar"], ["foo", "bar", "baz"]]
     cur = aconn.cursor()
-    await ensure_table_async(cur, "id serial primary key, data integer, data2 integer")
-    with pytest.raises(Exception):
+    await ensure_table_async(cur, "id serial primary key, data text, data2 text")
+    with pytest.raises(psycopg.DataError):
         async with cur.copy(
             f"copy copy_in (data, data2) from stdin (format {format.name})"
         ) as copy:
             if use_set_types:
-                copy.set_types(["integer", "integer"])
+                copy.set_types(["text", "text"])
             for row in samples:
                 await copy.write_row(row)
 
