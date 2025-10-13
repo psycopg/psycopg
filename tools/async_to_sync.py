@@ -59,6 +59,7 @@ ALL_INPUTS = """
     tests/test_prepared_async.py
     tests/test_tpc_async.py
     tests/test_transaction_async.py
+    tests/test_waiting_async.py
 """.split()
 
 PROJECT_DIR = Path(__file__).parent.parent
