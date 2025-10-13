@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Build a modern version of libpq and depending libs from source on Centos 5, Alpine or macOS
+# Build a modern version of libpq and depending libs from source on Centos 5,
+# Alpine or macOS
 
 set -euo pipefail
 
@@ -12,9 +13,6 @@ krb5_version="1.21.3"
 
 # Latest release: https://openldap.org/software/download/
 ldap_version="2.6.9"
-
-# Latest release: https://github.com/cyrusimap/cyrus-sasl/releases
-sasl_version="2.1.28"
 
 export LIBPQ_BUILD_PREFIX=${LIBPQ_BUILD_PREFIX:-/tmp/libpq.build}
 
@@ -50,9 +48,10 @@ fi
 
 # Install packages required to build the libpq.
 case "$ID" in
-    centos)
+    centos | almalinux)
         yum update -y
-        yum install -y flex krb5-devel pam-devel perl-IPC-Cmd zlib-devel
+        yum install -y flex cyrus-sasl-devel krb5-devel pam-devel \
+            perl-IPC-Cmd perl-Time-Piece zlib-devel
         ;;
 
     alpine)
@@ -62,7 +61,7 @@ case "$ID" in
         ;;
 
     macos)
-        brew install automake m4 libtool
+        brew install automake cyrus-sasl libtool m4
         # If available, libpq seemingly insists on linking against homebrew's
         # openssl no matter what so remove it. Since homebrew's curl depends on
         # it, force use of system curl.
@@ -100,7 +99,7 @@ else
     )
 fi
 
-if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/openssl.cnf" ]]; then
 
     # Build openssl if needed
@@ -156,40 +155,7 @@ if [ "$ID" == "macos" ]; then
 fi
 
 
-if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
-  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libsasl2.${library_suffix}" ]]; then
-
-    # Build libsasl2 if needed
-    # The system package (cyrus-sasl-devel) causes an amazing error on i686:
-    # "unsupported version 0 of Verneed record"
-    # https://github.com/pypa/manylinux/issues/376
-    sasl_tag="cyrus-sasl-${sasl_version}"
-    sasl_dir="cyrus-sasl-${sasl_tag}"
-    if [ ! -d "${sasl_dir}" ]; then
-        curl -fsSL \
-            https://github.com/cyrusimap/cyrus-sasl/archive/${sasl_tag}.tar.gz \
-            | tar xzf -
-
-        pushd "${sasl_dir}"
-
-        autoreconf -i
-        ./configure "${make_configure_standard_flags[@]}" --disable-macos-framework
-        make -s
-    else
-        pushd "${sasl_dir}"
-    fi
-
-    # Install libsasl2
-    # requires missing nroff to build
-    touch saslauthd/saslauthd.8
-    make install
-    popd
-
-  fi
-fi
-
-
-if [ "$ID" == "centos" ] || [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libldap.${library_suffix}" ]]; then
 
     # Build openldap if needed
