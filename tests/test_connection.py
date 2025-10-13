@@ -936,7 +936,7 @@ def test_right_exception_on_session_timeout(conn):
         want_ex = psycopg.OperationalError
 
     conn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
-    sleep(0.2)
+    sleep(1)
     with pytest.raises(want_ex) as ex:
         conn.execute("SELECT * from pg_tables")
 

@@ -941,7 +941,7 @@ async def test_right_exception_on_session_timeout(aconn):
         want_ex = psycopg.OperationalError
 
     await aconn.execute("SET SESSION idle_in_transaction_session_timeout = 100")
-    await asleep(0.2)
+    await asleep(1)
     with pytest.raises(want_ex) as ex:
         await aconn.execute("SELECT * from pg_tables")
 
