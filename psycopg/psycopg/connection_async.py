@@ -501,7 +501,7 @@ class AsyncConnection(BaseConnection[Row]):
             assert pipeline is self._pipeline
             self._pipeline = None
 
-    async def wait(self, gen: PQGen[RV], interval: float | None = _WAIT_INTERVAL) -> RV:
+    async def wait(self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL) -> RV:
         """
         Consume a generator operating on the connection.
 

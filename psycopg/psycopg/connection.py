@@ -466,7 +466,7 @@ class Connection(BaseConnection[Row]):
             assert pipeline is self._pipeline
             self._pipeline = None
 
-    def wait(self, gen: PQGen[RV], interval: float | None = _WAIT_INTERVAL) -> RV:
+    def wait(self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL) -> RV:
         """
         Consume a generator operating on the connection.
 

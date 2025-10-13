@@ -5,13 +5,17 @@ C implementation of waiting functions
 # Copyright (C) 2022 The Psycopg Team
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
+
+from os import fstat
 from typing import TypeVar
+
+from psycopg import errors as e
 
 RV = TypeVar("RV")
 
 
 cdef extern from *:
-    """
+    r"""
 #if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
 
 #if defined(HAVE_POLL_H)
@@ -32,6 +36,8 @@ cdef extern from *:
 
 #define SELECT_EV_READ 1
 #define SELECT_EV_WRITE 2
+#define CWAIT_SELECT_ERROR -1
+#define CWAIT_SOCKET_ERROR -2
 
 #define SEC_TO_MS 1000
 #define SEC_TO_US (1000 * 1000)
@@ -39,8 +45,9 @@ cdef extern from *:
 /* Use select to wait for readiness on fileno.
  *
  * - Return SELECT_EV_* if the file is ready
- * - Return 0 on timeout
- * - Return -1 (and set an exception) on error.
+ * - Return SELECT_EV_NONE on timeout
+ * - Return CWAIT_SELECT_ERROR (and set an exception) on error.
+ * - Return CWAIT_SOCKET_ERROR on poll success but fd error.
  *
  * The wisdom of this function comes from:
  *
@@ -51,7 +58,7 @@ static int
 wait_c_impl(int fileno, int wait, float timeout)
 {
     int select_rv;
-    int rv = -1;
+    int rv = CWAIT_SELECT_ERROR;
 
 #if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
 
@@ -88,8 +95,11 @@ retry_eintr:
 
     rv = 0;  /* success, maybe with timeout */
     if (select_rv >= 0) {
-        if (input_fd.events & POLLIN) { rv |= SELECT_EV_READ; }
-        if (input_fd.events & POLLOUT) { rv |= SELECT_EV_WRITE; }
+        if (input_fd.revents & POLLIN) { rv |= SELECT_EV_READ; }
+        if (input_fd.revents & POLLOUT) { rv |= SELECT_EV_WRITE; }
+        if (!rv && (input_fd.revents & ~(POLLIN | POLLOUT))) {
+            rv = CWAIT_SOCKET_ERROR;
+        }
     }
 
 #else
@@ -104,7 +114,7 @@ retry_eintr:
         PyErr_SetString(
             PyExc_ValueError,  /* same exception of Python's 'select.select()' */
             "connection file descriptor out of range for 'select()'");
-        return -1;
+        return CWAIT_SELECT_ERROR;
     }
 #endif
 
@@ -122,7 +132,7 @@ retry_eintr:
     }
     else {
         tv.tv_sec = (int)timeout;
-        tv.tv_usec = (int)(((long)timeout * SEC_TO_US) % SEC_TO_US);
+        tv.tv_usec = (int)((long)(timeout * SEC_TO_US) % SEC_TO_US);
         tvptr = &tv;
     }
 
@@ -143,8 +153,18 @@ retry_eintr:
 
     rv = 0;
     if (select_rv > 0) {
-        if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
-        if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
+        if (!FD_ISSET(fileno, &efds)) {
+            if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
+            if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
+        }
+        else {
+            /* There is an error on the FD. Assume it means it is closed. We
+             * want to raise a chained exception, which is tricky in C, so
+             * return the special value CWAIT_SOCKET_ERROR to signal the Cython
+             * wrapper to check the fd and raise the appropriate exception.
+             */
+            rv = CWAIT_SOCKET_ERROR;
+        }
     }
 
 #endif  /* HAVE_POLL */
@@ -153,7 +173,7 @@ retry_eintr:
 
 error:
 
-    rv = -1;
+    rv = CWAIT_SELECT_ERROR;
 
 #ifdef MS_WINDOWS
     if (select_rv == SOCKET_ERROR) {
@@ -175,9 +195,10 @@ finally:
 }
     """
     cdef int wait_c_impl(int fileno, int wait, float timeout) except -1
+    cdef int CWAIT_SOCKET_ERROR
 
 
-def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
+def wait_c(gen: PQGen[RV], int fileno, interval = 0.0) -> RV:
     """
     Wait for a generator using poll or select.
     """
@@ -186,11 +207,11 @@ def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
     cdef PyObject *pyready
 
     if interval is None:
-        cinterval = -1.0
-    else:
-        cinterval = <float>float(interval)
-        if cinterval < 0.0:
-            cinterval = -1.0
+        raise ValueError("indefinite wait not supported anymore")
+
+    cinterval = <float>float(interval)
+    if cinterval < 0.0:
+        cinterval = 0.0
 
     send = gen.send
 
@@ -207,6 +228,13 @@ def wait_c(gen: PQGen[RV], int fileno, interval = None) -> RV:
                 pyready = <PyObject *>PY_READY_RW
             elif ready == READY_W:
                 pyready = <PyObject *>PY_READY_W
+            elif ready == CWAIT_SOCKET_ERROR:  # FD closed?
+                try:
+                    fstat(fileno)
+                except Exception as ex:
+                    raise e.OperationalError("connection socket closed") from ex
+                else:
+                    raise e.OperationalError("connection socket closed")
             else:
                 raise AssertionError(f"unexpected ready value: {ready}")
 
