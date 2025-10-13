@@ -133,16 +133,16 @@ def test_set_types(conn, format):
 
 @pytest.mark.parametrize("format", pq.Format)
 @pytest.mark.parametrize("use_set_types", [True, False])
-def test_segfault_rowlen_mismatch(conn, format, use_set_types):
-    samples = [[123, 456], [123, 456, 789]]
+def test_rowlen_mismatch(conn, format, use_set_types):
+    samples = [["foo", "bar"], ["foo", "bar", "baz"]]
     cur = conn.cursor()
-    ensure_table(cur, "id serial primary key, data integer, data2 integer")
-    with pytest.raises(Exception):
+    ensure_table(cur, "id serial primary key, data text, data2 text")
+    with pytest.raises(psycopg.DataError):
         with cur.copy(
             f"copy copy_in (data, data2) from stdin (format {format.name})"
         ) as copy:
             if use_set_types:
-                copy.set_types(["integer", "integer"])
+                copy.set_types(["text", "text"])
             for row in samples:
                 copy.write_row(row)
 
