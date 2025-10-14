@@ -702,6 +702,23 @@ async def test_binary_partial_row(aconn):
             await copy.write_row([16, [[None], None]])
 
 
+@pytest.mark.parametrize("format", pq.Format)
+async def test_clean_buffer_on_error(aconn, format):
+    cur = aconn.cursor()
+    await ensure_table_async(cur, "id serial primary key, num int4, obj jsonb")
+    async with cur.copy(
+        f"copy copy_in (num, obj) from stdin (format {format.name})"
+    ) as copy:
+        copy.set_types(["int4", "jsonb"])
+        await copy.write_row([15, {}])
+        with pytest.raises(TypeError):
+            await copy.write_row([16, 1j])
+        await copy.write_row([17, []])
+
+    await cur.execute("select num, obj from copy_in order by id")
+    assert (await cur.fetchall()) == [(15, {}), (17, [])]
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(pq.Format.TEXT, "sample_text"), (pq.Format.BINARY, "sample_binary")],
