@@ -62,6 +62,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
         self._entered = self._exited = False
+        self.exited_with = ""
         self._outer_transaction = False
         self._stack_index = -1
 
@@ -85,7 +86,8 @@ class BaseTransaction(Generic[ConnectionType]):
             status = "terminated"
 
         sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
-        return f"<{cls} {sp}({status}) {info} at 0x{id(self):x}>"
+        ew = self.exited_with
+        return f"<{cls} {sp}({status} with {ew}) {info} at 0x{id(self):x}>"
 
     def _enter_gen(self) -> PQGen[None]:
         if self._entered:
@@ -124,6 +126,7 @@ class BaseTransaction(Generic[ConnectionType]):
     def _commit_gen(self) -> PQGen[None]:
         ex = self._pop_savepoint("commit")
         self._exited = True
+        self.exited_with = "commit"
         if ex:
             raise ex
 
@@ -136,6 +139,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
         ex = self._pop_savepoint("rollback")
         self._exited = True
+        self.exited_with = "rollback"
         if ex:
             raise ex
 
