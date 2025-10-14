@@ -686,6 +686,21 @@ def test_binary_partial_row(conn):
             copy.write_row([16, [[None], None]])
 
 
+@pytest.mark.parametrize("format", pq.Format)
+def test_clean_buffer_on_error(conn, format):
+    cur = conn.cursor()
+    ensure_table(cur, "id serial primary key, num int4, obj jsonb")
+    with cur.copy(f"copy copy_in (num, obj) from stdin (format {format.name})") as copy:
+        copy.set_types(["int4", "jsonb"])
+        copy.write_row([15, {}])
+        with pytest.raises(TypeError):
+            copy.write_row([16, 1j])
+        copy.write_row([17, []])
+
+    cur.execute("select num, obj from copy_in order by id")
+    assert cur.fetchall() == [(15, {}), (17, [])]
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(pq.Format.TEXT, "sample_text"), (pq.Format.BINARY, "sample_binary")],
