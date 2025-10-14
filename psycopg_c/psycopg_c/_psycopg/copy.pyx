@@ -21,9 +21,7 @@ from psycopg import errors as e
 cdef int32_t _binary_null = -1
 
 
-def _format_row_binary(
-    row: Sequence[Any], tx: Transformer, out: bytearray
-) -> bytearray:
+cdef object _format_row_binary(object row, Transformer tx, bytearray out):
     """Convert a row of adapted data to the data to send for binary copy"""
     cdef Py_ssize_t rowlen
     if type(row) is list:
@@ -95,26 +93,18 @@ def _format_row_binary(
 
     # Resize to the final size
     PyByteArray_Resize(out, pos)
-    return out
 
 
-def format_row_binary(
-    row: Sequence[Any], tx: Transformer, out: bytearray = None
-) -> bytearray:
-    cdef Py_ssize_t size
-    if out is None:
-        out = PyByteArray_FromStringAndSize("", 0)
-        size = 0
-    else:
-        size = PyByteArray_GET_SIZE(out)
+def format_row_binary(row: Sequence[Any], tx: Transformer, out: bytearray) -> None:
+    cdef Py_ssize_t size = PyByteArray_GET_SIZE(out)
 
     try:
         _format_row_binary(row, tx, out)
     except Exception as e:
+        # Restore the input bytearray to the size it was before entering here
+        # to avoid potentially passing junk to copy.
         PyByteArray_Resize(out, size)
         raise e
-
-    return out
 
 
 cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
@@ -125,9 +115,7 @@ cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
     return 0
 
 
-def _format_row_text(
-    row: Sequence[Any], tx: Transformer, out: bytearray
-) -> bytearray:
+cdef object _format_row_text(object row, Py_ssize_t rowlen, Transformer tx, bytearray out):
     # offset in 'out' where to write
     cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
 
@@ -139,7 +127,6 @@ def _format_row_text(
     cdef int with_tab
     cdef PyObject *fmt = <PyObject *>PG_TEXT
     cdef PyObject *row_dumper
-    cdef Py_ssize_t rowlen = len(row)
 
     # try to get preloaded dumpers from set_types
     if not tx._row_dumpers:
@@ -215,33 +202,32 @@ def _format_row_text(
     # Resize to the final size, add the newline
     PyByteArray_Resize(out, pos + 1)
     out[pos] = b"\n"
-    return out
 
 
-def format_row_text(
-    row: Sequence[Any], tx: Transformer, out: bytearray = None
-) -> bytearray:
-    cdef Py_ssize_t size
-    if out is None:
-        out = PyByteArray_FromStringAndSize("", 0)
-        size = 0
-    else:
-        size = PyByteArray_GET_SIZE(out)
+def format_row_text(row: Sequence[Any], tx: Transformer, out: bytearray) -> None:
+    cdef Py_ssize_t size = PyByteArray_GET_SIZE(out)
 
     # exit early, if the row is empty
-    cdef Py_ssize_t rowlen = len(row)
+    cdef Py_ssize_t rowlen
+    if type(row) is list:
+        rowlen = PyList_GET_SIZE(row)
+    elif type(row) is tuple:
+        rowlen = PyTuple_GET_SIZE(row)
+    else:
+        rowlen = len(row)
+
     if rowlen == 0:
         PyByteArray_Resize(out, size + 1)
         out[size] = b"\n"
-        return out
+        return
 
     try:
-        _format_row_text(row, tx, out)
+        _format_row_text(row, rowlen, tx, out)
     except Exception as e:
+        # Restore the input bytearray to the size it was before entering here
+        # to avoid potentially passing junk to copy.
         PyByteArray_Resize(out, size)
         raise e
-
-    return out
 
 
 cdef int _append_text_none(bytearray out, Py_ssize_t *pos, int with_tab) except -1:
