@@ -120,6 +120,37 @@ async def test_rows(aconn, format):
     assert aconn.info.transaction_status == pq.TransactionStatus.INTRANS
 
 
+@pytest.mark.parametrize("format", pq.Format)
+async def test_set_types(aconn, format):
+    sample = ({"foo": "bar"}, 123)
+    cur = aconn.cursor()
+    await ensure_table_async(cur, "id serial primary key, data jsonb, data2 bigint")
+    async with cur.copy(
+        f"copy copy_in (data, data2) from stdin (format {format.name})"
+    ) as copy:
+        copy.set_types(["jsonb", "bigint"])
+        await copy.write_row(sample)
+    await cur.execute("select data, data2 from copy_in")
+    data = await cur.fetchone()
+    assert data == sample
+
+
+@pytest.mark.parametrize("format", pq.Format)
+@pytest.mark.parametrize("use_set_types", [True, False])
+async def test_rowlen_mismatch(aconn, format, use_set_types):
+    samples = [["foo", "bar"], ["foo", "bar", "baz"]]
+    cur = aconn.cursor()
+    await ensure_table_async(cur, "id serial primary key, data text, data2 text")
+    with pytest.raises(psycopg.DataError):
+        async with cur.copy(
+            f"copy copy_in (data, data2) from stdin (format {format.name})"
+        ) as copy:
+            if use_set_types:
+                copy.set_types(["text", "text"])
+            for row in samples:
+                await copy.write_row(row)
+
+
 async def test_set_custom_type(aconn, hstore):
     command = """copy (select '"a"=>"1", "b"=>"2"'::hstore) to stdout"""
     cur = aconn.cursor()

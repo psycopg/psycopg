@@ -178,6 +178,10 @@ class Transformer(AdaptContext):
         # which case self.types and self.formats are set to sequences of the
         # right size.
         if self._row_dumpers:
+            if len(self._row_dumpers) != nparams:
+                raise e.DataError(
+                    f"expected {len(self._row_dumpers)} values in row, got {nparams}"
+                )
             for i in range(nparams):
                 if (param := params[i]) is not None:
                     out[i] = self._row_dumpers[i].dump(param)
