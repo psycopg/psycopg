@@ -390,16 +390,26 @@ def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
 _re_needs_quotes = re.compile(rb'[",\\\s()\[\]]')
 _re_esc = re.compile(rb"([\\\"])")
 
-
+from .._cmodule import _psycopg
 class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
+    _inner_dumper: Dumper | None = None
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
+        if _psycopg:
+            pass
+            #print('c:  ', _psycopg.dump_range_binary(self, obj))
+            return _psycopg.dump_range_binary(self, obj)
         if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
+            if self._inner_dumper:
+                dump = self._inner_dumper.dump
+            else:
+                dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
 
+        #print('py: ', dump_range_binary(obj, dump))
+        #assert _psycopg.dump_range_binary(self, obj) == dump_range_binary(obj, dump)
         return dump_range_binary(obj, dump)
 
 
@@ -626,14 +636,15 @@ class TimestamptzRangeDumper(RangeDumper):
 # These are registered on specific subtypes so that the upgrade mechanism
 # doesn't kick in.
 
-
 class Int4RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT4RANGE_OID
 
 
+from .numeric import Int8BinaryDumper
 class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
-
+    _inner_dumper = _psycopg.Int8BinaryDumper(None)
+    #_inner_dumper = Int8BinaryDumper(None)
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.NUMRANGE_OID

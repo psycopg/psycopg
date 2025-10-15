@@ -831,3 +831,96 @@ cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset)
         i -= 1
 
     return length
+
+
+RANGE_EMPTY = 0x01  # range is empty
+RANGE_LB_INC = 0x02  # lower bound is inclusive
+RANGE_UB_INC = 0x04  # upper bound is inclusive
+RANGE_LB_INF = 0x08  # lower bound is -infinity
+RANGE_UB_INF = 0x10  # upper bound is +infinity
+
+_EMPTY_HEAD = bytes([RANGE_EMPTY])
+
+
+def dump_range_binary(rd: Any, obj: Any) -> bytearray:
+    if not obj:
+        return _EMPTY_HEAD
+
+    cdef rv = obj.lower
+    cdef item = rv if rv is not None else obj.upper
+    if item is None:
+        raise e.InternalError("trying to dump a range element without information")
+
+    cdef int has_cdump = 0
+    cdef object dumper
+
+    if rd._inner_dumper:
+        dumper = rd._inner_dumper
+    else:
+        dumper = rd._tx.get_dumper(item, rd._adapt_format)
+
+    if isinstance(dumper, CDumper):
+        has_cdump = 1
+
+    cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
+    cdef int pos = 1
+    cdef char *target
+    cdef uint32_t besize
+    cdef int data_len
+
+    cdef int head = 0
+    if obj.lower_inc:
+        head |= RANGE_LB_INC
+    if obj.upper_inc:
+        head |= RANGE_UB_INC
+
+    if has_cdump:
+
+        if obj.lower is not None:
+            pos = PyByteArray_GET_SIZE(out)
+            data_len = (<CDumper>dumper).cdump(obj.lower, out, pos + sizeof(besize))
+            besize = endian.htobe32(<int32_t>data_len)
+            target = PyByteArray_AS_STRING(out)
+            memcpy(target + pos, <void *>&besize, sizeof(besize))
+        else:
+            head |= RANGE_LB_INF
+
+        if obj.upper is not None:
+            pos = PyByteArray_GET_SIZE(out)
+            data_len = (<CDumper>dumper).cdump(obj.upper, out, pos + sizeof(besize))
+            besize = endian.htobe32(<int32_t>data_len)
+            target = PyByteArray_AS_STRING(out)
+            memcpy(target + pos, <void *>&besize, sizeof(besize))
+        else:
+            head |= RANGE_UB_INF
+
+    else:
+
+        if obj.lower is not None:
+            if (data := dumper.dump(obj.lower)) is not None:
+                data_len = len(data)
+                pos = PyByteArray_GET_SIZE(out)
+                besize = endian.htobe32(<int32_t>data_len)
+                target = CDumper.ensure_size(out, pos, sizeof(besize))
+                memcpy(target, <void *>&besize, sizeof(besize))
+                out += data
+            else:
+                head |= RANGE_LB_INF
+        else:
+            head |= RANGE_LB_INF
+
+        if obj.upper is not None:
+            if (data := dumper.dump(obj.upper)) is not None:
+                data_len = len(data)
+                pos = PyByteArray_GET_SIZE(out)
+                besize = endian.htobe32(<int32_t>data_len)
+                target = CDumper.ensure_size(out, pos, sizeof(besize))
+                memcpy(target, <void *>&besize, sizeof(besize))
+                out += data
+            else:
+                head |= RANGE_UB_INF
+        else:
+            head |= RANGE_UB_INF
+
+    out[0] = head
+    return out
