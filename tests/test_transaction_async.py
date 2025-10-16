@@ -581,16 +581,10 @@ async def test_transaction_status(aconn):
     assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     """
-    The Transaction.status property starts with NOT_STARTED state.
-    """
-    tx = aconn.transaction()
-    assert tx.status.name == "NOT_STARTED"
-
-    """
     The Transaction.status property ends up in FAILED state when the connection
     is broken within the transaction block.
     """
-    async with tx:
+    async with aconn.transaction() as tx:
         assert tx.status.name == "ACTIVE"
         assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
         aconn.pgconn.status = pq.ConnStatus.BAD

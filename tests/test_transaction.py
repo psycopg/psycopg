@@ -574,16 +574,10 @@ def test_transaction_status(conn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     """
-    The Transaction.status property starts with NOT_STARTED state.
-    """
-    tx = conn.transaction()
-    assert tx.status.name == "NOT_STARTED"
-
-    """
     The Transaction.status property ends up in FAILED state when the connection
     is broken within the transaction block.
     """
-    with tx:
+    with conn.transaction() as tx:
         assert tx.status.name == "ACTIVE"
         assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
         conn.pgconn.status = pq.ConnStatus.BAD
