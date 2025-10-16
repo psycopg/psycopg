@@ -443,36 +443,23 @@ cdef class Transformer:
         cdef object record  # not 'tuple' as it would check on assignment
 
         cdef object records = PyList_New(row1 - row0)
-        for row in range(row0, row1):
-            record = PyTuple_New(self._nfields)
-            Py_INCREF(record)
-            PyList_SET_ITEM(records, row - row0, record)
 
         cdef PyObject *loader  # borrowed RowLoader
-        cdef PyObject *brecord  # borrowed
+
         row_loaders = self._row_loaders  # avoid an incref/decref per item
 
-        for col in range(self._nfields):
-            loader = PyList_GET_ITEM(row_loaders, col)
-            if (<RowLoader>loader).cloader is not None:
-                for row in range(row0, row1):
-                    brecord = PyList_GET_ITEM(records, row - row0)
-                    attval = &(ires.tuples[row][col])
-                    if attval.len == -1:  # NULL_LEN
-                        pyval = None
-                    else:
+        for row in range(row0, row1):
+            record = PyTuple_New(self._nfields)
+
+            for col in range(self._nfields):
+                attval = &(ires.tuples[row][col])
+                if attval.len == -1:  # NULL_LEN
+                    pyval = None
+                else:
+                    loader = PyList_GET_ITEM(row_loaders, col)
+                    if (<RowLoader>loader).cloader is not None:
                         pyval = (<RowLoader>loader).cloader.cload(
                             attval.value, attval.len)
-
-                    Py_INCREF(pyval)
-                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
-
-            else:
-                for row in range(row0, row1):
-                    brecord = PyList_GET_ITEM(records, row - row0)
-                    attval = &(ires.tuples[row][col])
-                    if attval.len == -1:  # NULL_LEN
-                        pyval = None
                     else:
                         b = PyMemoryView_FromObject(
                             ViewBuffer._from_buffer(
@@ -481,17 +468,16 @@ cdef class Transformer:
                         pyval = PyObject_CallFunctionObjArgs(
                             (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 
-                    Py_INCREF(pyval)
-                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
+                Py_INCREF(pyval)
+                PyTuple_SET_ITEM(record, col, pyval)
 
-        if make_row is not tuple:
-            for i in range(row1 - row0):
-                brecord = PyList_GET_ITEM(records, i)
+            if make_row is not tuple:
                 record = PyObject_CallFunctionObjArgs(
-                    make_row, <PyObject *>brecord, NULL)
-                Py_INCREF(record)
-                PyList_SET_ITEM(records, i, record)
-                Py_DECREF(<object>brecord)
+                    make_row, <PyObject *>record, NULL)
+
+            Py_INCREF(record)
+            PyList_SET_ITEM(records, row - row0, record)
+
         return records
 
     def load_row(self, int row, object make_row) -> Row:
