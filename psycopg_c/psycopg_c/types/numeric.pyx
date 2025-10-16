@@ -834,93 +834,97 @@ cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset)
 
 
 RANGE_EMPTY = 0x01  # range is empty
-RANGE_LB_INC = 0x02  # lower bound is inclusive
-RANGE_UB_INC = 0x04  # upper bound is inclusive
-RANGE_LB_INF = 0x08  # lower bound is -infinity
-RANGE_UB_INF = 0x10  # upper bound is +infinity
+#RANGE_LB_INC = 0x02  # lower bound is inclusive
+#RANGE_UB_INC = 0x04  # upper bound is inclusive
+#RANGE_LB_INF = 0x08  # lower bound is -infinity
+#RANGE_UB_INF = 0x10  # upper bound is +infinity
 
 _EMPTY_HEAD = bytes([RANGE_EMPTY])
+
+
+cdef inline _write_cdump(bytearray out, object dumper, object obj):
+    cdef uint32_t besize
+    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
+    cdef Py_ssize_t size = (<CDumper>dumper).cdump(obj, out, pos + sizeof(besize))
+    besize = endian.htobe32(<int32_t>size)
+    cdef char *target = PyByteArray_AS_STRING(out)
+    memcpy(target + pos, <void *>&besize, sizeof(besize))
+
+cdef inline _write_size(bytearray out, int32_t size):
+    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
+    cdef Py_ssize_t besize = endian.htobe32(size)
+    cdef char *target = CDumper.ensure_size(out, pos, sizeof(besize))
+    memcpy(target, <void *>&besize, sizeof(besize))
+
+from psycopg_c.pq cimport _buffer_as_string_and_size
+
+cdef inline _write_dump(bytearray out, object b):
+    cdef Py_ssize_t size
+    cdef uint32_t besize
+    cdef char *buf
+    _buffer_as_string_and_size(b, &buf, &size)
+    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
+    cdef char *target = CDumper.ensure_size(out, pos, size + sizeof(besize))
+    besize = endian.htobe32(<int32_t>size)
+    memcpy(target, <void *>&besize, sizeof(besize))
+    memcpy(target + sizeof(besize), buf, size)
 
 
 def dump_range_binary(rd: Any, obj: Any) -> bytearray:
     if not obj:
         return _EMPTY_HEAD
 
-    cdef rv = obj.lower
-    cdef item = rv if rv is not None else obj.upper
-    if item is None:
+    cdef lower = obj.lower
+    cdef upper = obj.upper
+    cdef bint lower_inf = lower is None
+    cdef bint upper_inf = upper is None
+
+    # FIXME: should this go under no _inner_dumper? Does postgres support inf on both ends?
+    if lower_inf and upper_inf:
         raise e.InternalError("trying to dump a range element without information")
 
-    cdef int has_cdump = 0
     cdef object dumper
+    cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
+    cdef bint lower_inc = obj.lower_inc
+    cdef bint upper_inc = obj.upper_inc
 
     if rd._inner_dumper:
         dumper = rd._inner_dumper
     else:
-        dumper = rd._tx.get_dumper(item, rd._adapt_format)
+        dumper = rd._tx.get_dumper(lower if not lower_inf else upper, rd._adapt_format)
 
     if isinstance(dumper, CDumper):
-        has_cdump = 1
-
-    cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
-    cdef int pos = 1
-    cdef char *target
-    cdef uint32_t besize
-    cdef int data_len
-
-    cdef int head = 0
-    if obj.lower_inc:
-        head |= RANGE_LB_INC
-    if obj.upper_inc:
-        head |= RANGE_UB_INC
-
-    if has_cdump:
-
-        if obj.lower is not None:
-            pos = PyByteArray_GET_SIZE(out)
-            data_len = (<CDumper>dumper).cdump(obj.lower, out, pos + sizeof(besize))
-            besize = endian.htobe32(<int32_t>data_len)
-            target = PyByteArray_AS_STRING(out)
-            memcpy(target + pos, <void *>&besize, sizeof(besize))
-        else:
-            head |= RANGE_LB_INF
-
-        if obj.upper is not None:
-            pos = PyByteArray_GET_SIZE(out)
-            data_len = (<CDumper>dumper).cdump(obj.upper, out, pos + sizeof(besize))
-            besize = endian.htobe32(<int32_t>data_len)
-            target = PyByteArray_AS_STRING(out)
-            memcpy(target + pos, <void *>&besize, sizeof(besize))
-        else:
-            head |= RANGE_UB_INF
-
+        if not lower_inf:
+            _write_cdump(out, dumper, lower)
+        if not upper_inf:
+            _write_cdump(out, dumper, upper)
     else:
-
-        if obj.lower is not None:
-            if (data := dumper.dump(obj.lower)) is not None:
-                data_len = len(data)
-                pos = PyByteArray_GET_SIZE(out)
-                besize = endian.htobe32(<int32_t>data_len)
-                target = CDumper.ensure_size(out, pos, sizeof(besize))
-                memcpy(target, <void *>&besize, sizeof(besize))
+        if not lower_inf:
+            if (data := dumper.dump(lower)) is not None:
+                _write_size(out, len(data))
                 out += data
             else:
-                head |= RANGE_LB_INF
-        else:
-            head |= RANGE_LB_INF
-
-        if obj.upper is not None:
-            if (data := dumper.dump(obj.upper)) is not None:
-                data_len = len(data)
-                pos = PyByteArray_GET_SIZE(out)
-                besize = endian.htobe32(<int32_t>data_len)
-                target = CDumper.ensure_size(out, pos, sizeof(besize))
-                memcpy(target, <void *>&besize, sizeof(besize))
+                out[0] |= (<int>lower_inf) << 3
+        if not upper_inf:
+            if (data := dumper.dump(upper)) is not None:
+                _write_size(out, len(data))
                 out += data
             else:
-                head |= RANGE_UB_INF
-        else:
-            head |= RANGE_UB_INF
+                out[0] |= (<int>upper_inf) << 4
+        # FIXME: the more C variant below is slightly worse (~10% slower)
+        #if not lower_inf:
+        #    b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>lower, NULL)
+        #    if b is None:
+        #        out[0] |= (<int>lower_inf) << 3
+        #    else:
+        #        _write_dump(out, b)
+        #if not upper_inf:
+        #    b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>upper, NULL)
+        #    if b is None:
+        #        out[0] |= (<int>upper_inf) << 4
+        #    else:
+        #        _write_dump(out, b)
 
-    out[0] = head
+    # write header w'o branching
+    out[0] = (<int>lower_inc) << 1 | (<int>upper_inc) << 2 | (<int>lower_inf) << 3 | (<int>upper_inf) << 4
     return out
