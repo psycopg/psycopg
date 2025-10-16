@@ -842,19 +842,13 @@ RANGE_EMPTY = 0x01  # range is empty
 _EMPTY_HEAD = bytes([RANGE_EMPTY])
 
 
-cdef inline _write_cdump(bytearray out, object dumper, object obj):
+cdef inline _write_cdump(bytearray out, CDumper dumper, object obj):
     cdef uint32_t besize
     cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
-    cdef Py_ssize_t size = (<CDumper>dumper).cdump(obj, out, pos + sizeof(besize))
+    cdef Py_ssize_t size = dumper.cdump(obj, out, pos + sizeof(besize))
     besize = endian.htobe32(<int32_t>size)
     cdef char *target = PyByteArray_AS_STRING(out)
     memcpy(target + pos, <void *>&besize, sizeof(besize))
-
-cdef inline _write_size(bytearray out, int32_t size):
-    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
-    cdef Py_ssize_t besize = endian.htobe32(size)
-    cdef char *target = CDumper.ensure_size(out, pos, sizeof(besize))
-    memcpy(target, <void *>&besize, sizeof(besize))
 
 from psycopg_c.pq cimport _buffer_as_string_and_size
 
@@ -870,7 +864,7 @@ cdef inline _write_dump(bytearray out, object b):
     memcpy(target + sizeof(besize), buf, size)
 
 
-def dump_range_binary(rd: Any, obj: Any) -> bytearray:
+def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray | bytes:
     if not obj:
         return _EMPTY_HEAD
 
@@ -879,51 +873,41 @@ def dump_range_binary(rd: Any, obj: Any) -> bytearray:
     cdef bint lower_inf = lower is None
     cdef bint upper_inf = upper is None
 
-    # FIXME: should this go under no _inner_dumper? Does postgres support inf on both ends?
+    # FIXME: should this go under no _inner_oid? Does postgres support inf on both ends?
     if lower_inf and upper_inf:
         raise e.InternalError("trying to dump a range element without information")
 
-    cdef object dumper
     cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
     cdef bint lower_inc = obj.lower_inc
     cdef bint upper_inc = obj.upper_inc
+    cdef RowDumper row_dumper
 
-    if rd._inner_dumper:
-        dumper = rd._inner_dumper
+    if oid:
+        row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
     else:
-        dumper = rd._tx.get_dumper(lower if not lower_inf else upper, rd._adapt_format)
+        row_dumper = <RowDumper>tx.get_row_dumper(
+            <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_BINARY)
 
-    if isinstance(dumper, CDumper):
+    if row_dumper.cdumper is not None:
         if not lower_inf:
-            _write_cdump(out, dumper, lower)
+            _write_cdump(out, row_dumper.cdumper, lower)
         if not upper_inf:
-            _write_cdump(out, dumper, upper)
+            _write_cdump(out, row_dumper.cdumper, upper)
     else:
         if not lower_inf:
-            if (data := dumper.dump(lower)) is not None:
-                _write_size(out, len(data))
-                out += data
-            else:
+            b = PyObject_CallFunctionObjArgs(
+                row_dumper.dumpfunc, <PyObject *>lower, NULL)
+            if b is None:
                 out[0] |= (<int>lower_inf) << 3
-        if not upper_inf:
-            if (data := dumper.dump(upper)) is not None:
-                _write_size(out, len(data))
-                out += data
             else:
+                _write_dump(out, b)
+        if not upper_inf:
+            b = PyObject_CallFunctionObjArgs(
+                row_dumper.dumpfunc, <PyObject *>upper, NULL)
+            if b is None:
                 out[0] |= (<int>upper_inf) << 4
-        # FIXME: the more C variant below is slightly worse (~10% slower)
-        #if not lower_inf:
-        #    b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>lower, NULL)
-        #    if b is None:
-        #        out[0] |= (<int>lower_inf) << 3
-        #    else:
-        #        _write_dump(out, b)
-        #if not upper_inf:
-        #    b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>upper, NULL)
-        #    if b is None:
-        #        out[0] |= (<int>upper_inf) << 4
-        #    else:
-        #        _write_dump(out, b)
+            else:
+                _write_dump(out, b)
 
     # write header w'o branching
     out[0] = (<int>lower_inc) << 1 | (<int>upper_inc) << 2 | (<int>lower_inf) << 3 | (<int>upper_inf) << 4

@@ -393,23 +393,18 @@ _re_esc = re.compile(rb"([\\\"])")
 from .._cmodule import _psycopg
 class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
-    _inner_dumper: Dumper | None = None
+    _inner_oid: int | None = None
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
         if _psycopg:
-            pass
-            #print('c:  ', _psycopg.dump_range_binary(self, obj))
-            return _psycopg.dump_range_binary(self, obj)
+            return _psycopg.dump_range_binary(self._tx, obj, self._inner_oid)
         if (item := self._get_item(obj)) is not None:
-            if self._inner_dumper:
-                dump = self._inner_dumper.dump
+            if self._inner_oid:
+                dump = self._tx.get_dumper_by_oid(self._inner_oid, Format.BINARY).dump
             else:
                 dump = self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
-
-        #print('py: ', dump_range_binary(obj, dump))
-        #assert _psycopg.dump_range_binary(self, obj) == dump_range_binary(obj, dump)
         return dump_range_binary(obj, dump)
 
 
@@ -643,8 +638,7 @@ class Int4RangeBinaryDumper(RangeBinaryDumper):
 from .numeric import Int8BinaryDumper
 class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
-    _inner_dumper = _psycopg.Int8BinaryDumper(None)
-    #_inner_dumper = Int8BinaryDumper(None)
+    _inner_oid = _oids.INT8_OID
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.NUMRANGE_OID
