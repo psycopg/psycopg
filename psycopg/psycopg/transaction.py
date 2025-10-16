@@ -52,7 +52,7 @@ class OutOfOrderTransactionNesting(e.ProgrammingError):
 
 
 class BaseTransaction(Generic[ConnectionType]):
-    class TransactionState(Enum):
+    class Status(Enum):
         NOT_STARTED = "not_started"
         ACTIVE = "active"
         COMMITTED = "committed"
@@ -71,7 +71,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
         self._entered = self._exited = False
-        self.state = self.TransactionState.NOT_STARTED
+        self.status = self.Status.NOT_STARTED
         self._outer_transaction = False
         self._stack_index = -1
 
@@ -88,13 +88,13 @@ class BaseTransaction(Generic[ConnectionType]):
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
         info = connection_summary(self.pgconn)
         sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
-        return f"<{cls} {sp}({self.state.value}) {info} at 0x{id(self):x}>"
+        return f"<{cls} {sp}({self.status.value}) {info} at 0x{id(self):x}>"
 
     def _enter_gen(self) -> PQGen[None]:
         if self._entered:
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
-        self.state = self.TransactionState.ACTIVE
+        self.status = self.Status.ACTIVE
 
         self._push_savepoint()
         for command in self._get_enter_commands():
@@ -128,7 +128,7 @@ class BaseTransaction(Generic[ConnectionType]):
     def _commit_gen(self) -> PQGen[None]:
         ex = self._pop_savepoint("commit")
         self._exited = True
-        self.state = self.TransactionState.COMMITTED
+        self.status = self.Status.COMMITTED
         if ex:
             raise ex
 
@@ -143,9 +143,9 @@ class BaseTransaction(Generic[ConnectionType]):
         self._exited = True
 
         if isinstance(exc_val, Rollback) or self.force_rollback:
-            self.state = self.TransactionState.ROLLED_BACK_EXPLICITLY
+            self.status = self.Status.ROLLED_BACK_EXPLICITLY
         else:
-            self.state = self.TransactionState.ROLLED_BACK_WITH_ERROR
+            self.status = self.Status.ROLLED_BACK_WITH_ERROR
 
         if ex:
             raise ex
@@ -264,7 +264,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
             with self._conn.lock:
                 return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
-            self.state = self.TransactionState.FAILED
+            self.status = self.Status.FAILED
             return False
 
 
@@ -294,5 +294,5 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
             async with self._conn.lock:
                 return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
-            self.state = self.TransactionState.FAILED
+            self.status = self.Status.FAILED
             return False
