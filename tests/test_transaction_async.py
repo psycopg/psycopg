@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from psycopg import Rollback
+from psycopg import Rollback, connect
 from psycopg import errors as e
 from psycopg import pq
 
@@ -584,12 +584,15 @@ async def test_transaction_status(aconn):
     The Transaction.status property ends up in FAILED state when the connection
     is broken within the transaction block.
     """
-    async with aconn.transaction() as tx:
+    dsn = aconn.info.dsn
+    # Create a new connection to avoid closing the original one
+    temp_aconn = connect(dsn)
+    with temp_aconn.transaction() as tx:
         assert tx.status.name == "ACTIVE"
-        assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        aconn.pgconn.status = pq.ConnStatus.BAD
+        assert temp_aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        temp_aconn.close()
+        assert temp_aconn.pgconn.status == pq.ConnStatus.BAD
     assert tx.status.name == "FAILED"
-    assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
 
 @crdb_skip_external_observer

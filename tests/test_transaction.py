@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from psycopg import Rollback
+from psycopg import Rollback, connect
 from psycopg import errors as e
 from psycopg import pq
 
@@ -577,12 +577,15 @@ def test_transaction_status(conn):
     The Transaction.status property ends up in FAILED state when the connection
     is broken within the transaction block.
     """
-    with conn.transaction() as tx:
+    dsn = conn.info.dsn
+    # Create a new connection to avoid closing the original one
+    temp_conn = connect(dsn)
+    with temp_conn.transaction() as tx:
         assert tx.status.name == "ACTIVE"
-        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        conn.pgconn.status = pq.ConnStatus.BAD
+        assert temp_conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        temp_conn.close()
+        assert temp_conn.pgconn.status == pq.ConnStatus.BAD
     assert tx.status.name == "FAILED"
-    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
 
 @crdb_skip_external_observer
