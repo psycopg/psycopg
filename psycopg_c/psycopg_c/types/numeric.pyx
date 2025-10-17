@@ -864,6 +864,14 @@ cdef inline _write_dump(bytearray out, object b):
     memcpy(target + sizeof(besize), buf, size)
 
 
+def _fail_dump(obj: Any) -> Buffer:
+    raise e.InternalError("trying to dump a range element without information")
+
+
+cdef RowDumper _fail_dumper = RowDumper()
+_fail_dumper.dumpfunc = _fail_dump
+
+
 def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray | bytes:
     if not obj:
         return _EMPTY_HEAD
@@ -873,20 +881,21 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray |
     cdef bint lower_inf = lower is None
     cdef bint upper_inf = upper is None
 
-    # FIXME: should this go under no _inner_oid? Does postgres support inf on both ends?
-    if lower_inf and upper_inf:
-        raise e.InternalError("trying to dump a range element without information")
-
     cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
     cdef bint lower_inc = obj.lower_inc
     cdef bint upper_inc = obj.upper_inc
     cdef RowDumper row_dumper
 
-    if oid:
-        row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
+    # FIXME: clarify why is the fail_dump constellation solved indirectly
+    # FIXME: does it still apply to _inner_oid, where we always know the dumper?
+    if not lower_inf or not upper_inf:
+        if oid:
+            row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
+        else:
+            row_dumper = <RowDumper>tx.get_row_dumper(
+                <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_BINARY)
     else:
-        row_dumper = <RowDumper>tx.get_row_dumper(
-            <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_BINARY)
+        row_dumper = _fail_dumper
 
     if row_dumper.cdumper is not None:
         if not lower_inf:
