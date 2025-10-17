@@ -639,6 +639,7 @@ class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
     _inner_oid = _oids.INT8_OID
 
+
 class NumericRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.NUMRANGE_OID
 

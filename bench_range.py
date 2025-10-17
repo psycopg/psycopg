@@ -1,5 +1,5 @@
 import psycopg
-from psycopg.types.range import Int8Range
+from psycopg.types.range import Int8Range, Range
 from psycopg.types.numeric import Int8
 from time import sleep, monotonic
 import statistics as st

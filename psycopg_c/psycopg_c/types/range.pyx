@@ -14,7 +14,7 @@ RANGE_LB_INF = 0x08  # lower bound is -infinity
 RANGE_UB_INF = 0x10  # upper bound is +infinity
 
 
-_EMPTY_HEAD = bytes([RANGE_EMPTY])
+_EMPTY_HEAD = bytearray([RANGE_EMPTY])
 
 
 cdef inline _cdump_inline(bytearray out, CDumper dumper, object obj):
@@ -46,7 +46,7 @@ cdef RowDumper _fail_dumper = RowDumper()
 _fail_dumper.dumpfunc = _fail_dump
 
 
-def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray | bytes:
+def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
     if not obj:
         return _EMPTY_HEAD
 
