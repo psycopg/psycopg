@@ -17,27 +17,7 @@ RANGE_UB_INF = 0x10  # upper bound is +infinity
 _EMPTY_HEAD = bytearray([RANGE_EMPTY])
 
 
-cdef inline _cdump_inline(bytearray out, CDumper dumper, object obj):
-    cdef uint32_t besize
-    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
-    cdef Py_ssize_t size = dumper.cdump(obj, out, pos + sizeof(besize))
-    besize = endian.htobe32(<int32_t>size)
-    cdef char *target = PyByteArray_AS_STRING(out)
-    memcpy(target + pos, <void *>&besize, sizeof(besize))
-
-
-cdef inline _write_dumped_obj(bytearray out, object obj):
-    cdef Py_ssize_t size
-    cdef uint32_t besize
-    cdef char *buf
-    _buffer_as_string_and_size(obj, &buf, &size)
-    cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
-    cdef char *target = CDumper.ensure_size(out, pos, size + sizeof(besize))
-    besize = endian.htobe32(<int32_t>size)
-    memcpy(target, <void *>&besize, sizeof(besize))
-    memcpy(target + sizeof(besize), buf, size)
-
-
+# FIXME: exception handling in cdef variant
 def _fail_dump(obj: Any) -> Buffer:
     raise e.InternalError("trying to dump a range element without information")
 
@@ -46,16 +26,19 @@ cdef RowDumper _fail_dumper = RowDumper()
 _fail_dumper.dumpfunc = _fail_dump
 
 
-def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
+cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transformer tx, object oid) except -1:
+    CDumper.ensure_size(rv, offset, 1)
     if not obj:
-        return _EMPTY_HEAD
+        rv[offset] = RANGE_EMPTY
+        return 1
+
+    cdef Py_ssize_t pos = offset + 1
 
     cdef lower = obj.lower
     cdef upper = obj.upper
     cdef bint lower_inf = lower is None
     cdef bint upper_inf = upper is None
 
-    cdef bytearray out = PyByteArray_FromStringAndSize("", 1)
     cdef bint lower_inc = obj.lower_inc
     cdef bint upper_inc = obj.upper_inc
     cdef RowDumper row_dumper
@@ -74,11 +57,24 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
     # write header w'o branching
     cdef int head = (<int>lower_inc) << 1 | (<int>upper_inc) << 2 | (<int>lower_inf) << 3 | (<int>upper_inf) << 4
 
+    cdef Py_ssize_t size
+    cdef uint32_t besize
+    cdef char *buf
+    cdef char *target
+
     if row_dumper.cdumper is not None:
         if not lower_inf:
-            _cdump_inline(out, row_dumper.cdumper, lower)
+            size = row_dumper.cdumper.cdump(lower, rv, pos + sizeof(besize))
+            besize = endian.htobe32(<int32_t>size)
+            target = PyByteArray_AS_STRING(rv)
+            memcpy(target + pos, <void *>&besize, sizeof(besize))
+            pos += size + sizeof(besize)
         if not upper_inf:
-            _cdump_inline(out, row_dumper.cdumper, upper)
+            size = row_dumper.cdumper.cdump(upper, rv, pos + sizeof(besize))
+            besize = endian.htobe32(<int32_t>size)
+            target = PyByteArray_AS_STRING(rv)
+            memcpy(target + pos, <void *>&besize, sizeof(besize))
+            pos += size + sizeof(besize)
     else:
         if not lower_inf:
             b = PyObject_CallFunctionObjArgs(
@@ -86,17 +82,34 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
             if b is None:
                 head |= RANGE_LB_INF
             else:
-                _write_dumped_obj(out, b)
+                _buffer_as_string_and_size(b, &buf, &size)
+                target = CDumper.ensure_size(rv, pos, size + sizeof(besize))
+                besize = endian.htobe32(<int32_t>size)
+                memcpy(target, <void *>&besize, sizeof(besize))
+                memcpy(target + sizeof(besize), buf, size)
+                pos += size + sizeof(besize)
         if not upper_inf:
             b = PyObject_CallFunctionObjArgs(
                 row_dumper.dumpfunc, <PyObject *>upper, NULL)
             if b is None:
                 head |= RANGE_UB_INF
             else:
-                _write_dumped_obj(out, b)
+                _buffer_as_string_and_size(b, &buf, &size)
+                target = CDumper.ensure_size(rv, pos, size + sizeof(besize))
+                besize = endian.htobe32(<int32_t>size)
+                memcpy(target, <void *>&besize, sizeof(besize))
+                memcpy(target + sizeof(besize), buf, size)
+                pos += size + sizeof(besize)
 
-    out[0] = head
-    return out
+    rv[offset] = head
+    return pos - offset
+
+
+# FIXME: not needed anymore, once tx.get_dumper_by_oid gets exposed to python
+def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
+    cdef bytearray rv = PyByteArray_FromStringAndSize("", 0)
+    _dump_range_binary(obj, rv, 0, tx, oid)
+    return rv
 
 
 cdef class _RangeBinaryDumper(CDumper):
@@ -108,13 +121,7 @@ cdef class _RangeBinaryDumper(CDumper):
         self._tx = Transformer.from_context(context)
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        # FIXME: rewrite dump_range_binary for inplace writing as cdef
-        cdef bytearray out = dump_range_binary(self._tx, obj, self._inner_oid)
-        cdef char *src = PyByteArray_AS_STRING(out)
-        cdef Py_ssize_t size = PyByteArray_GET_SIZE(out)
-        cdef char *target = CDumper.ensure_size(rv, offset, size)
-        memcpy(target, src, size)
-        return size
+        return _dump_range_binary(obj, rv, offset, self._tx, self._inner_oid)
 
 
 @cython.final

@@ -397,6 +397,10 @@ class RangeBinaryDumper(BaseRangeDumper):
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
         if _psycopg:
+            # this direct call is needed, since get_dumper_by_oid is cdef'ed in cython
+            # therefore a custom binary range dumper written in python with c installed
+            # will fail without this sidestep
+            # FIXME: expose get_dumper_by_oid from cython to python?
             return _psycopg.dump_range_binary(self._tx, obj, self._inner_oid)
         if (item := self._get_item(obj)) is not None:
             if self._inner_oid:
