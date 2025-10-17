@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from psycopg import Rollback, connect
+from psycopg import Rollback
 from psycopg import errors as e
 from psycopg import pq
 
@@ -530,7 +530,9 @@ async def test_force_rollback_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
-async def test_transaction_status(aconn):
+async def test_transaction_status(aconn_cls, dsn):
+    aconn = await aconn_cls.connect(dsn)
+
     """
     The Transaction.status property ends up in committed state when no exceptions
     are raised and force_rollback is False(default).
@@ -584,14 +586,11 @@ async def test_transaction_status(aconn):
     The Transaction.status property ends up in FAILED state when the connection
     is broken within the transaction block.
     """
-    dsn = aconn.info.dsn
-    # Create a new connection to avoid closing the original one
-    temp_aconn = connect(dsn)
-    with temp_aconn.transaction() as tx:
+    async with aconn.transaction() as tx:
         assert tx.status.name == "ACTIVE"
-        assert temp_aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        temp_aconn.close()
-        assert temp_aconn.pgconn.status == pq.ConnStatus.BAD
+        assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        await aconn.close()
+        assert aconn.pgconn.status == pq.ConnStatus.BAD
     assert tx.status.name == "FAILED"
 
 
