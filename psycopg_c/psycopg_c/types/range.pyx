@@ -97,3 +97,52 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray |
 
     out[0] = head
     return out
+
+
+cdef class _RangeBinaryDumper(CDumper):
+    format = PQ_BINARY
+    _inner_oid = None
+    cdef Transformer _tx
+
+    def __cinit__(self, cls, context: AdaptContext | None = None):
+        self._tx = Transformer.from_context(context)
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        # FIXME: rewrite dump_range_binary for inplace writing as cdef
+        cdef bytearray out = dump_range_binary(self._tx, obj, self._inner_oid)
+        cdef char *src = PyByteArray_AS_STRING(out)
+        cdef Py_ssize_t size = PyByteArray_GET_SIZE(out)
+        cdef char *target = CDumper.ensure_size(rv, offset, size)
+        memcpy(target, src, size)
+        return size
+
+
+@cython.final
+cdef class Int4RangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.INT4RANGE_OID
+
+
+@cython.final
+cdef class Int8RangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.INT8RANGE_OID
+    _inner_oid = oids.INT8_OID
+
+
+@cython.final
+cdef class NumericRangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.NUMRANGE_OID
+
+
+@cython.final
+cdef class DateRangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.DATERANGE_OID
+
+
+@cython.final
+cdef class TimestampRangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.TSRANGE_OID
+
+
+@cython.final
+cdef class TimestamptzRangeBinaryDumper(_RangeBinaryDumper):
+    oid = oids.TSTZRANGE_OID

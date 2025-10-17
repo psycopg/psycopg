@@ -40,7 +40,7 @@ def bench_range_dumping():
     dump = Int8RangeBinaryDumper(None).dump
     #return [dump(Int8Range(Int8(left), Int8(right))) for left, right in range_data]
     return [dump(Int8Range(left, right)) for left, right in range_data]
-measure(bench_range_dumping, repeat=50, relax=0)
+#measure(bench_range_dumping, repeat=50, relax=0)
 
 
 def bench_range_db():
@@ -52,4 +52,4 @@ def bench_range_db():
                 for left, right in range_data:
                     #copy.write_row([Int8Range(Int8(left), Int8(right))])
                     copy.write_row([Int8Range(left, right)])
-#measure(bench_range_db, repeat=10, relax=0)
+measure(bench_range_db, repeat=10, relax=0)

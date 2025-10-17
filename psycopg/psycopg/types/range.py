@@ -635,7 +635,6 @@ class Int4RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT4RANGE_OID
 
 
-from .numeric import Int8BinaryDumper
 class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
     _inner_oid = _oids.INT8_OID
