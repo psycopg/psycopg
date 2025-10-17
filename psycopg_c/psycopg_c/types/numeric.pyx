@@ -836,8 +836,8 @@ cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset)
 RANGE_EMPTY = 0x01  # range is empty
 #RANGE_LB_INC = 0x02  # lower bound is inclusive
 #RANGE_UB_INC = 0x04  # upper bound is inclusive
-#RANGE_LB_INF = 0x08  # lower bound is -infinity
-#RANGE_UB_INF = 0x10  # upper bound is +infinity
+RANGE_LB_INF = 0x08  # lower bound is -infinity
+RANGE_UB_INF = 0x10  # upper bound is +infinity
 
 _EMPTY_HEAD = bytes([RANGE_EMPTY])
 
@@ -897,6 +897,9 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray |
     else:
         row_dumper = _fail_dumper
 
+    # write header w'o branching
+    cdef int head = (<int>lower_inc) << 1 | (<int>upper_inc) << 2 | (<int>lower_inf) << 3 | (<int>upper_inf) << 4
+
     if row_dumper.cdumper is not None:
         if not lower_inf:
             _write_cdump(out, row_dumper.cdumper, lower)
@@ -907,17 +910,15 @@ def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray |
             b = PyObject_CallFunctionObjArgs(
                 row_dumper.dumpfunc, <PyObject *>lower, NULL)
             if b is None:
-                out[0] |= (<int>lower_inf) << 3
+                head |= RANGE_LB_INF
             else:
                 _write_dump(out, b)
         if not upper_inf:
             b = PyObject_CallFunctionObjArgs(
                 row_dumper.dumpfunc, <PyObject *>upper, NULL)
             if b is None:
-                out[0] |= (<int>upper_inf) << 4
+                head |= RANGE_UB_INF
             else:
                 _write_dump(out, b)
-
-    # write header w'o branching
-    out[0] = (<int>lower_inc) << 1 | (<int>upper_inc) << 2 | (<int>lower_inf) << 3 | (<int>upper_inf) << 4
+    out[0] = head
     return out
