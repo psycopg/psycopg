@@ -4,6 +4,7 @@ import time
 import socket
 import logging
 import subprocess as sp
+from pathlib import Path
 from contextlib import contextmanager
 
 import pytest
@@ -34,8 +35,10 @@ def pytest_configure(config):
 def proxy(dsn):
     """Return a proxy to the --test-dsn database"""
     p = Proxy(dsn)
-    yield p
-    p.stop()
+    try:
+        yield p
+    finally:
+        p.stop()
 
 
 class Proxy:
@@ -73,7 +76,8 @@ class Proxy:
             return
 
         logging.info("starting proxy")
-        cmdline = [sys.executable, "-m", "tests.pproxy_fix", "--reuse"]
+        pproxy_fix = str(Path(__file__).parent.parent / "tools/pproxy_fix.py")
+        cmdline = [sys.executable, pproxy_fix, "--reuse"]
         cmdline += ["-l", f"tunnel://:{self.client_port}"]
         cmdline += ["-r", f"tunnel://{self.server_host}:{self.server_port}"]
 
@@ -127,6 +131,10 @@ class Proxy:
                     break
                 time.sleep(0.1)
             else:
-                raise ValueError("the proxy didn't start listening in time")
+                # final shot at connecting, which will raise an exception
+                try:
+                    sock.connect((self.client_host, self.client_port))
+                except Exception as ex:
+                    pytest.fail(f"the proxy didn't start listening in time: {ex}")
 
         logging.info("proxy listening")

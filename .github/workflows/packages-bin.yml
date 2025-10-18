@@ -86,8 +86,7 @@ jobs:
             ./tools/ci/strip_wheel.sh {wheel}
             && auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
-          CIBW_TEST_COMMAND: >-
-            pytest {project}/tests -m 'not slow and not flakey' --color yes
+          CIBW_TEST_COMMAND: pytest {project}/tests
           CIBW_ENVIRONMENT_PASS_LINUX: LIBPQ_VERSION OPENSSL_VERSION
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -98,6 +97,7 @@ jobs:
             LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib:$LIBPQ_BUILD_PREFIX/lib64"
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
+            PYTEST_ADDOPTS="-m 'not slow and not flakey' --color yes"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -154,8 +154,7 @@ jobs:
           MACOSX_ARCHITECTURE: ${{matrix.arch}}
           CIBW_BEFORE_ALL_MACOS: ./tools/ci/wheel_macos_before_all.sh
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
-          CIBW_TEST_COMMAND: >-
-            pytest {project}/tests -m 'not slow and not flakey' --color yes
+          CIBW_TEST_COMMAND: pytest {project}/tests
           CIBW_ENVIRONMENT: >-
             PG_VERSION=18
             PSYCOPG_IMPL=binary
@@ -164,6 +163,7 @@ jobs:
             PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${{env.LIBPQ_VERSION}}"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${{env.LIBPQ_VERSION}}"
+            PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -228,13 +228,13 @@ jobs:
             delvewheel repair -w {dest_dir}
             --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
-          CIBW_TEST_COMMAND: >-
-            pytest {project}/tests -m "not slow and not flakey" --color yes
+          CIBW_TEST_COMMAND: pytest {project}/tests
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 16"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
+            PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - uses: actions/upload-artifact@v4
         with:
