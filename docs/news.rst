@@ -20,6 +20,7 @@ Psycopg 3.2.11 (unreleased)
   the Python version (:ticket:`#1153`).
 - Don't raise warning, and don't leak resources, if a builtin function is used
   as JSON dumper/loader function (:ticket:`#1165`).
+- Improve performance of Python conversion on results loading (:ticket:`#1155`).
 
 
 Current release
