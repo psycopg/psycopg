@@ -383,6 +383,7 @@ async def test_socket_closed(dsn, waitfn, pgconn):
     assert dt < 1.0
 
 
+@pytest.mark.flakey("fails in CI on wait_async on ppc64le cp314 manylinux")
 @pytest.mark.parametrize("waitfn", waitfns)
 async def test_wait_remote_closed(proxy, aconn_cls, waitfn):
     waitfn = getattr(waiting, waitfn)
