@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.2.11 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.2.11
+^^^^^^^^^^^^^^
 
 - Fix spurious readiness flags in some of the wait functions (:ticket:`#1141`).
 - Fix high CPU usage using the ``wait_c`` function on Windows (:ticket:`#645`).
@@ -22,9 +22,6 @@ Psycopg 3.2.11 (unreleased)
   as JSON dumper/loader function (:ticket:`#1165`).
 - Improve performance of Python conversion on results loading (:ticket:`#1155`).
 
-
-Current release
----------------
 
 .. _psycopg-3.2.10:
 
