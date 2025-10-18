@@ -176,6 +176,7 @@ async def test_queue(pool_cls, dsn):
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
+            assert conn._pool is p
             await conn.execute("select pg_sleep(0.2)")
             pid = conn.info.backend_pid
         t1 = time()
