@@ -738,24 +738,24 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
                 logger.info("not serving connection found broken")
+                self.run_task(AddConnection(self))
                 return
 
         else:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
                 # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
                 logger.warning("discarding closed connection: %s", conn)
+                self.run_task(AddConnection(self))
                 return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
-            self.run_task(AddConnection(self))
             logger.info("discarding expired connection")
             conn._pool = None
             await conn.close()
+            self.run_task(AddConnection(self))
             return
 
         await self._add_to_pool(conn)

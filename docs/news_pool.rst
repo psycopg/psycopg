@@ -22,6 +22,8 @@ psycopg_pool 3.2.7 (unreleased)
 
 - Fix infinite loop with connections modified to return on close
   (:ticket:`#1124`).
+- Fix request of excessive connections upon connection close failing and
+  retrying (:ticket:`#1176`).
 
 
 Current release
