@@ -473,6 +473,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         # Close the connections that were still in the pool
         for conn in connections:
+            conn._pool = None
             await conn.close()
 
         # Signal to eventual clients in the queue that business is closed.
@@ -545,6 +546,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Check for expired connections
             if conn._expire_at <= monotonic():
                 logger.info("discarding expired connection %s", conn)
+                conn._pool = None
                 await conn.close()
                 self.run_task(AddConnection(self))
                 continue
@@ -729,23 +731,24 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
                 logger.info("not serving connection found broken")
+                self.run_task(AddConnection(self))
                 return
 
         else:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
                 # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
                 logger.warning("discarding closed connection: %s", conn)
+                self.run_task(AddConnection(self))
                 return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
-            self.run_task(AddConnection(self))
             logger.info("discarding expired connection")
+            conn._pool = None
             await conn.close()
+            self.run_task(AddConnection(self))
             return
 
         await self._add_to_pool(conn)
@@ -820,11 +823,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     ex,
                     conn,
                 )
+                conn._pool = None
                 await conn.close()
 
         elif status == TransactionStatus.ACTIVE:
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
+            conn._pool = None
             await conn.close()
 
         if self._reset:
@@ -838,6 +843,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
+                conn._pool = None
                 await conn.close()
 
     async def _shrink_pool(self) -> None:
@@ -863,6 +869,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 nconns_min,
                 self.max_idle,
             )
+            to_close._pool = None
             await to_close.close()
 
     def _get_measures(self) -> dict[str, int]:
