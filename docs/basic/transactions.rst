@@ -3,6 +3,7 @@
 .. index:: Transactions management
 .. index:: InFailedSqlTransaction
 .. index:: idle in transaction
+.. index:: Transaction status
 
 .. _transactions:
 
@@ -295,6 +296,67 @@ but not entirely committed yet.
 
     # If `Rollback` is raised, it would propagate only up to this block,
     # and the program would continue from here with no exception.
+
+
+.. _transaction-status:
+
+Transaction status
+^^^^^^^^^^^^^^^^^^
+
+Each `Transaction` object exposes a `~Transaction.status` property that allows
+you to inspect the current state of the transaction. This can be useful for
+debugging, logging, or implementing custom transaction management logic.
+
+The `!status` property returns a `Transaction.Status` enum value that can be
+one of the following:
+
+- `!NOT_STARTED`: The transaction has been created but not yet entered (before
+  the `!__enter__()` method is called).
+- `!ACTIVE`: The transaction is currently active (inside the `!with` block).
+- `!COMMITTED`: The transaction exited successfully and changes were committed.
+- `!ROLLED_BACK_EXPLICITLY`: The transaction was explicitly rolled back, either
+  by raising a `Rollback` exception or by using `!force_rollback=True`.
+- `!ROLLED_BACK_WITH_ERROR`: The transaction was rolled back due to an
+  exception raised within the transaction block.
+- `!FAILED`: The transaction failed due to a connection failure (e.g., the
+  connection was closed or became unavailable during the transaction).
+
+Here's an example of how to use the status property:
+
+.. code:: python
+
+    from psycopg import Rollback
+
+    # Successful transaction
+    with conn.transaction() as tx:
+        assert tx.status == tx.Status.ACTIVE
+        conn.execute("INSERT INTO data VALUES (%s)", ("Hello",))
+    assert tx.status == tx.Status.COMMITTED
+
+    # Transaction rolled back with an error
+    try:
+        with conn.transaction() as tx:
+            conn.execute("INSERT INTO data VALUES (%s)", ("World",))
+            1 / 0  # Causes an exception
+    except ZeroDivisionError:
+        pass
+    assert tx.status == tx.Status.ROLLED_BACK_WITH_ERROR
+
+    # Explicit rollback
+    with conn.transaction() as tx:
+        conn.execute("INSERT INTO data VALUES (%s)", ("Test",))
+        raise Rollback()
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
+
+    # Force rollback
+    with conn.transaction(force_rollback=True) as tx:
+        conn.execute("INSERT INTO data VALUES (%s)", ("Temp",))
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
+
+The `!status` property remains accessible after the transaction context has
+exited, allowing you to check the final outcome of the transaction even after
+the `!with` block completes. This is particularly useful when you need to log
+transaction outcomes or implement retry logic based on the transaction status.
 
 
 .. _transaction-characteristics:
