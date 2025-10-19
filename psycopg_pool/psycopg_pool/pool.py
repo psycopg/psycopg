@@ -28,7 +28,7 @@ from .abc import CT, ConnectFailedCB, ConnectionCB
 from .base import AttemptWithBackoff, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Self
+from ._compat import PSYCOPG_VERSION, PoolConnection, Self
 from ._acompat import Condition, Event, Lock, Queue, Worker, current_thread_name
 from ._acompat import gather, sleep, spawn
 
@@ -51,6 +51,7 @@ class ConnectionPool(Generic[CT], BasePool):
         check: ConnectionCB[CT] | None = None,
         reset: ConnectionCB[CT] | None = None,
         name: str | None = None,
+        close_returns: bool = False,
         timeout: float = 30.0,
         max_waiting: int = 0,
         max_lifetime: float = 60 * 60.0,
@@ -59,6 +60,14 @@ class ConnectionPool(Generic[CT], BasePool):
         reconnect_failed: ConnectFailedCB | None = None,
         num_workers: int = 3,
     ):
+        if close_returns and PSYCOPG_VERSION < (3, 3):
+            if connection_class is Connection:
+                connection_class = cast(type[CT], PoolConnection)
+            else:
+                raise TypeError(
+                    "Using 'close_returns=True' and a non-standard 'connection_class' requires psycopg 3.3 or newer. Please check the docs at https://www.psycopg.org/psycopg3/docs/advanced/pool.html#pool-sqlalchemy for a workaround."
+                )
+
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -86,6 +95,7 @@ class ConnectionPool(Generic[CT], BasePool):
             min_size=min_size,
             max_size=max_size,
             name=name,
+            close_returns=close_returns,
             timeout=timeout,
             max_waiting=max_waiting,
             max_lifetime=max_lifetime,
@@ -439,6 +449,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         # Close the connections that were still in the pool
         for conn in connections:
+            conn._pool = None
             conn.close()
 
         # Signal to eventual clients in the queue that business is closed.
@@ -511,6 +522,7 @@ class ConnectionPool(Generic[CT], BasePool):
             # Check for expired connections
             if conn._expire_at <= monotonic():
                 logger.info("discarding expired connection %s", conn)
+                conn._pool = None
                 conn.close()
                 self.run_task(AddConnection(self))
                 continue
@@ -676,21 +688,22 @@ class ConnectionPool(Generic[CT], BasePool):
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
                 logger.info("not serving connection found broken")
+                self.run_task(AddConnection(self))
                 return
         elif conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
             self._stats[self._RETURNS_BAD] += 1
             # Connection no more in working state: create a new one.
-            self.run_task(AddConnection(self))
             logger.warning("discarding closed connection: %s", conn)
+            self.run_task(AddConnection(self))
             return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
-            self.run_task(AddConnection(self))
             logger.info("discarding expired connection")
+            conn._pool = None
             conn.close()
+            self.run_task(AddConnection(self))
             return
 
         self._add_to_pool(conn)
@@ -763,10 +776,12 @@ class ConnectionPool(Generic[CT], BasePool):
                     ex,
                     conn,
                 )
+                conn._pool = None
                 conn.close()
         elif status == TransactionStatus.ACTIVE:
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
+            conn._pool = None
             conn.close()
 
         if self._reset:
@@ -779,6 +794,7 @@ class ConnectionPool(Generic[CT], BasePool):
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
+                conn._pool = None
                 conn.close()
 
     def _shrink_pool(self) -> None:
@@ -803,6 +819,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 nconns_min,
                 self.max_idle,
             )
+            to_close._pool = None
             to_close.close()
 
     def _get_measures(self) -> dict[str, int]:

@@ -26,6 +26,9 @@ except ImportError:
     pass
 
 
+PSYCOPG_VERSION = tuple(map(int, psycopg.__version__.split(".", 2)[:2]))
+
+
 def test_default_sizes(dsn):
     with pool.ConnectionPool(dsn) as p:
         assert p.min_size == p.max_size == 4
@@ -1040,30 +1043,36 @@ def test_check_returns_an_ok_connection(dsn, status):
         assert conn.info.transaction_status == TransactionStatus.IDLE
 
 
+class ReturningConnection(psycopg.Connection[Row]):
+    """
+    Test connection returning to the pool on close.
+
+    Verify that it's possible to override `close()` to act as `putconn()`.
+    which allows to use the psycopg pool in a sqlalchemy NullPool.
+
+    We cannot guarantee 100% that we will never break this implementation,
+    but we can keep awareness that we use it this way, maintain it on a
+    best-effort basis, and notify upstream if we are forced to break it.
+
+    https://github.com/sqlalchemy/sqlalchemy/discussions/12522
+    https://github.com/psycopg/psycopg/issues/1046
+    """
+
+    def close(self) -> None:
+        if pool := getattr(self, "_pool", None):
+            # Connection currently checked out from the pool.
+            # Instead of closing it, return it to the pool.
+            pool.putconn(self)
+        else:
+            # Connection not part of any pool, or currently into the pool.
+            # Close the connection for real.
+            super().close()
+
+
 def test_override_close(dsn):
-    # Verify that it's possible to override `close()` to act as `putconn()`.
-    # which allows to use the psycopg pool in a sqlalchemy NullPool.
-    #
-    # We cannot guarantee 100% that we will never break this implementation,
-    # but we can keep awareness that we use it this way, maintain it on a
-    # best-effort basis, and notify upstream if we are forced to break it.
-    #
-    # https://github.com/sqlalchemy/sqlalchemy/discussions/12522
-    # https://github.com/psycopg/psycopg/issues/1046
-
-    class MyConnection(psycopg.Connection[Row]):
-
-        def close(self) -> None:
-            if pool := getattr(self, "_pool", None):
-                # Connection currently checked out from the pool.
-                # Instead of closing it, return it to the pool.
-                pool.putconn(self)
-            else:
-                # Connection not part of any pool, or currently into the pool.
-                # Close the connection for real.
-                super().close()
-
-    with pool.ConnectionPool(dsn, connection_class=MyConnection, min_size=2) as p:
+    with pool.ConnectionPool(
+        dsn, connection_class=ReturningConnection, min_size=2
+    ) as p:
         p.wait()
         assert len(p._pool) == 2
         conn = p.getconn()
@@ -1074,3 +1083,88 @@ def test_override_close(dsn):
         assert len(p._pool) == 2
 
     assert conn.closed
+
+
+def test_close_returns(dsn):
+    with pool.ConnectionPool(dsn, min_size=2, close_returns=True) as p:
+        p.wait()
+        assert len(p._pool) == 2
+        conn = p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+def test_close_returns_custom_class(dsn):
+
+    class MyConnection(psycopg.Connection):
+        pass
+
+    with pool.ConnectionPool(
+        dsn, min_size=2, connection_class=MyConnection, close_returns=True
+    ) as p:
+        p.wait()
+        conn = p.getconn()
+        assert not conn.closed
+        assert len(p._pool) == 1
+        conn.close()
+        assert not conn.closed
+        assert len(p._pool) == 2
+
+    assert conn.closed
+
+
+@pytest.mark.skipif(PSYCOPG_VERSION >= (3, 3), reason="psycopg < 3.3 behaviour")
+def test_close_returns_custom_class_old(dsn):
+
+    class MyConnection(psycopg.Connection):
+        pass
+
+    with pytest.raises(TypeError, match="close_returns=True"):
+        pool.ConnectionPool(dsn, connection_class=MyConnection, close_returns=True)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
+def test_close_returns_no_loop(dsn):
+    with pool.ConnectionPool(
+        dsn, min_size=1, close_returns=True, max_lifetime=0.05
+    ) as p:
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        sleep(0.1)  # wait for the connection to expire
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1
+
+
+@pytest.mark.slow
+def test_override_close_no_loop_subclass(dsn):
+    with pool.ConnectionPool(
+        dsn, min_size=1, max_lifetime=0.05, connection_class=ReturningConnection
+    ) as p:
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        sleep(0.1)  # wait for the connection to expire
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1
+        conn = p.getconn()
+        sleep(0.1)
+        assert len(p._pool) == 0
+        conn.close()
+        sleep(0.1)
+        assert len(p._pool) == 1

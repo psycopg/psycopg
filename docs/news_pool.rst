@@ -7,6 +7,25 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.3.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add `!close_returns` for :ref:`integration with SQLAlchemy <pool-sqlalchemy>`
+  (:ticket:`#1046`).
+
+
+psycopg_pool 3.2.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix infinite loop with connections modified to return on close
+  (:ticket:`#1124`).
+- Fix request of excessive connections upon connection close failing and
+  retrying (:ticket:`#1176`).
+
+
 Current release
 ---------------
 
