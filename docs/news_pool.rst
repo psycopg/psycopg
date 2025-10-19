@@ -10,6 +10,18 @@
 Current release
 ---------------
 
+psycopg_pool 3.2.6
+^^^^^^^^^^^^^^^^^^
+
+- Reset transaction status of connection failing check (:ticket:`#1014`).
+
+
+psycopg_pool 3.2.5
+^^^^^^^^^^^^^^^^^^
+
+- Fix spurious warning logging on pool shrinking (:ticket:`#1001`).
+
+
 psycopg_pool 3.2.4
 ^^^^^^^^^^^^^^^^^^
 

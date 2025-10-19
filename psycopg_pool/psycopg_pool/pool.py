@@ -669,6 +669,7 @@ class ConnectionPool(Generic[CT], BasePool):
         """
         Return a connection to the pool after usage.
         """
+        self._reset_connection(conn)
         if from_getconn:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._CONNECTIONS_LOST] += 1
@@ -676,14 +677,12 @@ class ConnectionPool(Generic[CT], BasePool):
                 self.run_task(AddConnection(self))
                 logger.info("not serving connection found broken")
                 return
-        else:
-            self._reset_connection(conn)
-            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                self._stats[self._RETURNS_BAD] += 1
-                # Connection no more in working state: create a new one.
-                self.run_task(AddConnection(self))
-                logger.warning("discarding closed connection: %s", conn)
-                return
+        elif conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+            self._stats[self._RETURNS_BAD] += 1
+            # Connection no more in working state: create a new one.
+            self.run_task(AddConnection(self))
+            logger.warning("discarding closed connection: %s", conn)
+            return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
@@ -789,7 +788,7 @@ class ConnectionPool(Generic[CT], BasePool):
             self._nconns_min = len(self._pool)
 
             # If the pool can shrink and connections were unused, drop one
-            if self._nconns > self._min_size and nconns_min > 0:
+            if self._nconns > self._min_size and nconns_min > 0 and self._pool:
                 to_close = self._pool.popleft()
                 self._nconns -= 1
                 self._nconns_min -= 1

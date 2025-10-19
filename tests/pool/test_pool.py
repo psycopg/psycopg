@@ -1017,6 +1017,28 @@ def test_check_backoff(dsn, caplog, monkeypatch):
         want *= 2
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("status", ["ERROR", "INTRANS"])
+def test_check_returns_an_ok_connection(dsn, status):
+
+    def check(conn):
+        if status == "ERROR":
+            conn.execute("wat")
+        elif status == "INTRANS":
+            conn.execute("select 1")
+            1 / 0
+        else:
+            assert False
+
+    with pool.ConnectionPool(dsn, min_size=1, check=check) as p:
+        p.wait(1.0)
+        with pytest.raises(pool.PoolTimeout):
+            conn = p.getconn(0.5)
+
+        conn = list(p._pool)[0]
+        assert conn.info.transaction_status == TransactionStatus.IDLE
+
+
 def test_override_close(dsn):
     # Verify that it's possible to override `close()` to act as `putconn()`.
     # which allows to use the psycopg pool in a sqlalchemy NullPool.
