@@ -1225,7 +1225,8 @@ def test_get_config_rotates_connections(dsn):
         p.close()
 
 
-def test_get_config_rise_exception(dsn, caplog):
+@pytest.mark.slow
+def test_get_config_raise_exception(dsn, caplog):
 
     def failing_conninfo():
         raise RuntimeError("cannot build conninfo")
