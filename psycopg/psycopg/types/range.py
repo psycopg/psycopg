@@ -522,12 +522,13 @@ class RangeBinaryLoader(BaseRangeLoader[T]):
         return load_range_binary(data, self._load)
 
 
+# fast lookup bounds from RANGE_LB_INC and RANGE_UB_INC
+_range_bounds = ["()", None, "[)", None, "(]", None, "[]"]
+
+
 def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
     if (head := data[0]) & RANGE_EMPTY:
         return Range(empty=True)
-
-    lb = "[" if head & RANGE_LB_INC else "("
-    ub = "]" if head & RANGE_UB_INC else ")"
 
     pos = 1  # after the head
     if head & RANGE_LB_INF:
@@ -546,7 +547,7 @@ def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
         max = load(data[pos : pos + length])
         pos += length
 
-    return Range(min, max, lb + ub)
+    return Range(min, max, _range_bounds[(head & RANGE_LB_INC) | (head & RANGE_UB_INC)])
 
 
 def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None:
