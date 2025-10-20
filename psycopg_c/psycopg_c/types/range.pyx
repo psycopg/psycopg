@@ -153,3 +153,190 @@ cdef class TimestampRangeBinaryDumper(_RangeBinaryDumper):
 @cython.final
 cdef class TimestamptzRangeBinaryDumper(_RangeBinaryDumper):
     oid = oids.TSTZRANGE_OID
+
+
+
+cdef Py_ssize_t _escape_text(bytearray rv, Py_ssize_t pos, Py_ssize_t size):
+    cdef char *target = PyByteArray_AS_STRING(rv) + pos
+    cdef int additional = 0
+    cdef int needs_escape = 0
+    cdef int tmpsize = size
+    cdef char c
+    for j in range(size):
+        if (c := range_escape_lut[target[j]]):
+            needs_escape = 1
+            if c == b'"' or c == b"\\":
+                additional += 1
+    if needs_escape:
+        additional += 2
+    if additional > 0:
+        tmpsize = size + additional
+        target = CDumper.ensure_size(rv, pos, tmpsize)
+        target[tmpsize - 1] = b'"'
+        additional -= 1
+        for j in range(<int>size - 1, -1, -1):
+            c = target[j]
+            if c == b'"' or c == b"\\":
+                target[j + additional] = c
+                additional -= 1
+                target[j + additional] = c
+            else:
+                target[j + additional] = target[j]
+        target[0] = b'"'
+    return tmpsize
+
+
+cdef Py_ssize_t _dump_range_text(obj, bytearray rv, Py_ssize_t offset, Transformer tx) except -1:
+    cdef char* empty_string = b"empty"
+    cdef char *target
+
+    # FIXME: obj.isempty in TEXT vs. (not obj) in BINARY?
+    if obj.isempty:
+        target = CDumper.ensure_size(rv, offset, 5)
+        memcpy(target, empty_string, 5)
+        return 5
+
+    cdef Py_ssize_t pos = offset
+
+    cdef lower = obj.lower
+    cdef upper = obj.upper
+    cdef bint lower_inf = lower is None
+    cdef bint upper_inf = upper is None
+    cdef bint lower_inc = obj.lower_inc
+    cdef bint upper_inc = obj.upper_inc
+    cdef RowDumper row_dumper
+
+    if not lower_inf or not upper_inf:
+        row_dumper = <RowDumper>tx.get_row_dumper(
+            <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_TEXT)
+    else:
+        row_dumper = _fail_dumper
+
+    target = CDumper.ensure_size(rv, pos, 3)
+    target[0] = b"[" if lower_inc else b"("
+    pos += 1
+
+    cdef Py_ssize_t size
+    cdef char *buf
+
+    if not lower_inf:
+        if row_dumper.cdumper is not None:
+            size = row_dumper.cdumper.cdump(lower, rv, pos)
+        else:
+            b = PyObject_CallFunctionObjArgs(
+                row_dumper.dumpfunc, <PyObject *>lower, NULL)
+            if not b:
+                # FIXME: None is treated differently than (not b)?
+                size = -1 if b is None else 0
+            else:
+                _buffer_as_string_and_size(b, &buf, &size)
+                if size:
+                    target = CDumper.ensure_size(rv, pos, size)
+                    memcpy(target, buf, size)
+        if not size:
+            target = CDumper.ensure_size(rv, pos, 2)
+            target[0] = b"\""
+            target[1] = b"\""
+            pos += 2
+        elif size > 0:
+            pos += _escape_text(rv, pos, size)
+
+    target = CDumper.ensure_size(rv, pos, 2)
+    target[0] = b","
+    pos += 1
+
+    if not upper_inf:
+        if row_dumper.cdumper is not None:
+            size = row_dumper.cdumper.cdump(upper, rv, pos)
+        else:
+            b = PyObject_CallFunctionObjArgs(
+                row_dumper.dumpfunc, <PyObject *>lower, NULL)
+            if not b:
+                # FIXME: None is treated differently than (not b)?
+                size = -1 if b is None else 0
+            else:
+                _buffer_as_string_and_size(b, &buf, &size)
+                if size:
+                    target = CDumper.ensure_size(rv, pos, size)
+                    memcpy(target, buf, size)
+        if not size:
+            target = CDumper.ensure_size(rv, pos, 2)
+            target[0] = b"\""
+            target[1] = b"\""
+            pos += 2
+        elif size > 0:
+            pos += _escape_text(rv, pos, size)
+
+    target = CDumper.ensure_size(rv, pos, 1)
+    target[0] = b"]" if upper_inc else b")"
+    pos += 1
+
+    return pos - offset
+
+
+cdef class _RangeDumper(CDumper):
+    format = PQ_TEXT
+    cdef Transformer _tx
+
+    def __cinit__(self, cls, context: AdaptContext | None = None):
+        self._tx = Transformer.from_context(context)
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        return _dump_range_text(obj, rv, offset, self._tx)
+
+
+@cython.final
+cdef class Int4RangeDumper(_RangeDumper):
+    oid = oids.INT4RANGE_OID
+
+
+@cython.final
+cdef class Int8RangeDumper(_RangeDumper):
+    oid = oids.INT8RANGE_OID
+
+
+@cython.final
+cdef class NumericRangeDumper(_RangeDumper):
+    oid = oids.NUMRANGE_OID
+
+
+@cython.final
+cdef class DateRangeDumper(_RangeDumper):
+    oid = oids.DATERANGE_OID
+
+
+@cython.final
+cdef class TimestampRangeDumper(_RangeDumper):
+    oid = oids.TSRANGE_OID
+
+
+@cython.final
+cdef class TimestamptzRangeDumper(_RangeDumper):
+    oid = oids.TSTZRANGE_OID
+
+
+
+cdef extern from *:
+    """
+/* ",\\()[] \t\n\r\f\v --> [9, 10, 11, 12, 13, 32, 34, 40, 41, 44, 91, 92, 93] */
+
+static const char range_escape_lut[] = {
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   9,  10,  11,  12,  13,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+ 32,   0,  34,   0,   0,   0,   0,   0,  40,  41,   0,   0,  44,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  91,  92,  93,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+};
+    """
+    const char[256] range_escape_lut
