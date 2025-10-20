@@ -547,7 +547,7 @@ def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
         max = load(data[pos : pos + length])
         pos += length
 
-    return Range(min, max, _range_bounds[(head & RANGE_LB_INC) | (head & RANGE_UB_INC)])
+    return Range(min, max, _range_bounds[head & (RANGE_LB_INC | RANGE_UB_INC)])
 
 
 def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None:
