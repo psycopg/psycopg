@@ -5,6 +5,7 @@ from libc.stdint cimport int32_t, uint32_t
 from libc.string cimport memcpy
 from psycopg_c._psycopg cimport endian, RowDumper, CDumper
 from psycopg import errors as e
+from cpython.buffer cimport PyBUF_READ
 
 
 RANGE_EMPTY = 0x01  # range is empty
@@ -17,6 +18,10 @@ RANGE_UB_INF = 0x10  # upper bound is +infinity
 _EMPTY_HEAD = bytearray([RANGE_EMPTY])
 
 
+cdef extern from "Python.h":
+    object PyMemoryView_FromMemory(char *mem, Py_ssize_t size, int flags)
+
+
 # FIXME: exception handling in cdef variant
 def _fail_dump(obj: Any) -> Buffer:
     raise e.InternalError("trying to dump a range element without information")
@@ -26,7 +31,10 @@ cdef RowDumper _fail_dumper = RowDumper()
 _fail_dumper.dumpfunc = _fail_dump
 
 
-cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transformer tx, object oid) except -1:
+# binary dumpers
+
+
+cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transformer tx, RowDumper row_dumper) except -1:
     CDumper.ensure_size(rv, offset, 1)
     if not obj:
         rv[offset] = RANGE_EMPTY
@@ -41,14 +49,16 @@ cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transfo
 
     cdef bint lower_inc = obj.lower_inc
     cdef bint upper_inc = obj.upper_inc
-    cdef RowDumper row_dumper
+    #cdef RowDumper row_dumper
 
     # FIXME: clarify why the fail_dump constellation is solved indirectly
     # FIXME: does it still apply to _inner_oid, where we always know the dumper?
     if not lower_inf or not upper_inf:
-        if oid:
-            row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
-        else:
+        # FIXME: should this stay here instead of once in cinit?
+        #if oid:
+        #    row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
+        #else:
+        if not row_dumper:
             row_dumper = <RowDumper>tx.get_row_dumper(
                 <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_BINARY)
     else:
@@ -107,8 +117,11 @@ cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transfo
 
 # FIXME: not needed anymore, once tx.get_dumper_by_oid gets exposed to python
 def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
+    cdef row_dumper = None
+    if oid:
+        row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
     cdef bytearray rv = PyByteArray_FromStringAndSize("", 0)
-    _dump_range_binary(obj, rv, 0, tx, oid)
+    _dump_range_binary(obj, rv, 0, tx, row_dumper)
     return rv
 
 
@@ -116,12 +129,16 @@ cdef class _RangeBinaryDumper(CDumper):
     format = PQ_BINARY
     _inner_oid = None
     cdef Transformer _tx
+    cdef RowDumper _row_dumper
 
     def __cinit__(self, cls, context: AdaptContext | None = None):
         self._tx = Transformer.from_context(context)
+        if self._inner_oid:
+            self._row_dumper = <RowDumper>self._tx.get_dumper_by_oid(
+                <PyObject *>(self._inner_oid), <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        return _dump_range_binary(obj, rv, offset, self._tx, self._inner_oid)
+        return _dump_range_binary(obj, rv, offset, self._tx, self._row_dumper)
 
 
 @cython.final
@@ -154,6 +171,8 @@ cdef class TimestampRangeBinaryDumper(_RangeBinaryDumper):
 cdef class TimestamptzRangeBinaryDumper(_RangeBinaryDumper):
     oid = oids.TSTZRANGE_OID
 
+
+# text dumpers
 
 
 cdef Py_ssize_t _escape_text(bytearray rv, Py_ssize_t pos, Py_ssize_t size):
@@ -340,3 +359,106 @@ static const char range_escape_lut[] = {
 };
     """
     const char[256] range_escape_lut
+
+
+# binary loaders
+
+
+cdef _range_bounds = ["()", None, "[)", None, "(]", None, "[]"]
+
+
+cdef object _load_range_binary(const char *data, size_t length, object loader, object range_ctor):
+    if length == 0:
+        raise e.DataError("bad data: 0 length data")
+
+    cdef char head = data[0]
+    if head & RANGE_EMPTY:
+        return range_ctor(empty=True)
+
+    cdef int pos = 1
+    cdef lower = None
+    cdef upper = None
+    cdef Py_ssize_t size
+    cdef uint32_t besize
+    cdef has_cload = isinstance(loader, CLoader)
+
+    if not (head & RANGE_LB_INF):
+        if length <= pos + sizeof(besize):
+            raise e.DataError("bad data: truncated data")
+        memcpy(&besize, data + pos, sizeof(besize))
+        size = endian.be32toh(besize)
+        pos += sizeof(besize)
+        if length < pos + size:
+            raise e.DataError("bad data: truncated data")
+        if has_cload:
+            lower = (<CLoader>loader).cload(data + pos, size)
+        else:
+            mv = PyMemoryView_FromMemory(data + pos, size, PyBUF_READ)
+            lower = loader.load(mv)
+        pos += size
+    if not (head & RANGE_UB_INF):
+        if length <= pos + sizeof(besize):
+            raise e.DataError("bad data: truncated data")
+        memcpy(&besize, data + pos, sizeof(besize))
+        size = endian.be32toh(besize)
+        pos += sizeof(besize)
+        if length < pos + size:
+            raise e.DataError("bad data: truncated data")
+        if has_cload:
+            upper = (<CLoader>loader).cload(data + pos, size)
+        else:
+            mv = PyMemoryView_FromMemory(data + pos, size, PyBUF_READ)
+            upper = loader.load(mv)
+
+    return range_ctor(
+        lower,
+        upper,
+        _range_bounds[head & (RANGE_LB_INC | RANGE_UB_INC)]
+    )
+
+
+
+cdef class _RangeBinaryLoader(_CRecursiveLoader):
+    format = PQ_BINARY
+    cdef _loader
+    cdef range_ctor
+
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        if not self.range_ctor:
+            from psycopg.types.range import Range as PyRange
+            self.range_ctor = PyRange
+        super().__init__(oid, context)
+        self._loader = self._tx.get_loader(self.subtype_oid, format=self.format)
+
+    cdef object cload(self, const char *data, size_t length):
+        return _load_range_binary(data, length, self._loader, self.range_ctor)
+
+
+@cython.final
+cdef class Int4RangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.INT4_OID
+
+
+@cython.final
+cdef class Int8RangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.INT8_OID
+
+
+@cython.final
+cdef class NumericRangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.NUMERIC_OID
+
+
+@cython.final
+cdef class DateRangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.DATE_OID
+
+
+@cython.final
+cdef class TimestampRangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.TIMESTAMP_OID
+
+
+@cython.final
+cdef class TimestampTZRangeBinaryLoader(_RangeBinaryLoader):
+    subtype_oid = oids.TIMESTAMPTZ_OID
