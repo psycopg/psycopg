@@ -367,7 +367,7 @@ static const char range_escape_lut[] = {
 cdef _range_bounds = ["()", None, "[)", None, "(]", None, "[]"]
 
 
-cdef object _load_range_binary(const char *data, size_t length, object loader, object range_ctor):
+cdef object _load_range_binary(const char *data, size_t length, RowLoader row_loader, object range_ctor):
     if length == 0:
         raise e.DataError("bad data: 0 length data")
 
@@ -380,7 +380,7 @@ cdef object _load_range_binary(const char *data, size_t length, object loader, o
     cdef upper = None
     cdef Py_ssize_t size
     cdef uint32_t besize
-    cdef has_cload = isinstance(loader, CLoader)
+    cdef has_cload = row_loader.cloader is not None
 
     if not (head & RANGE_LB_INF):
         if length <= pos + sizeof(besize):
@@ -391,10 +391,11 @@ cdef object _load_range_binary(const char *data, size_t length, object loader, o
         if length < pos + size:
             raise e.DataError("bad data: truncated data")
         if has_cload:
-            lower = (<CLoader>loader).cload(data + pos, size)
+            lower = row_loader.cloader.cload(data + pos, size)
         else:
             mv = PyMemoryView_FromMemory(data + pos, size, PyBUF_READ)
-            lower = loader.load(mv)
+            lower = PyObject_CallFunctionObjArgs(
+                row_loader.loadfunc, <PyObject *>mv, NULL)
         pos += size
     if not (head & RANGE_UB_INF):
         if length <= pos + sizeof(besize):
@@ -405,10 +406,11 @@ cdef object _load_range_binary(const char *data, size_t length, object loader, o
         if length < pos + size:
             raise e.DataError("bad data: truncated data")
         if has_cload:
-            upper = (<CLoader>loader).cload(data + pos, size)
+            upper = row_loader.cloader.cload(data + pos, size)
         else:
             mv = PyMemoryView_FromMemory(data + pos, size, PyBUF_READ)
-            upper = loader.load(mv)
+            upper = PyObject_CallFunctionObjArgs(
+                row_loader.loadfunc, <PyObject *>mv, NULL)
 
     return range_ctor(
         lower,
@@ -420,7 +422,7 @@ cdef object _load_range_binary(const char *data, size_t length, object loader, o
 
 cdef class _RangeBinaryLoader(_CRecursiveLoader):
     format = PQ_BINARY
-    cdef _loader
+    cdef RowLoader _row_loader
     cdef range_ctor
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
@@ -428,10 +430,11 @@ cdef class _RangeBinaryLoader(_CRecursiveLoader):
             from psycopg.types.range import Range as PyRange
             self.range_ctor = PyRange
         super().__init__(oid, context)
-        self._loader = self._tx.get_loader(self.subtype_oid, format=self.format)
+        self._row_loader = <RowLoader>self._tx._c_get_loader(<PyObject *>(
+            self.subtype_oid), <PyObject *>(self.format))
 
     cdef object cload(self, const char *data, size_t length):
-        return _load_range_binary(data, length, self._loader, self.range_ctor)
+        return _load_range_binary(data, length, self._row_loader, self.range_ctor)
 
 
 @cython.final
