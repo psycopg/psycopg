@@ -357,15 +357,20 @@ static const char range_escape_lut[] = {
 
 
 cdef _range_bounds = ["()", None, "[)", None, "(]", None, "[]"]
+_range_ctor = None
 
 
-cdef object _load_range_binary(const char *data, size_t length, RowLoader row_loader, object range_ctor):
+cdef object _load_range_binary(const char *data, size_t length, RowLoader row_loader):
     if length == 0:
         raise e.DataError("bad data: 0 length data")
 
     cdef char head = data[0]
     if head & RANGE_EMPTY:
-        return range_ctor(empty=True)
+        obj = _range_ctor.__new__(_range_ctor)
+        obj._lower = None
+        obj._upper = None
+        obj._bounds = ""
+        return obj
 
     cdef int pos = 1
     cdef lower = None
@@ -404,29 +409,33 @@ cdef object _load_range_binary(const char *data, size_t length, RowLoader row_lo
             upper = PyObject_CallFunctionObjArgs(
                 row_loader.loadfunc, <PyObject *>mv, NULL)
 
-    return range_ctor(
-        lower,
-        upper,
-        _range_bounds[head & (RANGE_LB_INC | RANGE_UB_INC)]
-    )
-
+    # Range construction, must match Range.__init__ logic
+    obj = _range_ctor.__new__(_range_ctor)
+    obj._lower = lower
+    obj._upper = upper
+    if lower is None:
+        head &= ~RANGE_LB_INC
+    if upper is None:
+        head &= ~RANGE_UB_INC
+    obj._bounds = _range_bounds[head & (RANGE_LB_INC | RANGE_UB_INC)]
+    return obj
 
 
 cdef class _RangeBinaryLoader(_CRecursiveLoader):
     format = PQ_BINARY
     cdef RowLoader _row_loader
-    cdef range_ctor
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        if not self.range_ctor:
+        global _range_ctor
+        if not _range_ctor:
             from psycopg.types.range import Range as PyRange
-            self.range_ctor = PyRange
+            _range_ctor = PyRange
         super().__init__(oid, context)
-        self._row_loader = <RowLoader>self._tx._c_get_loader(<PyObject *>(
-            self.subtype_oid), <PyObject *>(self.format))
+        self._row_loader = <RowLoader>self._tx._c_get_loader(
+            <PyObject *>(self.subtype_oid), <PyObject *>(self.format))
 
     cdef object cload(self, const char *data, size_t length):
-        return _load_range_binary(data, length, self._row_loader, self.range_ctor)
+        return _load_range_binary(data, length, self._row_loader)
 
 
 @cython.final
