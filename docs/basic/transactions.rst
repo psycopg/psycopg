@@ -329,9 +329,9 @@ Here's an example of how to use the status property:
 
     # Successful transaction
     with conn.transaction() as tx:
-        assert tx.status.name == "ACTIVE"
+        assert tx.status == tx.Status.ACTIVE
         conn.execute("INSERT INTO data VALUES (%s)", ("Hello",))
-    assert tx.status.name == "COMMITTED"
+    assert tx.status == tx.Status.COMMITTED
 
     # Transaction rolled back with an error
     try:
@@ -340,18 +340,18 @@ Here's an example of how to use the status property:
             1 / 0  # Causes an exception
     except ZeroDivisionError:
         pass
-    assert tx.status.name == "ROLLED_BACK_WITH_ERROR"
+    assert tx.status == tx.Status.ROLLED_BACK_WITH_ERROR
 
     # Explicit rollback
     with conn.transaction() as tx:
         conn.execute("INSERT INTO data VALUES (%s)", ("Test",))
         raise Rollback()
-    assert tx.status.name == "ROLLED_BACK_EXPLICITLY"
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
 
     # Force rollback
     with conn.transaction(force_rollback=True) as tx:
         conn.execute("INSERT INTO data VALUES (%s)", ("Temp",))
-    assert tx.status.name == "ROLLED_BACK_EXPLICITLY"
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
 
 The `!status` property remains accessible after the transaction context has
 exited, allowing you to check the final outcome of the transaction even after
