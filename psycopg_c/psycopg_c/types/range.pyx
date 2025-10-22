@@ -49,15 +49,10 @@ cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transfo
 
     cdef bint lower_inc = obj.lower_inc
     cdef bint upper_inc = obj.upper_inc
-    #cdef RowDumper row_dumper
 
     # FIXME: clarify why the fail_dump constellation is solved indirectly
-    # FIXME: does it still apply to _inner_oid, where we always know the dumper?
+    # FIXME: does it still apply to subtype_oid, where we always know the dumper?
     if not lower_inf or not upper_inf:
-        # FIXME: should this stay here instead of once in cinit?
-        #if oid:
-        #    row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
-        #else:
         if not row_dumper:
             row_dumper = <RowDumper>tx.get_row_dumper(
                 <PyObject *>(lower if not lower_inf else upper), <PyObject *>PG_BINARY)
@@ -116,26 +111,23 @@ cdef Py_ssize_t _dump_range_binary(obj, bytearray rv, Py_ssize_t offset, Transfo
 
 
 # FIXME: not needed anymore, once tx.get_dumper_by_oid gets exposed to python
-def dump_range_binary(tx: Transformer, obj: Any, oid: int | None) -> bytearray:
-    cdef row_dumper = None
-    if oid:
-        row_dumper = <RowDumper>tx.get_dumper_by_oid(<PyObject *>oid, <PyObject *>PQ_BINARY)
-    cdef bytearray rv = PyByteArray_FromStringAndSize("", 0)
-    _dump_range_binary(obj, rv, 0, tx, row_dumper)
-    return rv
+def dumper_by_oid_helper(tx: Transformer, oid: int) -> Dumper:
+    cdef RowDumper row_dumper = <RowDumper>tx.get_dumper_by_oid(
+        <PyObject *>oid, <PyObject *>PQ_BINARY)
+    return row_dumper.pydumper
 
 
 cdef class _RangeBinaryDumper(CDumper):
     format = PQ_BINARY
-    _inner_oid = None
+    subtype_oid = None
     cdef Transformer _tx
     cdef RowDumper _row_dumper
 
     def __cinit__(self, cls, context: AdaptContext | None = None):
         self._tx = Transformer.from_context(context)
-        if self._inner_oid:
+        if self.subtype_oid:
             self._row_dumper = <RowDumper>self._tx.get_dumper_by_oid(
-                <PyObject *>(self._inner_oid), <PyObject *>PQ_BINARY)
+                <PyObject *>(self.subtype_oid), <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         return _dump_range_binary(obj, rv, offset, self._tx, self._row_dumper)
@@ -149,7 +141,7 @@ cdef class Int4RangeBinaryDumper(_RangeBinaryDumper):
 @cython.final
 cdef class Int8RangeBinaryDumper(_RangeBinaryDumper):
     oid = oids.INT8RANGE_OID
-    _inner_oid = oids.INT8_OID
+    subtype_oid = oids.INT8_OID
 
 
 @cython.final
