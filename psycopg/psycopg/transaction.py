@@ -70,7 +70,6 @@ class BaseTransaction(Generic[ConnectionType]):
         self.pgconn = self._conn.pgconn
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
-        self._entered = self._exited = False
         self.status = self.Status.NOT_STARTED
         self._outer_transaction = False
         self._stack_index = -1
@@ -91,9 +90,8 @@ class BaseTransaction(Generic[ConnectionType]):
         return f"<{cls} {sp}({self.status.value}) {info} at 0x{id(self):x}>"
 
     def _enter_gen(self) -> PQGen[None]:
-        if self._entered:
+        if self.status != self.Status.NOT_STARTED:
             raise TypeError("transaction blocks can be used only once")
-        self._entered = True
         self.status = self.Status.ACTIVE
 
         self._push_savepoint()
@@ -127,7 +125,6 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _commit_gen(self) -> PQGen[None]:
         ex = self._pop_savepoint("commit")
-        self._exited = True
         self.status = self.Status.COMMITTED
         if ex:
             raise ex
@@ -140,7 +137,6 @@ class BaseTransaction(Generic[ConnectionType]):
             logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
 
         ex = self._pop_savepoint("rollback")
-        self._exited = True
 
         if isinstance(exc_val, Rollback) or self.force_rollback:
             self.status = self.Status.ROLLED_BACK_EXPLICITLY
