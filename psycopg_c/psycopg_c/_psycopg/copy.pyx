@@ -128,12 +128,8 @@ cdef object _format_row_text(object row, Py_ssize_t rowlen, Transformer tx, byte
     cdef PyObject *fmt = <PyObject *>PG_TEXT
     cdef PyObject *row_dumper
 
-    # try to get preloaded dumpers from set_types
-    if not tx._row_dumpers:
-        tx._row_dumpers = PyList_New(rowlen)
-
     dumpers = tx._row_dumpers
-    if PyList_GET_SIZE(dumpers) != rowlen:
+    if dumpers and PyList_GET_SIZE(dumpers) != rowlen:
         raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
     for i in range(rowlen):
@@ -145,11 +141,12 @@ cdef object _format_row_text(object row, Py_ssize_t rowlen, Transformer tx, byte
             _append_text_none(out, &pos, with_tab)
             continue
 
-        row_dumper = PyList_GET_ITEM(dumpers, i)
-        if not row_dumper:
+        if dumpers:
+            # pinned dumpers from set_types are authoritative
+            row_dumper = PyList_GET_ITEM(dumpers, i)
+        else:
+            # no pinned dumpers, thus free value dumping
             row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
-            Py_INCREF(<object>row_dumper)
-            PyList_SET_ITEM(dumpers, i, <object>row_dumper)
 
         if (<RowDumper>row_dumper).cdumper is not None:
             # A cdumper can resize if necessary and copy in place
