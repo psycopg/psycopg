@@ -404,7 +404,7 @@ class RangeBinaryDumper(BaseRangeDumper):
             if _psycopg:
                 self._dump = _psycopg.dumper_by_oid_helper(self._tx, self.subtype_oid).dump
             else:
-                dump = self._tx.get_dumper_by_oid(self.subtype_oid, Format.BINARY).dump
+                self._dump = self._tx.get_dumper_by_oid(self.subtype_oid, Format.BINARY).dump
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
         if (item := self._get_item(obj)) is not None:
