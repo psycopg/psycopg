@@ -683,14 +683,14 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._set_connection_expiry_date(conn)
         return conn
 
-    async def _resolve_conninfo(self) -> str | Any:
+    async def _resolve_conninfo(self) -> str:
         """Resolve conninfo (static string, sync callable, or async callable)."""
         if callable(self.conninfo):
             return await ensure_async(self.conninfo)
 
-        return self.conninfo
+        return self.conninfo or ""
 
-    async def _resolve_kwargs(self) -> dict[str, Any] | Any:
+    async def _resolve_kwargs(self) -> dict[str, Any]:
         """Resolve kwargs (static dict, sync callable, or async callable)."""
         if not self.kwargs:
             return {}
