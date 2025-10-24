@@ -43,8 +43,15 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
-Psycopg 3.2.11 (unreleased)
+Psycopg 3.2.12 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Allow copy to pass different types per column, as long as the database can
+  convert them. Regression introduced in 3.2.11 (:ticket:`#1192`).
+
+
+Psycopg 3.2.11
+^^^^^^^^^^^^^^
 
 - Fix spurious readiness flags in some of the wait functions (:ticket:`#1141`).
 - Fix high CPU usage using the ``wait_c`` function on Windows (:ticket:`#645`).
