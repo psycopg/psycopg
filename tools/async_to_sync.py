@@ -309,6 +309,8 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "AsyncServerCursor": "ServerCursor",
         "AsyncTransaction": "Transaction",
         "AsyncWriter": "Writer",
+        "AsyncKwargsParam": "KwargsParam",
+        "AsyncConninfoParam": "ConninfoParam",
         "StopAsyncIteration": "StopIteration",
         "__aenter__": "__enter__",
         "__aexit__": "__exit__",
@@ -347,7 +349,6 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
     _skip_imports = {
         "acompat": {"alist", "anext"},
         "_acompat": {"ensure_async"},
-        "typing": {"Awaitable"},
     }
 
     def visit_Module(self, node: ast.Module) -> ast.AST:

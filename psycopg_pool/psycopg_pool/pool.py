@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Callable, Generic, cast
+from typing import Any, Generic, cast
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -24,7 +24,7 @@ from psycopg import Connection
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectFailedCB, ConnectionCB
+from .abc import CT, ConnectFailedCB, ConnectionCB, ConninfoParam, KwargsParam
 from .base import AttemptWithBackoff, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
@@ -40,10 +40,10 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def __init__(
         self,
-        conninfo: str | Callable[[], str] | None = None,
+        conninfo: ConninfoParam | None = None,
         *,
         connection_class: type[CT] = cast(type[CT], Connection),
-        kwargs: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
+        kwargs: KwargsParam | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -67,7 +67,8 @@ class ConnectionPool(Generic[CT], BasePool):
                 raise TypeError(
                     "Using 'close_returns=True' and a non-standard 'connection_class' requires psycopg 3.3 or newer. Please check the docs at https://www.psycopg.org/psycopg3/docs/advanced/pool.html#pool-sqlalchemy for a workaround."
                 )
-
+        self.conninfo = conninfo
+        self.kwargs: KwargsParam | None = kwargs
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -90,8 +91,6 @@ class ConnectionPool(Generic[CT], BasePool):
         self._workers: list[Worker] = []
 
         super().__init__(
-            conninfo,
-            kwargs=kwargs,
             min_size=min_size,
             max_size=max_size,
             name=name,
@@ -599,7 +598,8 @@ class ConnectionPool(Generic[CT], BasePool):
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        conninfo, kwargs = (self._resolve_conninfo(), self._resolve_kwargs())
+        conninfo = self._resolve_conninfo()
+        kwargs = self._resolve_kwargs()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)

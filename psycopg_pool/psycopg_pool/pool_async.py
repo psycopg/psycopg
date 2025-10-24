@@ -11,7 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, Awaitable, Callable, Generic, cast
+from typing import Any, Generic, cast
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -21,7 +21,13 @@ from psycopg import AsyncConnection
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
 
-from .abc import ACT, AsyncConnectFailedCB, AsyncConnectionCB
+from .abc import (
+    ACT,
+    AsyncConnectFailedCB,
+    AsyncConnectionCB,
+    AsyncConninfoParam,
+    AsyncKwargsParam,
+)
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import PSYCOPG_VERSION, AsyncPoolConnection, Self
@@ -40,10 +46,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     def __init__(
         self,
-        conninfo: str | Callable[[], Awaitable[str]] | None = None,
+        conninfo: AsyncConninfoParam | None = None,
         *,
         connection_class: type[ACT] = cast(type[ACT], AsyncConnection),
-        kwargs: dict[str, Any] | Callable[[], Awaitable[dict[str, Any]]] | None = None,
+        kwargs: AsyncKwargsParam | None = None,
         min_size: int = 4,
         max_size: int | None = None,
         open: bool | None = None,
@@ -70,6 +76,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     " https://www.psycopg.org/psycopg3/docs/advanced/pool.html"
                     "#pool-sqlalchemy for a workaround."
                 )
+        self.conninfo = conninfo
+        self.kwargs: AsyncKwargsParam | None = kwargs
         self.connection_class = connection_class
         self._check = check
         self._configure = configure
@@ -92,8 +100,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._workers: list[AWorker] = []
 
         super().__init__(
-            conninfo,
-            kwargs=kwargs,
             min_size=min_size,
             max_size=max_size,
             name=name,
@@ -647,7 +653,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     async def _connect(self, timeout: float | None = None) -> ACT:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
-        conninfo, kwargs = await self._resolve_conninfo(), await self._resolve_kwargs()
+        conninfo = await self._resolve_conninfo()
+        kwargs = await self._resolve_kwargs()
         if timeout:
             kwargs = kwargs.copy()
             kwargs["connect_timeout"] = max(round(timeout), 1)

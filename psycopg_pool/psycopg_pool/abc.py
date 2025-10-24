@@ -34,3 +34,10 @@ AsyncConnectFailedCB: TypeAlias = Union[
     Callable[["AsyncConnectionPool[Any]"], None],
     Callable[["AsyncConnectionPool[Any]"], Awaitable[None]],
 ]
+
+# Types of the connection parameters
+ConninfoParam: TypeAlias = Callable[[], str]
+AsyncConninfoParam: TypeAlias = Callable[[], Awaitable[str]]
+
+KwargsParam: TypeAlias = Union[dict[str, Any], Callable[[], dict[str, Any]]]
+AsyncKwargsParam: TypeAlias = Callable[[], Awaitable[dict[str, Any]]]
