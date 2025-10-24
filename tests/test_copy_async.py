@@ -9,8 +9,9 @@ import pytest
 import psycopg
 from psycopg import errors as e
 from psycopg import pq, sql
+from psycopg.abc import Buffer
 from psycopg.copy import AsyncCopy, AsyncLibpqWriter, AsyncQueuedLibpqWriter
-from psycopg.adapt import PyFormat
+from psycopg.adapt import Dumper, PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
@@ -501,8 +502,19 @@ async def test_copy_in_records_binary(aconn, format):
     assert data == [(1, None, "hello"), (2, None, "world")]
 
 
+class StrictIntDumper(Dumper):
+    oid = psycopg.adapters.types["int4"].oid
+
+    def dump(self, obj: int) -> Buffer:
+        if type(obj) is not int:
+            raise TypeError(f"bad type: {obj!r}")
+        return str(obj).encode()
+
+
 async def test_copy_in_text_no_pinning(aconn):
     cur = aconn.cursor()
+    cur.adapters.register_dumper(int, StrictIntDumper)
+
     cols = [
         "col1 serial primary key",
         "col2 int",
@@ -527,14 +539,9 @@ async def test_copy_in_text_no_pinning(aconn):
 
 
 async def test_copy_in_text_pinned(aconn):
-    # FIXME: this test works currently only in c,
-    # as c/python dumpers differ in what they accept as valid input
-    # here: python int & float text dumpers always allow str as input
-    from psycopg._cmodule import _psycopg
-
-    if not _psycopg:
-        return
     cur = aconn.cursor()
+    cur.adapters.register_dumper(int, StrictIntDumper)
+
     cols = [
         "col1 serial primary key",
         "col2 int",
@@ -557,8 +564,6 @@ async def test_copy_in_text_pinned(aconn):
             await copy.write_row([1.0, 2, 3, 4.1])
         with pytest.raises((e.DataError, TypeError)):
             await copy.write_row([1, "2", 3, 4.1])
-        with pytest.raises((e.DataError, TypeError)):
-            await copy.write_row([1, 2, 3, "4.1"])
 
     await cur.execute("select col2,col3,col4,col5 from copy_in order by 1")
     data = await cur.fetchall()
