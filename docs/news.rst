@@ -43,8 +43,11 @@ Psycopg 3.3.0 (unreleased)
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
 
-Psycopg 3.2.12 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.2.12
+^^^^^^^^^^^^^^
 
 - Allow copy to pass different types per column, as long as the database can
   convert them. Regression introduced in 3.2.11 (:ticket:`#1192`).
@@ -62,9 +65,6 @@ Psycopg 3.2.11
   as JSON dumper/loader function (:ticket:`#1165`).
 - Improve performance of Python conversion on results loading (:ticket:`#1155`).
 
-
-Current release
----------------
 
 .. _psycopg-3.2.10:
 
