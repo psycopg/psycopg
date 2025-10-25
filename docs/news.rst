@@ -7,6 +7,17 @@
 ``psycopg`` release notes
 =========================
 
+
+Future releases
+---------------
+
+Psycopg 3.2.12 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Allow copy to pass different types per column, as long as the database can
+  convert them. Regression introduced in 3.2.11 (:ticket:`#1192`).
+
+
 Current release
 ---------------
 
