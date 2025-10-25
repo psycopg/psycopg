@@ -44,9 +44,7 @@ class BasePool:
 
     def __init__(
         self,
-        conninfo: str = "",
         *,
-        kwargs: dict[str, Any] | None,
         min_size: int,
         max_size: int | None,
         name: str | None,
@@ -67,8 +65,6 @@ class BasePool:
         if num_workers < 1:
             raise ValueError("num_workers must be at least 1")
 
-        self.conninfo = conninfo
-        self.kwargs: dict[str, Any] = kwargs or {}
         self.name = name
         self.close_returns = close_returns
         self._min_size = min_size
