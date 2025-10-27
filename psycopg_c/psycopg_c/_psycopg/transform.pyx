@@ -15,6 +15,8 @@ from cpython.list cimport PyList_GET_ITEM, PyList_GET_SIZE, PyList_New, PyList_S
 from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
+from cpython.sequence cimport PySequence_Fast, PySequence_Fast_GET_ITEM
+from cpython.sequence cimport PySequence_Fast_GET_SIZE
 
 from typing import Sequence
 
@@ -185,16 +187,15 @@ cdef class Transformer:
         self.formats = [format] * ntypes
 
     def set_loader_types(self, types: Sequence[int], format: PqFormat) -> None:
-        self._c_loader_types(len(types), types, format)
-
-    cdef void _c_loader_types(self, Py_ssize_t ntypes, list types, object format):
+        cdef types_fast = PySequence_Fast(types, "'types' is not a valid sequence")
+        cdef Py_ssize_t ntypes = PySequence_Fast_GET_SIZE(types_fast)
         cdef list loaders = PyList_New(ntypes)
 
         # these are used more as Python object than C
         cdef PyObject *oid
         cdef PyObject *row_loader
         for i in range(ntypes):
-            oid = PyList_GET_ITEM(types, i)
+            oid = PySequence_Fast_GET_ITEM(types_fast, i)
             row_loader = self._c_get_loader(oid, <PyObject *>format)
             Py_INCREF(<object>row_loader)
             PyList_SET_ITEM(loaders, i, <object>row_loader)
