@@ -350,34 +350,37 @@ cdef class Transformer:
         return ptr
 
     cpdef dump_sequence(self, object params, object formats):
-        # Verify that they are not none and that PyList_GET_ITEM won't blow up
-        cdef Py_ssize_t nparams = len(params)
-        cdef list out = PyList_New(nparams)
-
         cdef int i
         cdef PyObject *dumper_ptr  # borrowed pointer to row dumper
         cdef object dumped
         cdef Py_ssize_t size
 
+        cdef params_fast = PySequence_Fast(
+            params, "'params' is not a valid sequence")
+        cdef formats_fast = PySequence_Fast(
+            formats, "'formats' is not a valid sequence")
+
+        cdef Py_ssize_t nparams = PySequence_Fast_GET_SIZE(params_fast)
+        cdef list out = PyList_New(nparams)
+        cdef PyObject *param
+
         if self._none_oid < 0:
             self._none_oid = self.adapters.get_dumper(NoneType, "s").oid
 
         dumpers = self._row_dumpers
-
         if dumpers:
             for i in range(nparams):
-                param = params[i]
-                if param is not None:
+                param = PySequence_Fast_GET_ITEM(params_fast, i)
+                if param != <PyObject *>None:
                     dumper_ptr = PyList_GET_ITEM(dumpers, i)
                     if (<RowDumper>dumper_ptr).cdumper is not None:
                         dumped = PyByteArray_FromStringAndSize("", 0)
                         size = (<RowDumper>dumper_ptr).cdumper.cdump(
-                            param, <bytearray>dumped, 0)
+                            <object>param, <bytearray>dumped, 0)
                         PyByteArray_Resize(dumped, size)
                     else:
                         dumped = PyObject_CallFunctionObjArgs(
-                            (<RowDumper>dumper_ptr).dumpfunc,
-                            <PyObject *>param, NULL)
+                            (<RowDumper>dumper_ptr).dumpfunc, param, NULL)
                 else:
                     dumped = None
 
@@ -388,21 +391,21 @@ cdef class Transformer:
 
         cdef tuple types = PyTuple_New(nparams)
         cdef list pqformats = PyList_New(nparams)
+        cdef PyObject *format
 
         for i in range(nparams):
-            param = params[i]
-            if param is not None:
-                dumper_ptr = self.get_row_dumper(
-                    <PyObject *>param, <PyObject *>formats[i])
+            param = PySequence_Fast_GET_ITEM(params_fast, i)
+            if param != <PyObject *>None:
+                format = PySequence_Fast_GET_ITEM(formats_fast, i)
+                dumper_ptr = self.get_row_dumper(param, format)
                 if (<RowDumper>dumper_ptr).cdumper is not None:
                     dumped = PyByteArray_FromStringAndSize("", 0)
                     size = (<RowDumper>dumper_ptr).cdumper.cdump(
-                        param, <bytearray>dumped, 0)
+                        <object>param, <bytearray>dumped, 0)
                     PyByteArray_Resize(dumped, size)
                 else:
                     dumped = PyObject_CallFunctionObjArgs(
-                        (<RowDumper>dumper_ptr).dumpfunc,
-                        <PyObject *>param, NULL)
+                        (<RowDumper>dumper_ptr).dumpfunc, param, NULL)
                 oid = (<RowDumper>dumper_ptr).oid
                 fmt = (<RowDumper>dumper_ptr).format
             else:
@@ -526,13 +529,15 @@ cdef class Transformer:
         return record
 
     cpdef object load_sequence(self, record: Sequence[Buffer | None]):
-        cdef Py_ssize_t nfields = len(record)
-        out = PyTuple_New(nfields)
+        cdef record_fast = PySequence_Fast(record, "'record' is not a valid sequence")
+        cdef Py_ssize_t nfields = PySequence_Fast_GET_SIZE(record_fast)
         cdef PyObject *loader  # borrowed RowLoader
         cdef int col
         cdef char *ptr
         cdef Py_ssize_t size
+        cdef PyObject *item
 
+        out = PyTuple_New(nfields)
         row_loaders = self._row_loaders  # avoid an incref/decref per item
         if PyList_GET_SIZE(row_loaders) != nfields:
             raise e.ProgrammingError(
@@ -540,19 +545,17 @@ cdef class Transformer:
                 f" {len(self._row_loaders)} loaders registered")
 
         for col in range(nfields):
-            item = record[col]
-            if item is None:
-                Py_INCREF(None)
-                PyTuple_SET_ITEM(out, col, None)
-                continue
-
-            loader = PyList_GET_ITEM(row_loaders, col)
-            if (<RowLoader>loader).cloader is not None:
-                _buffer_as_string_and_size(item, &ptr, &size)
-                pyval = (<RowLoader>loader).cloader.cload(ptr, size)
+            item = PySequence_Fast_GET_ITEM(record_fast, col)
+            if item == <PyObject *>None:
+                pyval = None
             else:
-                pyval = PyObject_CallFunctionObjArgs(
-                    (<RowLoader>loader).loadfunc, <PyObject *>item, NULL)
+                loader = PyList_GET_ITEM(row_loaders, col)
+                if (<RowLoader>loader).cloader is not None:
+                    _buffer_as_string_and_size(<object>item, &ptr, &size)
+                    pyval = (<RowLoader>loader).cloader.cload(ptr, size)
+                else:
+                    pyval = PyObject_CallFunctionObjArgs(
+                        (<RowLoader>loader).loadfunc, item, NULL)
 
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(out, col, pyval)
