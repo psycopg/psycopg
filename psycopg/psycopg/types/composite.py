@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import struct
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeVar, cast
 from functools import cache
 from collections import namedtuple
@@ -217,7 +218,7 @@ class RecordBinaryLoader(Loader):
         return tx
 
 
-class _CompositeLoader(Loader, Generic[T]):
+class _CompositeLoader(Loader, Generic[T], ABC):
     """
     Base class to create text loaders of specific composite types.
 
@@ -226,8 +227,8 @@ class _CompositeLoader(Loader, Generic[T]):
     create a subclass of this class.
     """
 
-    factory: Callable[..., T]
-    fields_types: list[int]
+    fields_types: tuple[int]
+    fields_names: tuple[str]
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
@@ -242,30 +243,14 @@ class _CompositeLoader(Loader, Generic[T]):
             args = ()
         else:
             args = self._tx.load_sequence(tuple(_parse_text_record(data[1:-1])))
-        return self._load_instance(args)
+        return type(self).make_instance(args, self.fields_names)
 
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        raise NotImplementedError
-
-
-class _ArgsCompositeLoader(_CompositeLoader[T]):
-
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        return cls.factory(*args)
+    @staticmethod
+    @abstractmethod
+    def make_instance(args: Sequence[Any], names: Sequence[str]) -> T: ...
 
 
-class _KwargsCompositeLoader(_CompositeLoader[T]):
-    fields_names: Sequence[str]
-
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        mapped = dict(zip(cls.fields_names, args))
-        return cls.factory(**mapped)
-
-
-class _CompositeBinaryLoader(Loader, Generic[T]):
+class _CompositeBinaryLoader(Loader, Generic[T], ABC):
     """
     Base class to create text loaders of specific composite types.
 
@@ -275,8 +260,8 @@ class _CompositeBinaryLoader(Loader, Generic[T]):
     """
 
     format = pq.Format.BINARY
-    factory: Callable[..., T]
-    fields_types: list[int]
+    fields_types: tuple[int]
+    fields_names: tuple[str]
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
@@ -286,34 +271,18 @@ class _CompositeBinaryLoader(Loader, Generic[T]):
     def load(self, data: abc.Buffer) -> T:
         brecord, _ = _parse_binary_record(data)  # assume oids == self.fields_types
         record = self._tx.load_sequence(brecord)
-        return self._load_instance(record)
+        return type(self).make_instance(record, self.fields_names)
 
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        raise NotImplementedError
-
-
-class _ArgsCompositeBinaryLoader(_CompositeBinaryLoader[T]):
-
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        return cls.factory(*args)
-
-
-class _KwargsCompositeBinaryLoader(_CompositeBinaryLoader[T]):
-    fields_names: Sequence[str]
-
-    @classmethod
-    def _load_instance(cls, args: Sequence[Any]) -> T:
-        mapped = dict(zip(cls.fields_names, args))
-        return cls.factory(**mapped)
+    @staticmethod
+    @abstractmethod
+    def make_instance(args: Sequence[Any], names: Sequence[str]) -> T: ...
 
 
 def register_composite(
     info: CompositeInfo,
     context: abc.AdaptContext | None = None,
     factory: Callable[..., T] | None = None,
-    use_keywords: bool = False,
+    make_instance: Callable[[Sequence[Any], Sequence[str]], T] | None = None,
 ) -> None:
     """Register the adapters to load and dump a composite type.
 
@@ -322,8 +291,8 @@ def register_composite(
         register it globally.
     :param factory: Callable to convert the sequence of attributes read from
         the composite into a Python object.
-    :param use_keywords: If `True`, load composite types using field names as keyword
-        arguments.
+    :param make_instance: optional function taking values and names as input and
+        returning the new type.
 
     .. note::
 
@@ -344,6 +313,11 @@ def register_composite(
     if not factory:
         factory = cast("Callable[..., T]", _nt_from_info(info))
 
+    if not make_instance:
+
+        def make_instance(values: Sequence[Any], types: Sequence[str]) -> T:
+            return factory(*values)
+
     adapters = context.adapters if context else postgres.adapters
 
     field_names = tuple(_as_python_identifier(n) for n in info.field_names)
@@ -351,13 +325,13 @@ def register_composite(
 
     # generate and register a customized text loader
     loader: type[_CompositeLoader[T]] = _make_loader(
-        info.name, factory, field_names, field_types, use_keywords
+        info.name, field_names, field_types, make_instance
     )
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
     binary_loader: type[_CompositeBinaryLoader[T]] = _make_binary_loader(
-        info.name, factory, field_names, field_types, use_keywords
+        info.name, field_names, field_types, make_instance
     )
     adapters.register_loader(info.oid, binary_loader)
 
@@ -458,41 +432,35 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 @cache
 def _make_loader(
     name: str,
-    factory: Callable[..., T],
     field_names: tuple[str, ...],
     field_types: tuple[int, ...],
-    use_keywords: bool,
+    make_instance: Callable[[Sequence[Any], Sequence[str]], T],
 ) -> type[_CompositeLoader[T]]:
     doc = f"Text loader for the '{name}' composite."
-    base_cls = _KwargsCompositeLoader if use_keywords else _ArgsCompositeLoader
     d = {
         "__doc__": doc,
-        "factory": factory,
         "fields_types": field_types,
         "fields_names": field_names,
+        "make_instance": make_instance,
     }
-    return type(f"{name.title()}Loader", (base_cls,), d)
+    return type(f"{name.title()}Loader", (_CompositeLoader,), d)
 
 
 @cache
 def _make_binary_loader(
     name: str,
-    factory: Callable[..., T],
     field_names: tuple[str, ...],
     field_types: tuple[int, ...],
-    use_keywords: bool,
+    make_instance: Callable[[Sequence[Any], Sequence[str]], T] | None,
 ) -> type[_CompositeBinaryLoader[T]]:
     doc = f"Binary loader for the '{name}' composite."
-    base_cls = (
-        _KwargsCompositeBinaryLoader if use_keywords else _ArgsCompositeBinaryLoader
-    )
     d = {
         "__doc__": doc,
-        "factory": factory,
         "fields_names": field_names,
         "fields_types": field_types,
+        "make_instance": make_instance,
     }
-    return type(f"{name.title()}BinaryLoader", (base_cls,), d)
+    return type(f"{name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
 
 
 @cache

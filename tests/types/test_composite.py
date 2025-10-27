@@ -353,7 +353,10 @@ def test_load_keyword_composite_factory(conn, testcomp, fmt_out):
         def __init__(self, *, foo, bar, baz):
             self.foo, self.bar, self.baz = foo, bar, baz
 
-    register_composite(info, conn, factory=MyKeywordThing, use_keywords=True)
+    def make_instance(values, names):
+        return MyKeywordThing(**dict(zip(names, values)))
+
+    register_composite(info, conn, factory=MyKeywordThing, make_instance=make_instance)
     assert info.python_type is MyKeywordThing
 
     cur = conn.cursor(binary=fmt_out)
