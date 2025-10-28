@@ -364,9 +364,6 @@ cdef class Transformer:
         cdef list out = PyList_New(nparams)
         cdef PyObject *param
 
-        if self._none_oid < 0:
-            self._none_oid = self.adapters.get_dumper(NoneType, "s").oid
-
         dumpers = self._row_dumpers
         if dumpers:
             for i in range(nparams):
@@ -410,6 +407,8 @@ cdef class Transformer:
                 fmt = (<RowDumper>dumper_ptr).format
             else:
                 dumped = None
+                if self._none_oid < 0:
+                    self._none_oid = self.adapters.get_dumper(NoneType, "s").oid
                 oid = self._none_oid
                 fmt = PQ_TEXT
 
