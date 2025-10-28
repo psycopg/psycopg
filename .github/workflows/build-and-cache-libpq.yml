@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64, ppc64le, aarch64]
+        arch: [x86_64, ppc64le, aarch64, riscv64]
         platform: [manylinux, musllinux]
 
     steps:
@@ -101,8 +101,9 @@ jobs:
           CIBW_MANYLINUX_I686_IMAGE: manylinux2014
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux2014
+          CIBW_MANYLINUX_RISCV64_IMAGE: quay.io/pypa/manylinux_2_39_riscv64
           CIBW_BUILD: cp313-${{matrix.platform}}_${{matrix.arch}}
-          CIBW_ARCHS_LINUX: auto aarch64 ppc64le
+          CIBW_ARCHS_LINUX: auto aarch64 ppc64le riscv64
           CIBW_BEFORE_ALL_LINUX: ./tools/ci/build_libpq.sh
           CIBW_REPAIR_WHEEL_COMMAND: >-
             ./tools/ci/strip_wheel.sh {wheel}
