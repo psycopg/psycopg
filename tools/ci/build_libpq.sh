@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Build a modern version of libpq and depending libs from source on Centos 5,
-# Alpine or macOS
+# Rocky Linux, Alpine or macOS
 
 set -euo pipefail
 
@@ -48,10 +48,10 @@ fi
 
 # Install packages required to build the libpq.
 case "$ID" in
-    centos | almalinux)
+    centos | almalinux | rocky)
         yum update -y
         yum install -y flex cyrus-sasl-devel krb5-devel pam-devel \
-            perl-IPC-Cmd perl-Time-Piece zlib-devel
+            perl perl-IPC-Cmd perl-Time-Piece zlib-devel
         ;;
 
     alpine)
@@ -99,7 +99,7 @@ else
     )
 fi
 
-if [ "$ID" == "centos" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/openssl.cnf" ]]; then
 
     # Build openssl if needed
@@ -155,7 +155,7 @@ if [ "$ID" == "macos" ]; then
 fi
 
 
-if [ "$ID" == "centos" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libldap.${library_suffix}" ]]; then
 
     # Build openldap if needed
