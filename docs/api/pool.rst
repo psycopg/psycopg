@@ -48,9 +48,10 @@ The `!ConnectionPool` class
    arguments have meaningful defaults and can probably be tweaked later, if
    required.
 
-   :param conninfo: The connection string. See
-                    `~psycopg.Connection.connect()` for details.
-   :type conninfo: `!str`
+   :param conninfo: The connection string. See `~psycopg.Connection.connect()`
+                    for details. If it is a callable it will be called at
+                    every connection attempt.
+   :type conninfo: `!str` or `!Callable[[], str]`
 
    :param connection_class: The class of the connections to serve. It should
                             be a `!Connection` subclass.
@@ -58,9 +59,9 @@ The `!ConnectionPool` class
 
    :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
                   *one dict argument* of the pool constructor, which is
-                  expanded as `connect()` keyword parameters.
-
-   :type kwargs: `!dict`
+                  expanded as `connect()` keyword parameters. If it is a
+                  callable it will be called at every connection attempt.
+   :type kwargs: `!dict[str, Any]` or `!Callable[[], dict[str, Any]]`
 
    :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
@@ -181,6 +182,9 @@ The `!ConnectionPool` class
    .. versionchanged:: 3.3
         added `!close_returns` parameter to the constructor.
 
+   .. versionchanged:: 3.3
+        `conninfo` and `kwargs` can be callable.
+
    .. warning::
 
         At the moment, the default value for the `!open` parameter is `!True`;
@@ -284,9 +288,17 @@ Only the functions and parameters with different signature from
 
 .. autoclass:: AsyncConnectionPool
 
+   :param conninfo: The connection string. It can be an async function too.
+   :type conninfo: `!str` or `!Callable[[], str]` or `async Callable[[], str]`
+
    :param connection_class: The class of the connections to serve. It should
                             be an `!AsyncConnection` subclass.
    :type connection_class: `!type`, default: `~psycopg.AsyncConnection`
+
+   :param kwargs: Extra arguments to pass to `!connect()`. It can be an async
+                  function too.
+   :type kwargs: `!dict[str, Any]` or `!Callable[[], dict[str, Any]]`
+                 or `async !Callable[[], dict[str, Any]]`
 
    :param check: A callback to check that a connection is working correctly
                  when obtained by the pool.
@@ -312,6 +324,9 @@ Only the functions and parameters with different signature from
 
    .. versionchanged:: 3.3
         added `!close_returns` parameter to the constructor.
+
+   .. versionchanged:: 3.3
+        `conninfo` and `kwargs` can be callable (sync or async).
 
    .. warning::
 
