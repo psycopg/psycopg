@@ -1152,6 +1152,7 @@ async def test_close_returns_no_loop(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_override_close_no_loop_subclass(dsn):
     async with pool.AsyncConnectionPool(
         dsn, min_size=1, max_lifetime=0.05, connection_class=ReturningConnection

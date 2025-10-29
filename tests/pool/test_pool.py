@@ -1152,6 +1152,7 @@ def test_close_returns_no_loop(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_override_close_no_loop_subclass(dsn):
     with pool.ConnectionPool(
         dsn, min_size=1, max_lifetime=0.05, connection_class=ReturningConnection
