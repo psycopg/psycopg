@@ -1130,6 +1130,7 @@ def test_close_returns_custom_class_old(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 @pytest.mark.skipif(PSYCOPG_VERSION < (3, 3), reason="psycopg >= 3.3 behaviour")
 def test_close_returns_no_loop(dsn):
     with pool.ConnectionPool(
