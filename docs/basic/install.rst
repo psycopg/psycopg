@@ -59,6 +59,47 @@ database may use the same wire protocol as PostgreSQL) but we cannot guarantee
 the correct working or a smooth ride.
 
 
+.. _install-grid:
+
+What to install?
+----------------
+
+There are a few different options to install Psycopg 3. This is a quick
+summary of their differences; follow the links for more details.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Installation Option
+     - Command
+     - Description
+     - Perfor­mance
+     - Needs Local libpq?
+     - Needs Build Tools?
+
+   * - :ref:`binary-installation` (recommended for most users)
+     - ``pip install psycopg[binary]``
+     - Precompiled C extensions, packaged with client lbiraries.
+     - 🐇 Fast
+     - ❌ No
+     - ❌ No
+
+   * - :ref:`local-installation`
+     - ``pip install psycopg[c]``
+     - Builds C extensions from source.
+       Requires build tools and client libraries.
+     - 🐇 Fast
+     - ✅ Yes
+     - ✅ Yes
+
+   * - :ref:`pure-python-installation`
+     - ``pip install psycopg``
+     - Pure Python implementation only. Requires client libraries.
+     - 🐢 Slow
+     - ✅ Yes
+     - ❌ No
+
+
 .. _binary-installation:
 
 Binary installation
