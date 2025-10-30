@@ -220,6 +220,10 @@ def test_execute_many_results(conn):
     assert cur.rowcount == 3
     assert cur.nextset() is None
 
+    cur.set_result(0)
+    assert cur.fetchall() == [("foo",)]
+    assert cur.rowcount == 1
+
     cur.close()
     assert cur.nextset() is None
 
