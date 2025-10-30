@@ -262,11 +262,31 @@ See :ref:`transactions` for details about these objects.
 
     .. autoattribute:: savepoint_name
     .. autoattribute:: connection
+    .. autoattribute:: status
+
+        The current status of the transaction. Returns a `Transaction.Status`
+        enum value indicating whether the transaction is active, committed,
+        rolled back, or failed.
+
+        Possible values:
+
+        - `!NOT_STARTED`: Transaction created but not yet entered
+        - `!ACTIVE`: Transaction is currently active
+        - `!COMMITTED`: Transaction successfully committed
+        - `!ROLLED_BACK_EXPLICITLY`: Transaction explicitly rolled back
+        - `!ROLLED_BACK_WITH_ERROR`: Transaction rolled back due to an error
+        - `!FAILED`: Transaction failed due to connection failure
+
+        See :ref:`transaction-status` for more details and examples.
 
 
 .. autoclass:: AsyncTransaction()
 
     .. autoattribute:: connection
+    .. autoattribute:: status
+
+        The current status of the transaction. Returns a `AsyncTransaction.Status`
+        enum value. See `Transaction.status` for details.
 
 
 .. autoexception:: Rollback
