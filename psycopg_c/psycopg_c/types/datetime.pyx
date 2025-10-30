@@ -72,7 +72,7 @@ cdef class DateDumper(CDumper):
     oid = oids.DATE_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         cdef const char *src
 
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -128,7 +128,7 @@ cdef class _BaseTimeTextDumper(_BaseTimeDumper):
     format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         cdef const char *src
 
         cdef str s = str(obj)
@@ -228,7 +228,7 @@ cdef class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
     format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         cdef const char *src
 
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -270,7 +270,7 @@ cdef class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
         cdef int64_t us = cdt.timedelta_microseconds(delta) + 1_000_000 * (
             86_400 * <int64_t>cdt.timedelta_days(delta)
-                + <int64_t>cdt.timedelta_seconds(delta))
+            + <int64_t>cdt.timedelta_seconds(delta))
         cdef uint64_t beus = endian.htobe64(us)
 
         cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus))
@@ -295,7 +295,7 @@ cdef class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
         cdef int64_t us = cdt.timedelta_microseconds(delta) + 1_000_000 * (
             86_400 * <int64_t>cdt.timedelta_days(delta)
-                + <int64_t>cdt.timedelta_seconds(delta))
+            + <int64_t>cdt.timedelta_seconds(delta))
         cdef uint64_t beus = endian.htobe64(us)
 
         cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(beus))
@@ -319,7 +319,7 @@ cdef class TimedeltaDumper(CDumper):
             self._style = INTERVALSTYLE_OTHERS
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         cdef const char *src
 
         cdef str s
@@ -618,7 +618,7 @@ cdef class TimestampLoader(CLoader):
             y, m, d = vals[0], vals[1], vals[2]
         elif self._order == ORDER_DMY:
             d, m, y = vals[0], vals[1], vals[2]
-        else: # self._order == ORDER_MDY
+        else:  # self._order == ORDER_MDY
             m, d, y = vals[0], vals[1], vals[2]
 
         try:
@@ -661,7 +661,7 @@ cdef class TimestampLoader(CLoader):
             if self._order == ORDER_PGDM:
                 d = int(seps[0][1 : seps[1] - seps[0]])
                 m = _month_abbr[seps[1][1 : seps[2] - seps[1]]]
-            else: # self._order == ORDER_PGMD
+            else:  # self._order == ORDER_PGMD
                 m = _month_abbr[seps[0][1 : seps[1] - seps[0]]]
                 d = int(seps[1][1 : seps[2] - seps[1]])
         except (KeyError, ValueError) as ex:
@@ -760,7 +760,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
             y, m, d = vals[0], vals[1], vals[2]
         elif self._order == ORDER_DMY:
             d, m, y = vals[0], vals[1], vals[2]
-        else: # self._order == ORDER_MDY
+        else:  # self._order == ORDER_MDY
             m, d, y = vals[0], vals[1], vals[2]
 
         # Parse the timezone
@@ -780,8 +780,8 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
             dt = cdt.datetime_new(
                 y, m, d, vals[3], vals[4], vals[5], us, timezone_utc)
             dt -= tzoff
-            return PyObject_CallFunctionObjArgs(datetime_astimezone,
-                <PyObject *>dt, <PyObject *>self._time_zone, NULL)
+            return PyObject_CallFunctionObjArgs(
+                datetime_astimezone, <PyObject *>dt, <PyObject *>self._time_zone, NULL)
         except OverflowError as ex:
             # If we have created the temporary 'dt' it means that we have a
             # datetime close to max, the shift pushed it past max, overflowing.
@@ -832,8 +832,8 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
                 dt = pg_datetimetz_epoch + delta
             else:
                 dt = pg_datetimetz_epoch - delta
-            return PyObject_CallFunctionObjArgs(datetime_astimezone,
-                <PyObject *>dt, <PyObject *>self._time_zone, NULL)
+            return PyObject_CallFunctionObjArgs(
+                datetime_astimezone, <PyObject *>dt, <PyObject *>self._time_zone, NULL)
 
         except OverflowError:
             # If we were asked about a timestamp which would overflow in UTC,
@@ -1096,7 +1096,7 @@ cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     return -off if sgn == b"-" else off
 
 
-cdef object _timezone_from_seconds(int sec, __cache={}):
+cdef object _timezone_from_seconds(int sec, __cache={}):  # no-cython-lint
     cdef object pysec = sec
     cdef PyObject *ptr = PyDict_GetItem(__cache, pysec)
     if ptr != NULL:

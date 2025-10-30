@@ -268,7 +268,6 @@ cdef class IntLoader(CLoader):
         return PyLong_FromString(buf, NULL, 10)
 
 
-
 @cython.final
 cdef class Int2BinaryLoader(CLoader):
 
@@ -797,7 +796,9 @@ cdef Py_ssize_t dump_int_to_int8_binary(
     return sizeof(val)
 
 
-cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset) except -1:
+cdef Py_ssize_t dump_int_to_numeric_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
     # Calculate the number of PG digits required to store the number
     cdef uint16_t ndigits
     ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1
