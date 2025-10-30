@@ -115,7 +115,9 @@ cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
     return 0
 
 
-cdef object _format_row_text(object row, Py_ssize_t rowlen, Transformer tx, bytearray out):
+cdef object _format_row_text(
+    object row, Py_ssize_t rowlen, Transformer tx, bytearray out
+):
     # offset in 'out' where to write
     cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
 

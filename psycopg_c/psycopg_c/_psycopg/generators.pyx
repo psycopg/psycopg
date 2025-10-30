@@ -28,6 +28,7 @@ cdef int READY_R = Ready.R
 cdef int READY_W = Ready.W
 cdef int READY_RW = Ready.RW
 
+
 def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     """
     Generator to create a database connection without blocking.
@@ -55,8 +56,10 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
             poll_status = libpq.PQconnectPoll(pgconn_ptr)
         logger.debug("connection polled: %s", conn)
 
-        if poll_status == libpq.PGRES_POLLING_READING \
-        or poll_status == libpq.PGRES_POLLING_WRITING:
+        if (
+            poll_status == libpq.PGRES_POLLING_READING
+            or poll_status == libpq.PGRES_POLLING_WRITING
+        ):
             wait = WAIT_R if poll_status == libpq.PGRES_POLLING_READING else WAIT_W
             while True:
                 ready = yield (libpq.PQsocket(pgconn_ptr), wait)

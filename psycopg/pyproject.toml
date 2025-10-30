@@ -80,6 +80,7 @@ dev = [
     "ast-comments >= 1.1.2",
     "black >= 24.1.0",
     "codespell >= 2.2",
+    "cython-lint >= 0.16",
     "dnspython >= 2.1",
     "flake8 >= 4.0",
     "isort[colors] >= 6.0",

@@ -22,8 +22,6 @@ from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
 
 from psycopg_c.pq cimport Escaping, _buffer_as_string_and_size
 
-from psycopg import errors as e
-
 
 @cython.freelist(8)
 cdef class CDumper:
@@ -126,7 +124,9 @@ cdef class CDumper:
         return self
 
     @staticmethod
-    cdef char *ensure_size(bytearray ba, Py_ssize_t offset, Py_ssize_t size) except NULL:
+    cdef char *ensure_size(
+        bytearray ba, Py_ssize_t offset, Py_ssize_t size
+    ) except NULL:
         """
         Grow *ba*, if necessary, to contains at least *size* bytes after *offset*
 

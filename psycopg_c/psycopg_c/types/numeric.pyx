@@ -201,13 +201,13 @@ cdef class IntDumper(CDumper):
         if overflow:
             return IntNumeric
 
-        if INT32_MIN <= obj <= INT32_MAX:
-            if INT16_MIN <= obj <= INT16_MAX:
+        if INT32_MIN <= val <= INT32_MAX:
+            if INT16_MIN <= val <= INT16_MAX:
                 return Int2
             else:
                 return Int4
         else:
-            if INT64_MIN <= obj <= INT64_MAX:
+            if INT64_MIN <= val <= INT64_MAX:
                 return Int8
             else:
                 return IntNumeric
@@ -225,13 +225,13 @@ cdef class IntDumper(CDumper):
         if overflow:
             return self._int_numeric_dumper(IntNumeric)
 
-        if INT32_MIN <= obj <= INT32_MAX:
-            if INT16_MIN <= obj <= INT16_MAX:
+        if INT32_MIN <= val <= INT32_MAX:
+            if INT16_MIN <= val <= INT16_MAX:
                 return self._int2_dumper(Int2)
             else:
                 return self._int4_dumper(Int4)
         else:
-            if INT64_MIN <= obj <= INT64_MAX:
+            if INT64_MIN <= val <= INT64_MAX:
                 return self._int8_dumper(Int8)
             else:
                 return self._int_numeric_dumper(IntNumeric)
@@ -266,7 +266,6 @@ cdef class IntLoader(CLoader):
         memcpy(buf, data, length)
         buf[length] = 0
         return PyLong_FromString(buf, NULL, 10)
-
 
 
 @cython.final
@@ -797,7 +796,9 @@ cdef Py_ssize_t dump_int_to_int8_binary(
     return sizeof(val)
 
 
-cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset) except -1:
+cdef Py_ssize_t dump_int_to_numeric_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
     # Calculate the number of PG digits required to store the number
     cdef uint16_t ndigits
     ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1

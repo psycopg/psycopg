@@ -27,18 +27,18 @@ cdef extern from "libpq-fe.h":
         pass
 
     ctypedef struct PQconninfoOption:
-        char   *keyword
-        char   *envvar
-        char   *compiled
-        char   *val
-        char   *label
-        char   *dispchar
-        int     dispsize
+        char *keyword
+        char *envvar
+        char *compiled
+        char *val
+        char *label
+        char *dispchar
+        int dispsize
 
     ctypedef struct PGnotify:
-        char   *relname
-        int     be_pid
-        char   *extra
+        char *relname
+        int be_pid
+        char *extra
 
     ctypedef struct PGcancelConn:
         pass
@@ -47,13 +47,13 @@ cdef extern from "libpq-fe.h":
         pass
 
     ctypedef struct PGresAttDesc:
-        char   *name
-        Oid     tableid
-        int     columnid
-        int     format
-        Oid     typid
-        int     typlen
-        int     atttypmod
+        char *name
+        Oid tableid
+        int columnid
+        int format
+        Oid typid
+        int typlen
+        int atttypmod
 
     # enums
 
@@ -65,7 +65,6 @@ cdef extern from "libpq-fe.h":
         PGRES_POLLING_WRITING
         PGRES_POLLING_OK
         PGRES_POLLING_ACTIVE
-
 
     ctypedef enum PGPing:
         PQPING_OK
@@ -223,7 +222,6 @@ cdef extern from "libpq-fe.h":
                                  size_t *to_length)
     unsigned char *PQunescapeBytea(const unsigned char *src, size_t *to_length)
 
-
     # 33.4. Asynchronous Command Processing
     int PQsendQuery(PGconn *conn, const char *command) nogil
     int PQsendQueryParams(PGconn *conn,
@@ -284,16 +282,16 @@ cdef extern from "libpq-fe.h":
     int PQgetCopyData(PGconn *conn, char **buffer, int async) nogil
 
     # 33.10. Control Functions
-    void PQtrace(PGconn *conn, FILE *stream);
-    void PQsetTraceFlags(PGconn *conn, int flags);
-    void PQuntrace(PGconn *conn);
+    void PQtrace(PGconn *conn, FILE *stream)
+    void PQsetTraceFlags(PGconn *conn, int flags)
+    void PQuntrace(PGconn *conn)
 
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr) nogil
     void PQconninfoFree(PQconninfoOption *connOptions)
     char *PQencryptPasswordConn(
-        PGconn *conn, const char *passwd, const char *user, const char *algorithm);
-    PGresult *PQchangePassword(PGconn *conn, const char *user, const char *passwd);
+        PGconn *conn, const char *passwd, const char *user, const char *algorithm)
+    PGresult *PQchangePassword(PGconn *conn, const char *user, const char *passwd)
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs)
     int PQlibVersion()

@@ -33,7 +33,8 @@ cdef class _BaseStrDumper(CDumper):
         cdef const char *pgenc
 
         if self._pgconn is not None:
-            pgenc = libpq.PQparameterStatus(self._pgconn._pgconn_ptr, b"client_encoding")
+            pgenc = libpq.PQparameterStatus(
+                self._pgconn._pgconn_ptr, b"client_encoding")
             if pgenc == NULL or pgenc == b"UTF8":
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
@@ -45,7 +46,7 @@ cdef class _BaseStrDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         # the server will raise DataError subclass if the string contains 0x00
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         cdef const char *src
 
         if self.is_utf8:
@@ -141,7 +142,8 @@ cdef class _TextLoader(CLoader):
         cdef const char *pgenc
 
         if self._pgconn is not None:
-            pgenc = libpq.PQparameterStatus(self._pgconn._pgconn_ptr, b"client_encoding")
+            pgenc = libpq.PQparameterStatus(
+                self._pgconn._pgconn_ptr, b"client_encoding")
             if pgenc == NULL or pgenc == b"UTF8":
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
@@ -160,6 +162,7 @@ cdef class _TextLoader(CLoader):
             return PyUnicode_Decode(<char *>data, length, self.encoding, NULL)
         else:
             return data[:length]
+
 
 @cython.final
 cdef class TextLoader(_TextLoader):
@@ -212,8 +215,6 @@ cdef class BytesDumper(CDumper):
         return len_out
 
     def quote(self, obj) -> Buffer:
-        cdef size_t len_out
-        cdef unsigned char *out
         cdef char *ptr
         cdef Py_ssize_t length
         cdef const char *scs
@@ -229,8 +230,8 @@ cdef class BytesDumper(CDumper):
         # use.
         if self._pgconn is not None:
             if not self._qplen:
-                scs = libpq.PQparameterStatus(self._pgconn._pgconn_ptr,
-                    b"standard_conforming_strings")
+                scs = libpq.PQparameterStatus(
+                    self._pgconn._pgconn_ptr, b"standard_conforming_strings")
                 if scs and scs[0] == b'o' and scs[1] == b"n":  # == "on"
                     self._qplen = 1
                 else:
@@ -275,7 +276,7 @@ cdef class BytesBinaryDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *src
-        cdef Py_ssize_t size;
+        cdef Py_ssize_t size
         _buffer_as_string_and_size(obj, &src, &size)
 
         cdef char *buf = CDumper.ensure_size(rv, offset, size)

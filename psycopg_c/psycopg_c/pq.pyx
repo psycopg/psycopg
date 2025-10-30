@@ -9,7 +9,6 @@ from psycopg_c.pq cimport libpq
 import logging
 
 from psycopg import errors as e
-from psycopg.pq import Format
 
 logger = logging.getLogger("psycopg")
 
@@ -30,7 +29,7 @@ include "pq/pqbuffer.pyx"
 
 
 # importing the ssl module sets up Python's libcrypto callbacks
-import ssl  # noqa
+import ssl  # no-cython-lint
 
 # disable libcrypto setup in libpq, so it won't stomp on the callbacks
 # that have already been set up

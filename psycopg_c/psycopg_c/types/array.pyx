@@ -9,12 +9,11 @@ import cython
 from cpython.mem cimport PyMem_Free, PyMem_Realloc
 from cpython.ref cimport Py_INCREF
 from libc.stdint cimport int32_t, uint32_t
-from libc.string cimport memset, strchr
-from cpython.list cimport PyList_Append, PyList_GET_ITEM, PyList_GET_SIZE
-from cpython.list cimport PyList_GetSlice, PyList_New, PyList_SET_ITEM
+from libc.string cimport strchr
+from cpython.list cimport PyList_Append, PyList_GET_ITEM, PyList_GET_SIZE, PyList_New
+from cpython.list cimport PyList_SET_ITEM
 from cpython.object cimport PyObject
 
-from psycopg_c.pq cimport _buffer_as_string_and_size
 from psycopg_c._psycopg cimport endian
 from psycopg_c.pq.libpq cimport Oid
 
