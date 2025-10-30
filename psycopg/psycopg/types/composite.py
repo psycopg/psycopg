@@ -84,7 +84,7 @@ WHERE t.oid = {regtype}
         ).format(regtype=cls._to_regtype(conn))
 
 
-class SequenceDumper(RecursiveDumper):
+class _SequenceDumper(RecursiveDumper):
     def _dump_sequence(
         self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
     ) -> bytes:
@@ -117,7 +117,7 @@ class SequenceDumper(RecursiveDumper):
     _re_esc = re.compile(rb"([\\\"])")
 
 
-class TupleDumper(SequenceDumper):
+class TupleDumper(_SequenceDumper):
     # Should be this, but it doesn't work
     # oid = _oids.RECORD_OID
 
@@ -125,11 +125,11 @@ class TupleDumper(SequenceDumper):
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
-class TupleBinaryDumper(Dumper):
+class _SequenceBinaryDumper(Dumper):
     format = pq.Format.BINARY
 
     # Subclasses must set this info
-    _field_types: tuple[int, ...]
+    field_types: tuple[int, ...]
 
     def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
@@ -139,9 +139,9 @@ class TupleBinaryDumper(Dumper):
         # in case the composite contains another composite. Make sure to use
         # a separate Transformer instance instead.
         self._tx = Transformer(context)
-        self._tx.set_dumper_types(self._field_types, self.format)
+        self._tx.set_dumper_types(self.field_types, self.format)
 
-        nfields = len(self._field_types)
+        nfields = len(self.field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
     def dump(self, obj: tuple[Any, ...]) -> Buffer | None:
@@ -149,7 +149,7 @@ class TupleBinaryDumper(Dumper):
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
             b = adapted[i]
-            oid = self._field_types[i]
+            oid = self.field_types[i]
             if b is not None:
                 out += _pack_oidlen(oid, len(b))
                 out += b
@@ -475,9 +475,6 @@ def _make_dumper(name: str, oid: int) -> type[TupleDumper]:
 @cache
 def _make_binary_dumper(
     name: str, oid: int, field_types: tuple[int, ...]
-) -> type[TupleBinaryDumper]:
-    return type(
-        f"{name.title()}BinaryDumper",
-        (TupleBinaryDumper,),
-        {"oid": oid, "_field_types": field_types},
-    )
+) -> type[_SequenceBinaryDumper]:
+    d = {"oid": oid, "field_types": field_types}
+    return type(f"{name.title()}BinaryDumper", (_SequenceBinaryDumper,), d)

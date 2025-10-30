@@ -4,8 +4,7 @@ from psycopg import postgres, pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 from psycopg.types.range import Range
-from psycopg.types.composite import CompositeInfo, TupleBinaryDumper, TupleDumper
-from psycopg.types.composite import register_composite
+from psycopg.types.composite import CompositeInfo, TupleDumper, register_composite
 
 from ..utils import eur
 from ..fix_crdb import crdb_skip_message, is_crdb
@@ -415,9 +414,6 @@ def test_type_dumper_registered_binary(conn, testcomp):
     register_composite(info, conn)
     assert issubclass(info.python_type, tuple)
     assert info.python_type.__name__ == "testcomp"
-    d = conn.adapters.get_dumper(info.python_type, "b")
-    assert issubclass(d, TupleBinaryDumper)
-    assert d is not TupleBinaryDumper
 
     tc = info.python_type("foo", 42, 3.14)
     cur = conn.execute("select pg_typeof(%b)", [tc])
