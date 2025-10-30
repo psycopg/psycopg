@@ -20,6 +20,9 @@ cdef extern from * nogil:
 from libc.stdio cimport fdopen
 from cpython.mem cimport PyMem_Free, PyMem_Malloc
 from cpython.bytes cimport PyBytes_AsString
+from cpython.object cimport PyObject
+from cpython.sequence cimport PySequence_Fast, PySequence_Fast_GET_ITEM
+from cpython.sequence cimport PySequence_Fast_GET_SIZE
 from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
@@ -321,12 +324,17 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int i
-        cdef Py_ssize_t nparams = len(param_types) if param_types else 0
+        cdef types_fast
+        cdef Py_ssize_t nparams = 0
+        if param_types is not None:
+            types_fast = PySequence_Fast(param_types, "'param_types' is not a sequence")
+            nparams = PySequence_Fast_GET_SIZE(types_fast)
+
         cdef libpq.Oid *atypes = NULL
         if nparams:
             atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
-                atypes[i] = param_types[i]
+                atypes[i] = <object>PySequence_Fast_GET_ITEM(types_fast, i)
 
         cdef int rv
         with nogil:
@@ -376,12 +384,17 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int i
-        cdef Py_ssize_t nparams = len(param_types) if param_types else 0
+        cdef types_fast
+        cdef Py_ssize_t nparams = 0
+        if param_types is not None:
+            types_fast = PySequence_Fast(param_types, "'param_types' is not a sequence")
+            nparams = PySequence_Fast_GET_SIZE(types_fast)
+
         cdef libpq.Oid *atypes = NULL
         if nparams:
             atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
-                atypes[i] = param_types[i]
+                atypes[i] = <object>PySequence_Fast_GET_ITEM(types_fast, i)
 
         cdef libpq.PGresult *rv
         with nogil:
@@ -751,31 +764,35 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) noexcept wit
 
 
 cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
-    list param_values: Sequence[bytes | None] | None,
+    param_values: Sequence[bytes | None] | None,
     param_types: Sequence[int] | None,
-    list param_formats: Sequence[int] | None,
+    param_formats: Sequence[int] | None,
 ) except *:
     cdef int i
 
-    # the PostgresQuery converts the param_types to tuple, so this operation
-    # is most often no-op
-    cdef tuple tparam_types
-    if param_types is not None and not isinstance(param_types, tuple):
-        tparam_types = tuple(param_types)
-    else:
-        tparam_types = param_types
+    cdef values_fast
+    cdef types_fast
+    cdef formats_fast
 
-    cdef Py_ssize_t nparams = len(param_values) if param_values else 0
-    if tparam_types is not None and len(tparam_types) != nparams:
-        raise ValueError(
-            "got %d param_values but %d param_types"
-            % (nparams, len(tparam_types))
-        )
-    if param_formats is not None and len(param_formats) != nparams:
-        raise ValueError(
-            "got %d param_values but %d param_formats"
-            % (nparams, len(param_formats))
-        )
+    cdef Py_ssize_t nparams = 0
+    if param_values is not None:
+        values_fast = PySequence_Fast(param_values, "'param_values' is not a sequence")
+        nparams = PySequence_Fast_GET_SIZE(values_fast)
+
+    if param_types is not None:
+        types_fast = PySequence_Fast(param_types, "'param_types' is not a sequence")
+        if PySequence_Fast_GET_SIZE(types_fast) != nparams:
+            raise ValueError(
+                f"got {nparams} param_values but {len(param_types)} param_types"
+            )
+
+    if param_formats is not None:
+        formats_fast = PySequence_Fast(
+            param_formats, "'param_formats' is not a sequence")
+        if PySequence_Fast_GET_SIZE(formats_fast) != nparams:
+            raise ValueError(
+                f"got {nparams} param_values but {len(param_formats)} param_formats"
+            )
 
     cdef char **aparams = NULL
     cdef int *alenghts = NULL
@@ -786,28 +803,28 @@ cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
         aparams = <char **>PyMem_Malloc(nparams * sizeof(char *))
         alenghts = <int *>PyMem_Malloc(nparams * sizeof(int))
         for i in range(nparams):
-            obj = param_values[i]
-            if obj is None:
-                aparams[i] = NULL
-                alenghts[i] = 0
-            else:
+            obj = PySequence_Fast_GET_ITEM(values_fast, i)
+            if obj != <PyObject *>None:
                 # TODO: it is a leak if this fails (but it should only fail
                 # on internal error, e.g. if obj is not a buffer)
-                _buffer_as_string_and_size(obj, &ptr, &length)
+                _buffer_as_string_and_size(<object>obj, &ptr, &length)
                 aparams[i] = ptr
                 alenghts[i] = <int>length
+            else:
+                aparams[i] = NULL
+                alenghts[i] = 0
 
     cdef libpq.Oid *atypes = NULL
-    if tparam_types:
+    if param_types is not None:
         atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
         for i in range(nparams):
-            atypes[i] = tparam_types[i]
+            atypes[i] = <object>PySequence_Fast_GET_ITEM(types_fast, i)
 
     cdef int *aformats = NULL
     if param_formats is not None:
         aformats = <int *>PyMem_Malloc(nparams * sizeof(int *))
         for i in range(nparams):
-            aformats[i] = param_formats[i]
+            aformats[i] = <object>PySequence_Fast_GET_ITEM(formats_fast, i)
 
     return (nparams, atypes, aparams, alenghts, aformats)
 

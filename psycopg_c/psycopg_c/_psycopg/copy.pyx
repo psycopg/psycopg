@@ -7,7 +7,8 @@ C optimised functions for the copy system.
 
 from libc.stdint cimport int32_t, uint16_t, uint32_t
 from libc.string cimport memcpy
-from cpython.tuple cimport PyTuple_GET_SIZE
+from cpython.sequence cimport PySequence_Fast, PySequence_Fast_GET_ITEM
+from cpython.sequence cimport PySequence_Fast_GET_SIZE
 from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_FromStringAndSize
 from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
 from cpython.memoryview cimport PyMemoryView_FromObject
@@ -23,13 +24,8 @@ cdef int32_t _binary_null = -1
 
 cdef object _format_row_binary(object row, Transformer tx, bytearray out):
     """Convert a row of adapted data to the data to send for binary copy"""
-    cdef Py_ssize_t rowlen
-    if type(row) is list:
-        rowlen = PyList_GET_SIZE(row)
-    elif type(row) is tuple:
-        rowlen = PyTuple_GET_SIZE(row)
-    else:
-        rowlen = len(row)
+    cdef row_fast = PySequence_Fast(row, "'row' is not a valid sequence")
+    cdef Py_ssize_t rowlen = PySequence_Fast_GET_SIZE(row_fast)
     cdef uint16_t berowlen = endian.htobe16(<int16_t>rowlen)
 
     # offset in 'out' where to write
@@ -55,22 +51,23 @@ cdef object _format_row_binary(object row, Transformer tx, bytearray out):
     if PyList_GET_SIZE(dumpers) != rowlen:
         raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
+    cdef PyObject *item
     for i in range(rowlen):
-        item = row[i]
-        if item is None:
+        item = PySequence_Fast_GET_ITEM(row_fast, i)
+        if item is <PyObject *>None:
             _append_binary_none(out, &pos)
             continue
 
         row_dumper = PyList_GET_ITEM(dumpers, i)
         if not row_dumper:
-            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+            row_dumper = tx.get_row_dumper(item, fmt)
             Py_INCREF(<object>row_dumper)
             PyList_SET_ITEM(dumpers, i, <object>row_dumper)
 
         if (<RowDumper>row_dumper).cdumper is not None:
             # A cdumper can resize if necessary and copy in place
             size = (<RowDumper>row_dumper).cdumper.cdump(
-                item, out, pos + sizeof(besize))
+                <object>item, out, pos + sizeof(besize))
             # Also add the size of the item, before the item
             besize = endian.htobe32(<int32_t>size)
             target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
@@ -78,7 +75,7 @@ cdef object _format_row_binary(object row, Transformer tx, bytearray out):
         else:
             # A Python dumper, gotta call it and extract its juices
             b = PyObject_CallFunctionObjArgs(
-                (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
+                (<RowDumper>row_dumper).dumpfunc, item, NULL)
             if b is None:
                 _append_binary_none(out, &pos)
                 continue
@@ -115,11 +112,17 @@ cdef int _append_binary_none(bytearray out, Py_ssize_t *pos) except -1:
     return 0
 
 
-cdef object _format_row_text(
-    object row, Py_ssize_t rowlen, Transformer tx, bytearray out
-):
+cdef object _format_row_text(object row, Transformer tx, bytearray out):
     # offset in 'out' where to write
     cdef Py_ssize_t pos = PyByteArray_GET_SIZE(out)
+    cdef row_fast = PySequence_Fast(row, "'row' is not a valid sequence")
+
+    # exit early, if the row is empty
+    cdef Py_ssize_t rowlen = PySequence_Fast_GET_SIZE(row_fast)
+    if rowlen == 0:
+        PyByteArray_Resize(out, pos + 1)
+        out[pos] = b"\n"
+        return
 
     cdef Py_ssize_t size, tmpsize
     cdef char *buf
@@ -134,12 +137,13 @@ cdef object _format_row_text(
     if dumpers and PyList_GET_SIZE(dumpers) != rowlen:
         raise e.DataError(f"expected {len(dumpers)} values in row, got {rowlen}")
 
+    cdef PyObject *item
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
         with_tab = i > 0
 
-        item = row[i]
-        if item is None:
+        item = PySequence_Fast_GET_ITEM(row_fast, i)
+        if item == <PyObject *>None:
             _append_text_none(out, &pos, with_tab)
             continue
 
@@ -148,17 +152,17 @@ cdef object _format_row_text(
             row_dumper = PyList_GET_ITEM(dumpers, i)
         else:
             # no pinned dumpers, thus free value dumping
-            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+            row_dumper = tx.get_row_dumper(item, fmt)
 
         if (<RowDumper>row_dumper).cdumper is not None:
             # A cdumper can resize if necessary and copy in place
             size = (<RowDumper>row_dumper).cdumper.cdump(
-                item, out, pos + with_tab)
+                <object>item, out, pos + with_tab)
             target = <unsigned char *>PyByteArray_AS_STRING(out) + pos
         else:
             # A Python dumper, gotta call it and extract its juices
             b = PyObject_CallFunctionObjArgs(
-                (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
+                (<RowDumper>row_dumper).dumpfunc, item, NULL)
             if b is None:
                 _append_text_none(out, &pos, with_tab)
                 continue
@@ -206,22 +210,8 @@ cdef object _format_row_text(
 def format_row_text(row: Sequence[Any], tx: Transformer, out: bytearray) -> None:
     cdef Py_ssize_t size = PyByteArray_GET_SIZE(out)
 
-    # exit early, if the row is empty
-    cdef Py_ssize_t rowlen
-    if type(row) is list:
-        rowlen = PyList_GET_SIZE(row)
-    elif type(row) is tuple:
-        rowlen = PyTuple_GET_SIZE(row)
-    else:
-        rowlen = len(row)
-
-    if rowlen == 0:
-        PyByteArray_Resize(out, size + 1)
-        out[size] = b"\n"
-        return
-
     try:
-        _format_row_text(row, rowlen, tx, out)
+        _format_row_text(row, tx, out)
     except Exception as e:
         # Restore the input bytearray to the size it was before entering here
         # to avoid potentially passing junk to copy.
