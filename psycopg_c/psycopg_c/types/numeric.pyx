@@ -201,13 +201,13 @@ cdef class IntDumper(CDumper):
         if overflow:
             return IntNumeric
 
-        if INT32_MIN <= obj <= INT32_MAX:
-            if INT16_MIN <= obj <= INT16_MAX:
+        if INT32_MIN <= val <= INT32_MAX:
+            if INT16_MIN <= val <= INT16_MAX:
                 return Int2
             else:
                 return Int4
         else:
-            if INT64_MIN <= obj <= INT64_MAX:
+            if INT64_MIN <= val <= INT64_MAX:
                 return Int8
             else:
                 return IntNumeric
@@ -225,13 +225,13 @@ cdef class IntDumper(CDumper):
         if overflow:
             return self._int_numeric_dumper(IntNumeric)
 
-        if INT32_MIN <= obj <= INT32_MAX:
-            if INT16_MIN <= obj <= INT16_MAX:
+        if INT32_MIN <= val <= INT32_MAX:
+            if INT16_MIN <= val <= INT16_MAX:
                 return self._int2_dumper(Int2)
             else:
                 return self._int4_dumper(Int4)
         else:
-            if INT64_MIN <= obj <= INT64_MAX:
+            if INT64_MIN <= val <= INT64_MAX:
                 return self._int8_dumper(Int8)
             else:
                 return self._int_numeric_dumper(IntNumeric)
