@@ -1170,3 +1170,96 @@ async def test_override_close_no_loop_subclass(dsn):
         await conn.close()
         await asleep(0.1)
         assert len(p._pool) == 1
+
+
+async def test_get_config_rotates_connections(dsn):
+
+    config_rotation_counter = 0
+
+    async def rotating_config():
+        nonlocal config_rotation_counter
+        config_rotation_counter += 1
+        return dsn
+
+    app_names = ["app-1", "app-2"]
+    kwargs_counter = 0
+
+    async def rotating_kwargs():
+        # Return a different application_name for each new connection
+        nonlocal kwargs_counter
+        kwargs_counter += 1
+        return {"application_name": app_names[kwargs_counter % len(app_names)]}
+
+    p = pool.AsyncConnectionPool(
+        conninfo=rotating_config,
+        kwargs=rotating_kwargs,
+        min_size=2,
+        max_lifetime=0.2,
+        open=False,
+    )
+
+    try:
+        await p.open()
+        await p.wait()
+
+        # Make sure we created two connections (rotating_config called twice)
+        assert config_rotation_counter == 2
+
+        # Acquire both connections and check application_name
+        async with p.connection() as conn1, p.connection() as conn2:
+            row1 = await conn1.execute("SHOW application_name")
+            row2 = await conn2.execute("SHOW application_name")
+
+            name1 = await row1.fetchone()
+            assert (
+                name1 is not None
+            ), "first call to SHOW application_name returned no rows"
+            assert name1[0] in app_names
+
+            name2 = await row2.fetchone()
+            assert (
+                name2 is not None
+            ), "second call to SHOW application_name returned no rows"
+            assert name2[0] in app_names
+
+            # Make sure that names are different.
+            assert name1 != name2
+
+    finally:
+        await p.close()
+
+
+@pytest.mark.slow
+async def test_get_config_raise_exception(dsn, caplog):
+
+    async def failing_conninfo():
+        raise RuntimeError("cannot build conninfo")
+
+    async def failing_kwargs():
+        raise RuntimeError("cannot build kwargs")
+
+    p = pool.AsyncConnectionPool(
+        conninfo=failing_conninfo,
+        kwargs=failing_kwargs,
+        min_size=1,
+        max_lifetime=0.1,
+        open=False,
+        reconnect_timeout=1.0,
+    )
+
+    with caplog.at_level("WARNING"):
+        try:
+            await p.open()
+            with pytest.raises(pool.PoolTimeout):
+                await p.wait(timeout=2.0)
+        finally:
+            await p.close()
+
+    # Ensure log contains "reconnection attempt" warning`
+    reconnection_warnings = [
+        rec for rec in caplog.records if "reconnection attempt" in rec.message.lower()
+    ]
+
+    assert reconnection_warnings, "Expected reconnection attempt logs"
+    # Make sure that we saw not too many (backoff works)
+    assert len(reconnection_warnings) < 5, "Too many attempts (likely busyloop)"
