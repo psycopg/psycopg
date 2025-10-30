@@ -59,6 +59,13 @@ using `~psycopg.types.composite.register_composite()`.
    that type are created and registered too, so that passing objects of that
    type to a query will adapt them to the registered type.
 
+   The `!factory` callable will be called with the sequence of value from the
+   composite. If passing the sequence of positional arguments is not suitable
+   you can specify a :samp:`make_instance({values}, {names})` callable.
+
+   .. versionadded:: 3.3
+        the `!make_instance` parameter
+
 Example::
 
     >>> from psycopg.types.composite import CompositeInfo, register_composite
@@ -92,6 +99,25 @@ composite components are registered as well::
     >>> conn.execute("SELECT ((8, 'hearts'), 'blue')::card_back").fetchone()[0]
     card_back(face=card(value=8, suit='hearts'), back='blue')
 
+If your Python type takes keyword arguments, or if the sequence of value
+coming from the PostgreSQL type is not suitable, it is possible to specify
+a :samp:`make_instance({values}, {names})` function to adapt the values from
+the composite to the right type requirements. For example::
+
+    >>> from dataclasses import dataclass
+    >>> from typing import Any, Sequence
+
+    >>> @dataclass
+    ... class Card:
+    ...     suit: str
+    ...     value: int
+
+    >>> def card_from_db(values: Sequence[Any], names: Sequence[str]) -> Card:
+    ...     return Card(**dict(zip(names, values)))
+
+    >>> register_composite(info, conn, make_instance=card_from_db)
+    >>> conn.execute("select '(1,spades)'::card").fetchone()[0]
+    Card(suit='spades', value=1)
 
 .. index::
     pair: range; Data types
