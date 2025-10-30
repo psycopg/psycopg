@@ -41,3 +41,9 @@ repos:
         entry: mypy --pretty --follow-imports=silent
         files: \.py[i]?$
         exclude: tests/test_tstring.py
+
+      - id: cython-lint
+        name: cython-lint
+        language: system
+        entry: cython-lint
+        files: \.(pxd|pyx)$
