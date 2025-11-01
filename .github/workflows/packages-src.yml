@@ -50,7 +50,7 @@ jobs:
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
           PGPASSWORD: password
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.package }}-${{ matrix.format }}-${{ matrix.impl }}
           path: ./dist/*
@@ -74,7 +74,7 @@ jobs:
       - sdist
     steps:
       - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v4
+        uses: actions/upload-artifact/merge@v5
         with:
           name: psycopg-src-artifact
           delete-merged: true
