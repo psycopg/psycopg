@@ -16,6 +16,9 @@ Psycopg 3.3.0 (unreleased)
 .. rubric:: New top-level features
 
 - Add :ref:`template strings queries <template-strings>` (:ticket:`#1054`).
+- Add `!make_instance` parameter to `~types.composite.register_composite()`
+  to load objects from composite via keyword arguments or in other ways other
+  than just by values sequence (:ticket:`#932`).
 - Cursors are now iterators, not only iterables. This means you can call
   ``next(cur)`` to fetch the next row (:ticket:`#1064`).
 - Add `Cursor.results()` to iterate over the result sets of the queries
