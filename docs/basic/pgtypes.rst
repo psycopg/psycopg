@@ -66,7 +66,8 @@ using `~psycopg.types.composite.register_composite()`.
    .. versionadded:: 3.3
         the `!make_instance` parameter
 
-Example::
+Example: registering a composite without `!factory` information will create a
+type on the fly, stored in `!CompositeInfo.python_type`. ::
 
     >>> from psycopg.types.composite import CompositeInfo, register_composite
 
@@ -118,6 +119,7 @@ the composite to the right type requirements. For example::
     >>> register_composite(info, conn, make_instance=card_from_db)
     >>> conn.execute("select '(1,spades)'::card").fetchone()[0]
     Card(suit='spades', value=1)
+
 
 .. index::
     pair: range; Data types
