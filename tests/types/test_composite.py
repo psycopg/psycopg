@@ -1,11 +1,12 @@
+import logging
+
 import pytest
 
 from psycopg import postgres, pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 from psycopg.types.range import Range
-from psycopg.types.composite import CompositeInfo, TupleBinaryDumper, TupleDumper
-from psycopg.types.composite import register_composite
+from psycopg.types.composite import CompositeInfo, register_composite
 
 from ..utils import eur
 from ..fix_crdb import crdb_skip_message, is_crdb
@@ -345,13 +346,14 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
     assert isinstance(res[0].baz, float)
 
 
+class MyKeywordThing:
+    def __init__(self, *, foo, bar, baz):
+        self.foo, self.bar, self.baz = foo, bar, baz
+
+
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_keyword_composite_factory(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
-
-    class MyKeywordThing:
-        def __init__(self, *, foo, bar, baz):
-            self.foo, self.bar, self.baz = foo, bar, baz
 
     def make_instance(values, names):
         return MyKeywordThing(**dict(zip(names, values)))
@@ -396,32 +398,20 @@ def test_register_scope(conn, testcomp):
             assert oid in conn.adapters._loaders[fmt]
 
 
-def test_type_dumper_registered(conn, testcomp):
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_type_dumper_registered(conn, testcomp, fmt_in):
     info = CompositeInfo.fetch(conn, "testcomp")
     register_composite(info, conn)
     assert issubclass(info.python_type, tuple)
     assert info.python_type.__name__ == "testcomp"
-    d = conn.adapters.get_dumper(info.python_type, "s")
-    assert issubclass(d, TupleDumper)
-    assert d is not TupleDumper
+    assert conn.adapters.get_dumper(info.python_type, "s")
 
     tc = info.python_type("foo", 42, 3.14)
-    cur = conn.execute("select pg_typeof(%s)", [tc])
-    assert cur.fetchone()[0] == "testcomp"
-
-
-def test_type_dumper_registered_binary(conn, testcomp):
-    info = CompositeInfo.fetch(conn, "testcomp")
-    register_composite(info, conn)
-    assert issubclass(info.python_type, tuple)
-    assert info.python_type.__name__ == "testcomp"
-    d = conn.adapters.get_dumper(info.python_type, "b")
-    assert issubclass(d, TupleBinaryDumper)
-    assert d is not TupleBinaryDumper
-
-    tc = info.python_type("foo", 42, 3.14)
-    cur = conn.execute("select pg_typeof(%b)", [tc])
-    assert cur.fetchone()[0] == "testcomp"
+    cur = conn.execute(
+        f"select pg_typeof(%(obj){fmt_in.value}), (%(obj){fmt_in.value}).bar",
+        {"obj": tc},
+    )
+    assert cur.fetchone() == ("testcomp", 42)
 
 
 def test_callable_dumper_not_registered(conn, testcomp):
@@ -436,6 +426,43 @@ def test_callable_dumper_not_registered(conn, testcomp):
     # but the loader is registered
     cur = conn.execute("select '(foo,42,3.14)'::testcomp")
     assert cur.fetchone()[0] == ("foo", 42, 3.14, 3.14)
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_no_sequence(conn, testcomp, fmt_in, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    def make_sequence(obj, names):
+        return [getattr(obj, attr) for attr in names]
+
+    info = CompositeInfo.fetch(conn, "testcomp")
+    register_composite(info, conn, factory=MyKeywordThing, make_sequence=make_sequence)
+    assert info.python_type is MyKeywordThing
+    assert not caplog.records
+
+    obj = MyKeywordThing(foo="foo", bar=42, baz=3.14)
+    cur = conn.execute(
+        f"select pg_typeof(%(obj){fmt_in.value}), (%(obj){fmt_in.value}).bar",
+        {"obj": obj},
+    )
+    assert cur.fetchone() == ("testcomp", 42)
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_no_sequence_failing(conn, testcomp, fmt_in, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    info = CompositeInfo.fetch(conn, "testcomp")
+    register_composite(info, conn, factory=MyKeywordThing)
+    assert info.python_type is MyKeywordThing
+    assert caplog.records
+    assert "'MyKeywordThing' is not a sequence" in caplog.records[0].message
+
+    obj = MyKeywordThing(foo="foo", bar=42, baz=3.14)
+    with pytest.raises(
+        TypeError, match="MyKeywordThing.*make_sequence.*register_composite"
+    ):
+        conn.execute(f"select pg_typeof(%{fmt_in.value})", [obj])
 
 
 def test_no_info_error(conn):
