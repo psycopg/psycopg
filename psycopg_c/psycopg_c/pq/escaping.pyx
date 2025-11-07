@@ -27,7 +27,7 @@ cdef class Escaping:
         out = libpq.PQescapeLiteral(self.conn._pgconn_ptr, ptr, length)
         if out is NULL:
             raise e.OperationalError(
-                f"escape_literal failed: {self.conn.get_error_message())}"
+                f"escape_literal failed: {self.conn.get_error_message()}"
             )
 
         rv = out[:strlen(out)]
