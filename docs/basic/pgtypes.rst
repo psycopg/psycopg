@@ -21,8 +21,8 @@ Psycopg offers wrappers and conversion functions to allow their use.
 
 .. _adapt-composite:
 
-Composite types casting
------------------------
+Composite types adaptation
+--------------------------
 
 Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
 TYPE|_ command or implicitly defined after a table row type) to and from
@@ -49,24 +49,33 @@ using `~psycopg.types.composite.register_composite()`.
 
 .. autofunction:: psycopg.types.composite.register_composite
 
-   After registering, fetching data of the registered composite will invoke
-   `!factory` to create corresponding Python objects.
+   After registering the `CompositeInfo`, fetching data of the registered
+   composite type will invoke `!factory` to create corresponding Python
+   objects. If no factory is specified, Psycopg will generate a
+   `~collection.namedtuple` with the same fields of the composite type, and
+   use it to return fetched data. The factory will be made available on
+   `!info.`\ `~CompositeInfo.python_type`.
 
-   If no factory is specified, a `~collection.namedtuple` is created and used
-   to return data.
-
-   If the `!factory` is a type (and not a generic callable), then dumpers for
-   that type are created and registered too, so that passing objects of that
-   type to a query will adapt them to the registered type.
+   If the `!factory` is a type (and not a generic callable) then dumpers for
+   such type are created and registered too, so that passing objects of that
+   type to a query will adapt them to the registered type. This assumes that
+   the `!factory` is a sequence; if this is not the case you can specify the
+   `!make_sequence` parameter. See :ref:`composite-generic`.
 
    The `!factory` callable will be called with the sequence of value from the
    composite. If passing the sequence of positional arguments is not suitable
-   you can specify a :samp:`make_instance({values}, {names})` callable.
+   you can specify a `!make_instance` callable.
 
    .. versionadded:: 3.3
-        the `!make_instance` parameter
+        the `!make_instance` and `!make_sequence` parameters.
 
-Example: registering a composite without `!factory` information will create a
+
+.. _composite-sequence:
+
+Example: Python sequence
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Registering a composite without `!factory` information will create a
 type on the fly, stored in `!CompositeInfo.python_type`. ::
 
     >>> from psycopg.types.composite import CompositeInfo, register_composite
@@ -100,10 +109,18 @@ composite components are registered as well::
     >>> conn.execute("SELECT ((8, 'hearts'), 'blue')::card_back").fetchone()[0]
     card_back(face=card(value=8, suit='hearts'), back='blue')
 
+
+.. _composite-generic:
+
+Example: Generic Python object
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. versionadded:: 3.3
+
 If your Python type takes keyword arguments, or if the sequence of value
-coming from the PostgreSQL type is not suitable, it is possible to specify
-a :samp:`make_instance({values}, {names})` function to adapt the values from
-the composite to the right type requirements. For example::
+coming from the PostgreSQL type is not suitable for it, it is possible to
+specify a :samp:`make_instance({values}, {names})` function to adapt the
+values from the composite to the right type requirements. For example::
 
     >>> from dataclasses import dataclass
     >>> from typing import Any, Sequence
@@ -119,6 +136,26 @@ the composite to the right type requirements. For example::
     >>> register_composite(info, conn, make_instance=card_from_db)
     >>> conn.execute("select '(1,spades)'::card").fetchone()[0]
     Card(suit='spades', value=1)
+
+The previous example only configures loaders to convert data from PostgreSQL
+to Python. If we are also interested in dumping Python `!Card` objects we need
+to specify `!Card` as the factory (to declare which object we want to dump)
+and, because `!Card` is not a sequence, we need to specify a
+:samp:`make_sequence({object}, {names})` to convert objects attributes into
+a sequence matching the composite fields::
+
+    >>> def card_to_db(card: Card, names: Sequence[str]) -> Sequence[Any]:
+    ...     return [getattr(card, name) for name in names]
+
+    >>> register_composite(
+    ...     info, conn, factory=Card,
+    ...     make_instance=card_from_db, make_sequence=card_to_db)
+
+    >>> conn.execute(
+    ...     "select %(card)s.value + 1, %(card)s.suit",
+    ...     {"card": Card(suit="hearts", value=8)},
+    ...     ).fetchone()
+    (9, 'hearts')
 
 
 .. index::
