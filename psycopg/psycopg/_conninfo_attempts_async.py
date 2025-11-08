@@ -42,13 +42,15 @@ async def conninfo_attempts_async(params: ConnMapping) -> list[ConnDict]:
         try:
             attempts.extend(await _resolve_hostnames(attempt))
         except OSError as ex:
-            logger.debug("failed to resolve host %r: %s", attempt.get("host"), ex)
-            last_exc = ex
+            last_exc = e.OperationalError(
+                f"failed to resolve host {attempt.get('host')!r}: {ex}"
+            )
+            logger.debug("%s", last_exc)
 
     if not attempts:
         assert last_exc
         # We couldn't resolve anything
-        raise e.OperationalError(str(last_exc))
+        raise last_exc
 
     if get_param(params, "load_balance_hosts") == "random":
         shuffle(attempts)
