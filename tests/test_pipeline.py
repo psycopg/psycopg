@@ -16,21 +16,18 @@ from psycopg import pq
 
 from .acompat import is_async
 
-pytestmark = [
-    pytest.mark.pipeline,
-    pytest.mark.skipif("not psycopg.Pipeline.is_supported()"),
-]
-pipeline_aborted = pytest.mark.flakey("the server might get in pipeline aborted")
+pytestmark = [pytest.mark.pipeline, pytest.mark.skipif('not psycopg.Pipeline.is_supported()')]
+pipeline_aborted = pytest.mark.flakey('the server might get in pipeline aborted')
 
 
 def test_repr(conn):
     with conn.pipeline() as p:
-        name = "psycopg.AsyncPipeline" if is_async(conn) else "psycopg.Pipeline"
+        name = 'psycopg.AsyncPipeline' if is_async(conn) else 'psycopg.Pipeline'
         assert name in repr(p)
-        assert "[IDLE, pipeline=ON]" in repr(p)
-
+        assert '[IDLE, pipeline=ON]' in repr(p)
+    
     conn.close()
-    assert "[BAD]" in repr(p)
+    assert '[BAD]' in repr(p)
 
 
 def test_connection_closed(conn):
@@ -63,31 +60,31 @@ def test_pipeline_reenter(conn: psycopg.Connection[Any]) -> None:
 def test_pipeline_broken_conn_exit(conn: psycopg.Connection[Any]) -> None:
     with pytest.raises(e.OperationalError):
         with conn.pipeline():
-            conn.execute("select 1")
+            conn.execute('select 1')
             conn.close()
             closed = True
-
+    
     assert closed
 
 
 def test_pipeline_exit_error_noclobber(conn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg")
+    caplog.set_level(logging.WARNING, logger='psycopg')
     with pytest.raises(ZeroDivisionError):
         with conn.pipeline():
             conn.close()
             1 / 0
-
+    
     assert len(caplog.records) == 1
 
 
 def test_pipeline_exit_error_noclobber_nested(conn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg")
+    caplog.set_level(logging.WARNING, logger='psycopg')
     with pytest.raises(ZeroDivisionError):
         with conn.pipeline():
             with conn.pipeline():
                 conn.close()
                 1 / 0
-
+    
     assert len(caplog.records) == 2
 
 
@@ -96,7 +93,7 @@ def test_pipeline_exit_sync_trace(conn, trace):
     with conn.pipeline():
         pass
     conn.close()
-    assert len([i for i in t if i.type == "Sync"]) == 1
+    assert len([i for i in t if i.type == 'Sync']) == 1
 
 
 def test_pipeline_nested_sync_trace(conn, trace):
@@ -105,42 +102,42 @@ def test_pipeline_nested_sync_trace(conn, trace):
         with conn.pipeline():
             pass
     conn.close()
-    assert len([i for i in t if i.type == "Sync"]) == 2
+    assert len([i for i in t if i.type == 'Sync']) == 2
 
 
 def test_cursor_stream(conn):
     with conn.pipeline(), conn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
-            next(cur.stream("select 1"))
+            next(cur.stream('select 1'))
 
 
 def test_server_cursor(conn):
-    with conn.cursor(name="pipeline") as cur, conn.pipeline():
+    with conn.cursor(name='pipeline') as cur, conn.pipeline():
         with pytest.raises(psycopg.NotSupportedError):
-            cur.execute("select 1")
+            cur.execute('select 1')
 
 
 def test_cannot_insert_multiple_commands(conn):
     with pytest.raises((e.SyntaxError, e.InvalidPreparedStatementDefinition)):
         with conn.pipeline():
-            conn.execute("select 1; select 2")
+            conn.execute('select 1; select 2')
 
 
 def test_copy(conn):
     with conn.pipeline():
         cur = conn.cursor()
         with pytest.raises(e.NotSupportedError):
-            with cur.copy("copy (select 1) to stdout") as copy:
+            with cur.copy('copy (select 1) to stdout') as copy:
                 copy.read()
 
 
 def test_pipeline_processed_at_exit(conn):
     with conn.cursor() as cur:
         with conn.pipeline() as p:
-            cur.execute("select 1")
-
+            cur.execute('select 1')
+            
             assert len(p.result_queue) == 1
-
+        
         assert cur.fetchone() == (1,)
 
 
@@ -148,12 +145,10 @@ def test_pipeline_errors_processed_at_exit(conn):
     conn.set_autocommit(True)
     with pytest.raises(e.UndefinedTable):
         with conn.pipeline():
-            conn.execute("select * from nosuchtable")
-            conn.execute("create table voila ()")
-    cur = conn.execute(
-        "select count(*) from pg_tables where tablename = %s", ("voila",)
-    )
-    (count,) = cur.fetchone()
+            conn.execute('select * from nosuchtable')
+            conn.execute('create table voila ()')
+    cur = conn.execute('select count(*) from pg_tables where tablename = %s', ('voila',))
+    count, = cur.fetchone()
     assert count == 0
 
 
@@ -161,67 +156,67 @@ def test_pipeline(conn):
     with conn.pipeline() as p:
         c1 = conn.cursor()
         c2 = conn.cursor()
-        c1.execute("select 1")
-        c2.execute("select 2")
-
+        c1.execute('select 1')
+        c2.execute('select 2')
+        
         assert len(p.result_queue) == 2
-
-        (r1,) = c1.fetchone()
+        
+        r1, = c1.fetchone()
         assert r1 == 1
-
-    (r2,) = c2.fetchone()
+    
+    r2, = c2.fetchone()
     assert r2 == 2
 
 
 def test_autocommit(conn):
     conn.set_autocommit(True)
     with conn.pipeline(), conn.cursor() as c:
-        c.execute("select 1")
-
-        (r,) = c.fetchone()
+        c.execute('select 1')
+        
+        r, = c.fetchone()
         assert r == 1
 
 
 def test_pipeline_aborted(conn):
     conn.set_autocommit(True)
     with conn.pipeline() as p:
-        c1 = conn.execute("select 1")
+        c1 = conn.execute('select 1')
         with pytest.raises(e.UndefinedTable):
-            conn.execute("select * from doesnotexist").fetchone()
+            conn.execute('select * from doesnotexist').fetchone()
         with pytest.raises(e.PipelineAborted):
             conn.execute("select 'aborted'").fetchone()
         # Sync restore the connection in usable state.
         p.sync()
-        c2 = conn.execute("select 2")
-
-    (r,) = c1.fetchone()
+        c2 = conn.execute('select 2')
+    
+    r, = c1.fetchone()
     assert r == 1
-
-    (r,) = c2.fetchone()
+    
+    r, = c2.fetchone()
     assert r == 2
 
 
 def test_pipeline_commit_aborted(conn):
     with pytest.raises((e.UndefinedColumn, e.OperationalError)):
         with conn.pipeline():
-            conn.execute("select error")
-            conn.execute("create table voila ()")
+            conn.execute('select error')
+            conn.execute('create table voila ()')
             conn.commit()
 
 
 def test_sync_syncs_results(conn):
     with conn.pipeline() as p:
-        cur = conn.execute("select 1")
+        cur = conn.execute('select 1')
         assert cur.statusmessage is None
         p.sync()
-        assert cur.statusmessage == "SELECT 1"
+        assert cur.statusmessage == 'SELECT 1'
 
 
-@pytest.mark.flakey("assert rarely fails randomly in CI blocking release")
+@pytest.mark.flakey('assert rarely fails randomly in CI blocking release')
 def test_sync_syncs_errors(conn):
     conn.set_autocommit(True)
     with conn.pipeline() as p:
-        conn.execute("select 1 from nosuchtable")
+        conn.execute('select 1 from nosuchtable')
         with pytest.raises(e.UndefinedTable):
             p.sync()
 
@@ -229,46 +224,46 @@ def test_sync_syncs_errors(conn):
 @pipeline_aborted
 def test_errors_raised_on_commit(conn):
     with conn.pipeline():
-        conn.execute("select 1 from nosuchtable")
+        conn.execute('select 1 from nosuchtable')
         with pytest.raises(e.UndefinedTable):
             conn.commit()
         conn.rollback()
-        cur1 = conn.execute("select 1")
-    cur2 = conn.execute("select 2")
-
+        cur1 = conn.execute('select 1')
+    cur2 = conn.execute('select 2')
+    
     assert cur1.fetchone() == (1,)
     assert cur2.fetchone() == (2,)
 
 
-@pytest.mark.flakey("assert fails randomly in CI blocking release")
+@pytest.mark.flakey('assert fails randomly in CI blocking release')
 def test_errors_raised_on_transaction_exit(conn):
     here = False
     with conn.pipeline():
         with pytest.raises(e.UndefinedTable):
             with conn.transaction():
-                conn.execute("select 1 from nosuchtable")
+                conn.execute('select 1 from nosuchtable')
                 here = True
-        cur1 = conn.execute("select 1")
+        cur1 = conn.execute('select 1')
     assert here
-    cur2 = conn.execute("select 2")
-
+    cur2 = conn.execute('select 2')
+    
     assert cur1.fetchone() == (1,)
     assert cur2.fetchone() == (2,)
 
 
-@pytest.mark.flakey("assert fails randomly in CI blocking release")
+@pytest.mark.flakey('assert fails randomly in CI blocking release')
 def test_errors_raised_on_nested_transaction_exit(conn):
     here = False
     with conn.pipeline():
         with conn.transaction():
             with pytest.raises(e.UndefinedTable):
                 with conn.transaction():
-                    conn.execute("select 1 from nosuchtable")
+                    conn.execute('select 1 from nosuchtable')
                     here = True
-            cur1 = conn.execute("select 1")
+            cur1 = conn.execute('select 1')
     assert here
-    cur2 = conn.execute("select 2")
-
+    cur2 = conn.execute('select 2')
+    
     assert cur1.fetchone() == (1,)
     assert cur2.fetchone() == (2,)
 
@@ -287,28 +282,26 @@ def test_implicit_transaction(conn):
         with conn.transaction():
             conn.execute("select 'tx'")
         cur = conn.execute("select 'after'")
-    assert cur.fetchone() == ("after",)
+    assert cur.fetchone() == ('after',)
 
 
-@pytest.mark.crdb_skip("deferrable")
+@pytest.mark.crdb_skip('deferrable')
 def test_error_on_commit(conn):
-    conn.execute(
-        """
+    conn.execute("""
         drop table if exists selfref;
         create table selfref (
             x serial primary key,
             y int references selfref (x) deferrable initially deferred)
-        """
-    )
+        """)
     conn.commit()
-
+    
     with conn.pipeline():
-        conn.execute("insert into selfref (y) values (-1)")
+        conn.execute('insert into selfref (y) values (-1)')
         with pytest.raises(e.ForeignKeyViolation):
             conn.commit()
-        cur1 = conn.execute("select 1")
-    cur2 = conn.execute("select 2")
-
+        cur1 = conn.execute('select 1')
+    cur2 = conn.execute('select 2')
+    
     assert cur1.fetchone() == (1,)
     assert cur2.fetchone() == (2,)
 
@@ -322,16 +315,10 @@ def test_fetch_no_result(conn):
 
 def test_executemany(conn):
     conn.set_autocommit(True)
-    conn.execute("drop table if exists execmanypipeline")
-    conn.execute(
-        "create unlogged table execmanypipeline (id serial primary key, num integer)"
-    )
+    conn.execute('drop table if exists execmanypipeline')
+    conn.execute('create unlogged table execmanypipeline (id serial primary key, num integer)')
     with conn.pipeline(), conn.cursor() as cur:
-        cur.executemany(
-            "insert into execmanypipeline(num) values (%s) returning num",
-            [(10,), (20,)],
-            returning=True,
-        )
+        cur.executemany('insert into execmanypipeline(num) values (%s) returning num', [(10,), (20,)], returning=True)
         assert cur.rowcount == 1
         assert cur.fetchone() == (10,)
         assert cur.nextset()
@@ -342,91 +329,76 @@ def test_executemany(conn):
 
 def test_executemany_no_returning(conn):
     conn.set_autocommit(True)
-    conn.execute("drop table if exists execmanypipelinenoreturning")
-    conn.execute(
-        """create unlogged table execmanypipelinenoreturning
-            (id serial primary key, num integer)"""
-    )
+    conn.execute('drop table if exists execmanypipelinenoreturning')
+    conn.execute("""create unlogged table execmanypipelinenoreturning
+            (id serial primary key, num integer)""")
     with conn.pipeline(), conn.cursor() as cur:
-        cur.executemany(
-            "insert into execmanypipelinenoreturning(num) values (%s)",
-            [(10,), (20,)],
-            returning=False,
-        )
-        with pytest.raises(e.ProgrammingError, match="no result available"):
+        cur.executemany('insert into execmanypipelinenoreturning(num) values (%s)', [(10,), (20,)], returning=False)
+        with pytest.raises(e.ProgrammingError, match='no result available'):
             cur.fetchone()
         assert cur.nextset() is None
-        with pytest.raises(e.ProgrammingError, match="no result available"):
+        with pytest.raises(e.ProgrammingError, match='no result available'):
             cur.fetchone()
         assert cur.nextset() is None
 
 
-@pytest.mark.crdb("skip", reason="temp tables")
+@pytest.mark.crdb('skip', reason='temp tables')
 def test_executemany_trace(conn, trace):
     conn.set_autocommit(True)
     cur = conn.cursor()
-    cur.execute("create temp table trace (id int)")
+    cur.execute('create temp table trace (id int)')
     t = trace.trace(conn)
     with conn.pipeline():
-        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
-        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+        cur.executemany('insert into trace (id) values (%s)', [(10,), (20,)])
+        cur.executemany('insert into trace (id) values (%s)', [(10,), (20,)])
     conn.close()
     items = list(t)
-    assert items[-1].type == "Terminate"
+    assert items[-1].type == 'Terminate'
     del items[-1]
-    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
-    assert roundtrips == ["F", "B"]
-    assert len([i for i in items if i.type == "Sync"]) == 1
+    roundtrips = [k for k, g in groupby(items, key=attrgetter('direction'))]
+    assert roundtrips == ['F', 'B']
+    assert len([i for i in items if i.type == 'Sync']) == 1
 
 
-@pytest.mark.crdb("skip", reason="temp tables")
+@pytest.mark.crdb('skip', reason='temp tables')
 def test_executemany_trace_returning(conn, trace):
     conn.set_autocommit(True)
     cur = conn.cursor()
-    cur.execute("create temp table trace (id int)")
+    cur.execute('create temp table trace (id int)')
     t = trace.trace(conn)
     with conn.pipeline():
-        cur.executemany(
-            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
-        )
-        cur.executemany(
-            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
-        )
+        cur.executemany('insert into trace (id) values (%s)', [(10,), (20,)], returning=True)
+        cur.executemany('insert into trace (id) values (%s)', [(10,), (20,)], returning=True)
     conn.close()
     items = list(t)
-    assert items[-1].type == "Terminate"
+    assert items[-1].type == 'Terminate'
     del items[-1]
-    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
-    assert roundtrips == ["F", "B"] * 3
-    assert items[-2].direction == "F"  # last 2 items are F B
-    assert len([i for i in items if i.type == "Sync"]) == 1
+    roundtrips = [k for k, g in groupby(items, key=attrgetter('direction'))]
+    assert roundtrips == ['F', 'B'] * 3
+    assert items[-2].direction == 'F'  # last 2 items are F B
+    assert len([i for i in items if i.type == 'Sync']) == 1
 
 
 def test_prepared(conn):
     conn.set_autocommit(True)
     with conn.pipeline():
-        c1 = conn.execute("select %s::int", [10], prepare=True)
-        c2 = conn.execute(
-            "select count(*) from pg_prepared_statements where name != ''"
-        )
-
-        (r,) = c1.fetchone()
+        c1 = conn.execute('select %s::int', [10], prepare=True)
+        c2 = conn.execute("select count(*) from pg_prepared_statements where name != ''")
+        
+        r, = c1.fetchone()
         assert r == 10
-
-        (r,) = c2.fetchone()
+        
+        r, = c2.fetchone()
         assert r == 1
 
 
 def test_auto_prepare(conn):
     conn.prepared_threshold = 5
     with conn.pipeline():
-        cursors = [
-            conn.execute("select count(*) from pg_prepared_statements where name != ''")
-            for i in range(10)
-        ]
-
+        cursors = [conn.execute("select count(*) from pg_prepared_statements where name != ''") for i in range(10)]
+        
         assert len(conn._prepared._names) == 1
-
+    
     res = [c.fetchone()[0] for c in cursors]
     assert res == [0] * 5 + [1] * 5
 
@@ -438,33 +410,33 @@ def test_prepare_error(conn):
     and not reused.
     """
     conn.set_autocommit(True)
-    stmt = "INSERT INTO nosuchtable(data) VALUES (%s)"
+    stmt = 'INSERT INTO nosuchtable(data) VALUES (%s)'
     with pytest.raises(psycopg.errors.UndefinedTable):
         with conn.pipeline():
-            conn.execute(stmt, ["foo"], prepare=True)
+            conn.execute(stmt, ['foo'], prepare=True)
     assert not conn._prepared._names
     with pytest.raises(psycopg.errors.UndefinedTable):
-        conn.execute(stmt, ["bar"])
+        conn.execute(stmt, ['bar'])
 
 
 def test_transaction(conn):
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
-
+    
     with conn.pipeline():
         with conn.transaction():
             cur = conn.execute("select 'tx'")
-
-        (r,) = cur.fetchone()
-        assert r == "tx"
-
+        
+        r, = cur.fetchone()
+        assert r == 'tx'
+        
         with conn.transaction():
             cur = conn.execute("select 'rb'")
             raise psycopg.Rollback()
-
-        (r,) = cur.fetchone()
-        assert r == "rb"
-
+        
+        r, = cur.fetchone()
+        assert r == 'rb'
+    
     assert not notices
 
 
@@ -476,31 +448,31 @@ def test_transaction_nested(conn):
                 with conn.transaction():
                     inner = conn.execute("select 'inner'")
                     1 / 0
-
-        (r,) = outer.fetchone()
-        assert r == "outer"
-        (r,) = inner.fetchone()
-        assert r == "inner"
+        
+        r, = outer.fetchone()
+        assert r == 'outer'
+        r, = inner.fetchone()
+        assert r == 'inner'
 
 
 def test_transaction_nested_no_statement(conn):
     with conn.pipeline():
         with conn.transaction():
             with conn.transaction():
-                cur = conn.execute("select 1")
-
-        (r,) = cur.fetchone()
+                cur = conn.execute('select 1')
+        
+        r, = cur.fetchone()
         assert r == 1
 
 
 def test_outer_transaction(conn):
     with conn.transaction():
-        conn.execute("drop table if exists outertx")
+        conn.execute('drop table if exists outertx')
     with conn.transaction():
         with conn.pipeline():
-            conn.execute("create table outertx as (select 1)")
-            cur = conn.execute("select * from outertx")
-    (r,) = cur.fetchone()
+            conn.execute('create table outertx as (select 1)')
+            cur = conn.execute('select * from outertx')
+    r, = cur.fetchone()
     assert r == 1
     cur = conn.execute("select count(*) from pg_tables where tablename = 'outertx'")
     assert cur.fetchone()[0] == 1
@@ -510,18 +482,18 @@ def test_outer_transaction_error(conn):
     with conn.transaction():
         with pytest.raises((e.UndefinedColumn, e.OperationalError)):
             with conn.pipeline():
-                conn.execute("select error")
-                conn.execute("create table voila ()")
+                conn.execute('select error')
+                conn.execute('create table voila ()')
 
 
 def test_rollback_explicit(conn):
     conn.set_autocommit(True)
     with conn.pipeline():
         with pytest.raises(e.DivisionByZero):
-            cur = conn.execute("select 1 / %s", [0])
+            cur = conn.execute('select 1 / %s', [0])
             cur.fetchone()
         conn.rollback()
-        conn.execute("select 1")
+        conn.execute('select 1')
 
 
 def test_rollback_transaction(conn):
@@ -529,21 +501,21 @@ def test_rollback_transaction(conn):
     with pytest.raises(e.DivisionByZero):
         with conn.pipeline():
             with conn.transaction():
-                cur = conn.execute("select 1 / %s", [0])
+                cur = conn.execute('select 1 / %s', [0])
                 cur.fetchone()
-    conn.execute("select 1")
+    conn.execute('select 1')
 
 
 def test_message_0x33(conn):
     # https://github.com/psycopg/psycopg/issues/314
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
-
+    
     conn.set_autocommit(True)
     with conn.pipeline():
         cur = conn.execute("select 'test'")
-        assert cur.fetchone() == ("test",)
-
+        assert cur.fetchone() == ('test',)
+    
     assert not notices
 
 
@@ -557,57 +529,50 @@ def test_transaction_state_implicit_begin(conn, trace):
         conn.execute("select 'x'").fetchone()
         conn.execute("select 'y'")
     assert not notices
-    assert [
-        e.content[0] for e in t if e.type == "Parse" and b"BEGIN" in e.content[0]
-    ] == [b' "" "BEGIN" 0']
+    assert [e.content[0] for e in t if e.type == 'Parse' and b'BEGIN' in e.content[0]] == [b' "" "BEGIN" 0']
 
 
 def test_concurrency(conn):
     with conn.transaction():
-        conn.execute("drop table if exists pipeline_concurrency")
-        conn.execute("drop table if exists accessed")
+        conn.execute('drop table if exists pipeline_concurrency')
+        conn.execute('drop table if exists accessed')
     with conn.transaction():
-        conn.execute(
-            """create unlogged table pipeline_concurrency (
+        conn.execute("""create unlogged table pipeline_concurrency (
                 id serial primary key,
-                value integer)"""
-        )
-        conn.execute("create unlogged table accessed as (select now() as value)")
+                value integer)""")
+        conn.execute('create unlogged table accessed as (select now() as value)')
+    
 
     def update(value):
-        cur = conn.execute(
-            "insert into pipeline_concurrency(value) values (%s) returning value",
-            (value,),
-        )
-        conn.execute("update accessed set value = now()")
+        cur = conn.execute('insert into pipeline_concurrency(value) values (%s) returning value', (value,))
+        conn.execute('update accessed set value = now()')
         return cur
-
+    
     conn.set_autocommit(True)
-
-    (before,) = conn.execute("select value from accessed").fetchone()
-
+    
+    before, = conn.execute('select value from accessed').fetchone()
+    
     values = range(1, 10)
     with conn.pipeline():
         from concurrent.futures import ThreadPoolExecutor
-
         with ThreadPoolExecutor() as e:
             cursors = list(e.map(update, values, timeout=len(values)))
-
+        
         assert sum([cur.fetchone()[0] for cur in cursors]) == sum(values)
-
-    cur = conn.execute("select sum(value) from pipeline_concurrency")
-    (s,) = cur.fetchone()
+    
+    cur = conn.execute('select sum(value) from pipeline_concurrency')
+    s, = cur.fetchone()
     assert s == sum(values)
-    (after,) = conn.execute("select value from accessed").fetchone()
+    after, = conn.execute('select value from accessed').fetchone()
     assert after > before
 
 
 def test_execute_nextset(conn):
     cur = conn.cursor()
     with conn.pipeline():
-        cur.execute("select 1")
-        cur.execute("select 2")
-
+        cur.execute('select 1')
+        cur.execute('select 2')
+        
         assert cur.fetchall() == [(2,)]
         assert not cur.nextset()
         assert cur.fetchall() == []

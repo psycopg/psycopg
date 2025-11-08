@@ -20,59 +20,60 @@ pytestmark = [pytest.mark.crdb]
 @pytest.fixture
 def testfeed(svcconn):
     name = f"test_feed_{str(uuid4()).replace('-', '')}"
-    svcconn.execute("set cluster setting kv.rangefeed.enabled to true")
-    svcconn.execute(f"create table {name} (id serial primary key, data text)")
+    svcconn.execute('set cluster setting kv.rangefeed.enabled to true')
+    svcconn.execute(f'create table {name} (id serial primary key, data text)')
     yield name
-    svcconn.execute(f"drop table {name}")
+    svcconn.execute(f'drop table {name}')
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize('fmt_out', pq.Format)
 def test_changefeed(conn_cls, dsn, conn, testfeed, fmt_out):
     conn.set_autocommit(True)
     q = Queue()
+    
 
     def worker():
         try:
             with conn_cls.connect(dsn, autocommit=True) as conn:
                 cur = conn.cursor(binary=fmt_out, row_factory=namedtuple_row)
                 try:
-                    for row in cur.stream(f"experimental changefeed for {testfeed}"):
+                    for row in cur.stream(f'experimental changefeed for {testfeed}'):
                         q.put_nowait(row)
                 except e.QueryCanceled:
                     assert conn.info.transaction_status == pq.TransactionStatus.IDLE
                     q.put_nowait(None)
         except Exception as ex:
             q.put_nowait(ex)
-
+    
     t = spawn(worker)
-
+    
     cur = conn.cursor()
     cur.execute(f"insert into {testfeed} (data) values ('hello') returning id")
-    (key,) = cur.fetchone()
+    key, = cur.fetchone()
     row = q.get()
     assert row.table == testfeed
     assert json.loads(row.key) == [key]
-    assert json.loads(row.value)["after"] == {"id": key, "data": "hello"}
-
-    cur.execute(f"delete from {testfeed} where id = %s", [key])
+    assert json.loads(row.value)['after'] == {'id': key, 'data': 'hello'}
+    
+    cur.execute(f'delete from {testfeed} where id = %s', [key])
     row = q.get()
     assert row.table == testfeed
     assert json.loads(row.key) == [key]
-    assert json.loads(row.value)["after"] is None
-
+    assert json.loads(row.value)['after'] is None
+    
     cur.execute("select query_id from [show statements] where query !~ 'show'")
-    (qid,) = cur.fetchone()
-    cur.execute("cancel query %s", [qid])
-    assert cur.statusmessage == "CANCEL QUERIES 1"
-
+    qid, = cur.fetchone()
+    cur.execute('cancel query %s', [qid])
+    assert cur.statusmessage == 'CANCEL QUERIES 1'
+    
     # We often find the record with {"after": null} at least another time
     # in the queue. Let's tolerate an extra one.
     for i in range(2):
         if (row := q.get()) is None:
             break
-        assert json.loads(row.value)["after"] is None, json
+        assert json.loads(row.value)['after'] is None, json
     else:
-        pytest.fail("keep on receiving messages")
-
+        pytest.fail('keep on receiving messages')
+    
     gather(t)

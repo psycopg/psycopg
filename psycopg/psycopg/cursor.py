@@ -12,16 +12,16 @@ from __future__ import annotations
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, overload
 from contextlib import contextmanager
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator, Iterable
 
 from . import errors as e
 from . import pq
 from .abc import Params, Query, QueryNoTemplate
 from .copy import Copy, Writer
-from .rows import Row, RowFactory, RowMaker
+from .rows import RowFactory, Row, RowMaker
 from ._compat import Self, Template
-from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
+from ._pipeline import Pipeline
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -29,97 +29,81 @@ if TYPE_CHECKING:
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class Cursor(BaseCursor["Connection[Any]", Row]):
-    __module__ = "psycopg"
+class Cursor(BaseCursor['Connection[Any]', Row]):
+    __module__ = 'psycopg'
     __slots__ = ()
+    
 
     @overload
-    def __init__(self, connection: Connection[Row]): ...
+    def __init__(self, connection: Connection[Row]):
+        ...
+    
 
     @overload
-    def __init__(
-        self, connection: Connection[Any], *, row_factory: RowFactory[Row]
-    ): ...
+    def __init__(self, connection: Connection[Any], *, row_factory: RowFactory[Row]):
+        ...
+    
 
-    def __init__(
-        self, connection: Connection[Any], *, row_factory: RowFactory[Row] | None = None
-    ):
+    def __init__(self, connection: Connection[Any], *, row_factory: RowFactory[Row] | None=None):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
+    
 
     def __enter__(self) -> Self:
         return self
+    
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.close()
+    
 
     def close(self) -> None:
         """
         Close the current cursor and free associated resources.
         """
         self._close()
+    
 
     @property
     def row_factory(self) -> RowFactory[Row]:
         """Writable attribute to control how result rows are formed."""
         return self._row_factory
+    
 
     @row_factory.setter
     def row_factory(self, row_factory: RowFactory[Row]) -> None:
         self._row_factory = row_factory
         if self.pgresult:
             self._make_row = row_factory(self)
+    
 
     def _make_row_maker(self) -> RowMaker[Row]:
         return self._row_factory(self)
+    
 
     @overload
-    def execute(
-        self,
-        query: QueryNoTemplate,
-        params: Params | None = None,
-        *,
-        prepare: bool | None = None,
-        binary: bool | None = None,
-    ) -> Self: ...
+    def execute(self, query: QueryNoTemplate, params: Params | None=None, *, prepare: bool | None=None, binary: bool | None=None) -> Self:
+        ...
+    
 
     @overload
-    def execute(
-        self,
-        query: Template,
-        *,
-        prepare: bool | None = None,
-        binary: bool | None = None,
-    ) -> Self: ...
+    def execute(self, query: Template, *, prepare: bool | None=None, binary: bool | None=None) -> Self:
+        ...
+    
 
-    def execute(
-        self,
-        query: Query,
-        params: Params | None = None,
-        *,
-        prepare: bool | None = None,
-        binary: bool | None = None,
-    ) -> Self:
+    def execute(self, query: Query, params: Params | None=None, *, prepare: bool | None=None, binary: bool | None=None) -> Self:
         """
         Execute a query or command to the database.
         """
         try:
             with self._conn.lock:
-                self._conn.wait(
-                    self._execute_gen(query, params, prepare=prepare, binary=binary)
-                )
+                self._conn.wait(self._execute_gen(query, params, prepare=prepare, binary=binary))
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
         return self
+    
 
-    def executemany(
-        self, query: Query, params_seq: Iterable[Params], *, returning: bool = False
-    ) -> None:
+    def executemany(self, query: Query, params_seq: Iterable[Params], *, returning: bool=False) -> None:
         """
         Execute the same command with a sequence of input data.
         """
@@ -129,32 +113,18 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     # If there is already a pipeline, ride it, in order to avoid
                     # sending unnecessary Sync.
                     if self._conn._pipeline:
-                        self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
-                        )
+                        self._conn.wait(self._executemany_gen_pipeline(query, params_seq, returning))
                     else:
                         # Otherwise, make a new one
                         with self._conn._pipeline_nolock():
-                            self._conn.wait(
-                                self._executemany_gen_pipeline(
-                                    query, params_seq, returning
-                                )
-                            )
+                            self._conn.wait(self._executemany_gen_pipeline(query, params_seq, returning))
                 else:
-                    self._conn.wait(
-                        self._executemany_gen_no_pipeline(query, params_seq, returning)
-                    )
+                    self._conn.wait(self._executemany_gen_no_pipeline(query, params_seq, returning))
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
+    
 
-    def stream(
-        self,
-        query: Query,
-        params: Params | None = None,
-        *,
-        binary: bool | None = None,
-        size: int = 1,
-    ) -> Iterator[Row]:
+    def stream(self, query: Query, params: Params | None=None, *, binary: bool | None=None, size: int=1) -> Iterator[Row]:
         """
         Iterate row-by-row on a result from the database.
 
@@ -163,15 +133,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             available from version 17 of the libpq.
         """
         if self._pgconn.pipeline_status:
-            raise e.ProgrammingError("stream() cannot be used in pipeline mode")
-
+            raise e.ProgrammingError('stream() cannot be used in pipeline mode')
+        
         with self._conn.lock:
             try:
-                self._conn.wait(
-                    self._stream_send_gen(query, params, binary=binary, size=size)
-                )
+                self._conn.wait(self._stream_send_gen(query, params, binary=binary, size=size))
                 first = True
-                while res := self._conn.wait(self._stream_fetchone_gen(first)):
+                while (res := self._conn.wait(self._stream_fetchone_gen(first))):
                     for pos in range(res.ntuples):
                         yield self._tx.load_row(pos, self._make_row)
                     first = False
@@ -187,13 +155,14 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                             pass
                     except Exception:
                         pass
-
+                    
                     # Try to get out of ACTIVE state. Just do a single attempt, which
                     # should work to recover from an error or query cancelled.
                     try:
                         self._conn.wait(self._stream_fetchone_gen(first=False))
                     except Exception:
                         pass
+    
 
     def results(self) -> Iterator[Self]:
         """
@@ -206,9 +175,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         if self.pgresult:
             while True:
                 yield self
-
+                
                 if not self.nextset():
                     break
+    
 
     def fetchone(self) -> Row | None:
         """
@@ -225,8 +195,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             self._pos += 1
             return record
         return None
+    
 
-    def fetchmany(self, size: int = 0) -> list[Row]:
+    def fetchmany(self, size: int=0) -> list[Row]:
         """
         Return the next `!size` records from the current result set.
 
@@ -236,14 +207,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         self._fetch_pipeline()
         res = self._check_result_for_fetch()
-
+        
         if not size:
             size = self.arraysize
-        records = self._tx.load_rows(
-            self._pos, min(self._pos + size, res.ntuples), self._make_row
-        )
+        records = self._tx.load_rows(self._pos, min(self._pos + size, res.ntuples), self._make_row)
         self._pos += len(records)
         return records
+    
 
     def fetchall(self) -> list[Row]:
         """
@@ -256,9 +226,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         records = self._tx.load_rows(self._pos, res.ntuples, self._make_row)
         self._pos = res.ntuples
         return records
+    
 
     def __iter__(self) -> Self:
         return self
+    
 
     def __next__(self) -> Row:
         self._fetch_pipeline()
@@ -267,9 +239,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             record = self._tx.load_row(self._pos, self._make_row)
             self._pos += 1
             return record
-        raise StopIteration("no more records to return")
+        raise StopIteration('no more records to return')
+    
 
-    def scroll(self, value: int, mode: str = "relative") -> None:
+    def scroll(self, value: int, mode: str='relative') -> None:
         """
         Move the cursor in the result set to a new position according to mode.
 
@@ -282,36 +255,28 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         self._fetch_pipeline()
         self._scroll(value, mode)
+    
 
     @contextmanager
-    def copy(
-        self,
-        statement: Query,
-        params: Params | None = None,
-        *,
-        writer: Writer | None = None,
-    ) -> Iterator[Copy]:
+    def copy(self, statement: Query, params: Params | None=None, *, writer: Writer | None=None) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
         """
         try:
             with self._conn.lock:
                 self._conn.wait(self._start_copy_gen(statement, params))
-
+            
             with Copy(self, writer=writer) as copy:
                 yield copy
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
-
+        
         # If a fresher result has been set on the cursor by the Copy object,
         # read its properties (especially rowcount).
         self._select_current_result(0)
+    
 
     def _fetch_pipeline(self) -> None:
-        if (
-            self._execmany_returning is not False
-            and (not self.pgresult)
-            and self._conn._pipeline
-        ):
+        if self._execmany_returning is not False and (not self.pgresult) and self._conn._pipeline:
             with self._conn.lock:
                 self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))

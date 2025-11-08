@@ -22,21 +22,22 @@ from . import pq, waiting
 from .abc import RV, AdaptContext, ConnDict, ConnParam, Params, PQGen, Query
 from .abc import QueryNoTemplate
 from ._tpc import Xid
-from .rows import Row, RowFactory, args_row, tuple_row
+from .rows import RowFactory, Row, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .cursor import Cursor
 from ._compat import Self, Template
 from ._acompat import Lock
 from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
-from ._pipeline import Pipeline
 from .generators import notifies
 from .transaction import Transaction
+from .cursor import Cursor
 from ._capabilities import capabilities
-from ._server_cursor import ServerCursor
 from ._conninfo_utils import gssapi_requested
+from ._pipeline import Pipeline
 from ._connection_base import BaseConnection, CursorRow, Notify
+from ._server_cursor import ServerCursor
+
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -52,92 +53,73 @@ INTRANS = pq.TransactionStatus.INTRANS
 
 _INTERRUPTED = KeyboardInterrupt
 
-logger = logging.getLogger("psycopg")
+logger = logging.getLogger('psycopg')
 
 
 class Connection(BaseConnection[Row]):
     """
     Wrapper for a connection to the database.
     """
-
-    __module__ = "psycopg"
-
+    
+    __module__ = 'psycopg'
+    
     cursor_factory: type[Cursor[Row]]
     server_cursor_factory: type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
     _pipeline: Pipeline | None
+    
 
-    def __init__(
-        self,
-        pgconn: PGconn,
-        row_factory: RowFactory[Row] = cast(RowFactory[Row], tuple_row),
-    ):
+    def __init__(self, pgconn: PGconn, row_factory: RowFactory[Row]=cast(RowFactory[Row], tuple_row)):
         super().__init__(pgconn)
         self.row_factory = row_factory
         self.lock = Lock()
         self.cursor_factory = Cursor
         self.server_cursor_factory = ServerCursor
+    
 
     @classmethod
-    def connect(
-        cls,
-        conninfo: str = "",
-        *,
-        autocommit: bool = False,
-        prepare_threshold: int | None = 5,
-        context: AdaptContext | None = None,
-        row_factory: RowFactory[Row] | None = None,
-        cursor_factory: type[Cursor[Row]] | None = None,
-        **kwargs: ConnParam,
-    ) -> Self:
+    def connect(cls, conninfo: str='', *, autocommit: bool=False, prepare_threshold: int | None=5, context: AdaptContext | None=None, row_factory: RowFactory[Row] | None=None, cursor_factory: type[Cursor[Row]] | None=None, **kwargs: ConnParam) -> Self:
         """
         Connect to a database server and return a new `Connection` instance.
         """
-
+        
         params = cls._get_connection_params(conninfo, **kwargs)
         timeout = timeout_from_conninfo(params)
         rv = None
         attempts = conninfo_attempts(params)
         conn_errors: list[tuple[e.Error, str]] = []
         for attempt in attempts:
-            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
-            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
-            logger.debug("connection attempt: %s", descr)
+            tdescr = (attempt.get('host'), attempt.get('port'), attempt.get('hostaddr'))
+            descr = 'host: %r, port: %r, hostaddr: %r' % tdescr
+            logger.debug('connection attempt: %s', descr)
             try:
-                conninfo = make_conninfo("", **attempt)
+                conninfo = make_conninfo('', **attempt)
                 gen = cls._connect_gen(conninfo, timeout=timeout)
                 rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL)
             except e.Error as ex:
-                logger.debug("connection failed: %s: %s", descr, str(ex))
+                logger.debug('connection failed: %s: %s', descr, str(ex))
                 conn_errors.append((ex, descr))
             except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
             else:
-                logger.debug("connection succeeded: %s", descr)
+                logger.debug('connection succeeded: %s', descr)
                 break
-
+        
         if not rv:
             last_ex = conn_errors[-1][0]
             if len(conn_errors) == 1:
                 raise last_ex.with_traceback(None)
-
+            
             # Create a new exception with the same type as the last one, containing
             # all attempt errors while preserving backward compatibility.
             lines = [str(last_ex)]
-            lines.append("Multiple connection attempts failed. All failures were:")
-            lines.extend((f"- {descr}: {error}" for error, descr in conn_errors))
-            raise type(last_ex)("\n".join(lines)).with_traceback(None)
-
-        if (
-            capabilities.has_used_gssapi()
-            and rv.pgconn.used_gssapi
-            and (not gssapi_requested(params))
-        ):
-            warnings.warn(
-                "the connection was obtained using the GSSAPI relying on the 'gssencmode=prefer' libpq default. The value for this default might be 'disable' instead, in certain psycopg[binary] implementations. If you wish to interact with the GSSAPI reliably please set the 'gssencmode' parameter in the connection string or the 'PGGSSENCMODE' environment variable to 'prefer' or 'require'",
-                RuntimeWarning,
-            )
-
+            lines.append('Multiple connection attempts failed. All failures were:')
+            lines.extend((f'- {descr}: {error}' for error, descr in conn_errors))
+            raise type(last_ex)('\n'.join(lines)).with_traceback(None)
+        
+        if capabilities.has_used_gssapi() and rv.pgconn.used_gssapi and (not gssapi_requested(params)):
+            warnings.warn("the connection was obtained using the GSSAPI relying on the 'gssencmode=prefer' libpq default. The value for this default might be 'disable' instead, in certain psycopg[binary] implementations. If you wish to interact with the GSSAPI reliably please set the 'gssencmode' parameter in the connection string or the 'PGGSSENCMODE' environment variable to 'prefer' or 'require'", RuntimeWarning)
+        
         rv._autocommit = bool(autocommit)
         if row_factory:
             rv.row_factory = row_factory
@@ -147,168 +129,135 @@ class Connection(BaseConnection[Row]):
             rv._adapters = AdaptersMap(context.adapters)
         rv.prepare_threshold = prepare_threshold
         return rv
+    
 
     def __enter__(self) -> Self:
         return self
+    
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         if self.closed:
             return
-
+        
         if exc_type:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
             try:
                 self.rollback()
             except Exception as exc2:
-                logger.warning("error ignored in rollback on %s: %s", self, exc2)
+                logger.warning('error ignored in rollback on %s: %s', self, exc2)
         else:
             self.commit()
-
+        
         # Close the connection only if it doesn't belong to a pool.
-        if not getattr(self, "_pool", None):
+        if not getattr(self, '_pool', None):
             self.close()
+    
 
     @classmethod
     def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> ConnDict:
         """Manipulate connection parameters before connecting."""
         return conninfo_to_dict(conninfo, **kwargs)
+    
 
     def close(self) -> None:
         """Close the database connection."""
         if self.closed:
             return
-
-        pool = getattr(self, "_pool", None)
-        if pool and getattr(pool, "close_returns", False):
+        
+        pool = getattr(self, '_pool', None)
+        if pool and getattr(pool, 'close_returns', False):
             pool.putconn(self)
             return
-
+        
         self._closed = True
-
+        
         # TODO: maybe send a cancel on close, if the connection is ACTIVE?
-
+        
         self.pgconn.finish()
+    
 
     @overload
-    def cursor(self, *, binary: bool = False) -> Cursor[Row]: ...
+    def cursor(self, *, binary: bool=False) -> Cursor[Row]:
+        ...
+    
 
     @overload
-    def cursor(
-        self, *, binary: bool = False, row_factory: RowFactory[CursorRow]
-    ) -> Cursor[CursorRow]: ...
+    def cursor(self, *, binary: bool=False, row_factory: RowFactory[CursorRow]) -> Cursor[CursorRow]:
+        ...
+    
 
     @overload
-    def cursor(
-        self,
-        name: str,
-        *,
-        binary: bool = False,
-        scrollable: bool | None = None,
-        withhold: bool = False,
-    ) -> ServerCursor[Row]: ...
+    def cursor(self, name: str, *, binary: bool=False, scrollable: bool | None=None, withhold: bool=False) -> ServerCursor[Row]:
+        ...
+    
 
     @overload
-    def cursor(
-        self,
-        name: str,
-        *,
-        binary: bool = False,
-        row_factory: RowFactory[CursorRow],
-        scrollable: bool | None = None,
-        withhold: bool = False,
-    ) -> ServerCursor[CursorRow]: ...
+    def cursor(self, name: str, *, binary: bool=False, row_factory: RowFactory[CursorRow], scrollable: bool | None=None, withhold: bool=False) -> ServerCursor[CursorRow]:
+        ...
+    
 
-    def cursor(
-        self,
-        name: str = "",
-        *,
-        binary: bool = False,
-        row_factory: RowFactory[Any] | None = None,
-        scrollable: bool | None = None,
-        withhold: bool = False,
-    ) -> Cursor[Any] | ServerCursor[Any]:
+    def cursor(self, name: str='', *, binary: bool=False, row_factory: RowFactory[Any] | None=None, scrollable: bool | None=None, withhold: bool=False) -> Cursor[Any] | ServerCursor[Any]:
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
         self._check_connection_ok()
-
+        
         if not row_factory:
             row_factory = self.row_factory
-
+        
         cur: Cursor[Any] | ServerCursor[Any]
         if name:
-            cur = self.server_cursor_factory(
-                self,
-                name=name,
-                row_factory=row_factory,
-                scrollable=scrollable,
-                withhold=withhold,
-            )
+            cur = self.server_cursor_factory(self, name=name, row_factory=row_factory, scrollable=scrollable, withhold=withhold)
         else:
             cur = self.cursor_factory(self, row_factory=row_factory)
-
+        
         if binary:
             cur.format = BINARY
-
+        
         return cur
+    
 
     @overload
-    def execute(
-        self,
-        query: QueryNoTemplate,
-        params: Params | None = None,
-        *,
-        prepare: bool | None = None,
-        binary: bool = False,
-    ) -> Cursor[Row]: ...
+    def execute(self, query: QueryNoTemplate, params: Params | None=None, *, prepare: bool | None=None, binary: bool=False) -> Cursor[Row]:
+        ...
+    
 
     @overload
-    def execute(
-        self, query: Template, *, prepare: bool | None = None, binary: bool = False
-    ) -> Cursor[Row]: ...
+    def execute(self, query: Template, *, prepare: bool | None=None, binary: bool=False) -> Cursor[Row]:
+        ...
+    
 
-    def execute(
-        self,
-        query: Query,
-        params: Params | None = None,
-        *,
-        prepare: bool | None = None,
-        binary: bool = False,
-    ) -> Cursor[Row]:
+    def execute(self, query: Query, params: Params | None=None, *, prepare: bool | None=None, binary: bool=False) -> Cursor[Row]:
         """Execute a query and return a cursor to read its results."""
         try:
             cur = self.cursor()
             if binary:
                 cur.format = BINARY
-
+            
             if isinstance(query, Template):
                 if params is not None:
-                    raise TypeError(
-                        "'execute()' with string template query doesn't support parameters"
-                    )
+                    raise TypeError("'execute()' with string template query doesn't support parameters")
                 return cur.execute(query, prepare=prepare)
             else:
                 return cur.execute(query, params, prepare=prepare)
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
+    
 
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
             self.wait(self._commit_gen())
+    
 
     def rollback(self) -> None:
         """Roll back to the start of any pending transaction."""
         with self.lock:
             self.wait(self._rollback_gen())
+    
 
-    def cancel_safe(self, *, timeout: float = 30.0) -> None:
+    def cancel_safe(self, *, timeout: float=30.0) -> None:
         """Cancel the current operation on the connection.
 
         :param timeout: raise a `~errors.CancellationTimeout` if the
@@ -326,24 +275,22 @@ class Connection(BaseConnection[Row]):
         """
         if not self._should_cancel():
             return
-
+        
         if capabilities.has_cancel_safe():
-            waiting.wait_conn(
-                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
-            )
+            waiting.wait_conn(self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL)
         else:
             self.cancel()
+    
 
-    def _try_cancel(self, *, timeout: float = 5.0) -> None:
+    def _try_cancel(self, *, timeout: float=5.0) -> None:
         try:
             self.cancel_safe(timeout=timeout)
         except Exception as ex:
-            logger.warning("query cancellation failed: %s", ex)
+            logger.warning('query cancellation failed: %s', ex)
+    
 
     @contextmanager
-    def transaction(
-        self, savepoint_name: str | None = None, force_rollback: bool = False
-    ) -> Iterator[Transaction]:
+    def transaction(self, savepoint_name: str | None=None, force_rollback: bool=False) -> Iterator[Transaction]:
         """
         Start a context block with a new transaction or nested transaction.
 
@@ -360,10 +307,9 @@ class Connection(BaseConnection[Row]):
         else:
             with tx:
                 yield tx
+    
 
-    def notifies(
-        self, *, timeout: float | None = None, stop_after: int | None = None
-    ) -> Generator[Notify]:
+    def notifies(self, *, timeout: float | None=None, stop_after: int | None=None) -> Generator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
 
@@ -381,22 +327,19 @@ class Connection(BaseConnection[Row]):
         else:
             deadline = None
             interval = _WAIT_INTERVAL
-
+        
         nreceived = 0
-
+        
         if self._notify_handlers:
-            warnings.warn(
-                "using 'notifies()' together with notifies handlers on the same connection is not reliable. Please use only one of these methods",
-                RuntimeWarning,
-            )
-
+            warnings.warn("using 'notifies()' together with notifies handlers on the same connection is not reliable. Please use only one of these methods", RuntimeWarning)
+        
         with self.lock:
             enc = self.pgconn._encoding
-
+            
             # Remove the backlog deque for the duration of this critical
             # section to avoid reporting notifies twice.
             self._notifies_backlog, d = (None, self._notifies_backlog)
-
+            
             try:
                 while True:
                     # if notifies were received when the generator was off,
@@ -412,17 +355,13 @@ class Connection(BaseConnection[Row]):
                             raise ex.with_traceback(None)
                         # Emit the notifications received.
                         for pgn in pgns:
-                            yield Notify(
-                                pgn.relname.decode(enc),
-                                pgn.extra.decode(enc),
-                                pgn.be_pid,
-                            )
+                            yield Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                             nreceived += 1
-
+                    
                     # Stop if we have received enough notifications.
                     if stop_after is not None and nreceived >= stop_after:
                         break
-
+                    
                     # Check the deadline after the loop to ensure that timeout=0
                     # polls at least once.
                     if deadline:
@@ -431,17 +370,18 @@ class Connection(BaseConnection[Row]):
                             break
             finally:
                 self._notifies_backlog = d
+    
 
     @contextmanager
     def pipeline(self) -> Iterator[Pipeline]:
         """Context manager to switch the connection into pipeline mode."""
         with self.lock:
             self._check_connection_ok()
-
+            
             if (pipeline := self._pipeline) is None:
                 # WARNING: reference loop, broken ahead.
                 pipeline = self._pipeline = Pipeline(self)
-
+        
         try:
             with pipeline:
                 yield pipeline
@@ -450,6 +390,7 @@ class Connection(BaseConnection[Row]):
                 with self.lock:
                     assert pipeline is self._pipeline
                     self._pipeline = None
+    
 
     @contextmanager
     def _pipeline_nolock(self) -> Iterator[Pipeline]:
@@ -457,7 +398,7 @@ class Connection(BaseConnection[Row]):
 
         Assume that the caller is holding the lock.
         """
-
+        
         # Currently only used internally by Cursor.executemany() in a branch
         # in which we already established that the connection has no pipeline.
         # If this changes we may relax the asserts.
@@ -471,8 +412,9 @@ class Connection(BaseConnection[Row]):
             assert pipeline.level == 0
             assert pipeline is self._pipeline
             self._pipeline = None
+    
 
-    def wait(self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL) -> RV:
+    def wait(self, gen: PQGen[RV], interval: float=_WAIT_INTERVAL) -> RV:
         """
         Consume a generator operating on the connection.
 
@@ -491,38 +433,48 @@ class Connection(BaseConnection[Row]):
                 except e.QueryCanceled:
                     pass  # as expected
             raise
+    
 
     def _set_autocommit(self, value: bool) -> None:
         self.set_autocommit(value)
+    
 
     def set_autocommit(self, value: bool) -> None:
         """Method version of the `~Connection.autocommit` setter."""
         with self.lock:
             self.wait(self._set_autocommit_gen(value))
+    
 
     def _set_isolation_level(self, value: IsolationLevel | None) -> None:
         self.set_isolation_level(value)
+    
 
     def set_isolation_level(self, value: IsolationLevel | None) -> None:
         """Method version of the `~Connection.isolation_level` setter."""
         with self.lock:
             self.wait(self._set_isolation_level_gen(value))
+    
 
     def _set_read_only(self, value: bool | None) -> None:
         self.set_read_only(value)
+    
 
     def set_read_only(self, value: bool | None) -> None:
         """Method version of the `~Connection.read_only` setter."""
         with self.lock:
             self.wait(self._set_read_only_gen(value))
+    
 
     def _set_deferrable(self, value: bool | None) -> None:
         self.set_deferrable(value)
+    
 
     def set_deferrable(self, value: bool | None) -> None:
         """Method version of the `~Connection.deferrable` setter."""
         with self.lock:
             self.wait(self._set_deferrable_gen(value))
+    
+    
 
     def tpc_begin(self, xid: Xid | str) -> None:
         """
@@ -530,6 +482,7 @@ class Connection(BaseConnection[Row]):
         """
         with self.lock:
             self.wait(self._tpc_begin_gen(xid))
+    
 
     def tpc_prepare(self) -> None:
         """
@@ -540,20 +493,23 @@ class Connection(BaseConnection[Row]):
                 self.wait(self._tpc_prepare_gen())
         except e.ObjectNotInPrerequisiteState as ex:
             raise e.NotSupportedError(str(ex)) from None
+    
 
-    def tpc_commit(self, xid: Xid | str | None = None) -> None:
+    def tpc_commit(self, xid: Xid | str | None=None) -> None:
         """
         Commit a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("COMMIT", xid))
+            self.wait(self._tpc_finish_gen('COMMIT', xid))
+    
 
-    def tpc_rollback(self, xid: Xid | str | None = None) -> None:
+    def tpc_rollback(self, xid: Xid | str | None=None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("ROLLBACK", xid))
+            self.wait(self._tpc_finish_gen('ROLLBACK', xid))
+    
 
     def tpc_recover(self) -> list[Xid]:
         self._check_tpc()
@@ -561,8 +517,8 @@ class Connection(BaseConnection[Row]):
         with self.cursor(row_factory=args_row(Xid._from_record)) as cur:
             cur.execute(Xid._get_recover_query())
             res = cur.fetchall()
-
+        
         if status == IDLE and self.info.transaction_status == INTRANS:
             self.rollback()
-
+        
         return res

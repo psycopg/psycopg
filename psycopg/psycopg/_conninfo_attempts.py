@@ -17,7 +17,8 @@ from . import errors as e
 from .abc import ConnDict, ConnMapping
 from ._conninfo_utils import get_param, get_param_def, is_ip_address, split_attempts
 
-logger = logging.getLogger("psycopg")
+
+logger = logging.getLogger('psycopg')
 
 
 def conninfo_attempts(params: ConnMapping) -> list[ConnDict]:
@@ -35,35 +36,29 @@ def conninfo_attempts(params: ConnMapping) -> list[ConnDict]:
     """
     last_exc = None
     attempts = []
-    if prefer_standby := (
-        get_param(params, "target_session_attrs") == "prefer-standby"
-    ):
-        params = {k: v for k, v in params.items() if k != "target_session_attrs"}
-
+    if (prefer_standby := (get_param(params, 'target_session_attrs') == 'prefer-standby')):
+        params = {k: v for k, v in params.items() if k != 'target_session_attrs'}
+    
     for attempt in split_attempts(params):
         try:
             attempts.extend(_resolve_hostnames(attempt))
         except OSError as ex:
-            last_exc = e.OperationalError(
-                f"failed to resolve host {attempt.get('host')!r}: {ex}"
-            )
-            logger.debug("%s", last_exc)
-
+            logger.debug('failed to resolve host %r: %s', attempt.get('host'), ex)
+            last_exc = ex
+    
     if not attempts:
         assert last_exc
         # We couldn't resolve anything
-        raise last_exc
-
-    if get_param(params, "load_balance_hosts") == "random":
+        raise e.OperationalError(str(last_exc))
+    
+    if get_param(params, 'load_balance_hosts') == 'random':
         shuffle(attempts)
-
+    
     # Order matters: first try all the load-balanced host in standby mode,
     # then allow primary
     if prefer_standby:
-        attempts = [
-            {**a, "target_session_attrs": "standby"} for a in attempts
-        ] + attempts
-
+        attempts = [{**a, 'target_session_attrs': 'standby'} for a in attempts] + attempts
+    
     return attempts
 
 
@@ -82,25 +77,23 @@ def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
     :return: A list of attempts to make (to include the case of a hostname
         resolving to more than one IP).
     """
-    host = get_param(params, "host")
-    if not host or host.startswith("/") or host[1:2] == ":":
+    host = get_param(params, 'host')
+    if not host or host.startswith('/') or host[1:2] == ':':
         # Local path, or no host to resolve
         return [params]
-
-    if get_param(params, "hostaddr"):
+    
+    if get_param(params, 'hostaddr'):
         # Already resolved
         return [params]
-
+    
     if is_ip_address(host):
         # If the host is already an ip address don't try to resolve it
-        return [{**params, "hostaddr": host}]
-
-    if not (port := get_param(params, "port")):
-        port_def = get_param_def("port")
-        port = port_def and port_def.compiled or "5432"
-
-    ans = socket.getaddrinfo(
-        host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
-    )
-
-    return [{**params, "hostaddr": item[4][0]} for item in ans]
+        return [{**params, 'hostaddr': host}]
+    
+    if not (port := get_param(params, 'port')):
+        port_def = get_param_def('port')
+        port = port_def and port_def.compiled or '5432'
+    
+    ans = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM)
+    
+    return [{**params, 'hostaddr': item[4][0]} for item in ans]

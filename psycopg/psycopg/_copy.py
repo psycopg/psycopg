@@ -32,7 +32,7 @@ COPY_OUT = pq.ExecStatus.COPY_OUT
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 
-class Copy(BaseCopy["Connection[Any]"]):
+class Copy(BaseCopy['Connection[Any]']):
     """Manage an asynchronous :sql:`COPY` operation.
 
     :param cursor: the cursor where the operation is performed.
@@ -46,43 +46,37 @@ class Copy(BaseCopy["Connection[Any]"]):
     no operation is performed on the cursor, such as when using ``writer=``\\
     `~psycopg.copy.FileWriter`.
     """
-
-    __module__ = "psycopg"
-
+    
+    __module__ = 'psycopg'
+    
     writer: Writer
+    
 
-    def __init__(
-        self,
-        cursor: Cursor[Any],
-        *,
-        binary: bool | None = None,
-        writer: Writer | None = None,
-    ):
+    def __init__(self, cursor: Cursor[Any], *, binary: bool | None=None, writer: Writer | None=None):
         super().__init__(cursor, binary=binary)
         if not writer:
             writer = LibpqWriter(cursor)
-
+        
         self.writer = writer
         self._write = writer.write
+    
 
     def __enter__(self) -> Self:
         self._enter()
         return self
+    
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.finish(exc_val)
-
+    
     # End user sync interface
+    
 
     def __iter__(self) -> Iterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
-        while data := self.read():
+        while (data := self.read()):
             yield data
+    
 
     def read(self) -> Buffer:
         """
@@ -91,6 +85,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         Return an empty string when the data is finished.
         """
         return self.connection.wait(self._read_gen())
+    
 
     def rows(self) -> Iterator[tuple[Any, ...]]:
         """
@@ -101,6 +96,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         """
         while (record := self.read_row()) is not None:
             yield record
+    
 
     def read_row(self) -> tuple[Any, ...] | None:
         """
@@ -112,6 +108,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         bytes, unless data types are specified using `set_types()`.
         """
         return self.connection.wait(self._read_row_gen())
+    
 
     def write(self, buffer: Buffer | str) -> None:
         """
@@ -120,13 +117,15 @@ class Copy(BaseCopy["Connection[Any]"]):
         If the :sql:`COPY` is in binary format `!buffer` must be `!bytes`. In
         text mode it can be either `!bytes` or `!str`.
         """
-        if data := self.formatter.write(buffer):
+        if (data := self.formatter.write(buffer)):
             self._write(data)
+    
 
     def write_row(self, row: Sequence[Any]) -> None:
         """Write a record to a table after a :sql:`COPY FROM` operation."""
-        if data := self.formatter.write_row(row):
+        if (data := self.formatter.write_row(row)):
             self._write(data)
+    
 
     def finish(self, exc: BaseException | None) -> None:
         """Terminate the copy operation and free the resources allocated.
@@ -137,7 +136,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         """
         if self._direction == COPY_IN:
             if not exc:
-                if data := self.formatter.end():
+                if (data := self.formatter.end()):
                     self._write(data)
             self.writer.finish(exc)
             self._finished = True
@@ -160,13 +159,15 @@ class Writer(ABC):
     """
     A class to write copy data somewhere (for async connections).
     """
+    
 
     @abstractmethod
     def write(self, data: Buffer) -> None:
         """Write some data to destination."""
         ...
+    
 
-    def finish(self, exc: BaseException | None = None) -> None:
+    def finish(self, exc: BaseException | None=None) -> None:
         """
         Called when write operations are finished.
 
@@ -179,13 +180,15 @@ class LibpqWriter(Writer):
     """
     An `Writer` to write copy data to a Postgres database.
     """
-
-    __module__ = "psycopg.copy"
+    
+    __module__ = 'psycopg.copy'
+    
 
     def __init__(self, cursor: Cursor[Any]):
         self.cursor = cursor
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
+    
 
     def write(self, data: Buffer) -> None:
         if len(data) <= MAX_BUFFER_SIZE:
@@ -196,20 +199,17 @@ class LibpqWriter(Writer):
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
-                self.connection.wait(
-                    copy_to(
-                        self._pgconn, data[i : i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH
-                    )
-                )
+                self.connection.wait(copy_to(self._pgconn, data[i:i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH))
+    
 
-    def finish(self, exc: BaseException | None = None) -> None:
+    def finish(self, exc: BaseException | None=None) -> None:
         bmsg: bytes | None
         if exc:
-            msg = f"error from Python: {type(exc).__qualname__} - {exc}"
-            bmsg = msg.encode(self._pgconn._encoding, "replace")
+            msg = f'error from Python: {type(exc).__qualname__} - {exc}'
+            bmsg = msg.encode(self._pgconn._encoding, 'replace')
         else:
             bmsg = None
-
+        
         try:
             res = self.connection.wait(copy_end(self._pgconn, bmsg))
         # The QueryCanceled is expected if we sent an exception message to
@@ -230,15 +230,17 @@ class QueuedLibpqWriter(LibpqWriter):
     formatting messages, while a worker thread can be IO-bound waiting to write
     on the connection.
     """
-
-    __module__ = "psycopg.copy"
+    
+    __module__ = 'psycopg.copy'
+    
 
     def __init__(self, cursor: Cursor[Any]):
         super().__init__(cursor)
-
+        
         self._queue: Queue[Buffer] = Queue(maxsize=QUEUE_SIZE)
         self._worker: Worker | None = None
         self._worker_error: BaseException | None = None
+    
 
     def worker(self) -> None:
         """Push data to the server when available from the copy queue.
@@ -249,21 +251,22 @@ class QueuedLibpqWriter(LibpqWriter):
         The function is designed to be run in a separate task.
         """
         try:
-            while data := self._queue.get():
+            while (data := self._queue.get()):
                 self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
         except BaseException as ex:
             # Propagate the error to the main thread.
             self._worker_error = ex
+    
 
     def write(self, data: Buffer) -> None:
         if not self._worker:
             # warning: reference loop, broken by _write_end
             self._worker = spawn(self.worker)
-
+        
         # If the worker thread raies an exception, re-raise it to the caller.
         if self._worker_error:
             raise self._worker_error
-
+        
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller
             # bits, so don't make a copy.
@@ -272,17 +275,18 @@ class QueuedLibpqWriter(LibpqWriter):
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
-                self._queue.put(data[i : i + MAX_BUFFER_SIZE])
+                self._queue.put(data[i:i + MAX_BUFFER_SIZE])
+    
 
-    def finish(self, exc: BaseException | None = None) -> None:
-        self._queue.put(b"")
-
+    def finish(self, exc: BaseException | None=None) -> None:
+        self._queue.put(b'')
+        
         if self._worker:
             gather(self._worker)
             self._worker = None  # break reference loops if any
-
+        
         # Check if the worker thread raised any exception before terminating.
         if self._worker_error:
             raise self._worker_error
-
+        
         super().finish(exc)
