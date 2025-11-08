@@ -9,7 +9,7 @@ import psycopg.crdb
 from psycopg import errors as e
 from psycopg.crdb import CrdbConnection
 
-from ..acompat import sleep, gather, spawn
+from ..acompat import gather, sleep, spawn
 
 pytestmark = [pytest.mark.crdb]
 
@@ -22,7 +22,7 @@ def test_is_crdb(conn):
 def test_connect(dsn):
     with CrdbConnection.connect(dsn) as conn:
         assert isinstance(conn, CrdbConnection)
-    
+
     with psycopg.crdb.connect(dsn) as conn:
         assert isinstance(conn, CrdbConnection)
 
@@ -30,13 +30,13 @@ def test_connect(dsn):
 def test_xid(dsn):
     with CrdbConnection.connect(dsn) as conn:
         with pytest.raises(e.NotSupportedError):
-            conn.xid(1, 'gtrid', 'bqual')
+            conn.xid(1, "gtrid", "bqual")
 
 
 def test_tpc_begin(dsn):
     with CrdbConnection.connect(dsn) as conn:
         with pytest.raises(e.NotSupportedError):
-            conn.tpc_begin('foo')
+            conn.tpc_begin("foo")
 
 
 def test_tpc_recover(dsn):
@@ -48,20 +48,20 @@ def test_tpc_recover(dsn):
 @pytest.mark.slow
 def test_broken_connection(conn):
     cur = conn.cursor()
-    cur.execute('select session_id from [show session_id]')
-    session_id, = cur.fetchone()
+    cur.execute("select session_id from [show session_id]")
+    (session_id,) = cur.fetchone()
     with pytest.raises(psycopg.DatabaseError):
-        cur.execute('cancel session %s', [session_id])
+        cur.execute("cancel session %s", [session_id])
     assert conn.closed
 
 
 @pytest.mark.slow
 def test_broken(conn):
-    cur = conn.execute('show session_id')
-    session_id, = cur.fetchone()
+    cur = conn.execute("show session_id")
+    (session_id,) = cur.fetchone()
     with pytest.raises(psycopg.OperationalError):
-        conn.execute('cancel session %s', [session_id])
-    
+        conn.execute("cancel session %s", [session_id])
+
     assert conn.closed
     assert conn.broken
     conn.close()
@@ -74,19 +74,18 @@ def test_broken(conn):
 def test_identify_closure(conn_cls, dsn):
     with conn_cls.connect(dsn, autocommit=True) as conn:
         with conn_cls.connect(dsn, autocommit=True) as conn2:
-            cur = conn.execute('show session_id')
-            session_id, = cur.fetchone()
-            
+            cur = conn.execute("show session_id")
+            (session_id,) = cur.fetchone()
 
             def closer():
                 sleep(0.2)
-                conn2.execute('cancel session %s', [session_id])
-            
+                conn2.execute("cancel session %s", [session_id])
+
             t = spawn(closer)
             t0 = time.time()
             try:
                 with pytest.raises(psycopg.OperationalError):
-                    conn.execute('select pg_sleep(3.0)')
+                    conn.execute("select pg_sleep(3.0)")
                 dt = time.time() - t0
                 # CRDB seems to take not less than 1s
                 assert 0.2 < dt < 2
@@ -94,11 +93,13 @@ def test_identify_closure(conn_cls, dsn):
                 gather(t)
 
 
-@pytest.mark.crdb('> 24.0', reason='autocommit_before_ddl not available')
+@pytest.mark.crdb("> 24.0", reason="autocommit_before_ddl not available")
 def test_unknown_portal(conn):
     # See #1009. The test fails with CRDB v25.1.2 with autocommit before DDL enabled.
-    conn.execute('set autocommit_before_ddl=on')
+    conn.execute("set autocommit_before_ddl=on")
     conn.commit()
     for i in range(10):
-        conn.execute('drop table if exists integer_table')
-        conn.execute('create table integer_table (id serial primary key, integer_data bigint)')
+        conn.execute("drop table if exists integer_table")
+        conn.execute(
+            "create table integer_table (id serial primary key, integer_data bigint)"
+        )

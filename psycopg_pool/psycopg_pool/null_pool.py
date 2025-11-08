@@ -15,26 +15,63 @@ from typing import cast
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
-from .abc import CT, ConnectFailedCB, ConnectionCB, ConninfoParam
-from .abc import KwargsParam
+from .abc import CT, ConnectFailedCB, ConnectionCB, ConninfoParam, KwargsParam
+from .pool import AddConnection, ConnectionPool
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import Event
-from .pool import AddConnection, ConnectionPool
 from .base_null_pool import _BaseNullConnectionPool
 
-logger = logging.getLogger('psycopg.pool')
+logger = logging.getLogger("psycopg.pool")
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
-    def __init__(self, conninfo: ConninfoParam='', *, connection_class: type[CT]=cast(type[CT], Connection), kwargs: KwargsParam | None=None, min_size: int=0, max_size: int | None=None, open: bool | None=None, configure: ConnectionCB[CT] | None=None, check: ConnectionCB[CT] | None=None, reset: ConnectionCB[CT] | None=None, name: str | None=None, close_returns: bool=False, timeout: float=30.0, max_waiting: int=0, max_lifetime: float=60 * 60.0, max_idle: float=10 * 60.0, reconnect_timeout: float=5 * 60.0, reconnect_failed: ConnectFailedCB | None=None, num_workers: int=3):  # Note: min_size default value changed to 0.
-        
-        # close_returns=True makes no sense
-        super().__init__(conninfo, open=open, connection_class=connection_class, check=check, configure=configure, reset=reset, kwargs=kwargs, min_size=min_size, max_size=max_size, name=name, close_returns=False, timeout=timeout, max_waiting=max_waiting, max_lifetime=max_lifetime, max_idle=max_idle, reconnect_timeout=reconnect_timeout, num_workers=num_workers)
-    
+    def __init__(
+        self,
+        conninfo: ConninfoParam = "",
+        *,
+        connection_class: type[CT] = cast(type[CT], Connection),
+        kwargs: KwargsParam | None = None,
+        min_size: int = 0,
+        max_size: int | None = None,
+        open: bool | None = None,
+        configure: ConnectionCB[CT] | None = None,
+        check: ConnectionCB[CT] | None = None,
+        reset: ConnectionCB[CT] | None = None,
+        name: str | None = None,
+        close_returns: bool = False,
+        timeout: float = 30.0,
+        max_waiting: int = 0,
+        max_lifetime: float = 60 * 60.0,
+        max_idle: float = 10 * 60.0,
+        reconnect_timeout: float = 5 * 60.0,
+        reconnect_failed: ConnectFailedCB | None = None,
+        num_workers: int = 3,
+    ):  # Note: min_size default value changed to 0.
 
-    def wait(self, timeout: float=30.0) -> None:
+        # close_returns=True makes no sense
+        super().__init__(
+            conninfo,
+            open=open,
+            connection_class=connection_class,
+            check=check,
+            configure=configure,
+            reset=reset,
+            kwargs=kwargs,
+            min_size=min_size,
+            max_size=max_size,
+            name=name,
+            close_returns=False,
+            timeout=timeout,
+            max_waiting=max_waiting,
+            max_lifetime=max_lifetime,
+            max_idle=max_idle,
+            reconnect_timeout=reconnect_timeout,
+            num_workers=num_workers,
+        )
+
+    def wait(self, timeout: float = 30.0) -> None:
         """
         Create a connection for test.
 
@@ -46,28 +83,27 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         sec.
         """
         self._check_open_getconn()
-        
+
         with self._lock:
             assert not self._pool_full_event
             self._pool_full_event = Event()
-        
-        logger.info('waiting for pool %r initialization', self.name)
+
+        logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))
         if not self._pool_full_event.wait(timeout):
             self.close()  # stop all the tasks
-            raise PoolTimeout(f'pool initialization incomplete after {timeout} sec')
-        
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
+
         with self._lock:
             assert self._pool_full_event
             self._pool_full_event = None
-        
-        logger.info('pool %r is ready to use', self.name)
-    
+
+        logger.info("pool %r is ready to use", self.name)
 
     def _get_ready_connection(self, timeout: float | None) -> CT | None:
         if timeout is not None and timeout <= 0.0:
             raise PoolTimeout()
-        
+
         conn: CT | None = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client
@@ -78,9 +114,11 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             self._nconns += 1
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
-            raise TooManyRequests(f'the pool {self.name!r} has already' + f' {len(self._waiting)} requests waiting')
+            raise TooManyRequests(
+                f"the pool {self.name!r} has already"
+                + f" {len(self._waiting)} requests waiting"
+            )
         return conn
-    
 
     def _maybe_close_connection(self, conn: CT) -> bool:
         # Close the connection if no client is waiting for it, or if the pool
@@ -89,39 +127,38 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         with self._lock:
             if not self._closed and self._waiting:
                 return False
-            
+
             conn._pool = None
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
             conn.close()
             self._nconns -= 1
             return True
-    
 
-    def resize(self, min_size: int, max_size: int | None=None) -> None:
+    def resize(self, min_size: int, max_size: int | None = None) -> None:
         """Change the size of the pool during runtime.
 
         Only *max_size* can be changed; *min_size* must remain 0.
         """
         min_size, max_size = self._check_size(min_size, max_size)
-        
-        logger.info('resizing %r to min_size=%s max_size=%s', self.name, min_size, max_size)
+
+        logger.info(
+            "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
+        )
         with self._lock:
             self._min_size = min_size
             self._max_size = max_size
-    
 
     def check(self) -> None:
         """No-op, as the pool doesn't have connections in its state."""
         pass
-    
 
     def _add_to_pool(self, conn: CT) -> None:
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
         # Also disable the warning for open connection in conn.__del__
         conn._pool = None
-        
+
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.
         with self._lock:

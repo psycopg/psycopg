@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from ..acompat import sleep, gather, spawn
+from ..acompat import gather, sleep, spawn
 
 try:
     from psycopg_pool.sched import Scheduler
@@ -23,11 +23,10 @@ pytestmark = [pytest.mark.timing]
 def test_sched():
     s = Scheduler()
     results = []
-    
 
     def worker(i):
         results.append((i, time()))
-    
+
     t0 = time()
     s.enter(0.1, partial(worker, 1))
     s.enter(0.4, partial(worker, 3))
@@ -45,23 +44,22 @@ def test_sched():
 def test_sched_task():
     s = Scheduler()
     t = spawn(s.run)
-    
+
     results = []
-    
 
     def worker(i):
         results.append((i, time()))
-    
+
     t0 = time()
     s.enter(0.1, partial(worker, 1))
     s.enter(0.4, partial(worker, 3))
     s.enter(0.3, None)
     s.enter(0.2, partial(worker, 2))
-    
+
     gather(t)
     t1 = time()
     assert t1 - t0 == pytest.approx(0.3, 0.2)
-    
+
     assert len(results) == 2
     assert results[0][0] == 1
     assert results[0][1] - t0 == pytest.approx(0.1, 0.2)
@@ -71,52 +69,50 @@ def test_sched_task():
 
 @pytest.mark.slow
 def test_sched_error(caplog):
-    caplog.set_level(logging.WARNING, logger='psycopg')
+    caplog.set_level(logging.WARNING, logger="psycopg")
     s = Scheduler()
     t = spawn(s.run)
-    
+
     results = []
-    
 
     def worker(i):
         results.append((i, time()))
-    
 
     def error():
         1 / 0
-    
+
     t0 = time()
     s.enter(0.1, partial(worker, 1))
     s.enter(0.4, None)
     s.enter(0.3, partial(worker, 2))
     s.enter(0.2, error)
-    
+
     gather(t)
     t1 = time()
     assert t1 - t0 == pytest.approx(0.4, 0.1)
-    
+
     assert len(results) == 2
     assert results[0][0] == 1
     assert results[0][1] - t0 == pytest.approx(0.1, 0.1)
     assert results[1][0] == 2
     assert results[1][1] - t0 == pytest.approx(0.3, 0.1)
-    
+
     assert len(caplog.records) == 1
-    assert 'ZeroDivisionError' in caplog.records[0].message
+    assert "ZeroDivisionError" in caplog.records[0].message
 
 
 @pytest.mark.slow
 def test_empty_queue_timeout():
     s = Scheduler()
-    
+
     with timed_wait(s) as times:
         s.EMPTY_QUEUE_TIMEOUT = 0.2
-        
+
         t = spawn(s.run)
         sleep(0.5)
         s.enter(0.5, None)
         gather(t)
-    
+
     for got, want in zip(times, [0.2, 0.4, 0.5, 1.0]):
         assert got == pytest.approx(want, 0.2), times
 
@@ -124,17 +120,17 @@ def test_empty_queue_timeout():
 @pytest.mark.slow
 def test_first_task_rescheduling():
     s = Scheduler()
-    
+
     with timed_wait(s) as times:
         s.EMPTY_QUEUE_TIMEOUT = 0.1
-        
+
         s.enter(0.4, noop)
         t = spawn(s.run)
         s.enter(0.6, None)  # this task doesn't trigger a reschedule
         sleep(0.1)
         s.enter(0.1, noop)  # this triggers a reschedule
         gather(t)
-    
+
     for got, want in zip(times, [0.1, 0.2, 0.4, 0.6, 0.6]):
         assert got == pytest.approx(want, 0.2), times
 
@@ -148,23 +144,22 @@ def timed_wait(s):
     """
     t0 = time()
     times = []
-    
+
     wait_orig = s._event.wait
-    
 
     def wait_logging(timeout=None):
         args = (timeout,)
-        
+
         try:
             rv = wait_orig(*args)
         finally:
             times.append(time() - t0)
         return rv
-    
-    setattr(s._event, 'wait', wait_logging)
-    
+
+    setattr(s._event, "wait", wait_logging)
+
     yield times
-    
+
     times.append(time() - t0)
 
 

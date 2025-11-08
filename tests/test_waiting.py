@@ -13,42 +13,55 @@ from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
 from psycopg.conninfo import make_conninfo
 
-from .acompat import Event, sleep, gather, spawn
+from .acompat import Event, gather, sleep, spawn
 
-skip_if_not_linux = pytest.mark.skipif(not sys.platform.startswith('linux'), reason='non-Linux platform')
+skip_if_not_linux = pytest.mark.skipif(
+    not sys.platform.startswith("linux"), reason="non-Linux platform"
+)
 
-waitfns = ['wait', 'wait_selector', pytest.param('wait_select', marks=pytest.mark.skipif("not hasattr(select, 'select')")), pytest.param('wait_epoll', marks=pytest.mark.skipif("not hasattr(select, 'epoll')")), pytest.param('wait_poll', marks=pytest.mark.skipif("not hasattr(select, 'poll')")), pytest.param('wait_c', marks=pytest.mark.skipif('not psycopg._cmodule._psycopg'))]
+waitfns = [
+    "wait",
+    "wait_selector",
+    pytest.param(
+        "wait_select", marks=pytest.mark.skipif("not hasattr(select, 'select')")
+    ),
+    pytest.param(
+        "wait_epoll", marks=pytest.mark.skipif("not hasattr(select, 'epoll')")
+    ),
+    pytest.param("wait_poll", marks=pytest.mark.skipif("not hasattr(select, 'poll')")),
+    pytest.param("wait_c", marks=pytest.mark.skipif("not psycopg._cmodule._psycopg")),
+]
 
-events = ['R', 'W', 'RW']
+events = ["R", "W", "RW"]
 intervals = [0, 0.2, 2]
 
 
 def tgen(wait):
     """A generator waiting for a specific event and returning what waited on."""
-    r = (yield wait)
+    r = yield wait
     return r
 
 
-@pytest.mark.parametrize('interval', intervals)
+@pytest.mark.parametrize("interval", intervals)
 def test_wait_conn(dsn, interval):
     gen = generators.connect(dsn)
     conn = waiting.wait_conn(gen, interval)
     assert conn.status == ConnStatus.OK
 
 
-@pytest.mark.crdb('skip', reason='can connect to any db name')
+@pytest.mark.crdb("skip", reason="can connect to any db name")
 def test_wait_conn_bad(dsn):
-    gen = generators.connect(make_conninfo(dsn, dbname='nosuchdb'))
+    gen = generators.connect(make_conninfo(dsn, dbname="nosuchdb"))
     with pytest.raises(psycopg.OperationalError):
         waiting.wait_conn(gen)
 
 
 @pytest.mark.slow
 @pytest.mark.skipif("sys.platform != 'linux'")
-@pytest.mark.parametrize('interval', [i for i in intervals if i > 0])
-@pytest.mark.parametrize('ready', ['R', 'NONE'])
-@pytest.mark.parametrize('event', ['R', 'RW'])
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("interval", [i for i in intervals if i > 0])
+@pytest.mark.parametrize("ready", ["R", "NONE"])
+@pytest.mark.parametrize("event", ["R", "RW"])
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_r(waitfn, event, ready, interval, request):
     # Test that wait functions handle waiting and returning state correctly
     # This test doesn't work on macOS for some internal race condition betwwn
@@ -57,10 +70,9 @@ def test_wait_r(waitfn, event, ready, interval, request):
     wait = getattr(waiting.Wait, event)
     ready = getattr(waiting.Ready, ready)
     delay = interval / 2
-    
+
     port = None
     ev = Event()
-    
 
     def writer():
         # Wake up the socket, or let it time out, according to the expected `ready`.
@@ -68,15 +80,15 @@ def test_wait_r(waitfn, event, ready, interval, request):
         assert port
         sleep(delay)
         if ready == waiting.Ready.R:
-            with socket.create_connection(('127.0.0.1', port)):
+            with socket.create_connection(("127.0.0.1", port)):
                 pass
-    
+
     tasks = [spawn(writer)]
-    
+
     try:
         with socket.socket() as s:
             # Make a listening socket
-            s.bind(('127.0.0.1', 0))
+            s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
             s.listen(10)
             s.setblocking(False)
@@ -97,9 +109,9 @@ def test_wait_r(waitfn, event, ready, interval, request):
 
 @pytest.mark.slow
 @pytest.mark.skipif("sys.platform == 'linux'")
-@pytest.mark.parametrize('interval', [2])
-@pytest.mark.parametrize('ready', ['R', 'NONE'])
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("interval", [2])
+@pytest.mark.parametrize("ready", ["R", "NONE"])
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_r_no_linux(waitfn, ready, interval, request):
     # A version of test_wait_r that works on macOS too, but doesn't allow to
     # test for the RW wait (because it seems that the sockets returned by
@@ -108,9 +120,8 @@ def test_wait_r_no_linux(waitfn, ready, interval, request):
     wait = waiting.Wait.R
     ready = getattr(waiting.Ready, ready)
     delay = interval / 2
-    
+
     ev = Event()
-    
 
     def writer():
         # Wake up the socket, or let it time out, according to the expected `ready`.
@@ -119,7 +130,7 @@ def test_wait_r_no_linux(waitfn, ready, interval, request):
         if ready == waiting.Ready.R:
             for att in range(10):
                 try:
-                    ws.sendall(b'hi')
+                    ws.sendall(b"hi")
                     ws.close()
                 except Exception as ex:
                     the_ex = ex
@@ -127,8 +138,10 @@ def test_wait_r_no_linux(waitfn, ready, interval, request):
                 else:
                     break
             else:
-                pytest.fail(f'failed after many attempts. Socket: {ws}, Last error: {the_ex}')
-    
+                pytest.fail(
+                    f"failed after many attempts. Socket: {ws}, Last error: {the_ex}"
+                )
+
     tasks = [spawn(writer)]
     try:
         rs, ws = socket.socketpair()
@@ -151,43 +164,41 @@ def test_wait_r_no_linux(waitfn, ready, interval, request):
         ws.close()
 
 
-@pytest.mark.parametrize('ready', ['R', 'NONE'])
-@pytest.mark.parametrize('event', ['R', 'RW'])
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("ready", ["R", "NONE"])
+@pytest.mark.parametrize("event", ["R", "RW"])
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_r_nowait(waitfn, event, ready, request):
     # Test that wait functions handle a poll when called with no timeout
     waitfn = getattr(waiting, waitfn)
     wait = getattr(waiting.Wait, event)
     ready = getattr(waiting.Ready, ready)
-    
+
     port = None
     ev1 = Event()
     ev2 = Event()
     ev3 = Event()
-    
 
     def writer():
         ev1.wait()
         assert port
         if ready == waiting.Ready.R:
-            with socket.create_connection(('127.0.0.1', port)):
+            with socket.create_connection(("127.0.0.1", port)):
                 ev2.set()
         else:
             ev2.set()
-    
 
     def unblocker():
         # If test doesn't pass, wake up the socket again to avoid hanging forever
         if not ev3.wait(0.5):
             assert port
-            with socket.create_connection(('127.0.0.1', port)):
+            with socket.create_connection(("127.0.0.1", port)):
                 pass
-    
+
     t1 = spawn(writer)
     t2 = spawn(unblocker)
     try:
         with socket.socket() as s:
-            s.bind(('127.0.0.1', 0))
+            s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
             s.listen(10)
             s.setblocking(False)
@@ -206,13 +217,13 @@ def test_wait_r_nowait(waitfn, event, ready, request):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('event', ['W', 'RW'])
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("event", ["W", "RW"])
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_w(waitfn, event, request):
     # Test that wait functions handle waiting and returning state correctly
     waitfn = getattr(waiting, waitfn)
     wait = getattr(waiting.Wait, event)
-    
+
     rs, ws = socket.socketpair()  # the w socket is already ready for writing
     rs.setblocking(False)
     ws.setblocking(False)
@@ -226,22 +237,22 @@ def test_wait_w(waitfn, event, request):
             assert dt < 0.1
 
 
-@pytest.mark.parametrize('waitfn', waitfns)
-@pytest.mark.parametrize('interval', intervals)
+@pytest.mark.parametrize("waitfn", waitfns)
+@pytest.mark.parametrize("interval", intervals)
 def test_wait(pgconn, waitfn, interval):
     waitfn = getattr(waiting, waitfn)
-    
-    pgconn.send_query(b'select 1')
+
+    pgconn.send_query(b"select 1")
     gen = generators.execute(pgconn)
-    res, = waitfn(gen, pgconn.socket, interval)
+    (res,) = waitfn(gen, pgconn.socket, interval)
     assert res.status == ExecStatus.TUPLES_OK
 
 
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_bad(pgconn, waitfn):
     waitfn = getattr(waiting, waitfn)
-    
-    pgconn.send_query(b'select 1')
+
+    pgconn.send_query(b"select 1")
     gen = generators.execute(pgconn)
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
@@ -250,26 +261,25 @@ def test_wait_bad(pgconn, waitfn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_timeout(pgconn, waitfn):
     waitfn = getattr(waiting, waitfn)
-    
-    pgconn.send_query(b'select pg_sleep(0.5)')
+
+    pgconn.send_query(b"select pg_sleep(0.5)")
     gen = generators.execute(pgconn)
-    
+
     ts = [time.time()]
-    
 
     def gen_wrapper():
         try:
             for x in gen:
-                res = (yield x)
+                res = yield x
                 ts.append(time.time())
                 gen.send(res)
         except StopIteration as ex:
             return ex.value
-    
-    res, = waitfn(gen_wrapper(), pgconn.socket, interval=0.1)
+
+    (res,) = waitfn(gen_wrapper(), pgconn.socket, interval=0.1)
     assert res.status == ExecStatus.TUPLES_OK
     ds = [t1 - t0 for t0, t1 in zip(ts[:-1], ts[1:])]
     assert len(ds) >= 5
@@ -278,36 +288,37 @@ def test_wait_timeout(pgconn, waitfn):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('waitfns', waitfns)
+@pytest.mark.parametrize("waitfns", waitfns)
 def test_wait_no_busy_loop(pgconn, waitfns):
     waitfn = getattr(waiting, waitfns)
-    
-    pgconn.send_query(b'select pg_sleep(1)')
+
+    pgconn.send_query(b"select pg_sleep(1)")
     gen = generators.execute(pgconn)
     ncalls = 0
-    
 
     def gen_wrapper():
         nonlocal ncalls
         try:
             for x in gen:
-                res = (yield x)
+                res = yield x
                 ncalls += 1
                 gen.send(res)
         except StopIteration as ex:
             return ex.value
-    
-    res, = waitfn(gen_wrapper(), pgconn.socket, 0.3)
+
+    (res,) = waitfn(gen_wrapper(), pgconn.socket, 0.3)
     assert res.status == ExecStatus.TUPLES_OK
     assert ncalls < 5
 
 
 @pytest.mark.slow
-@pytest.mark.skipif("sys.platform == 'win32'", reason='win32 works ok, but FDs are mysterious')
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.skipif(
+    "sys.platform == 'win32'", reason="win32 works ok, but FDs are mysterious"
+)
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_large_fd(dsn, waitfn):
     waitfn = getattr(waiting, waitfn)
-    
+
     files = []
     try:
         try:
@@ -315,17 +326,17 @@ def test_wait_large_fd(dsn, waitfn):
                 files.append(open(__file__))
         except OSError:
             pytest.skip("can't open the number of files needed for the test")
-        
+
         pgconn = psycopg.pq.PGconn.connect(dsn.encode())
         try:
             assert pgconn.socket > 1024
-            pgconn.send_query(b'select 1')
+            pgconn.send_query(b"select 1")
             gen = generators.execute(pgconn)
-            if waitfn.__name__ == 'wait_select':
+            if waitfn.__name__ == "wait_select":
                 with pytest.raises(ValueError):
                     waitfn(gen, pgconn.socket)
             else:
-                res, = waitfn(gen, pgconn.socket)
+                (res,) = waitfn(gen, pgconn.socket)
                 assert res.status == ExecStatus.TUPLES_OK
         finally:
             pgconn.finish()
@@ -335,38 +346,41 @@ def test_wait_large_fd(dsn, waitfn):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('waitfn', waitfns)
-@pytest.mark.skipif("sys.platform == 'win32'", reason="Windows doesn't see the fd closed.")
+@pytest.mark.parametrize("waitfn", waitfns)
+@pytest.mark.skipif(
+    "sys.platform == 'win32'", reason="Windows doesn't see the fd closed."
+)
 def test_socket_closed(dsn, waitfn, pgconn):
     waitfn = getattr(waiting, waitfn)
-    
 
     def closer():
         sleep(0.5)
         pgconn.finish()
-    
+
     t = spawn(closer)
-    
-    pgconn.send_query(b'select pg_sleep(2)')
-    with pytest.raises(psycopg.OperationalError, match='connection socket closed') as ex:
+
+    pgconn.send_query(b"select pg_sleep(2)")
+    with pytest.raises(
+        psycopg.OperationalError, match="connection socket closed"
+    ) as ex:
         t0 = time.time()
         gen = generators.execute(pgconn)
         waitfn(gen, pgconn.socket, 0.1)
-    
+
     assert pgconn.status == ConnStatus.BAD
     assert isinstance(ex.value.__cause__, OSError)
     dt = time.time() - t0
     gather(t)
-    
+
     assert dt < 1.0
 
 
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_remote_closed(proxy, conn_cls, waitfn):
     waitfn = getattr(waiting, waitfn)
     proxy.start()
     with conn_cls.connect(proxy.client_dsn, autocommit=True) as conn:
-        conn.pgconn.send_query(b'select 1')
+        conn.pgconn.send_query(b"select 1")
         proxy.stop()
         with pytest.raises(psycopg.OperationalError):
             gen = generators.execute(conn.pgconn)
@@ -379,15 +393,15 @@ def test_remote_closed(proxy, conn_cls, caplog):
     with conn_cls.connect(proxy.client_dsn) as conn:
         proxy.stop()
         with pytest.raises(psycopg.OperationalError):
-            conn.execute('select 1')
-    
+            conn.execute("select 1")
+
     assert not caplog.messages
 
 
-@pytest.mark.parametrize('waitfn', waitfns)
+@pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_timeout_none_unsupported(waitfn):
     waitfn = getattr(waiting, waitfn)
-    
+
     with pytest.raises(ValueError):
         waitfn(tgen(waiting.Wait.R), 1, None)
 
@@ -401,8 +415,8 @@ def check_timing(request):
     the timing, which on macOS and Windows in CI is very slow.
     """
     tokens = request.config.option.markexpr.split()
-    if 'timing' not in tokens:
+    if "timing" not in tokens:
         return True
-    if (idx := tokens.index('timing')) > 0 and tokens[idx - 1] == 'not':
+    if (idx := tokens.index("timing")) > 0 and tokens[idx - 1] == "not":
         return False
     return True

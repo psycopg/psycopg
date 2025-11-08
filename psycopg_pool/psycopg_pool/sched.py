@@ -35,9 +35,8 @@ class Scheduler:
         self._queue: list[Task] = []
         self._lock = Lock()
         self._event = Event()
-    
+
     EMPTY_QUEUE_TIMEOUT = 600.0
-    
 
     def enter(self, delay: float, action: Callable[[], Any] | None) -> Task:
         """Enter a new task in the queue delayed in the future.
@@ -46,7 +45,6 @@ class Scheduler:
         """
         time = monotonic() + delay
         return self.enterabs(time, action)
-    
 
     def enterabs(self, time: float, action: Callable[[], Any] | None) -> Task:
         """Enter a new task in the queue at an absolute time.
@@ -57,12 +55,11 @@ class Scheduler:
         with self._lock:
             heappush(self._queue, task)
             first = self._queue[0] is task
-        
+
         if first:
             self._event.set()
-        
+
         return task
-    
 
     def run(self) -> None:
         """Execute the events scheduled."""
@@ -70,7 +67,7 @@ class Scheduler:
         while True:
             with self._lock:
                 now = monotonic()
-                if (task := (q[0] if q else None)):
+                if task := (q[0] if q else None):
                     if task.time <= now:
                         heappop(q)
                     else:
@@ -79,14 +76,19 @@ class Scheduler:
                 else:
                     delay = self.EMPTY_QUEUE_TIMEOUT
                 self._event.clear()
-            
+
             if task:
                 if not task.action:
                     break
                 try:
                     task.action()
                 except Exception as e:
-                    logger.warning('scheduled task run %s failed: %s: %s', task.action, e.__class__.__name__, e)
+                    logger.warning(
+                        "scheduled task run %s failed: %s: %s",
+                        task.action,
+                        e.__class__.__name__,
+                        e,
+                    )
             else:
                 # Block for the expected timeout or until a new task scheduled
                 self._event.wait(delay)
