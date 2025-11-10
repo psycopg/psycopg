@@ -264,6 +264,15 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
+    .. automethod:: set_result
+
+        Move to a specific result set if `execute()` returned multiple result
+        sets. The parameter `result_no` specifies the zero-based index of the
+        desired result set. Negative values are supported and refer to result
+        sets counted from the end.
+
+        .. versionadded:: 3.3
+
     .. automethod:: results
 
         The iterator yields the cursor itself upon iteration, but the cursor
