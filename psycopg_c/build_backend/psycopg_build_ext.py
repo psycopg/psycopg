@@ -60,7 +60,7 @@ class psycopg_build_ext(build_ext):
                 self.distribution.ext_modules,
                 language_level=3,
                 compiler_directives={
-                    "always_allow_keywords": False,
+                    "always_allow_keywords": False, "freethreading_compatible": True,
                 },
                 annotate=False,  # enable to get an html view of the C module
             )
