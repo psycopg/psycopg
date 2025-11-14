@@ -993,6 +993,7 @@ async def test_copy_concurrency(aconn):
 
     async def copy_task():
         """Copy task that writes two rows with controlled pauses."""
+        cur = aconn.cursor()
         async with cur.copy("copy copy_concurrency_test from stdin") as copy:
             # Pause after entering copy context
             execution_log.append("entered_copy")
