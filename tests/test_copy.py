@@ -22,9 +22,17 @@ from psycopg.types.numeric import Int4
 from .utils import eur
 from .acompat import Event, gather, spawn
 from ._test_copy import sample_binary  # noqa: F401
-from ._test_copy import FileWriter, ensure_table, py_to_raw, sample_binary_rows
-from ._test_copy import sample_records, sample_tabledef, sample_text, sample_values
-from ._test_copy import special_chars
+from ._test_copy import (
+    FileWriter,
+    ensure_table,
+    py_to_raw,
+    sample_binary_rows,
+    sample_records,
+    sample_tabledef,
+    sample_text,
+    sample_values,
+    special_chars,
+)
 from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")
@@ -961,8 +969,7 @@ def test_copy_concurrency(conn):
     was not holding the connection lock throughout the copy context, allowing
     concurrent operations to interfere.
     """
-    cur = conn.cursor()
-    cur.execute("create temp table copy_concurrency_test (id int, data text)")
+    conn.execute("create temp table copy_concurrency_test (id int, data text)")
 
     # Events to coordinate execution between copy task and workers
     copy_entered = Event()
@@ -975,6 +982,7 @@ def test_copy_concurrency(conn):
 
     def copy_task():
         """Copy task that writes two rows with controlled pauses."""
+        cur = conn.cursor()
         with cur.copy("copy copy_concurrency_test from stdin") as copy:
             # Pause after entering copy context
             execution_log.append("entered_copy")
@@ -996,7 +1004,7 @@ def test_copy_concurrency(conn):
         # Copy context exited, lock should now be released
         execution_log.append("exited_copy")
 
-    def worker_task(worker_id):
+    def worker_task():
         """
         Worker that attempts to execute a query on a different cursor.
         Should block until copy completes due to connection lock.
@@ -1004,14 +1012,14 @@ def test_copy_concurrency(conn):
         # Try to execute on another cursor - this should block until copy exits
         worker_cur = conn.cursor()
         worker_cur.execute("select 1")
-        execution_log.append(f"worker_{worker_id}_completed")
+        execution_log.append("worker_completed")
 
     # Start the copy task
-    t_copy = spawn(copy_task, ())
+    t_copy = spawn(copy_task)
 
     # Wait for copy to enter, then spawn first worker
     copy_entered.wait()
-    t_worker1 = spawn(worker_task, (1,))
+    t_worker1 = spawn(worker_task)
 
     # Allow copy to proceed to write first row
     can_proceed.set()
@@ -1019,7 +1027,7 @@ def test_copy_concurrency(conn):
     wrote_first.wait()
 
     # Spawn second worker after first row
-    t_worker2 = spawn(worker_task, (2,))
+    t_worker2 = spawn(worker_task)
 
     # Allow copy to proceed to write second row
     can_proceed.set()
@@ -1027,7 +1035,7 @@ def test_copy_concurrency(conn):
     wrote_second.wait()
 
     # Spawn third worker after second row
-    t_worker3 = spawn(worker_task, (3,))
+    t_worker3 = spawn(worker_task)
 
     # Allow copy to exit
     can_proceed.set()
@@ -1036,20 +1044,20 @@ def test_copy_concurrency(conn):
     gather(t_copy, t_worker1, t_worker2, t_worker3)
 
     # Verify the data was written correctly
-    cur.execute("select * from copy_concurrency_test order by id")
+    cur = conn.execute("select * from copy_concurrency_test order by id")
     rows = cur.fetchall()
     assert rows == [(1, "first"), (2, "second")]
 
     # Verify that all workers completed AFTER copy exited
-    # This confirms the connection lock was held throughout the copy operation
-    copy_exit_idx = execution_log.index("exited_copy")
-    worker1_idx = execution_log.index("worker_1_completed")
-    worker2_idx = execution_log.index("worker_2_completed")
-    worker3_idx = execution_log.index("worker_3_completed")
-
-    assert copy_exit_idx < worker1_idx, "Worker 1 should complete after copy exits"
-    assert copy_exit_idx < worker2_idx, "Worker 2 should complete after copy exits"
-    assert copy_exit_idx < worker3_idx, "Worker 3 should complete after copy exits"
+    assert execution_log == [
+        "entered_copy",
+        "wrote_row_1",
+        "wrote_row_2",
+        "exited_copy",
+        "worker_completed",
+        "worker_completed",
+        "worker_completed",
+    ]
 
 
 class DataGenerator:

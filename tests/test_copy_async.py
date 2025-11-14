@@ -19,9 +19,17 @@ from psycopg.types.numeric import Int4
 from .utils import eur
 from .acompat import AEvent, alist, gather, spawn
 from ._test_copy import sample_binary  # noqa: F401
-from ._test_copy import AsyncFileWriter, ensure_table_async, py_to_raw
-from ._test_copy import sample_binary_rows, sample_records, sample_tabledef
-from ._test_copy import sample_text, sample_values, special_chars
+from ._test_copy import (
+    AsyncFileWriter,
+    ensure_table_async,
+    py_to_raw,
+    sample_binary_rows,
+    sample_records,
+    sample_tabledef,
+    sample_text,
+    sample_values,
+    special_chars,
+)
 from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")
@@ -1015,7 +1023,7 @@ async def test_copy_concurrency(aconn):
         # Copy context exited, lock should now be released
         execution_log.append("exited_copy")
 
-    async def worker_task(worker_id):
+    async def worker_task():
         """
         Worker that attempts to execute a query on a different cursor.
         Should block until copy completes due to connection lock.
@@ -1023,14 +1031,14 @@ async def test_copy_concurrency(aconn):
         # Try to execute on another cursor - this should block until copy exits
         worker_cur = aconn.cursor()
         await worker_cur.execute("select 1")
-        execution_log.append(f"worker_{worker_id}_completed")
+        execution_log.append("worker_completed")
 
     # Start the copy task
-    t_copy = spawn(copy_task, ())
+    t_copy = spawn(copy_task)
 
     # Wait for copy to enter, then spawn first worker
     await copy_entered.wait()
-    t_worker1 = spawn(worker_task, (1,))
+    t_worker1 = spawn(worker_task)
 
     # Allow copy to proceed to write first row
     can_proceed.set()
@@ -1038,7 +1046,7 @@ async def test_copy_concurrency(aconn):
     await wrote_first.wait()
 
     # Spawn second worker after first row
-    t_worker2 = spawn(worker_task, (2,))
+    t_worker2 = spawn(worker_task)
 
     # Allow copy to proceed to write second row
     can_proceed.set()
@@ -1046,7 +1054,7 @@ async def test_copy_concurrency(aconn):
     await wrote_second.wait()
 
     # Spawn third worker after second row
-    t_worker3 = spawn(worker_task, (3,))
+    t_worker3 = spawn(worker_task)
 
     # Allow copy to exit
     can_proceed.set()
@@ -1060,15 +1068,15 @@ async def test_copy_concurrency(aconn):
     assert rows == [(1, "first"), (2, "second")]
 
     # Verify that all workers completed AFTER copy exited
-    # This confirms the connection lock was held throughout the copy operation
-    copy_exit_idx = execution_log.index("exited_copy")
-    worker1_idx = execution_log.index("worker_1_completed")
-    worker2_idx = execution_log.index("worker_2_completed")
-    worker3_idx = execution_log.index("worker_3_completed")
-
-    assert copy_exit_idx < worker1_idx, "Worker 1 should complete after copy exits"
-    assert copy_exit_idx < worker2_idx, "Worker 2 should complete after copy exits"
-    assert copy_exit_idx < worker3_idx, "Worker 3 should complete after copy exits"
+    assert execution_log == [
+        "entered_copy",
+        "wrote_row_1",
+        "wrote_row_2",
+        "exited_copy",
+        "worker_completed",
+        "worker_completed",
+        "worker_completed",
+    ]
 
 
 class DataGenerator:
