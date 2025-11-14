@@ -8,6 +8,13 @@
 =========================
 
 
+Psycopg 3.2.13 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `Cursor.copy()` and `AsyncCursor.copy()` to hold the connection lock
+  for the entire operation, preventing concurrent access issues (:ticket:`#1210`).
+
+
 Current release
 ---------------
 
