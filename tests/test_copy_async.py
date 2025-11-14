@@ -1054,7 +1054,7 @@ async def test_copy_concurrency(aconn):
     await gather(t_copy, t_worker1, t_worker2, t_worker3)
 
     # Verify the data was written correctly
-    await cur.execute("select * from copy_concurrency_test order by id")
+    cur = await aconn.execute("select * from copy_concurrency_test order by id")
     rows = await cur.fetchall()
     assert rows == [(1, "first"), (2, "second")]
 
