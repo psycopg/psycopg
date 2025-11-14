@@ -45,6 +45,11 @@ Psycopg 3.3.0 (unreleased)
 
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
 
+.. rubric:: Bug fixes
+
+- Fix `Cursor.copy()` and `AsyncCursor.copy()` to hold the connection lock
+  for the entire operation, preventing concurrent access issues (:ticket:`#1210`).
+
 
 Current release
 ---------------
