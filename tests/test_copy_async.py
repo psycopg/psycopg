@@ -980,8 +980,7 @@ async def test_copy_concurrency(aconn):
     was not holding the connection lock throughout the copy context, allowing
     concurrent operations to interfere.
     """
-    cur = aconn.cursor()
-    await cur.execute("create temp table copy_concurrency_test (id int, data text)")
+    await aconn.execute("create temp table copy_concurrency_test (id int, data text)")
 
     # Events to coordinate execution between copy task and workers
     copy_entered = AEvent()
