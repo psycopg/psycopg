@@ -19,17 +19,9 @@ from psycopg.types.numeric import Int4
 from .utils import eur
 from .acompat import AEvent, alist, gather, spawn
 from ._test_copy import sample_binary  # noqa: F401
-from ._test_copy import (
-    AsyncFileWriter,
-    ensure_table_async,
-    py_to_raw,
-    sample_binary_rows,
-    sample_records,
-    sample_tabledef,
-    sample_text,
-    sample_values,
-    special_chars,
-)
+from ._test_copy import AsyncFileWriter, ensure_table_async, py_to_raw
+from ._test_copy import sample_binary_rows, sample_records, sample_tabledef
+from ._test_copy import sample_text, sample_values, special_chars
 from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")

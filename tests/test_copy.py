@@ -22,17 +22,9 @@ from psycopg.types.numeric import Int4
 from .utils import eur
 from .acompat import Event, gather, spawn
 from ._test_copy import sample_binary  # noqa: F401
-from ._test_copy import (
-    FileWriter,
-    ensure_table,
-    py_to_raw,
-    sample_binary_rows,
-    sample_records,
-    sample_tabledef,
-    sample_text,
-    sample_values,
-    special_chars,
-)
+from ._test_copy import FileWriter, ensure_table, py_to_raw, sample_binary_rows
+from ._test_copy import sample_records, sample_tabledef, sample_text, sample_values
+from ._test_copy import special_chars
 from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = pytest.mark.crdb_skip("copy")
