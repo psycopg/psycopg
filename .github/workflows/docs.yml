@@ -13,6 +13,7 @@ concurrency:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    if: github.repository == 'psycopg/psycopg'
     steps:
       - name: Trigger docs build
         uses: peter-evans/repository-dispatch@v4
