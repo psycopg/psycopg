@@ -506,6 +506,14 @@ def test_connect_args(
     conn.close()
 
 
+def test_resolve_error_host(conn_cls):
+    host = "nosuchhost.example.com"
+    with pytest.raises(psycopg.OperationalError) as ex:
+        conn_cls.connect(host=host)
+
+    assert host in str(ex.value)
+
+
 @pytest.mark.parametrize(
     "args, kwargs, exctype",
     [
