@@ -23,6 +23,8 @@ Psycopg 3.2.12
 
 - Allow copy to pass different types per column, as long as the database can
   convert them. Regression introduced in 3.2.11 (:ticket:`#1192`).
+- Show the host name in the error message in case of name resolution error
+  (:ticket:`#1205`).
 
 
 Psycopg 3.2.11
