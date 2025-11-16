@@ -262,8 +262,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             async with self._conn.lock:
                 await self._conn.wait(self._start_copy_gen(statement, params))
 
-            async with AsyncCopy(self, writer=writer) as copy:
-                yield copy
+                async with AsyncCopy(self, writer=writer) as copy:
+                    yield copy
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
