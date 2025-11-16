@@ -502,6 +502,14 @@ async def test_connect_args(
     await conn.close()
 
 
+async def test_resolve_error_host(aconn_cls):
+    host = "nosuchhost.example.com"
+    with pytest.raises(psycopg.OperationalError) as ex:
+        await aconn_cls.connect(host=host)
+
+    assert host in str(ex.value)
+
+
 @pytest.mark.parametrize(
     "args, kwargs, exctype",
     [
