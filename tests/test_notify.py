@@ -3,6 +3,7 @@
 # DO NOT CHANGE! Change the original file instead.
 from __future__ import annotations
 
+import sysconfig
 from time import time
 
 import pytest
@@ -223,6 +224,10 @@ def test_notifies_blocking(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    bool(sysconfig.get_config_var("Py_GIL_DISABLED")),
+    reason="warnings are context-local in the free-threaded build >= 3.14",
+)
 def test_generator_and_handler(conn, conn_cls, dsn, recwarn):
     # NOTE: we don't support generator+handlers anymore. So, if in the future
     # this behaviour will change, we will not consider it a regression. However

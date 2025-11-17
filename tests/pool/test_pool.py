@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import weakref
+import sysconfig
 from time import time
 from typing import Any
 from collections import Counter
@@ -861,6 +862,10 @@ def test_check_max_lifetime(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    bool(sysconfig.get_config_var("Py_GIL_DISABLED")),
+    reason="timing not accurate under the free-threaded build",
+)
 def test_stats_connect(proxy, monkeypatch):
     proxy.start()
     delay_connection(monkeypatch, 0.2)

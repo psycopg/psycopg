@@ -72,18 +72,18 @@ def fixture_gc():
 
     **Note:** This will skip tests on PyPy.
     """
-    if sys.implementation.name == "pypy" or bool(sysconfig.get_config_var("Py_GIL_DISABLED")):
+    if sys.implementation.name == "pypy" or bool(
+        sysconfig.get_config_var("Py_GIL_DISABLED")
+    ):
         pytest.skip(reason="depends on refcount semantics")
     return GCFixture()
 
 
 @pytest.fixture
-def gc_collect():
+def gc_collect(gc):
     """
     Provides a consistent way to run garbage collection.
 
     **Note:** This will *not* skip tests on PyPy.
     """
-    if sys.implementation.name == "pypy" or bool(sysconfig.get_config_var("Py_GIL_DISABLED")):
-        pytest.skip(reason="depends on refcount semantics")
-    return GCFixture.collect
+    return gc.collect
