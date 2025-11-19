@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, Generic, cast
+from asyncio import CancelledError
 from weakref import ref
 from contextlib import asynccontextmanager
 from collections import deque
@@ -252,7 +253,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             conn = await self._getconn_unchecked(deadline - monotonic())
             try:
                 await self._check_connection(conn)
-            except Exception:
+            except (Exception, CancelledError):
                 await self._putconn(conn, from_getconn=True)
             else:
                 logger.info("connection given by %r", self.name)
@@ -290,7 +291,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not conn:
             try:
                 conn = await pos.wait(timeout=timeout)
-            except Exception:
+            except BaseException:
                 self._stats[self._REQUESTS_ERRORS] += 1
                 raise
             finally:
@@ -327,7 +328,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             return
         try:
             await self._check(conn)
-        except Exception as e:
+        except BaseException as e:
             logger.info("connection failed check: %s", e)
             raise
 
@@ -566,7 +567,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Check for broken connections
             try:
                 await self.check_connection(conn)
-            except Exception:
+            except (Exception, CancelledError):
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
@@ -637,7 +638,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Run the task. Make sure don't die in the attempt.
             try:
                 await task.run()
-            except Exception as ex:
+            except (Exception, CancelledError) as ex:
                 logger.warning(
                     "task run %s failed: %s: %s", task, ex.__class__.__name__, ex
                 )
@@ -653,7 +654,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         t0 = monotonic()
         try:
             conn = await self.connection_class.connect(conninfo, **kwargs)
-        except Exception:
+        except (Exception, CancelledError):
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
         else:
@@ -708,7 +709,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         try:
             conn = await self._connect()
-        except Exception as ex:
+        except (Exception, CancelledError) as ex:
             logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
                 logger.warning(
@@ -860,7 +861,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                         f"connection left in status {sname} by reset function"
                         f" {self._reset}: discarded"
                     )
-            except Exception as ex:
+            except (Exception, CancelledError) as ex:
                 logger.warning("error resetting connection: %s", ex)
                 await self._close_connection(conn)
 
