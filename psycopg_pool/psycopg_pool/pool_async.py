@@ -358,8 +358,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not self._closed:
             return False
 
-        conn._pool = None
-        await conn.close()
+        await self._close_connection(conn)
         return True
 
     async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
@@ -473,8 +472,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         # Close the connections that were still in the pool
         for conn in connections:
-            conn._pool = None
-            await conn.close()
+            await self._close_connection(conn)
 
         # Signal to eventual clients in the queue that business is closed.
         for pos in waiting:
@@ -546,8 +544,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Check for expired connections
             if conn._expire_at <= monotonic():
                 logger.info("discarding expired connection %s", conn)
-                conn._pool = None
-                await conn.close()
+                await self._close_connection(conn)
                 self.run_task(AddConnection(self))
                 continue
 
@@ -687,7 +684,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         try:
             conn = await self._connect()
         except Exception as ex:
-            logger.warning(f"error connecting in {self.name!r}: {ex}")
+            logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
                 logger.warning(
                     "reconnection attempt in pool %r failed after %s sec",
@@ -746,8 +743,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
             logger.info("discarding expired connection")
-            conn._pool = None
-            await conn.close()
+            await self._close_connection(conn)
             self.run_task(AddConnection(self))
             return
 
@@ -772,7 +768,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # between here and entering the lock. Therefore we will make another
         # check later.
         if self._closed:
-            await conn.close()
+            await self._close_connection(conn)
             return
 
         # Critical section: if there is a client waiting give it the connection
@@ -784,7 +780,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # this connection while the main process is closing the pool.
             # Now that we are in the critical section we know for real.
             if self._closed:
-                await conn.close()
+                await self._close_connection(conn)
                 return
 
             while self._waiting:
@@ -823,14 +819,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     ex,
                     conn,
                 )
-                conn._pool = None
-                await conn.close()
+                await self._close_connection(conn)
 
         elif status == TransactionStatus.ACTIVE:
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
-            conn._pool = None
-            await conn.close()
+            await self._close_connection(conn)
 
         if self._reset:
             try:
@@ -842,9 +836,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                         f" {self._reset}: discarded"
                     )
             except Exception as ex:
-                logger.warning(f"error resetting connection: {ex}")
-                conn._pool = None
-                await conn.close()
+                logger.warning("error resetting connection: %s", ex)
+                await self._close_connection(conn)
+
+    async def _close_connection(self, conn: ACT) -> None:
+        conn._pool = None
+        await conn.close()
 
     async def _shrink_pool(self) -> None:
         to_close: ACT | None = None
@@ -869,8 +866,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 nconns_min,
                 self.max_idle,
             )
-            to_close._pool = None
-            await to_close.close()
+            await self._close_connection(to_close)
 
     def _get_measures(self) -> dict[str, int]:
         rv = super()._get_measures()

@@ -124,7 +124,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             conn._pool = None
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
-            await conn.close()
+            await self._close_connection(conn)
             self._nconns -= 1
             return True
 
@@ -162,7 +162,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
                     break
             else:
                 # No client waiting for a connection: close the connection
-                await conn.close()
+                await self._close_connection(conn)
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is ready.
                 if self._pool_full_event:

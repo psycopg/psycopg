@@ -329,8 +329,7 @@ class ConnectionPool(Generic[CT], BasePool):
         if not self._closed:
             return False
 
-        conn._pool = None
-        conn.close()
+        self._close_connection(conn)
         return True
 
     def open(self, wait: bool = False, timeout: float = 30.0) -> None:
@@ -437,8 +436,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         # Close the connections that were still in the pool
         for conn in connections:
-            conn._pool = None
-            conn.close()
+            self._close_connection(conn)
 
         # Signal to eventual clients in the queue that business is closed.
         for pos in waiting:
@@ -510,8 +508,7 @@ class ConnectionPool(Generic[CT], BasePool):
             # Check for expired connections
             if conn._expire_at <= monotonic():
                 logger.info("discarding expired connection %s", conn)
-                conn._pool = None
-                conn.close()
+                self._close_connection(conn)
                 self.run_task(AddConnection(self))
                 continue
 
@@ -632,7 +629,7 @@ class ConnectionPool(Generic[CT], BasePool):
         try:
             conn = self._connect()
         except Exception as ex:
-            logger.warning(f"error connecting in {self.name!r}: {ex}")
+            logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
                 logger.warning(
                     "reconnection attempt in pool %r failed after %s sec",
@@ -689,8 +686,7 @@ class ConnectionPool(Generic[CT], BasePool):
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
             logger.info("discarding expired connection")
-            conn._pool = None
-            conn.close()
+            self._close_connection(conn)
             self.run_task(AddConnection(self))
             return
 
@@ -715,7 +711,7 @@ class ConnectionPool(Generic[CT], BasePool):
         # between here and entering the lock. Therefore we will make another
         # check later.
         if self._closed:
-            conn.close()
+            self._close_connection(conn)
             return
 
         # Critical section: if there is a client waiting give it the connection
@@ -726,7 +722,7 @@ class ConnectionPool(Generic[CT], BasePool):
             # this connection while the main process is closing the pool.
             # Now that we are in the critical section we know for real.
             if self._closed:
-                conn.close()
+                self._close_connection(conn)
                 return
 
             while self._waiting:
@@ -764,13 +760,11 @@ class ConnectionPool(Generic[CT], BasePool):
                     ex,
                     conn,
                 )
-                conn._pool = None
-                conn.close()
+                self._close_connection(conn)
         elif status == TransactionStatus.ACTIVE:
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
-            conn._pool = None
-            conn.close()
+            self._close_connection(conn)
 
         if self._reset:
             try:
@@ -781,9 +775,12 @@ class ConnectionPool(Generic[CT], BasePool):
                         f"connection left in status {sname} by reset function {self._reset}: discarded"
                     )
             except Exception as ex:
-                logger.warning(f"error resetting connection: {ex}")
-                conn._pool = None
-                conn.close()
+                logger.warning("error resetting connection: %s", ex)
+                self._close_connection(conn)
+
+    def _close_connection(self, conn: CT) -> None:
+        conn._pool = None
+        conn.close()
 
     def _shrink_pool(self) -> None:
         to_close: CT | None = None
@@ -807,8 +804,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 nconns_min,
                 self.max_idle,
             )
-            to_close._pool = None
-            to_close.close()
+            self._close_connection(to_close)
 
     def _get_measures(self) -> dict[str, int]:
         rv = super()._get_measures()
