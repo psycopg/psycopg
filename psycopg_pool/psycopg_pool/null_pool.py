@@ -131,7 +131,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             conn._pool = None
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
                 self._stats[self._RETURNS_BAD] += 1
-            conn.close()
+            self._close_connection(conn)
             self._nconns -= 1
             return True
 
@@ -169,7 +169,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
                     break
             else:
                 # No client waiting for a connection: close the connection
-                conn.close()
+                self._close_connection(conn)
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is ready.
                 if self._pool_full_event:
