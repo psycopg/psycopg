@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import sysconfig
 from time import time
 
 import pytest
 
 from psycopg import Notify
 
+from .utils import skip_free_threaded
 from .acompat import AEvent, alist, asleep, gather, spawn
 
 pytestmark = pytest.mark.crdb_skip("notify")
@@ -220,10 +220,7 @@ async def test_notifies_blocking(aconn):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(
-    bool(sysconfig.get_config_var("Py_GIL_DISABLED")),
-    reason="warnings are context-local in the free-threaded build >= 3.14",
-)
+@skip_free_threaded("warnings are context-local in the free-threaded build >= 3.14")
 async def test_generator_and_handler(aconn, aconn_cls, dsn, recwarn):
     # NOTE: we don't support generator+handlers anymore. So, if in the future
     # this behaviour will change, we will not consider it a regression. However

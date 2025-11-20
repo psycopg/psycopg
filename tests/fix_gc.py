@@ -80,10 +80,12 @@ def fixture_gc():
 
 
 @pytest.fixture
-def gc_collect(gc):
+def gc_collect():
     """
     Provides a consistent way to run garbage collection.
 
     **Note:** This will *not* skip tests on PyPy.
     """
-    return gc.collect
+    if bool(sysconfig.get_config_var("Py_GIL_DISABLED")):
+        pytest.skip(reason="depends on refcount semantics")
+    return GCFixture.collect
