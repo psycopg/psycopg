@@ -9,6 +9,7 @@ import pytest
 
 from psycopg import Notify
 
+from .utils import skip_free_threaded
 from .acompat import Event, gather, sleep, spawn
 
 pytestmark = pytest.mark.crdb_skip("notify")
@@ -223,6 +224,7 @@ def test_notifies_blocking(conn):
 
 
 @pytest.mark.slow
+@skip_free_threaded("warnings are context-local in the free-threaded build >= 3.14")
 def test_generator_and_handler(conn, conn_cls, dsn, recwarn):
     # NOTE: we don't support generator+handlers anymore. So, if in the future
     # this behaviour will change, we will not consider it a regression. However

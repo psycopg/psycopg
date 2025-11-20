@@ -12,7 +12,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
-from ..utils import assert_type, set_autocommit
+from ..utils import assert_type, set_autocommit, skip_free_threaded
 from ..acompat import AEvent, asleep, gather, skip_sync, spawn
 from .test_pool_common_async import delay_connection
 
@@ -862,6 +862,7 @@ async def test_check_max_lifetime(dsn):
 
 
 @pytest.mark.slow
+@skip_free_threaded("timing not accurate under the free-threaded build")
 async def test_stats_connect(proxy, monkeypatch):
     proxy.start()
     delay_connection(monkeypatch, 0.2)

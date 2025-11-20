@@ -34,12 +34,14 @@ jobs:
           - {impl: python, python: "3.12", postgres: "postgres:16", libpq: newest}
           - {impl: python, python: "3.13", postgres: "postgres:13"}
           - {impl: python, python: "3.14", postgres: "postgres:14"}
+          - {impl: python, python: "3.14t", postgres: "postgres:14"}
 
           - {impl: c, python: "3.10", postgres: "postgres:13", libpq: master}
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:16"}
           - {impl: c, python: "3.13", postgres: "postgres:17", libpq: newest}
           - {impl: c, python: "3.14", postgres: "postgres:18"}
+          - {impl: c, python: "3.14t", postgres: "postgres:18"}
 
           - {impl: python, python: "3.10", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.10", ext: dns, postgres: "postgres:14"}
