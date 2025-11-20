@@ -5,6 +5,7 @@ import sys
 import asyncio
 import operator
 import selectors
+import sysconfig
 from typing import Any
 from contextlib import contextmanager
 from collections.abc import Callable
@@ -201,3 +202,10 @@ def asyncio_run(coro: Any, *, debug: bool | None = None) -> Any:
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     return asyncio.run(coro, debug=debug, **kwargs)
+
+
+def skip_free_threaded(reason="unsafe under the free-threaded build"):
+    return pytest.mark.skipif(
+        bool(sysconfig.get_config_var("Py_GIL_DISABLED")),
+        reason=reason,
+    )
