@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from time import time
 from typing import Any
+from asyncio import CancelledError
 
 import pytest
 
@@ -692,6 +693,56 @@ def test_cancellation_in_queue(pool_cls, dsn):
         with p.connection() as conn:
             cur = conn.execute("select 1")
             assert cur.fetchone() == (1,)
+
+
+@skip_sync
+def test_cancel_on_check(pool_cls, dsn):
+    do_cancel = True
+
+    def check(conn):
+        nonlocal do_cancel
+        if do_cancel:
+            do_cancel = False
+            raise CancelledError()
+
+        pool_cls.check_connection(conn)
+
+    with pool_cls(dsn, min_size=min_size(pool_cls, 1), check=check, timeout=1.0) as p:
+        try:
+            with p.connection() as conn:
+                conn.execute("select 1")
+        except CancelledError:
+            pass
+
+        with p.connection() as conn:
+            conn.execute("select 1")
+
+
+@skip_sync
+def test_cancel_on_rollback(pool_cls, dsn, monkeypatch):
+    do_cancel = False
+
+    with pool_cls(dsn, min_size=min_size(pool_cls, 1), timeout=1.0) as p:
+        with p.connection() as conn:
+
+            def rollback(self):
+                if do_cancel:
+                    raise CancelledError()
+                else:
+                    type(self).rollback(self)
+
+            monkeypatch.setattr(type(conn), "rollback", rollback)
+            conn.execute("select 1")
+
+        do_cancel = True
+        with pytest.raises((psycopg.errors.SyntaxError, CancelledError)):
+            with p.connection() as conn:
+                conn.execute("selexx 2")
+
+        do_cancel = False
+        with p.connection() as conn:
+            cur = conn.execute("select 3")
+            assert cur.fetchone() == (3,)
 
 
 def min_size(pool_cls, num=1):

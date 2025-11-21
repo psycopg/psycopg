@@ -30,6 +30,13 @@ from .sched_async import AsyncScheduler
 if True:  # ASYNC
     import asyncio
 
+    # The exceptions that we need to capture in order to keep the pool
+    # consistent and avoid losing connections on errors in callers code.
+    CLIENT_EXCEPTIONS = (Exception, asyncio.CancelledError)
+else:
+    CLIENT_EXCEPTIONS = Exception
+
+
 logger = logging.getLogger("psycopg.pool")
 
 
@@ -237,7 +244,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             conn = await self._getconn_unchecked(deadline - monotonic())
             try:
                 await self._check_connection(conn)
-            except Exception:
+            except CLIENT_EXCEPTIONS:
                 await self._putconn(conn, from_getconn=True)
             else:
                 logger.info("connection given by %r", self.name)
@@ -275,7 +282,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not conn:
             try:
                 conn = await pos.wait(timeout=timeout)
-            except Exception:
+            except CLIENT_EXCEPTIONS:
                 self._stats[self._REQUESTS_ERRORS] += 1
                 raise
             finally:
@@ -312,7 +319,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             return
         try:
             await self._check(conn)
-        except Exception as e:
+        except CLIENT_EXCEPTIONS as e:
             logger.info("connection failed check: %s", e)
             raise
 
@@ -551,7 +558,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Check for broken connections
             try:
                 await self.check_connection(conn)
-            except Exception:
+            except CLIENT_EXCEPTIONS:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
@@ -630,7 +637,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Run the task. Make sure don't die in the attempt.
             try:
                 await task.run()
-            except Exception as ex:
+            except CLIENT_EXCEPTIONS as ex:
                 logger.warning(
                     "task run %s failed: %s: %s", task, ex.__class__.__name__, ex
                 )
@@ -645,7 +652,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         t0 = monotonic()
         try:
             conn = await self.connection_class.connect(self.conninfo, **kwargs)
-        except Exception:
+        except CLIENT_EXCEPTIONS:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
         else:
@@ -683,7 +690,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         try:
             conn = await self._connect()
-        except Exception as ex:
+        except CLIENT_EXCEPTIONS as ex:
             logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
                 logger.warning(
@@ -812,7 +819,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             logger.warning("rolling back returned connection: %s", conn)
             try:
                 await conn.rollback()
-            except Exception as ex:
+            except CLIENT_EXCEPTIONS as ex:
                 logger.warning(
                     "rollback failed: %s: %s. Discarding connection %s",
                     ex.__class__.__name__,
@@ -835,7 +842,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                         f"connection left in status {sname} by reset function"
                         f" {self._reset}: discarded"
                     )
-            except Exception as ex:
+            except CLIENT_EXCEPTIONS as ex:
                 logger.warning("error resetting connection: %s", ex)
                 await self._close_connection(conn)
 
@@ -902,7 +909,7 @@ class WaitingClient(Generic[ACT]):
                         self.error = PoolTimeout(
                             f"couldn't get a connection after {timeout:.2f} sec"
                         )
-                except BaseException as ex:
+                except CLIENT_EXCEPTIONS as ex:
                     self.error = ex
 
         if self.conn:

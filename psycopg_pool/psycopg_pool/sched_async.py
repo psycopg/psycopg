@@ -24,6 +24,15 @@ from ._acompat import AEvent, ALock
 
 logger = logging.getLogger(__name__)
 
+if True:  # ASYNC
+    from asyncio import CancelledError
+
+    # The exceptions that we need to capture in order to keep the pool
+    # consistent and avoid losing connections on errors in callers code.
+    CLIENT_EXCEPTIONS = (Exception, CancelledError)
+else:
+    CLIENT_EXCEPTIONS = Exception
+
 
 class AsyncScheduler:
     def __init__(self) -> None:
@@ -77,7 +86,7 @@ class AsyncScheduler:
                     break
                 try:
                     await task.action()
-                except Exception as e:
+                except CLIENT_EXCEPTIONS as e:
                     logger.warning(
                         "scheduled task run %s failed: %s: %s",
                         task.action,

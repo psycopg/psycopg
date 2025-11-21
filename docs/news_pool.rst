@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Don't lose connections if a `~asyncio.CancelledError` is raised in a check
+  (:tickets:`#1123, #1208`)
+
+
 Current release
 ---------------
 
