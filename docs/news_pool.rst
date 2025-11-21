@@ -19,6 +19,13 @@ psycopg_pool 3.3.0 (unreleased)
   parameters# update (:ticket:`#851`).
 
 
+psycopg_pool 3.2.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Don't lose connections if a `~asyncio.CancelledError` is raised in a check
+  (:tickets:`#1123, #1208`)
+
+
 Current release
 ---------------
 
