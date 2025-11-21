@@ -15,6 +15,7 @@ Psycopg 3.2.13 (unreleased)
   (:ticket:`#1205`).
 - Fix `Cursor.copy()` and `AsyncCursor.copy()` to hold the connection lock
   for the entire operation, preventing concurrent access issues (:ticket:`#1210`).
+- Fix GSSAPI check with C extension built with libpq < v16 (:ticket:`#1216`).
 
 
 Current release

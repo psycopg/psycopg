@@ -46,6 +46,13 @@ class Capabilities:
         """
         return self._has_feature("PGconn.set_trace_flags()", 140000, check=check)
 
+    def has_used_gssapi(self, check: bool = False) -> bool:
+        """Check if the `pq.PGconn.used_gssapi` attribute is implemented.
+
+        The feature requires libpq 16.0 or greater.
+        """
+        return self._has_feature("PGconn.used_gssapi", 160000, check=check)
+
     def has_cancel_safe(self, check: bool = False) -> bool:
         """Check if the `Connection.cancel_safe()` method is implemented.
 
