@@ -27,6 +27,8 @@ from ._acompat import Event, Lock
 
 logger = logging.getLogger(__name__)
 
+CLIENT_EXCEPTIONS = Exception
+
 
 class Scheduler:
 
@@ -81,7 +83,7 @@ class Scheduler:
                     break
                 try:
                     task.action()
-                except Exception as e:
+                except CLIENT_EXCEPTIONS as e:
                     logger.warning(
                         "scheduled task run %s failed: %s: %s",
                         task.action,

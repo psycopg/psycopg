@@ -718,6 +718,33 @@ def test_cancel_on_check(pool_cls, dsn):
             conn.execute("select 1")
 
 
+@skip_sync
+def test_cancel_on_rollback(pool_cls, dsn, monkeypatch):
+    do_cancel = False
+
+    with pool_cls(dsn, min_size=min_size(pool_cls, 1), timeout=1.0) as p:
+        with p.connection() as conn:
+
+            def rollback(self):
+                if do_cancel:
+                    raise CancelledError()
+                else:
+                    type(self).rollback(self)
+
+            monkeypatch.setattr(type(conn), "rollback", rollback)
+            conn.execute("select 1")
+
+        do_cancel = True
+        with pytest.raises((psycopg.errors.SyntaxError, CancelledError)):
+            with p.connection() as conn:
+                conn.execute("selexx 2")
+
+        do_cancel = False
+        with p.connection() as conn:
+            cur = conn.execute("select 3")
+            assert cur.fetchone() == (3,)
+
+
 def min_size(pool_cls, num=1):
     """Return the minimum min_size supported by the pool class."""
     if pool_cls is pool.ConnectionPool:
