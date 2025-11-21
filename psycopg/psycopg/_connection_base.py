@@ -127,6 +127,8 @@ class BaseConnection(Generic[Row]):
 
         self._pipeline: BasePipeline | None = None
 
+        # Time when the connection was created (currently only used by the pool)
+        self._created_at: float
         # Time after which the connection should be closed
         self._expire_at: float
 
