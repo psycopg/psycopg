@@ -8,8 +8,11 @@
 =========================
 
 
-Psycopg 3.2.13 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.2.13
+^^^^^^^^^^^^^^
 
 - Show the host name in the error message in case of name resolution error
   (:ticket:`#1205`).
@@ -17,9 +20,6 @@ Psycopg 3.2.13 (unreleased)
   for the entire operation, preventing concurrent access issues (:ticket:`#1210`).
 - Fix GSSAPI check with C extension built with libpq < v16 (:ticket:`#1216`).
 
-
-Current release
----------------
 
 Psycopg 3.2.12
 ^^^^^^^^^^^^^^
