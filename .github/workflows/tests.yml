@@ -161,10 +161,12 @@ jobs:
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
           - {impl: python, python: "3.13"}
+          - {impl: python, python: "3.14"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
           - {impl: c, python: "3.13"}
+          - {impl: c, python: "3.14"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -286,12 +288,14 @@ jobs:
           - {impl: python, python: "3.11"}
           - {impl: python, python: "3.12"}
           - {impl: python, python: "3.13"}
+          - {impl: python, python: "3.14"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
           - {impl: c, python: "3.13"}
+          - {impl: c, python: "3.14"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
