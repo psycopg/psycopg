@@ -127,7 +127,7 @@ class Connection(BaseConnection[Row]):
             raise type(last_ex)("\n".join(lines)).with_traceback(None)
 
         if (
-            pq.version() >= 160000
+            capabilities.has_used_gssapi()
             and rv.pgconn.used_gssapi
             and (not gssapi_requested(params))
         ):
