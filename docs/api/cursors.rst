@@ -264,6 +264,7 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
+
     .. automethod:: results
 
         The iterator yields the cursor itself upon iteration, but the cursor
@@ -286,6 +287,10 @@ The `!Cursor` class
 
             In previous version you may call `nextset()` in a loop until it
             returns a false value.
+
+    .. automethod:: set_result
+
+        .. versionadded:: 3.3
 
     .. automethod:: scroll
 
@@ -562,6 +567,7 @@ semantic with an `!async` interface. The main interface is described in
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: results
+    .. automethod:: set_result
     .. automethod:: scroll
 
     .. note::
