@@ -264,14 +264,6 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
-    .. automethod:: set_result
-
-        Move to a specific result set if `execute()` returned multiple result
-        sets. The parameter `result_no` specifies the zero-based index of the
-        desired result set. Negative values are supported and refer to result
-        sets counted from the end.
-
-        .. versionadded:: 3.3
 
     .. automethod:: results
 
@@ -295,6 +287,10 @@ The `!Cursor` class
 
             In previous version you may call `nextset()` in a loop until it
             returns a false value.
+
+    .. automethod:: set_result
+
+        .. versionadded:: 3.3
 
     .. automethod:: scroll
 
@@ -571,6 +567,7 @@ semantic with an `!async` interface. The main interface is described in
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: results
+    .. automethod:: set_result
     .. automethod:: scroll
 
     .. note::

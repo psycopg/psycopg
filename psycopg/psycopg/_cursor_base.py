@@ -165,21 +165,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             return None
 
-    def set_result(self, result_no: int) -> None:
-        """
-        Move to a specific result set if `execute()` returned multiple result sets.
-
-        Args:
-            result_no (int): Zero based index, supports negative values
-        """
-        total_results = len(self._results)
-        if result_no < 0:
-            result_no = total_results + result_no
-        if 0 <= result_no < total_results:
-            self._select_current_result(result_no)
-        else:
-            raise ValueError("result_no value not in available results range")
-
     @property
     def statusmessage(self) -> str | None:
         """

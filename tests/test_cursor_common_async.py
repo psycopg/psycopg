@@ -218,22 +218,30 @@ async def test_execute_many_results(aconn):
     assert cur.rowcount == 3
     assert cur.nextset() is None
 
-    cur.set_result(0)
-    assert cur.fetchall() == [("foo",)]
-    assert cur.rowcount == 1
-
-    cur.set_result(-1)
-    assert cur.fetchall() == [(1,), (2,), (3,)]
-    assert cur.rowcount == 3
-
-    with pytest.raises(ValueError):
-        cur.set_result(2)
-
-    with pytest.raises(ValueError):
-        cur.set_result(-3)
-
     await cur.close()
     assert cur.nextset() is None
+
+
+async def test_set_results(aconn):
+    cur = aconn.cursor()
+
+    with pytest.raises(IndexError):
+        await cur.set_result(0)
+
+    await cur.execute("select 'foo'; select generate_series(1,3)")
+    assert await cur.set_result(0) is cur
+    assert (await cur.fetchall()) == [("foo",)]
+    assert cur.rowcount == 1
+
+    assert await cur.set_result(-1) is cur
+    assert (await cur.fetchall()) == [(1,), (2,), (3,)]
+    assert cur.rowcount == 3
+
+    with pytest.raises(IndexError):
+        await cur.set_result(2)
+
+    with pytest.raises(IndexError):
+        await cur.set_result(-3)
 
 
 async def test_execute_sequence(aconn):

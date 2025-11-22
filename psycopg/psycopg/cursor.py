@@ -210,6 +210,32 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 if not self.nextset():
                     break
 
+    def set_result(self, index: int) -> Self:
+        """
+        Move to a specific result set.
+
+        :arg index: index of the result to go to
+        :type index: `!int`
+
+        More than one result will be available after executing calling
+        `executemany()` or `execute()` with more than one query.
+
+        `!index` is 0-based and supports negative values, counting from the end,
+        the same way you can index items in a list.
+
+        The function returns self, so that the result may be followed by a
+        fetch operation. See `results()` for details.
+        """
+        if not -len(self._results) <= index < len(self._results):
+            raise IndexError(
+                f"index {index} out of range: {len(self._results)} result(s) available"
+            )
+        if index < 0:
+            index = len(self._results) + index
+
+        self._select_current_result(index)
+        return self
+
     def fetchone(self) -> Row | None:
         """
         Return the next record from the current result set.

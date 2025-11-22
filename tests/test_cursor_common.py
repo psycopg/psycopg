@@ -220,22 +220,30 @@ def test_execute_many_results(conn):
     assert cur.rowcount == 3
     assert cur.nextset() is None
 
-    cur.set_result(0)
+    cur.close()
+    assert cur.nextset() is None
+
+
+def test_set_results(conn):
+    cur = conn.cursor()
+
+    with pytest.raises(IndexError):
+        cur.set_result(0)
+
+    cur.execute("select 'foo'; select generate_series(1,3)")
+    assert cur.set_result(0) is cur
     assert cur.fetchall() == [("foo",)]
     assert cur.rowcount == 1
 
-    cur.set_result(-1)
+    assert cur.set_result(-1) is cur
     assert cur.fetchall() == [(1,), (2,), (3,)]
     assert cur.rowcount == 3
 
-    with pytest.raises(ValueError):
+    with pytest.raises(IndexError):
         cur.set_result(2)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(IndexError):
         cur.set_result(-3)
-
-    cur.close()
-    assert cur.nextset() is None
 
 
 def test_execute_sequence(conn):
