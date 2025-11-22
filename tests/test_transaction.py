@@ -523,6 +523,128 @@ def test_force_rollback_exception_exit(conn, svcconn):
     assert not inserted(svcconn)
 
 
+def test_transaction_status(conn_cls, dsn):
+    conn = conn_cls.connect(dsn)
+
+    """
+    The Transaction.status property ends up in committed state when no exceptions
+    are raised and force_rollback is False(default).
+    """
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+    with conn.transaction() as tx:
+        assert tx.status == tx.Status.ACTIVE
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+    assert tx.status == tx.Status.COMMITTED
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+
+    """
+    The Transaction.status property ends up in rolled_back_with_error state when an
+    exception is raised within the transaction block.
+    """
+    try:
+        with conn.transaction() as tx:
+            assert tx.status == tx.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            1 / 0
+    except ZeroDivisionError:
+        pass
+    assert tx.status == tx.Status.ROLLED_BACK_WITH_ERROR
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+
+    """
+    The Transaction.status property ends up in rolled_back_explicitly state when a
+    Rollback exception is raised within the transaction block.
+    """
+    try:
+        with conn.transaction() as tx:
+            assert tx.status == tx.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            raise Rollback()
+    except Rollback:
+        pass
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+
+    """
+    The Transaction.status property ends up in rolled_back_explicitly state when a
+    Transaction is created with force_rollback=True.
+    """
+    with conn.transaction(force_rollback=True) as tx:
+        assert tx.status == tx.Status.ACTIVE
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+    assert tx.status == tx.Status.ROLLED_BACK_EXPLICITLY
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+
+    """
+    The Transaction.status property ends up in FAILED state when the connection
+    is broken within the transaction block.
+    """
+    with conn.transaction() as tx:
+        assert tx.status == tx.Status.ACTIVE
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        conn.close()
+        assert conn.pgconn.status == pq.ConnStatus.BAD
+    assert tx.status == tx.Status.FAILED
+
+
+def test_nested_transaction_status(conn_cls, dsn):
+    conn = conn_cls.connect(dsn)
+
+    """
+    Testing nested transactions status property behavior.
+    This is a basic test case where the outer transaction commits successfully.
+    """
+    with conn.transaction() as tx1:
+        assert tx1.status == tx1.Status.ACTIVE
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        with conn.transaction() as tx2:
+            assert tx2.status == tx2.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        assert tx2.status == tx2.Status.COMMITTED
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+
+        try:
+            with conn.transaction() as tx3:
+                assert tx3.status == tx3.Status.ACTIVE
+                assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+                1 / 0
+        except ZeroDivisionError:
+            pass
+        assert tx3.status == tx3.Status.ROLLED_BACK_WITH_ERROR
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+
+        with conn.transaction() as tx4:
+            assert tx4.status == tx4.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            raise Rollback()
+        assert tx4.status == tx4.Status.ROLLED_BACK_EXPLICITLY
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+
+        with conn.transaction(force_rollback=True) as tx5:
+            assert tx5.status == tx5.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        assert tx5.status == tx5.Status.ROLLED_BACK_EXPLICITLY
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+
+    assert tx1.status == tx1.Status.COMMITTED
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+
+    """
+    Testing nested transactions status property behavior.
+    This test case checks the scenario where the inner transaction fails
+    """
+    with conn.transaction() as tx6:
+        assert tx6.status == tx6.Status.ACTIVE
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+        with conn.transaction() as tx7:
+            assert tx7.status == tx7.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            conn.close()
+            assert conn.pgconn.status == pq.ConnStatus.BAD
+    assert tx7.status == tx7.Status.FAILED
+    assert tx6.status == tx6.Status.FAILED
+
+
 @crdb_skip_external_observer
 def test_explicit_rollback_discards_changes(conn, svcconn):
     """
@@ -629,13 +751,13 @@ def test_str(conn, pipeline):
         assert "[IDLE, pipeline=ON]" in str(tx)
     else:
         assert "[IDLE]" in str(tx)
-    assert "(terminated)" in str(tx)
+    assert "(committed)" in str(tx)
 
     with pytest.raises(ZeroDivisionError):
         with conn.transaction() as tx:
             1 / 0
 
-    assert "(terminated)" in str(tx)
+    assert "(rolled_back_with_error)" in str(tx)
 
 
 @pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])

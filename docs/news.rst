@@ -24,6 +24,8 @@ Psycopg 3.3.0 (unreleased)
 - Add `Cursor.set_result()` and `Cursor.results()` to move across the result
   sets of queries executed though `~Cursor.executemany()` or
   `~Cursor.execute()` with multiple statements (:tickets:`#1080, #1170`).
+- Add :ref:`transaction-status` to report the status during and after a
+  `~Connection.transaction()` block (:ticket:`#969`).
 
 .. rubric:: New libpq wrapper features
 
