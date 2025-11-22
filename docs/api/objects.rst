@@ -247,7 +247,7 @@ Transaction-related objects
 
 See :ref:`transactions` for details about these objects.
 
-.. autoclass:: IsolationLevel
+.. autoclass:: IsolationLevel()
     :members:
 
     The value is usually used with the `Connection.isolation_level` property.
@@ -262,31 +262,53 @@ See :ref:`transactions` for details about these objects.
 
     .. autoattribute:: savepoint_name
     .. autoattribute:: connection
-    .. autoattribute:: status
+    .. attribute:: status
 
-        The current status of the transaction. Returns a `Transaction.Status`
-        enum value indicating whether the transaction is active, committed,
-        rolled back, or failed.
+        The current status of the transaction.
 
-        Possible values:
-
-        - `!NOT_STARTED`: Transaction created but not yet entered
-        - `!ACTIVE`: Transaction is currently active
-        - `!COMMITTED`: Transaction successfully committed
-        - `!ROLLED_BACK_EXPLICITLY`: Transaction explicitly rolled back
-        - `!ROLLED_BACK_WITH_ERROR`: Transaction rolled back due to an error
-        - `!FAILED`: Transaction failed due to connection failure
+        :type: `~psycopg.Transaction.Status`
 
         See :ref:`transaction-status` for more details and examples.
 
 
 .. autoclass:: AsyncTransaction()
 
-    .. autoattribute:: connection
-    .. autoattribute:: status
+    The class differs from `Transaction` for the following details:
 
-        The current status of the transaction. Returns a `AsyncTransaction.Status`
-        enum value. See `Transaction.status` for details.
+    .. autoattribute:: connection
+
+
+.. class:: psycopg.Transaction.Status()
+.. autoclass:: psycopg.AsyncTransaction.Status()
+
+    .. note: `:members:` doeesn't seem to work currently. Nested class problem?
+
+    .. attribute:: NON_STARTED
+
+        Transaction created but not yet entered.
+
+    .. attribute:: ACTIVE
+
+        Transaction currently active (inside the `!with` block).
+
+    .. attribute:: COMMITTED
+
+        Transaction successfully committed.
+
+    .. attribute:: ROLLED_BACK_EXPLICITLY
+
+        The transaction was explicitly rolled back (by raising
+        `~psycopg.Rollback` or calling `!transaction(force_rollback=True)`).
+
+    .. attribute:: ROLLED_BACK_WITH_ERROR
+
+        The transaction was rolled back due to an exception raised within the
+        transaction block.
+
+    .. attribute:: FAILED
+
+        The transaction failed due to a connection failure (e.g., the
+        connection was closed or became unavailable during the transaction).
 
 
 .. autoexception:: Rollback

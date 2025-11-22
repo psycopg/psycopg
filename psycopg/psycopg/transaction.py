@@ -53,6 +53,13 @@ class OutOfOrderTransactionNesting(e.ProgrammingError):
 
 class BaseTransaction(Generic[ConnectionType]):
     class Status(str, Enum):
+        """
+        The current status of a transaction.
+
+        Exposed as the `~psycopg.Transaction.status` attribute of
+        `~psycopg.Transaction` and `~psycopg.AsyncTransaction` objects.
+        """
+
         NOT_STARTED = "not_started"
         ACTIVE = "active"
         COMMITTED = "committed"
@@ -242,7 +249,10 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     @property
     def connection(self) -> Connection[Any]:
-        """The connection the object is managing."""
+        """The connection the object is managing.
+
+        :type: `Connection`
+        """
         return self._conn
 
     def __enter__(self) -> Self:
@@ -273,6 +283,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     @property
     def connection(self) -> AsyncConnection[Any]:
+        """The connection the object is managing.
+
+        :type: `AsyncConnection`
+        """
         return self._conn
 
     async def __aenter__(self) -> Self:

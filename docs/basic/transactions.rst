@@ -303,25 +303,16 @@ but not entirely committed yet.
 Transaction status
 ^^^^^^^^^^^^^^^^^^
 
-Each `Transaction` object exposes a `~Transaction.status` property that allows
-you to inspect the current state of the transaction. This can be useful for
+.. versionadded:: 3.3
+
+Each `!Transaction` object exposes a `~Transaction.status` property allowing
+to inspect the current state of the transaction. This can be useful for
 debugging, logging, or implementing custom transaction management logic.
 
-The `!status` property returns a `Transaction.Status` enum value that can be
-one of the following:
+The `!status` property is a `~psycopg.Transaction.Status` enum value:
+please check the enum documentation for the possible values.
 
-- `!NOT_STARTED`: The transaction has been created but not yet entered (before
-  the `!__enter__()` method is called).
-- `!ACTIVE`: The transaction is currently active (inside the `!with` block).
-- `!COMMITTED`: The transaction exited successfully and changes were committed.
-- `!ROLLED_BACK_EXPLICITLY`: The transaction was explicitly rolled back, either
-  by raising a `Rollback` exception or by using `!force_rollback=True`.
-- `!ROLLED_BACK_WITH_ERROR`: The transaction was rolled back due to an
-  exception raised within the transaction block.
-- `!FAILED`: The transaction failed due to a connection failure (e.g., the
-  connection was closed or became unavailable during the transaction).
-
-Here's an example of how to use the status property:
+Here are a few examples of how to use the `!status` property:
 
 .. code:: python
 
