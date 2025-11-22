@@ -52,7 +52,7 @@ class OutOfOrderTransactionNesting(e.ProgrammingError):
 
 
 class BaseTransaction(Generic[ConnectionType]):
-    class Status(Enum):
+    class Status(str, Enum):
         NOT_STARTED = "not_started"
         ACTIVE = "active"
         COMMITTED = "committed"
