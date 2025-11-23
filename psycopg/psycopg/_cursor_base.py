@@ -7,13 +7,14 @@ Psycopg BaseCursor object
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, NoReturn
+from weakref import ReferenceType, ref
 from functools import partial
 from collections.abc import Iterable, Sequence
 
 from . import adapt
 from . import errors as e
 from . import pq
-from .abc import ConnectionType, Params, PQGen, Query
+from .abc import ConnectionType, Loader, Params, PQGen, Query
 from .rows import Row, RowMaker
 from ._column import Column
 from ._compat import Template
@@ -66,6 +67,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = False
         self._last_query: Query | None = None
         self._reset()
+
+        # Set up a callback to allow changing loaders on already returned result.
+        self._adapters._register_loader_callback = partial(
+            self._loaders_changed, ref(self)
+        )
 
     def _reset(self, reset_query: bool = True) -> None:
         self._results: list[PGresult] = []
@@ -532,6 +538,24 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # rows of executed queries.
             for res in results:
                 self._rowcount += res.command_tuples or 0
+
+    @classmethod
+    def _loaders_changed(
+        cls, wself: ReferenceType[BaseCursor[Any, Any]], oid: int, loader: type[Loader]
+    ) -> None:
+        """Callback called when self.adapters.set_loaders is called.
+
+        Allow to change the loaders after the results have been returned already.
+        """
+        if not (self := wself()):
+            return
+
+        # Replace the transformer with a new one, restore the current state.
+        self._tx = adapt.Transformer(self)
+        pos = self._pos
+        if self._iresult < len(self._results):
+            self._select_current_result(self._iresult)
+            self._pos = pos
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         if self._conn._pipeline:

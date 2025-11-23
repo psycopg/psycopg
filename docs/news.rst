@@ -26,6 +26,9 @@ Psycopg 3.3.0 (unreleased)
   `~Cursor.execute()` with multiple statements (:tickets:`#1080, #1170`).
 - Add :ref:`transaction-status` to report the status during and after a
   `~Connection.transaction()` block (:ticket:`#969`).
+- Allow to change loaders using `~adapt.AdaptersMap.register_loader()` on
+  `Cursor.adapters` after a query result has been already returned
+  (:ticket:`#884`).
 
 .. rubric:: New libpq wrapper features
 

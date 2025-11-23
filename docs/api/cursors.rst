@@ -43,6 +43,17 @@ The `!Cursor` class
 
         The connection this cursor is using.
 
+    .. attribute:: adapters
+        :type: ~adapt.AdaptersMap
+
+        The adapters configuration used to convert Python parameters and
+        PostgreSQL results for the queries executed on this cursor.
+
+        .. versionchanged:: 3.3
+
+            reconfiguring loaders using `~adapt.AdaptersMap.register_loader()`
+            affects the results of a query already executed.
+
     .. automethod:: close
 
         .. note::

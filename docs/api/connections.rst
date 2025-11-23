@@ -68,6 +68,14 @@ The `!Connection` class
         .. versionchanged:: 3.1
             added `!prepare_threshold` and `!cursor_factory` parameters.
 
+    .. attribute:: adapters
+        :type: ~adapt.AdaptersMap
+
+        The adapters configuration used to convert Python parameters and
+        PostgreSQL results for the queries executed on this cursor.
+
+        It affects all the cursors created by this connection afterwards.
+
     .. automethod:: close
 
         .. note::
