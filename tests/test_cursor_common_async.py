@@ -19,6 +19,7 @@ from . import _test_cursor
 from .utils import raiseif
 from .acompat import alist, gather, spawn
 from .fix_crdb import crdb_encoding
+from .test_adapt import make_loader
 from ._test_cursor import my_row_factory, ph
 
 execmany = _test_cursor.execmany  # avoid F811 underneath
@@ -982,3 +983,35 @@ async def test_results_after_executemany(aconn, count, returning):
             assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
         else:
             assert ress == []
+
+
+async def test_change_loader_results(aconn):
+    cur = aconn.cursor()
+    # With no result
+    cur.adapters.register_loader("text", make_loader("1"))
+
+    await cur.execute(
+        """
+        values ('foo'::text);
+        values ('bar'::text), ('baz');
+        values ('qux'::text);
+        """
+    )
+    assert (await cur.fetchall()) == [("foo1",)]
+
+    cur.nextset()
+    assert (await cur.fetchone()) == ("bar1",)
+    cur.adapters.register_loader("text", make_loader("2"))
+    assert (await cur.fetchone()) == ("baz2",)
+    await cur.scroll(-2)
+    assert (await cur.fetchall()) == [("bar2",), ("baz2",)]
+
+    cur.nextset()
+    assert (await cur.fetchall()) == [("qux2",)]
+
+    # After the final result
+    assert not cur.nextset()
+    cur.adapters.register_loader("text", make_loader("3"))
+    assert (await cur.fetchone()) is None
+    await cur.set_result(0)
+    assert (await cur.fetchall()) == [("foo3",)]

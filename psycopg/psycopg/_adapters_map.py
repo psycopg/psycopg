@@ -7,6 +7,7 @@ Mapping from types/oids to Dumpers/Loaders
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
+from collections.abc import Callable
 
 from . import errors as e
 from . import pq
@@ -67,6 +68,9 @@ class AdaptersMap:
 
     # Record if a dumper or loader has an optimised version.
     _optimised: dict[type, type] = {}
+
+    # Callable to be called when register_loader() is called.
+    _register_loader_callback: Callable[[int, type[Loader]], None] | None = None
 
     def __init__(
         self, template: AdaptersMap | None = None, types: TypesRegistry | None = None
@@ -182,6 +186,8 @@ class AdaptersMap:
             self._own_loaders[fmt] = True
 
         self._loaders[fmt][oid] = loader
+        if self._register_loader_callback:
+            self._register_loader_callback(oid, loader)
 
     def get_dumper(self, cls: type, format: PyFormat) -> type[Dumper]:
         """

@@ -70,7 +70,7 @@ class AdaptContext(Protocol):
     """
     A context describing how types are adapted.
 
-    Example of `~AdaptContext` are `~psycopg.Connection`, `~psycopg.Cursor`,
+    Example of `!AdaptContext` are `~psycopg.Connection`, `~psycopg.Cursor`,
     `~psycopg.adapt.Transformer`, `~psycopg.adapt.AdaptersMap`.
 
     Note that this is a `~typing.Protocol`, so objects implementing

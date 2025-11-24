@@ -62,6 +62,11 @@ returned.
     affected. For instance, changing the global context will only change newly
     created connections, not the ones already existing.
 
+    .. versionchanged:: 3.3
+
+        you can call `~AdaptersMap.register_loader()` on `!Cursor.adapters`
+        after a query has returned a result to change the loaders used.
+
 
 .. _adapt-life-cycle:
 

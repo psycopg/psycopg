@@ -22,6 +22,7 @@ from . import _test_cursor
 from .utils import raiseif
 from .acompat import gather, spawn
 from .fix_crdb import crdb_encoding
+from .test_adapt import make_loader
 from ._test_cursor import my_row_factory, ph
 
 execmany = _test_cursor.execmany  # avoid F811 underneath
@@ -974,3 +975,35 @@ def test_results_after_executemany(conn, count, returning):
             assert ress == [[(j + 1,) for j in range(i)] for i in range(count)]
         else:
             assert ress == []
+
+
+def test_change_loader_results(conn):
+    cur = conn.cursor()
+    # With no result
+    cur.adapters.register_loader("text", make_loader("1"))
+
+    cur.execute(
+        """
+        values ('foo'::text);
+        values ('bar'::text), ('baz');
+        values ('qux'::text);
+        """
+    )
+    assert cur.fetchall() == [("foo1",)]
+
+    cur.nextset()
+    assert cur.fetchone() == ("bar1",)
+    cur.adapters.register_loader("text", make_loader("2"))
+    assert cur.fetchone() == ("baz2",)
+    cur.scroll(-2)
+    assert cur.fetchall() == [("bar2",), ("baz2",)]
+
+    cur.nextset()
+    assert cur.fetchall() == [("qux2",)]
+
+    # After the final result
+    assert not cur.nextset()
+    cur.adapters.register_loader("text", make_loader("3"))
+    assert cur.fetchone() is None
+    cur.set_result(0)
+    assert cur.fetchall() == [("foo3",)]
