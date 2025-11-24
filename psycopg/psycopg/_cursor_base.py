@@ -475,8 +475,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.InternalError("got no result from the query")
 
         for res in results:
-            status = res.status
-            if status != TUPLES_OK and status != COMMAND_OK and status != EMPTY_QUERY:
+            if (
+                (status := res.status) != TUPLES_OK
+                and status != COMMAND_OK
+                and status != EMPTY_QUERY
+                and status != COPY_BOTH
+            ):
                 self._raise_for_result(res)
 
     def _raise_for_result(self, result: PGresult) -> NoReturn:
