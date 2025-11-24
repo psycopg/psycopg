@@ -325,6 +325,26 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._putconn(conn, from_getconn=False)
 
+    def drain(self) -> None:
+        """
+        Remove all the connections from the pool and create new ones.
+
+        If a connection is currently out of the pool it will be closed when
+        returned to the pool and replaced with a new one.
+
+        This method is useful to force a connection re-configuration, for
+        example when the adapters map changes after the pool was created.
+        """
+        with self._lock:
+            conns = list(self._pool)
+            self._pool.clear()
+            self._drained_at = monotonic()
+
+        # Close the connection already in the pool, open new ones.
+        for conn in conns:
+            self._close_connection(conn)
+            self.run_task(AddConnection(self))
+
     def _putconn(self, conn: CT, from_getconn: bool) -> None:
         # Use a worker to perform eventual maintenance work in a separate task
         if self._reset:
@@ -715,7 +735,7 @@ class ConnectionPool(Generic[CT], BasePool):
             return
 
         # Check if the connection is past its best before date
-        if conn._expire_at <= monotonic():
+        if conn._created_at <= self._drained_at or conn._expire_at <= monotonic():
             logger.info("discarding expired connection")
             self._close_connection(conn)
             self.run_task(AddConnection(self))
