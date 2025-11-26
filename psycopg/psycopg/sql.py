@@ -503,3 +503,25 @@ class Placeholder(Composable):
 # Literals
 NULL = SQL("NULL")
 DEFAULT = SQL("DEFAULT")
+
+
+def as_string(obj: Composable | Template, context: AdaptContext | None = None) -> str:
+    if isinstance(obj, Composable):
+        return obj.as_string(context=context)
+    elif isinstance(obj, Template):
+        from ._tstrings import as_string
+
+        return as_string(obj, context)
+    else:
+        raise TypeError(f"{type(obj).__name__} objects not supported by as_string")
+
+
+def as_bytes(obj: Composable | Template, context: AdaptContext | None = None) -> bytes:
+    if isinstance(obj, Composable):
+        return obj.as_bytes(context=context)
+    elif isinstance(obj, Template):
+        from ._tstrings import as_bytes
+
+        return as_bytes(obj, context)
+    else:
+        raise TypeError(f"{type(obj).__name__} objects not supported by as_bytes")
