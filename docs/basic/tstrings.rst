@@ -53,6 +53,17 @@ but has a clear readability advantage because the Python variable names or
 expressions appear directly in the place where they will be used in the query
 (no more forgetting to add a placeholder when adding a field in an INSERT...).
 
+If you want to convert the template string to a regular string, instead of
+executing it directly, you can use the `sql.as_string()` or `~sql.as_bytes()`
+functions:
+
+.. code:: python
+
+    >>> name = "O'Reilly"
+    >>> dob = datetime.date(1970, 1, 1)
+    >>> print(sql.as_string(t"INSERT INTO tbl VALUES ({name}, {dob})"))
+    INSERT INTO tbl VALUES ('O''Reilly', '1970-01-01'::date)
+
 With template strings it is also easy to parametrize parts of the query other
 than parameter values, for example tables or fields names:
 

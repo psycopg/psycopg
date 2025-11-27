@@ -143,6 +143,10 @@ class TemplateProcessor:
 
 
 def as_string(t: Template, context: abc.AdaptContext | None = None) -> str:
+    """Convert a template string to a string.
+
+    This function is exposed as part of psycopg.sql.as_string().
+    """
     tx = Transformer(context)
     tp = TemplateProcessor(t, tx=tx, server_params=False)
     tp.process()
@@ -150,6 +154,10 @@ def as_string(t: Template, context: abc.AdaptContext | None = None) -> str:
 
 
 def as_bytes(t: Template, context: abc.AdaptContext | None = None) -> bytes:
+    """Convert a template string to a bytes string.
+
+    This function is exposed as part of psycopg.sql.as_bytes().
+    """
     tx = Transformer(context)
     tp = TemplateProcessor(t, tx=tx, server_params=False)
     tp.process()
