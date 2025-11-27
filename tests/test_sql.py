@@ -294,7 +294,9 @@ class TestIdentifier:
     def test_as_bytes(self, conn, args, want, enc):
         want = want.encode(enc)
         conn.execute(f"set client_encoding to {py2pgenc(enc).decode()}")
-        assert sql.Identifier(*args).as_bytes(conn) == want
+        got = sql.Identifier(*args).as_bytes(conn)
+        assert isinstance(got, bytes)
+        assert got == want
 
     @pytest.mark.parametrize("args, want, enc", _as_bytes_params)
     def test_as_bytes_no_conn(self, conn, args, want, enc):
@@ -345,6 +347,7 @@ class TestLiteral:
     @pytest.mark.parametrize("obj, want", _params)
     def test_as_bytes(self, conn, obj, want):
         got = sql.Literal(obj).as_bytes(conn)
+        assert isinstance(got, bytes)
         if isinstance(obj, str):
             got = no_e(got)
         assert got == want.encode()
@@ -509,7 +512,9 @@ class TestSQL:
         if encoding:
             conn.execute(f"set client_encoding to {encoding}")
 
-        assert sql.SQL(eur).as_bytes(conn) == eur.encode(encoding)
+        got = sql.SQL(eur).as_bytes(conn)
+        assert isinstance(got, bytes)
+        assert got == eur.encode(encoding)
 
     def test_no_conn(self):
         assert sql.SQL(eur).as_string() == eur
@@ -629,6 +634,7 @@ class TestPlaceholder:
     @pytest.mark.parametrize("format", PyFormat)
     def test_as_bytes(self, conn, format):
         ph = sql.Placeholder(format=format)
+        assert isinstance(ph.as_bytes(), bytes)
         assert ph.as_bytes(conn) == f"%{format.value}".encode()
         assert ph.as_bytes() == f"%{format.value}".encode()
 
