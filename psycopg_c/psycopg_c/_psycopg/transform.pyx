@@ -238,6 +238,9 @@ cdef class Transformer:
             if <object>type_ptr:
                 rv = b"%s::%s" % (rv, <object>type_ptr)
 
+        if not isinstance(rv, bytes):
+            rv = bytes(rv)
+
         return rv
 
     def get_dumper(self, obj, format) -> "Dumper":
