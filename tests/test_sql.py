@@ -655,25 +655,35 @@ def test_as_string_context(conn):
     assert query == no_e("select 'foo1'")
 
 
-def test_as_string_error():
-    with pytest.raises(TypeError):
-        sql.as_string("query")  # type: ignore[arg-type]
+def test_as_string_literal():
+    got = sql.as_string("query")
+    assert got == no_e("'query'")
+
+    got = sql.as_string(dt.date(1970, 1, 1))
+    assert got == no_e("'1970-01-01'::date")
 
 
 def test_as_bytes():
     query = sql.as_bytes(sql.SQL("select {}").format("foo"))
+    assert isinstance(query, bytes)
     assert query == no_e(b"select 'foo'")
 
 
 def test_as_bytes_context(conn):
     conn.adapters.register_dumper(str, make_dumper("1"))
     query = sql.as_bytes(sql.SQL("select {}").format("foo"), context=conn)
+    assert isinstance(query, bytes)
     assert query == no_e(b"select 'foo1'")
 
 
-def test_as_bytes_error():
-    with pytest.raises(TypeError):
-        sql.as_bytes("query")  # type: ignore[arg-type]
+def test_as_bytes_literal():
+    got = sql.as_bytes("query")
+    assert isinstance(got, bytes)
+    assert got == no_e(b"'query'")
+
+    got = sql.as_bytes(dt.date(1970, 1, 1))
+    assert isinstance(got, bytes)
+    assert got == no_e(b"'1970-01-01'::date")
 
 
 class TestValues:
