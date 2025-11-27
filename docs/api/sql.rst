@@ -163,10 +163,18 @@ The `!sql` objects are in the following inheritance hierarchy:
 Utility functions
 -----------------
 
-.. autofunction:: quote
+.. autofunction:: as_string
+
+    .. versionadded:: 3.3
+
+.. autofunction:: as_bytes
+
+    .. versionadded:: 3.3
 
 .. data::
     NULL
     DEFAULT
 
     `sql.SQL` objects often useful in queries.
+
+.. autofunction:: quote

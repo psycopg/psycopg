@@ -503,3 +503,51 @@ class Placeholder(Composable):
 # Literals
 NULL = SQL("NULL")
 DEFAULT = SQL("DEFAULT")
+
+
+def as_string(obj: Any, context: AdaptContext | None = None) -> str:
+    """Convert an object to a string according to SQL rules.
+
+    :param obj: the object to convert
+    :param context: the context in which to convert the object
+    :type context: `~psycopg.abc.AdaptContext` | `!None`
+
+    Adaptation happens according to the type of `!obj`:
+
+    - `Composable` objects are converted according to their
+      `~Composable.as_string()` method;
+    - `~string.templatelib.Template` strings are converted according to the
+      rules documented in :ref:`template-strings`;
+    - every other object is converted as it was :ref:`a parameter passed to a
+      query <types-adaptation>`.
+
+    If `!context` is specified then it is be used to customize the conversion.
+    for example using the encoding of a connection or the dumpers registered.
+    """
+    if isinstance(obj, Composable):
+        return obj.as_string(context=context)
+    elif isinstance(obj, Template):
+        from ._tstrings import as_string
+
+        return as_string(obj, context)
+    else:
+        return Literal(obj).as_string(context=context)
+
+
+def as_bytes(obj: Any, context: AdaptContext | None = None) -> bytes:
+    """Convert an object to a bytes string according to SQL rules.
+
+    :param obj: the object to convert
+    :param context: the context in which to convert the object
+    :type context: `~psycopg.abc.AdaptContext` | `!None`
+
+    See `as_string()` for details.
+    """
+    if isinstance(obj, Composable):
+        return obj.as_bytes(context=context)
+    elif isinstance(obj, Template):
+        from ._tstrings import as_bytes
+
+        return as_bytes(obj, context)
+    else:
+        return Literal(obj).as_bytes(context=context)

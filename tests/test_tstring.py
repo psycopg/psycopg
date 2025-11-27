@@ -7,6 +7,8 @@ from psycopg import sql
 from psycopg.pq import Format
 
 from .acompat import alist
+from .test_sql import no_e
+from .test_adapt import make_dumper
 
 vstr = "hello"
 vint = 16
@@ -238,3 +240,25 @@ async def test_server_cursor(aconn):
         assert cur.description[1].name == vstr
         assert b"$2" in cur._query.query
         assert b"$3" not in cur._query.query
+
+
+def test_as_string():
+    query = sql.as_string(t"select {vstr}")
+    assert query == no_e("select 'hello'")
+
+
+async def test_as_string_context(aconn):
+    aconn.adapters.register_dumper(str, make_dumper("1"))
+    query = sql.as_string(t"select {vstr}", context=aconn)
+    assert query == no_e("select 'hello1'")
+
+
+def test_as_bytes():
+    query = sql.as_bytes(t"select {vstr}")
+    assert query == no_e(b"select 'hello'")
+
+
+async def test_as_bytes_context(aconn):
+    aconn.adapters.register_dumper(str, make_dumper("1"))
+    query = sql.as_bytes(t"select {vstr}", context=aconn)
+    assert query == no_e(b"select 'hello1'")

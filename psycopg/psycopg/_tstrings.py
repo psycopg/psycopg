@@ -6,15 +6,14 @@ Template strings support in queries.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from . import abc
 from . import errors as e
 from . import sql
 from ._enums import PyFormat
 from ._compat import Interpolation, Template
-
-if TYPE_CHECKING:
-    from .abc import Transformer
+from ._transformer import Transformer
 
 # Formats supported by template strings
 FMT_AUTO = PyFormat.AUTO.value
@@ -26,7 +25,7 @@ FMT_SQL = "q"
 
 
 class TemplateProcessor:
-    def __init__(self, template: Template, *, tx: Transformer, server_params: bool):
+    def __init__(self, template: Template, *, tx: abc.Transformer, server_params: bool):
         self.template = template
         self._tx = tx
         self._server_params = server_params
@@ -141,3 +140,25 @@ class TemplateProcessor:
             raise e.ProgrammingError(
                 f"{type(item.value).__qualname__} not supported in string templates"
             )
+
+
+def as_string(t: Template, context: abc.AdaptContext | None = None) -> str:
+    """Convert a template string to a string.
+
+    This function is exposed as part of psycopg.sql.as_string().
+    """
+    tx = Transformer(context)
+    tp = TemplateProcessor(t, tx=tx, server_params=False)
+    tp.process()
+    return tp.query.decode(tx.encoding)
+
+
+def as_bytes(t: Template, context: abc.AdaptContext | None = None) -> bytes:
+    """Convert a template string to a bytes string.
+
+    This function is exposed as part of psycopg.sql.as_bytes().
+    """
+    tx = Transformer(context)
+    tp = TemplateProcessor(t, tx=tx, server_params=False)
+    tp.process()
+    return tp.query
