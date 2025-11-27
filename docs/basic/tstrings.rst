@@ -10,29 +10,10 @@ Template string queries
 
 .. versionadded:: 3.3
 
-.. warning::
-
-    This is an experimental feature, still under active development,
-    documented here for preview. Details may change before the final Psycopg
-    3.3 release.
-
-    Template strings are a Python language feature under development too,
-    planned for release in Python 3.14. Template string queries are currently
-    tested in Python 3.14 rc 2.
-
-    If you want to test the feature you can install a `test version of Pyscopg
-    from test pypi`__:
-
-    .. code:: shell
-
-        $ pip install -i https://test.pypi.org/simple/ "psycopg[binary]==3.3.0.dev1"
-
-    .. __: https://test.pypi.org/project/psycopg/3.3.0.dev1/
-
 Psycopg can process queries expressed as `template strings`__ defined in
 :pep:`750` and implemented for the first time in Python 3.14.
 
-.. __: https://docs.python.org/3.14/whatsnew/3.14.html#pep-750-template-strings
+.. __: https://docs.python.org/3.14/whatsnew/3.14.html#pep-750-template-string-literals
 
 Template strings are similar to f-strings__: they are string literals
 interspersed with variables or expressions marked by ``{}``. They use a ``t``
@@ -50,7 +31,7 @@ string; t-strings, instead, are evaluated by Psycopg, which has a chance to
 process query parameters in a safe way.
 
 For example you can pass to a query some strings parameters, which may contain
-unsafe characters such as ``'``, or come from untrusted sources such as web
+unsafe characters such as ``'``, or come from untrusted sources such as a web
 form, and leave Psycopg to perform the right processing:
 
 .. code:: python
