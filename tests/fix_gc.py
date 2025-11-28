@@ -72,9 +72,7 @@ def fixture_gc():
 
     **Note:** This will skip tests on PyPy.
     """
-    if sys.implementation.name == "pypy" or bool(
-        sysconfig.get_config_var("Py_GIL_DISABLED")
-    ):
+    if sys.implementation.name == "pypy" or sysconfig.get_config_var("Py_GIL_DISABLED"):
         pytest.skip(reason="depends on refcount semantics")
     return GCFixture()
 
@@ -86,6 +84,6 @@ def gc_collect():
 
     **Note:** This will *not* skip tests on PyPy.
     """
-    if bool(sysconfig.get_config_var("Py_GIL_DISABLED")):
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
         pytest.skip(reason="depends on refcount semantics")
     return GCFixture.collect

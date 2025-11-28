@@ -206,6 +206,6 @@ def asyncio_run(coro: Any, *, debug: bool | None = None) -> Any:
 
 def skip_free_threaded(reason="unsafe under the free-threaded build"):
     return pytest.mark.skipif(
-        bool(sysconfig.get_config_var("Py_GIL_DISABLED")),
+        sysconfig.get_config_var("Py_GIL_DISABLED"),
         reason=reason,
     )
