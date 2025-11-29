@@ -19,8 +19,9 @@ Psycopg 3.3.0 (unreleased)
 - More flexible :ref:`composite adaptation<adapt-composite>`: it is now possible
   to adapt Python objects to PostgreSQL composites and back even if they are not
   sequences or if they take keyword arguments (:ticket:`#932`, :ticket:`#1202`).
-- Cursors are now *iterators*, not only *iterables*. This means you can call
-  ``next(cur)`` to fetch the next row (:ticket:`#1064`).
+- Cursors are now iterators_, not just iterables_. This means you can call
+  `next`\ ``(cur)`` or `anext`\ ``(cur)``, which is useful as a :ref:`type-safe
+  expression <typing-fetchone>` (:ticket:`#1064`).
 - Add `Cursor.set_result()` and `Cursor.results()` to move across the result
   sets of queries executed though `~Cursor.executemany()` or
   `~Cursor.execute()` with multiple statements (:tickets:`#1080, #1170`).
@@ -49,6 +50,9 @@ Psycopg 3.3.0 (unreleased)
     GSSAPI.
 
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
+
+.. _iterators: https://docs.python.org/3/glossary.html#term-iterator
+.. _iterables: https://docs.python.org/3/glossary.html#term-iterable
 
 
 Current release

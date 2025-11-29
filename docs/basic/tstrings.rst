@@ -144,7 +144,7 @@ result in executing the statement ``NOTIFY "foo.bar", 'O''Reilly'``.
 Example: nested templates
 -------------------------
 
-A string template merges literal parts of the query with parameter. It is also
+A string template merges literal parts of the query with parameters. It is also
 possible to pass templates to templates in order to compose more and more
 complex and dynamic SQL statements.
 

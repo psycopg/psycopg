@@ -309,8 +309,8 @@ Each `!Transaction` object exposes a `~Transaction.status` property allowing
 to inspect the current state of the transaction. This can be useful for
 debugging, logging, or implementing custom transaction management logic.
 
-The `!status` property is a `~psycopg.Transaction.Status` enum value:
-please check the enum documentation for the possible values.
+The `!status` property is a `psycopg.Transaction.Status` enum value:
+please check its documentation for the possible values.
 
 Here are a few examples of how to use the `!status` property:
 
@@ -346,7 +346,7 @@ Here are a few examples of how to use the `!status` property:
 
 The `!status` property remains accessible after the transaction context has
 exited, allowing you to check the final outcome of the transaction even after
-the `!with` block completes. This is particularly useful when you need to log
+the `!with` block has exited. This is particularly useful when you need to log
 transaction outcomes or implement retry logic based on the transaction status.
 
 
