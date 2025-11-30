@@ -355,10 +355,10 @@ class MyKeywordThing:
 def test_load_keyword_composite_factory(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
 
-    def make_instance(values, names):
+    def make_object(values, names):
         return MyKeywordThing(**dict(zip(names, values)))
 
-    register_composite(info, conn, factory=MyKeywordThing, make_instance=make_instance)
+    register_composite(info, conn, factory=MyKeywordThing, make_object=make_object)
     assert info.python_type is MyKeywordThing
 
     cur = conn.cursor(binary=fmt_out)

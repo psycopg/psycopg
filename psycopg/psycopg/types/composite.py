@@ -35,7 +35,7 @@ _unpack_oidlen = cast(
 )
 
 T = TypeVar("T")
-InstanceMaker: TypeAlias = Callable[[Sequence[Any], Sequence[str]], T]
+ObjectMaker: TypeAlias = Callable[[Sequence[Any], Sequence[str]], T]
 SequenceMaker: TypeAlias = Callable[[T, Sequence[str]], Sequence[Any]]
 
 
@@ -240,11 +240,11 @@ class _CompositeLoader(Loader, Generic[T], ABC):
             args = ()
         else:
             args = self._tx.load_sequence(tuple(_parse_text_record(data[1:-1])))
-        return type(self).make_instance(args, self.fields_names)
+        return type(self).make_object(args, self.fields_names)
 
     @staticmethod
     @abstractmethod
-    def make_instance(args: Sequence[Any], names: Sequence[str]) -> T: ...
+    def make_object(args: Sequence[Any], names: Sequence[str]) -> T: ...
 
 
 class _CompositeBinaryLoader(Loader, Generic[T], ABC):
@@ -268,18 +268,18 @@ class _CompositeBinaryLoader(Loader, Generic[T], ABC):
     def load(self, data: abc.Buffer) -> T:
         brecord, _ = _parse_binary_record(data)  # assume oids == self.fields_types
         record = self._tx.load_sequence(brecord)
-        return type(self).make_instance(record, self.fields_names)
+        return type(self).make_object(record, self.fields_names)
 
     @staticmethod
     @abstractmethod
-    def make_instance(args: Sequence[Any], names: Sequence[str]) -> T: ...
+    def make_object(args: Sequence[Any], names: Sequence[str]) -> T: ...
 
 
 def register_composite(
     info: CompositeInfo,
     context: abc.AdaptContext | None = None,
     factory: Callable[..., T] | None = None,
-    make_instance: InstanceMaker[T] | None = None,
+    make_object: ObjectMaker[T] | None = None,
     make_sequence: SequenceMaker[T] | None = None,
 ) -> None:
     """Register the adapters to load and dump a composite type.
@@ -292,11 +292,11 @@ def register_composite(
     :param factory: Callable to create a Python object from the sequence of
         attributes read from the composite.
     :type factory: `!Callable[..., T]` | `!None`
-    :param make_instance: optional function taking values and names as input and
-        returning the new type.
-    :type make_instance: `!Callable[[Sequence[Any], Sequence[str]], T]` | `!None`
-    :param make_sequence: optional function taking an instance and names as
-        input and returning the fields to dump.
+    :param make_object: optional function to use on load, to adapt the
+        composite's sequence of values to a Python object
+    :type make_object: `!Callable[[Sequence[Any], Sequence[str]], T]` | `!None`
+    :param make_sequence: optional function to use on dump, to adapt an object
+        to the composite's sequence of values
     :type make_sequence: `!Callable[[T, Sequence[str]], Sequence[Any]]` | `!None`
 
     .. note::
@@ -318,9 +318,9 @@ def register_composite(
     if not factory:
         factory = cast("Callable[..., T]", _nt_from_info(info))
 
-    if not make_instance:
+    if not make_object:
 
-        def make_instance(values: Sequence[Any], types: Sequence[str]) -> T:
+        def make_object(values: Sequence[Any], types: Sequence[str]) -> T:
             return factory(*values)
 
     adapters = context.adapters if context else postgres.adapters
@@ -330,13 +330,13 @@ def register_composite(
 
     # generate and register a customized text loader
     loader: type[_CompositeLoader[T]] = _make_loader(
-        info.name, field_names, field_types, make_instance
+        info.name, field_names, field_types, make_object
     )
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
     binary_loader: type[_CompositeBinaryLoader[T]] = _make_binary_loader(
-        info.name, field_names, field_types, make_instance
+        info.name, field_names, field_types, make_object
     )
     adapters.register_loader(info.oid, binary_loader)
 
@@ -527,14 +527,14 @@ def _make_loader(
     name: str,
     field_names: tuple[str, ...],
     field_types: tuple[int, ...],
-    make_instance: InstanceMaker[T],
+    make_object: ObjectMaker[T],
 ) -> type[_CompositeLoader[T]]:
     doc = f"Text loader for the '{name}' composite."
     d = {
         "__doc__": doc,
         "fields_types": field_types,
         "fields_names": field_names,
-        "make_instance": make_instance,
+        "make_object": make_object,
     }
     return type(f"{name.title()}Loader", (_CompositeLoader,), d)
 
@@ -544,14 +544,14 @@ def _make_binary_loader(
     name: str,
     field_names: tuple[str, ...],
     field_types: tuple[int, ...],
-    make_instance: InstanceMaker[T],
+    make_object: ObjectMaker[T],
 ) -> type[_CompositeBinaryLoader[T]]:
     doc = f"Binary loader for the '{name}' composite."
     d = {
         "__doc__": doc,
         "fields_names": field_names,
         "fields_types": field_types,
-        "make_instance": make_instance,
+        "make_object": make_object,
     }
     return type(f"{name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
 
