@@ -35,8 +35,8 @@ _unpack_oidlen = cast(
 )
 
 T = TypeVar("T")
-ObjectMaker: TypeAlias = Callable[[Sequence[Any], Sequence[str]], T]
-SequenceMaker: TypeAlias = Callable[[T, Sequence[str]], Sequence[Any]]
+ObjectMaker: TypeAlias = Callable[[Sequence[Any], "CompositeInfo"], T]
+SequenceMaker: TypeAlias = Callable[[T, "CompositeInfo"], Sequence[Any]]
 
 
 class CompositeInfo(TypeInfo):
@@ -53,10 +53,13 @@ class CompositeInfo(TypeInfo):
         field_types: Sequence[int],
     ):
         super().__init__(name, oid, array_oid, regtype=regtype)
-        self.field_names = field_names
-        self.field_types = field_types
+        self.field_names = tuple(field_names)
+        self.field_types = tuple(field_types)
         # Will be set by register() if the `factory` is a type
         self.python_type: type | None = None
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.field_names, self.field_types))
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> abc.QueryNoTemplate:
@@ -106,17 +109,16 @@ class _SequenceDumper(RecursiveDumper, Generic[T], ABC):
     object to dump to a sequence of values.
     """
 
-    # Subclasses must set this info
-    field_names: tuple[str, ...]
-    field_types: tuple[int, ...]
+    # Subclasses must set this attribute
+    info: CompositeInfo
 
     def dump(self, obj: T) -> bytes:
-        seq = type(self).make_sequence(obj, self.field_names)
+        seq = type(self).make_sequence(obj, self.info)
         return _dump_text_sequence(seq, self._tx)
 
     @staticmethod
     @abstractmethod
-    def make_sequence(obj: T, names: Sequence[str]) -> Sequence[Any]: ...
+    def make_sequence(obj: T, info: CompositeInfo) -> Sequence[Any]: ...
 
 
 class _SequenceBinaryDumper(Dumper, Generic[T], ABC):
@@ -129,10 +131,8 @@ class _SequenceBinaryDumper(Dumper, Generic[T], ABC):
     """
 
     format = pq.Format.BINARY
-
-    # Subclasses must set this info
-    field_names: tuple[str, ...]
-    field_types: tuple[int, ...]
+    # Subclasses must set this attribute
+    info: CompositeInfo
 
     def __init__(self, cls: type[T], context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
@@ -142,18 +142,20 @@ class _SequenceBinaryDumper(Dumper, Generic[T], ABC):
         # in case the composite contains another composite. Make sure to use
         # a separate Transformer instance instead.
         self._tx = Transformer(context)
-        self._tx.set_dumper_types(self.field_types, self.format)
+        self._tx.set_dumper_types(self.info.field_types, self.format)
 
-        nfields = len(self.field_types)
+        nfields = len(self.info.field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
     def dump(self, obj: T) -> Buffer | None:
-        seq = type(self).make_sequence(obj, self.field_names)
-        return _dump_binary_sequence(seq, self.field_types, self._formats, self._tx)
+        seq = type(self).make_sequence(obj, self.info)
+        return _dump_binary_sequence(
+            seq, self.info.field_types, self._formats, self._tx
+        )
 
     @staticmethod
     @abstractmethod
-    def make_sequence(obj: T, names: Sequence[str]) -> Sequence[Any]: ...
+    def make_sequence(obj: T, info: CompositeInfo) -> Sequence[Any]: ...
 
 
 class RecordLoader(RecursiveLoader):
@@ -224,8 +226,8 @@ class _CompositeLoader(Loader, Generic[T], ABC):
     create a subclass of this class.
     """
 
-    fields_types: tuple[int]
-    fields_names: tuple[str]
+    # Subclasses must set this attribute
+    info: CompositeInfo
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
@@ -233,18 +235,18 @@ class _CompositeLoader(Loader, Generic[T], ABC):
         # always want a different Transformer instance, otherwise the types
         # loaded will conflict with the types loaded by the record.
         self._tx = Transformer(context)
-        self._tx.set_loader_types(self.fields_types, self.format)
+        self._tx.set_loader_types(self.info.field_types, self.format)
 
     def load(self, data: abc.Buffer) -> T:
         if data == b"()":
             args = ()
         else:
             args = self._tx.load_sequence(tuple(_parse_text_record(data[1:-1])))
-        return type(self).make_object(args, self.fields_names)
+        return type(self).make_object(args, self.info)
 
     @staticmethod
     @abstractmethod
-    def make_object(args: Sequence[Any], names: Sequence[str]) -> T: ...
+    def make_object(args: Sequence[Any], info: CompositeInfo) -> T: ...
 
 
 class _CompositeBinaryLoader(Loader, Generic[T], ABC):
@@ -257,22 +259,22 @@ class _CompositeBinaryLoader(Loader, Generic[T], ABC):
     """
 
     format = pq.Format.BINARY
-    fields_types: tuple[int]
-    fields_names: tuple[str]
+    # Subclasses must set this attribute
+    info: CompositeInfo
 
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
-        self._tx.set_loader_types(self.fields_types, self.format)
+        self._tx.set_loader_types(self.info.field_types, self.format)
 
     def load(self, data: abc.Buffer) -> T:
         brecord, _ = _parse_binary_record(data)  # assume oids == self.fields_types
         record = self._tx.load_sequence(brecord)
-        return type(self).make_object(record, self.fields_names)
+        return type(self).make_object(record, self.info)
 
     @staticmethod
     @abstractmethod
-    def make_object(args: Sequence[Any], names: Sequence[str]) -> T: ...
+    def make_object(args: Sequence[Any], info: CompositeInfo) -> T: ...
 
 
 def register_composite(
@@ -292,12 +294,14 @@ def register_composite(
     :param factory: Callable to create a Python object from the sequence of
         attributes read from the composite.
     :type factory: `!Callable[..., T]` | `!None`
-    :param make_object: optional function to use on load, to adapt the
-        composite's sequence of values to a Python object
-    :type make_object: `!Callable[[Sequence[Any], Sequence[str]], T]` | `!None`
-    :param make_sequence: optional function to use on dump, to adapt an object
-        to the composite's sequence of values
-    :type make_sequence: `!Callable[[T, Sequence[str]], Sequence[Any]]` | `!None`
+    :param make_object: optional function that will be used when loading a
+        composite type from the database if the Python type is not a sequence
+        compatible with the composite fields
+    :type make_object: `!Callable[[Sequence[Any], CompositeInfo], T]` | `!None`
+    :param make_sequence: optional function that will be used when dumping an
+        object to the database if the object is not a sequence compatible
+        with the composite fields
+    :type make_sequence: `!Callable[[T, CompositeInfo], Sequence[Any]]` | `!None`
 
     .. note::
 
@@ -320,25 +324,18 @@ def register_composite(
 
     if not make_object:
 
-        def make_object(values: Sequence[Any], types: Sequence[str]) -> T:
+        def make_object(values: Sequence[Any], info: CompositeInfo) -> T:
             return factory(*values)
 
     adapters = context.adapters if context else postgres.adapters
 
-    field_names = tuple(_as_python_identifier(n) for n in info.field_names)
-    field_types = tuple(info.field_types)
-
     # generate and register a customized text loader
-    loader: type[_CompositeLoader[T]] = _make_loader(
-        info.name, field_names, field_types, make_object
-    )
+    loader: type[Loader] = _make_loader(info, make_object)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    binary_loader: type[_CompositeBinaryLoader[T]] = _make_binary_loader(
-        info.name, field_names, field_types, make_object
-    )
-    adapters.register_loader(info.oid, binary_loader)
+    loader = _make_binary_loader(info, make_object)
+    adapters.register_loader(info.oid, loader)
 
     # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
@@ -356,7 +353,7 @@ def register_composite(
                     factory.__name__,
                 )
 
-                def make_sequence(obj: T, name: Sequence[str]) -> Sequence[Any]:
+                def make_sequence(obj: T, into: CompositeInfo) -> Sequence[Any]:
                     raise TypeError(
                         f"{type(obj).__name__!r} objects cannot be dumped without"
                         " specifying 'make_sequence' in 'register_composite()'"
@@ -364,20 +361,15 @@ def register_composite(
 
             else:
 
-                def make_sequence(obj: T, name: Sequence[str]) -> Sequence[Any]:
+                def make_sequence(obj: T, info: CompositeInfo) -> Sequence[Any]:
                     return obj  # type: ignore[return-value]  # it's a sequence
 
         type_name = factory.__name__
-        dumper: type[Dumper]
-        dumper = _make_binary_dumper(
-            type_name, info.oid, field_names, field_types, make_sequence
-        )
+        dumper: type[Dumper] = _make_binary_dumper(type_name, info, make_sequence)
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
-        dumper = _make_dumper(
-            type_name, info.oid, field_names, field_types, make_sequence
-        )
+        dumper = _make_dumper(type_name, info, make_sequence)
         adapters.register_dumper(factory, dumper)
 
         info.python_type = factory
@@ -397,6 +389,7 @@ def register_default_adapters(context: abc.AdaptContext) -> None:
     adapters.register_loader("record", RecordBinaryLoader)
 
 
+@cache
 def _nt_from_info(info: CompositeInfo) -> type[NamedTuple]:
     name = _as_python_identifier(info.name)
     fields = tuple(_as_python_identifier(n) for n in info.field_names)
@@ -524,71 +517,35 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 
 @cache
 def _make_loader(
-    name: str,
-    field_names: tuple[str, ...],
-    field_types: tuple[int, ...],
-    make_object: ObjectMaker[T],
+    info: CompositeInfo, make_object: ObjectMaker[T]
 ) -> type[_CompositeLoader[T]]:
-    doc = f"Text loader for the '{name}' composite."
-    d = {
-        "__doc__": doc,
-        "fields_types": field_types,
-        "fields_names": field_names,
-        "make_object": make_object,
-    }
-    return type(f"{name.title()}Loader", (_CompositeLoader,), d)
+    doc = f"Text loader for the '{info.name}' composite."
+    d = {"__doc__": doc, "info": info, "make_object": make_object}
+    return type(f"{info.name.title()}Loader", (_CompositeLoader,), d)
 
 
 @cache
 def _make_binary_loader(
-    name: str,
-    field_names: tuple[str, ...],
-    field_types: tuple[int, ...],
-    make_object: ObjectMaker[T],
+    info: CompositeInfo, make_object: ObjectMaker[T]
 ) -> type[_CompositeBinaryLoader[T]]:
-    doc = f"Binary loader for the '{name}' composite."
-    d = {
-        "__doc__": doc,
-        "fields_names": field_names,
-        "fields_types": field_types,
-        "make_object": make_object,
-    }
-    return type(f"{name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
+    doc = f"Binary loader for the '{info.name}' composite."
+    d = {"__doc__": doc, "info": info, "make_object": make_object}
+    return type(f"{info.name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
 
 
 @cache
 def _make_dumper(
-    name: str,
-    oid: int,
-    field_names: tuple[str, ...],
-    field_types: tuple[int, ...],
-    make_sequence: SequenceMaker[T],
+    name: str, info: CompositeInfo, make_sequence: SequenceMaker[T]
 ) -> type[_SequenceDumper[T]]:
     doc = f"Text dumper for the '{name}' composite."
-    d = {
-        "__doc__": doc,
-        "oid": oid,
-        "field_names": field_names,
-        "field_types": field_types,
-        "make_sequence": make_sequence,
-    }
+    d = {"__doc__": doc, "oid": info.oid, "info": info, "make_sequence": make_sequence}
     return type(f"{name}Dumper", (_SequenceDumper,), d)
 
 
 @cache
 def _make_binary_dumper(
-    name: str,
-    oid: int,
-    field_names: tuple[str, ...],
-    field_types: tuple[int, ...],
-    make_sequence: SequenceMaker[T],
+    name: str, info: CompositeInfo, make_sequence: SequenceMaker[T]
 ) -> type[_SequenceBinaryDumper[T]]:
     doc = f"Text dumper for the '{name}' composite."
-    d = {
-        "__doc__": doc,
-        "oid": oid,
-        "field_names": field_names,
-        "field_types": field_types,
-        "make_sequence": make_sequence,
-    }
+    d = {"__doc__": doc, "oid": info.oid, "info": info, "make_sequence": make_sequence}
     return type(f"{name}BinaryDumper", (_SequenceBinaryDumper,), d)
