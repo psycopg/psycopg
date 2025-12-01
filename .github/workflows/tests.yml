@@ -120,7 +120,7 @@ jobs:
       - name: Exclude certain tests from pypy
         if: ${{ startsWith(matrix.python, 'pypy') }}
         run: |
-          echo "NOT_MARKERS=$NOT_MARKERS timing" >> $GITHUB_ENV
+          echo "NOT_MARKERS=$NOT_MARKERS timing mypy" >> $GITHUB_ENV
 
       - name: Configure to use the oldest dependencies
         if: ${{ matrix.ext == 'min' }}

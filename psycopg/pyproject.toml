@@ -70,7 +70,8 @@ pool = [
 ]
 test = [
     "anyio >= 4.0",
-    "mypy >= 1.18.1",
+    # Mypy >= 1.19 depends on librt, not available for PyPy.
+    "mypy >= 1.19.0; implementation_name != \"pypy\"",
     "pproxy >= 2.7",
     "pytest >= 6.2.5",
     "pytest-cov >= 3.0",
@@ -85,7 +86,7 @@ dev = [
     "flake8 >= 4.0",
     "isort[colors] >= 6.0",
     "isort-psycopg",
-    "mypy >= 1.18.1",
+    "mypy >= 1.19.0",
     "pre-commit >= 4.0.1",
     "types-setuptools >= 57.4",
     "types-shapely >= 2.0",

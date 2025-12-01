@@ -25,4 +25,6 @@ class _WritableUUID(UUID):
     """
 
     __slots__ = ()  # Give the class the same memory layout of the base clasee
-    __setattr__ = object.__setattr__  # make the class writable
+
+    # Make the class writable.
+    __setattr__ = object.__setattr__  # type: ignore[assignment]
