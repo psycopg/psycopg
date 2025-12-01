@@ -281,6 +281,7 @@ def register_composite(
     info: CompositeInfo,
     context: abc.AdaptContext | None = None,
     factory: Callable[..., T] | None = None,
+    *,
     make_object: ObjectMaker[T] | None = None,
     make_sequence: SequenceMaker[T] | None = None,
 ) -> None:
