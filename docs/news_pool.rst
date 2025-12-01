@@ -7,11 +7,11 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.3.0 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.3.0
+------------------
 
 - Add `~ConnectionPool.drain()` method (:ticket:`#1215`).
 - Allow the `!conninfo` and `!kwargs` `ConnectionPool` parameters to be callable
@@ -19,9 +19,6 @@ psycopg_pool 3.3.0 (unreleased)
 - Add `!close_returns` `ConnectionPool` parameter for :ref:`integration with
   SQLAlchemy <pool-sqlalchemy>` (:ticket:`#1046`).
 
-
-Current release
----------------
 
 psycopg_pool 3.2.8
 ^^^^^^^^^^^^^^^^^^
