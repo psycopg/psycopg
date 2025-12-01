@@ -26,8 +26,7 @@ Composite types adaptation
 
 Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
 TYPE|_ command or implicitly defined after a table row type) to and from
-Python tuples, `~collections.namedtuple`, or any other suitable object
-configured.
+Python tuples, `~collections.namedtuple`, or any suitably configured object.
 
 .. |CREATE TYPE| replace:: :sql:`CREATE TYPE`
 .. _CREATE TYPE: https://www.postgresql.org/docs/current/static/sql-createtype.html
@@ -39,13 +38,24 @@ using `~psycopg.types.composite.register_composite()`.
 .. autoclass:: psycopg.types.composite.CompositeInfo
 
    `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for the generic usage, especially the
+   documentation for the general usage, especially the
    `~psycopg.types.TypeInfo.fetch()` method.
 
-   .. attribute:: python_type
+   .. attribute:: field_names
+       :type: tuple[str, ...]
 
-       After `register_composite()` is called, it will contain the python type
-       mapping to the registered composite.
+       Tuple containing the field names of the composite type.
+
+   .. attribute:: field_types
+       :type: tuple[int, ...]
+
+       Tuple containing the field OIDs of the composite type.
+
+   .. attribute:: python_type
+       :type: Callable | None
+
+       After `register_composite()` is called, it will contain the Python type
+       adapting the registered composite.
 
 .. autofunction:: psycopg.types.composite.register_composite
 
@@ -58,16 +68,21 @@ using `~psycopg.types.composite.register_composite()`.
 
    If the `!factory` is a type (and not a generic callable) then dumpers for
    such type are created and registered too, so that passing objects of that
-   type to a query will adapt them to the registered type. This assumes that
-   the `!factory` is a sequence; if this is not the case you can specify the
-   `!make_sequence` parameter. See :ref:`composite-generic`.
+   type to a query will adapt them to the registered composite type. This
+   assumes that the `!factory` type is a sequence; if this is not the case you
+   can specify the `!make_sequence` parameter: a function taking the object to
+   dump and the composite info and returning a sequence of values. See
+   :ref:`composite-non-sequence`.
 
    The `!factory` callable will be called with the sequence of value from the
    composite. If passing the sequence of positional arguments is not suitable
-   you can specify a `!make_instance` callable.
+   for the `!factory` type you can specify the `!make_object` parameter: a
+   function taking the sequence of composite values and the type info, and
+   which should return a new instance of the object to load. See
+   :ref:`composite-non-sequence`.
 
    .. versionadded:: 3.3
-        the `!make_instance` and `!make_sequence` parameters.
+        the `!make_object` and `!make_sequence` parameters.
 
 
 .. _composite-sequence:
@@ -110,17 +125,18 @@ composite components are registered as well::
     card_back(face=card(value=8, suit='hearts'), back='blue')
 
 
-.. _composite-generic:
+.. _composite-non-sequence:
 
-Example: Generic Python object
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example: non-sequence Python object
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. versionadded:: 3.3
 
 If your Python type takes keyword arguments, or if the sequence of value
 coming from the PostgreSQL type is not suitable for it, it is possible to
-specify a :samp:`make_instance({values}, {names})` function to adapt the
-values from the composite to the right type requirements. For example::
+specify a :samp:`make_object({values}, {info})` function to adapt the values
+from the composite to the Python object to create, eventually making use of
+the information in the type `~types.composite.CompositeInfo`, for example::
 
     >>> from dataclasses import dataclass
     >>> from typing import Any, Sequence
@@ -130,10 +146,10 @@ values from the composite to the right type requirements. For example::
     ...     suit: str
     ...     value: int
 
-    >>> def card_from_db(values: Sequence[Any], names: Sequence[str]) -> Card:
-    ...     return Card(**dict(zip(names, values)))
+    >>> def card_from_db(values: Sequence[Any], info: CompositeInfo) -> Card:
+    ...     return Card(**dict(zip(info.field_names, values)))
 
-    >>> register_composite(info, conn, make_instance=card_from_db)
+    >>> register_composite(info, conn, make_object=card_from_db)
     >>> conn.execute("select '(1,spades)'::card").fetchone()[0]
     Card(suit='spades', value=1)
 
@@ -141,15 +157,15 @@ The previous example only configures loaders to convert data from PostgreSQL
 to Python. If we are also interested in dumping Python `!Card` objects we need
 to specify `!Card` as the factory (to declare which object we want to dump)
 and, because `!Card` is not a sequence, we need to specify a
-:samp:`make_sequence({object}, {names})` to convert objects attributes into
-a sequence matching the composite fields::
+:samp:`make_sequence({object}, {info})` function to convert objects attributes
+into a sequence matching the composite fields::
 
-    >>> def card_to_db(card: Card, names: Sequence[str]) -> Sequence[Any]:
-    ...     return [getattr(card, name) for name in names]
+    >>> def card_to_db(card: Card, info: CompositeInfo) -> Sequence[Any]:
+    ...     return [getattr(card, name) for name in info.field_names]
 
     >>> register_composite(
     ...     info, conn, factory=Card,
-    ...     make_instance=card_from_db, make_sequence=card_to_db)
+    ...     make_object=card_from_db, make_sequence=card_to_db)
 
     >>> conn.execute(
     ...     "select %(card)s.value + 1, %(card)s.suit",
@@ -287,7 +303,7 @@ multirange type with its subtype and make it work like the builtin ones.
 .. autoclass:: psycopg.types.multirange.MultirangeInfo
 
    `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details, especially the
+   documentation for general details, especially the
    `~psycopg.types.TypeInfo.fetch()` method.
 
 .. autofunction:: psycopg.types.multirange.register_multirange
