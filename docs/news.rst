@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.0 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.0
+^^^^^^^^^^^^^
 
 .. rubric:: New top-level features
 
@@ -54,9 +54,6 @@ Psycopg 3.3.0 (unreleased)
 .. _iterators: https://docs.python.org/3/glossary.html#term-iterator
 .. _iterables: https://docs.python.org/3/glossary.html#term-iterable
 
-
-Current release
----------------
 
 Psycopg 3.2.13
 ^^^^^^^^^^^^^^
