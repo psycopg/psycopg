@@ -70,7 +70,7 @@ jobs:
       MARKERS: ""
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -164,7 +164,7 @@ jobs:
       MARKERS: "pool"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -218,7 +218,7 @@ jobs:
       PG_VERSION: "18"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -277,7 +277,7 @@ jobs:
       PG_VERSION: "17"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -345,7 +345,7 @@ jobs:
       # there are some extra libpq.dll in PATH
       - run: rm -rf c:/tools/php C:/Strawberry/c/bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -437,7 +437,7 @@ jobs:
       PGOPTIONS: "-c autocommit_before_ddl=off"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
