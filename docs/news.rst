@@ -17,7 +17,7 @@ Fix iteration on server-side cursors (:ticket:`#1226`).
 
 
 Psycopg 3.3.0
-^^^^^^^^^^^^^
+-------------
 
 .. rubric:: New top-level features
 
