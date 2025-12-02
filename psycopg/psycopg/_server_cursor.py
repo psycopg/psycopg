@@ -140,7 +140,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         ):
             with self._conn.lock:
                 self._iter_rows = self._conn.wait(self._fetch_gen(self.itersize))
-                self._page_pos += 0
+                self._page_pos = 0
 
         if self._page_pos >= len(self._iter_rows):
             raise StopIteration("no more records to return")
