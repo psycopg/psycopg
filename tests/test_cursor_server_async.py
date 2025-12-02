@@ -452,7 +452,7 @@ async def test_itersize(aconn, acommands):
         await cur.execute(ph(cur, "select generate_series(1, %s) as bar"), (3,))
         acommands.popall()  # flush begin and other noise
 
-        await alist(cur)
+        assert await alist(cur) == [(1,), (2,), (3,)]
         cmds = acommands.popall()
         assert len(cmds) == 2
         for cmd in cmds:

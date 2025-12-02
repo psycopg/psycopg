@@ -446,7 +446,7 @@ def test_itersize(conn, commands):
         cur.execute(ph(cur, "select generate_series(1, %s) as bar"), (3,))
         commands.popall()  # flush begin and other noise
 
-        list(cur)
+        assert list(cur) == [(1,), (2,), (3,)]
         cmds = commands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
