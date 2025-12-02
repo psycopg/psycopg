@@ -7,17 +7,14 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.1 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.1
+^^^^^^^^^^^^^
 
 Fix iteration on server-side cursors (:ticket:`#1226`).
 
-
-Current release
----------------
 
 Psycopg 3.3.0
 ^^^^^^^^^^^^^
