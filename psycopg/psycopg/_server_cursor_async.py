@@ -138,7 +138,7 @@ class AsyncServerCursor(
         ):
             async with self._conn.lock:
                 self._iter_rows = await self._conn.wait(self._fetch_gen(self.itersize))
-                self._page_pos += 0
+                self._page_pos = 0
 
         if self._page_pos >= len(self._iter_rows):
             raise StopAsyncIteration("no more records to return")
