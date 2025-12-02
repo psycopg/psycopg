@@ -7,7 +7,7 @@ name = "psycopg-pool"
 description = "Connection Pool for Psycopg"
 
 # STOP AND READ! if you change:
-version = "3.3.0"
+version = "3.3.1.dev1"
 # also change:
 # - `docs/news_pool.rst` to declare this version current or unreleased
 
