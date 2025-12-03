@@ -217,9 +217,10 @@ class AdaptersMap:
 
             # If the adapter is not found, look for its name as a string
             fqn = scls.__module__ + "." + scls.__qualname__
-            if fqn in dmap:
+            if (d := dmap.get(fqn)) is not None:
                 # Replace the class name with the class itself
-                d = dmap[scls] = dmap.pop(fqn)
+                dmap[scls] = d
+                dmap.pop(fqn, None)
                 return d
 
         format = PyFormat(format)
