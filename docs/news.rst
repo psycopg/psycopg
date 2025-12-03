@@ -7,6 +7,14 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2.14 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix race condition in adapters at startup (:ticket:`#1230`).
+
 
 Current release
 ---------------
