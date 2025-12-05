@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+Psycopg 3.3.2
+^^^^^^^^^^^^^
+
+Fix race condition in adapters at startup (:ticket:`#1230`).
+
+
 Psycopg 3.3.1
 ^^^^^^^^^^^^^
 
