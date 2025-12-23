@@ -1,3 +1,4 @@
+import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -182,3 +183,54 @@ def test_same_cursor_from_multiple_threads_no_crash(conn):
             future.result()
 
     cur.close()
+
+
+@pytest.mark.slow
+@pytest.mark.usefixtures("testctx")
+def test_connection_finish_while_executing(conn):
+    with conn.cursor() as cur:
+        cur.execute("insert into testctx values (1)")
+    conn.commit()
+
+    def closer():
+        time.sleep(1)
+        conn.close()
+
+    def reader():
+        cur = conn.cursor()
+        try:
+            while True:
+                cur.execute("select id from testctx")
+                assert [row[0] for row in cur.fetchall()] == [1]
+        except Exception:
+            pass
+
+    with ThreadPoolExecutor(max_workers=2) as tpe:
+        future2 = tpe.submit(reader)
+        future1 = tpe.submit(closer)
+        future1.result()
+        future2.result()
+
+
+@pytest.mark.slow
+def test_connection_close_race_condition(dsn):
+    conn = psycopg.connect(dsn, autocommit=True)
+    barrier = threading.Barrier(parties=2)
+
+    def reader():
+        barrier.wait()
+        messages = [conn.pgconn.error_message for _ in range(100)]
+        return messages
+
+    def closer():
+        barrier.wait()
+        conn.pgconn.finish()
+
+    with ThreadPoolExecutor(max_workers=2) as tpe:
+        reader_future = tpe.submit(reader)
+        closer_future = tpe.submit(closer)
+        error_messages = reader_future.result()
+        closer_future.result()
+
+    for error_message in error_messages:
+        assert error_message in (b"", b"connection pointer is NULL\n")
