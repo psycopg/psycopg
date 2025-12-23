@@ -77,7 +77,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -93,7 +93,7 @@ jobs:
           key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.1
+        uses: pypa/cibuildwheel@v3.3.0
         with:
           package-dir: psycopg_c
         env:
@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Checkout repos
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Cache libpq build
         uses: actions/cache@v4
@@ -137,7 +137,7 @@ jobs:
           key: libpq-macos-${{ env.LIBPQ_VERSION }}-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.1
+        uses: pypa/cibuildwheel@v3.3.0
         with:
           package-dir: psycopg_c
         env:
