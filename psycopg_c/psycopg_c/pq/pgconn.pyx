@@ -658,10 +658,13 @@ cdef class PGconn:
 
     cpdef int flush(self) except -1:
         cdef int rv
+        cdef libpq.PGconn *pgconn_ptr
         with cython.critical_section(self):
-            if self._pgconn_ptr is NULL:
-                raise e.OperationalError("flushing failed: the connection is closed")
-            rv = libpq.PQflush(self._pgconn_ptr)
+            pgconn_ptr = self._pgconn_ptr
+            if pgconn_ptr is not NULL:
+                rv = libpq.PQflush(self._pgconn_ptr)
+        if pgconn_ptr is NULL:
+            raise e.OperationalError("flushing failed: the connection is closed")
         if rv < 0:
             raise e.OperationalError(f"flushing failed: {self.get_error_message()}")
         return rv
@@ -675,8 +678,9 @@ cdef class PGconn:
 
     def set_chunked_rows_mode(self, size: int) -> None:
         cdef int rv
+        cdef int s = size
         with cython.critical_section(self):
-            rv = libpq.PQsetChunkedRowsMode(self._pgconn_ptr, size)
+            rv = libpq.PQsetChunkedRowsMode(self._pgconn_ptr, s)
         if not rv:
             raise e.OperationalError("setting chunked rows mode failed")
 
@@ -760,8 +764,9 @@ cdef class PGconn:
 
     def set_trace_flags(self, flags: Trace) -> None:
         _check_supported("PQsetTraceFlags", 140000)
+        cdef int f = flags
         with cython.critical_section(self):
-            libpq.PQsetTraceFlags(self._pgconn_ptr, flags)
+            libpq.PQsetTraceFlags(self._pgconn_ptr, f)
 
     def untrace(self) -> None:
         with cython.critical_section(self):
