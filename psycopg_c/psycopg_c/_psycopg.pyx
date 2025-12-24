@@ -42,6 +42,7 @@ cdef extern from *:
 
 
 include "_psycopg/adapt.pyx"
+include "_psycopg/column.pyx"
 include "_psycopg/copy.pyx"
 include "_psycopg/generators.pyx"
 include "_psycopg/transform.pyx"

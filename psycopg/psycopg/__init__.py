@@ -15,7 +15,7 @@ from .cursor import Cursor
 from .errors import DatabaseError, DataError, Error, IntegrityError, InterfaceError
 from .errors import InternalError, NotSupportedError, OperationalError
 from .errors import ProgrammingError, Warning
-from ._column import Column
+from ._column import Column, _PythonColumn  # noqa: F401 imported to support pickling
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING, Binary, Date
 from .dbapi20 import DateFromTicks, Time, TimeFromTicks, Timestamp, TimestampFromTicks
 from .version import __version__ as __version__  # noqa: F401

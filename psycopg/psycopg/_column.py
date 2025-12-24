@@ -6,29 +6,68 @@ The Column object in Cursor.description
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from abc import abstractmethod
+from typing import Any, Protocol, Type
 from operator import attrgetter
 from collections.abc import Sequence
 
-if TYPE_CHECKING:
-    from ._cursor_base import BaseCursor
+from psycopg.pq.abc import PGresult
+
+from ._typeinfo import TypeInfo, TypesRegistry
 
 
-class Column(Sequence[Any]):
+class _ColumnBase(Protocol):
+    def __init__(
+        self, res: PGresult, encoding: str, types: TypesRegistry, index: int
+    ): ...
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+    @property
+    @abstractmethod
+    def type_code(self) -> int: ...
+    @property
+    @abstractmethod
+    def display_size(self) -> int | None: ...
+    @property
+    @abstractmethod
+    def internal_size(self) -> int | None: ...
+    @property
+    @abstractmethod
+    def precision(self) -> int | None: ...
+    @property
+    @abstractmethod
+    def scale(self) -> int | None: ...
+    @property
+    @abstractmethod
+    def null_ok(self) -> bool | None: ...
+    @property
+    @abstractmethod
+    def type_display(self) -> str: ...
+
+
+class _PythonColumn(_ColumnBase, Sequence[Any]):
     __module__ = "psycopg"
 
-    def __init__(self, cursor: BaseCursor[Any, Any], index: int):
-        res = cursor.pgresult
-        assert res
+    # def __init__(self, cursor: BaseCursor[Any, Any], index: int):
+    #     assert cursor.pgresult is not None
+    #     self.__init__(
+    #         cursor.pgresult, cursor._encoding, cursor.adapters.types, index
+    #     )
+
+    def __init__(self, res: PGresult, encoding: str, types: Any, index: int) -> None:
+        self._name: str | None = None
+        self._fname: bytes | None = None
+        self._encoding = encoding
+        self._index = index
 
         if fname := res.fname(index):
-            self._name = fname.decode(cursor._encoding)
-        else:
-            # COPY_OUT results have columns but no name
-            self._name = f"column_{index + 1}"
+            self._fname = fname
 
         self._ftype = res.ftype(index)
-        self._type = cursor.adapters.types.get(self._ftype)
+        self._types = types
+        self._type_has_been_resolved = False
+        self._resolved_type: TypeInfo | None = None
         self._fmod = res.fmod(index)
         self._fsize = res.fsize(index)
 
@@ -56,10 +95,10 @@ class Column(Sequence[Any]):
         brackets to signify arrays, e.g. :sql:`text`, :sql:`varchar(42)`,
         :sql:`date[]`.
         """
-        if not self._type:
+        if resolved_type := self._get_resolved_type():
+            return resolved_type.get_type_display(oid=self.type_code, fmod=self._fmod)
+        else:
             return str(self.type_code)
-
-        return self._type.get_type_display(oid=self.type_code, fmod=self._fmod)
 
     def __getitem__(self, index: Any) -> Any:
         if isinstance(index, slice):
@@ -70,7 +109,20 @@ class Column(Sequence[Any]):
     @property
     def name(self) -> str:
         """The name of the column."""
-        return self._name
+        name = self._name
+        if name is None:
+            name = self._decode_name()
+            self._name = name
+        return name
+
+    def _decode_name(self) -> str:
+        if self._fname is not None:
+            name = self._fname.decode(self._encoding)
+            self._fname = None
+            return name
+
+        # COPY_OUT results have columns but no name
+        return f"column_{self._index + 1}"
 
     @property
     def type_code(self) -> int:
@@ -80,7 +132,10 @@ class Column(Sequence[Any]):
     @property
     def display_size(self) -> int | None:
         """The field size, for string types such as :sql:`varchar(n)`."""
-        return self._type.get_display_size(self._fmod) if self._type else None
+        if resolved_type := self._get_resolved_type():
+            return resolved_type.get_display_size(self._fmod)
+        else:
+            return None
 
     @property
     def internal_size(self) -> int | None:
@@ -91,14 +146,34 @@ class Column(Sequence[Any]):
     @property
     def precision(self) -> int | None:
         """The number of digits for fixed precision types."""
-        return self._type.get_precision(self._fmod) if self._type else None
+        if resolved_type := self._get_resolved_type():
+            return resolved_type.get_precision(self._fmod)
+        else:
+            return None
 
     @property
     def scale(self) -> int | None:
         """The number of digits after the decimal point if available."""
-        return self._type.get_scale(self._fmod) if self._type else None
+        if resolved_type := self._get_resolved_type():
+            return resolved_type.get_scale(self._fmod)
+        else:
+            return None
 
     @property
     def null_ok(self) -> bool | None:
         """Always `!None`"""
         return None
+
+    def _get_resolved_type(self) -> TypeInfo | None:
+        if not self._type_has_been_resolved and self._types is not None:
+            self._resolved_type = self._types.get(self._ftype)
+            self._type_has_been_resolved = True
+        return self._resolved_type
+
+
+try:
+    from psycopg_c._psycopg import CColumn
+except ImportError:
+    CColumn = None  # type: ignore[assignment,misc]
+
+Column: Type[_ColumnBase] = CColumn if CColumn is not None else _PythonColumn
