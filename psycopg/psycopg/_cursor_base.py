@@ -48,7 +48,7 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
         _conn format _adapters arraysize _closed _results pgresult _pos
-        _iresult _rowcount _query _tx _last_query _row_factory _make_row
+        _iresult _rowcount _query _tx _last_query _cached_encoding _row_factory _make_row
         _pgconn _execmany_returning
         __weakref__
         """.split()
@@ -66,6 +66,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self.arraysize = 1
         self._closed = False
         self._last_query: Query | None = None
+        self._cached_encoding: str | None = None
         self._reset()
 
         # Set up a callback to allow changing loaders on already returned result.
@@ -82,6 +83,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._query: PostgresQuery | None
         # None if executemany() not executing, True/False according to returning state
         self._execmany_returning: bool | None = None
+        self._cached_encoding: str | None = None
         if reset_query:
             self._query = None
 
@@ -660,4 +662,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     @property
     def _encoding(self) -> str:
-        return self._pgconn._encoding
+        if self._cached_encoding is None:
+            self._cached_encoding = self._pgconn._encoding
+
+        return self._cached_encoding

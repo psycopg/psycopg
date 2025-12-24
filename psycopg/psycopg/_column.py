@@ -28,7 +28,8 @@ class Column(Sequence[Any]):
             self._name = f"column_{index + 1}"
 
         self._ftype = res.ftype(index)
-        self._type = cursor.adapters.types.get(self._ftype)
+        # self._type = cursor.adapters.types.get(self._ftype)
+        self._type = None
         self._fmod = res.fmod(index)
         self._fsize = res.fsize(index)
 

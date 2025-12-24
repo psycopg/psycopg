@@ -264,7 +264,7 @@ class TypesRegistry:
     @overload
     def __getitem__(self, key: tuple[type[T], int]) -> T: ...
 
-    def __getitem__(self, key: RegistryKey) -> TypeInfo:
+    def __getitem__(self, key: RegistryKey) -> TypeInfo | None:
         """
         Return info about a type, specified by name or oid
 
@@ -277,10 +277,8 @@ class TypesRegistry:
                 key = key[:-2]
         elif not isinstance(key, (int, tuple)):
             raise TypeError(f"the key must be an oid or a name, got {type(key)}")
-        try:
-            return self._registry[key]
-        except KeyError:
-            raise KeyError(f"couldn't find the type {key!r} in the types registry")
+
+        return self._registry.get(key)
 
     @overload
     def get(self, key: str | int) -> TypeInfo | None: ...
@@ -296,11 +294,8 @@ class TypesRegistry:
 
         Unlike `__getitem__`, return None if not found.
         """
-        try:
-            return self[key]
-        except KeyError:
-            return None
-
+        return self[key]
+        
     def get_oid(self, name: str) -> int:
         """
         Return the oid of a PostgreSQL type by name.
@@ -328,11 +323,9 @@ class TypesRegistry:
         :return: The `!TypeInfo` object of class `!cls` whose subtype is
             `!subtype`. `!None` if the element or its range are not found.
         """
-        try:
-            info = self[subtype]
-        except KeyError:
-            return None
-        return self.get((cls, info.oid))
+        if info := self[subtype]:
+            return self.get((cls, info.oid))
+        return None
 
     def _ensure_own_state(self) -> None:
         # Time to write! so, copy.
