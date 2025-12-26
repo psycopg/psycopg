@@ -11,6 +11,8 @@ from weakref import ReferenceType, ref
 from functools import partial
 from collections.abc import Iterable, Sequence
 
+from psycopg._column import _ColumnBase
+
 from . import adapt
 from . import errors as e
 from . import pq
@@ -48,8 +50,8 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
         _conn format _adapters arraysize _closed _results pgresult _pos
-        _iresult _rowcount _query _tx _last_query _row_factory _make_row
-        _pgconn _execmany_returning
+        _iresult _rowcount _query _tx _last_query _cached_encoding _row_factory
+        _make_row _pgconn _execmany_returning
         __weakref__
         """.split()
 
@@ -66,6 +68,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self.arraysize = 1
         self._closed = False
         self._last_query: Query | None = None
+        self._cached_encoding: str | None = None
         self._reset()
 
         # Set up a callback to allow changing loaders on already returned result.
@@ -82,6 +85,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._query: PostgresQuery | None
         # None if executemany() not executing, True/False according to returning state
         self._execmany_returning: bool | None = None
+        self._cached_encoding = None
         if reset_query:
             self._query = None
 
@@ -111,7 +115,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         return self._closed
 
     @property
-    def description(self) -> list[Column] | None:
+    def description(self) -> list[_ColumnBase] | None:
         """
         A list of `Column` objects describing the current resultset.
 
@@ -128,7 +132,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
             or res.status == SINGLE_TUPLE
             or res.status == TUPLES_CHUNK
         ):
-            return [Column(self, i) for i in range(res.nfields)]
+            encoding = self._encoding
+            types = self._adapters.types
+            nfields = res.nfields
+            return [Column(res, encoding, types, i) for i in range(nfields)]
         else:
             return None
 
@@ -660,4 +667,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     @property
     def _encoding(self) -> str:
-        return self._pgconn._encoding
+        if self._cached_encoding is None:
+            self._cached_encoding = self._pgconn._encoding
+
+        return self._cached_encoding
