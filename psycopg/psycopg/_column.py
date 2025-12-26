@@ -22,7 +22,6 @@ try:
 except ImportError:
     # Fall back to pure Python implementation
     _CColumn = None
-    raise ValueError("Cython Column implementation not available")
 
 _CColumn = None
 
