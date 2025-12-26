@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from operator import attrgetter
 from collections.abc import Sequence
+from ._typeinfo import TypeInfo
 
 if TYPE_CHECKING:
     from ._cursor_base import BaseCursor
@@ -28,8 +29,9 @@ class Column(Sequence[Any]):
             self._name = f"column_{index + 1}"
 
         self._ftype = res.ftype(index)
-        # self._type = cursor.adapters.types.get(self._ftype)
-        self._type = None
+        self._types = cursor.adapters.types
+        self._type_has_been_resolved = False
+        self._resolved_type: TypeInfo | None = None
         self._fmod = res.fmod(index)
         self._fsize = res.fsize(index)
 
@@ -57,10 +59,10 @@ class Column(Sequence[Any]):
         brackets to signify arrays, e.g. :sql:`text`, :sql:`varchar(42)`,
         :sql:`date[]`.
         """
-        if not self._type:
+        if not self._resolved_type:
             return str(self.type_code)
 
-        return self._type.get_type_display(oid=self.type_code, fmod=self._fmod)
+        return self._resolved_type.get_type_display(oid=self.type_code, fmod=self._fmod)
 
     def __getitem__(self, index: Any) -> Any:
         if isinstance(index, slice):
@@ -81,7 +83,7 @@ class Column(Sequence[Any]):
     @property
     def display_size(self) -> int | None:
         """The field size, for string types such as :sql:`varchar(n)`."""
-        return self._type.get_display_size(self._fmod) if self._type else None
+        return self._resolved_type.get_display_size(self._fmod) if self._resolved_type else None
 
     @property
     def internal_size(self) -> int | None:
@@ -92,14 +94,20 @@ class Column(Sequence[Any]):
     @property
     def precision(self) -> int | None:
         """The number of digits for fixed precision types."""
-        return self._type.get_precision(self._fmod) if self._type else None
+        return self._resolved_type.get_precision(self._fmod) if self._resolved_type else None
 
     @property
     def scale(self) -> int | None:
         """The number of digits after the decimal point if available."""
-        return self._type.get_scale(self._fmod) if self._type else None
+        return self._resolved_type.get_scale(self._fmod) if self._resolved_type else None
 
     @property
     def null_ok(self) -> bool | None:
         """Always `!None`"""
         return None
+
+    def _get_resolved_type(self) -> TypeInfo | None:
+        if not self._type_has_been_resolved and self._types is not None:
+            self._resolved_type = self._types.get(self._ftype)
+            self._type_has_been_resolved = True
+        return self._resolved_type
