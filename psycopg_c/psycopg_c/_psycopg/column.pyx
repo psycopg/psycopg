@@ -23,7 +23,10 @@ cdef class Column:
     This is an optimized Cython implementation that makes direct libpq calls
     to avoid Python property access overhead.
     """
-    cdef readonly str _name
+    cdef object _name
+    cdef object _fname_bytes
+    cdef object _encoding
+    cdef int _index
     cdef readonly int _ftype
     cdef readonly int _fmod
     cdef readonly int _fsize
@@ -35,18 +38,21 @@ cdef class Column:
     # (will be defined after the class)
 
     def __init__(self, cursor, int index):
-        cdef pq.PGresult res = cursor.pgresult
+        self._init_from_result(cursor.pgresult, cursor._encoding, cursor.adapters.types, index)
+
+    cdef inline void _init_from_result(self, pq.PGresult res, object encoding, object types, int index):
         cdef const char* fname_ptr
-        cdef bytes fname_bytes
 
         # Get the column name directly from libpq
+        self._name = None
+        self._fname_bytes = None
+        self._encoding = encoding
+        self._index = index
+
         fname_ptr = libpq.PQfname(res._pgresult_ptr, index)
         if fname_ptr != NULL:
-            fname_bytes = fname_ptr
-            self._name = fname_bytes.decode(cursor._encoding)
-        else:
-            # COPY_OUT results have columns but no name
-            self._name = f"column_{index + 1}"
+            # Store bytes to decode lazily.
+            self._fname_bytes = fname_ptr
 
         # Get type information directly from libpq
         self._ftype = libpq.PQftype(res._pgresult_ptr, index)
@@ -54,9 +60,16 @@ cdef class Column:
         self._fsize = libpq.PQfsize(res._pgresult_ptr, index)
 
         # Defer type resolution for performance
-        self._types = cursor.adapters.types
+        self._types = types
         self._type_has_been_resolved = False
         self._resolved_type = None
+
+    @classmethod
+    def _from_result(cls, pq.PGresult res, object encoding, object types, int index):
+        """Fast path to build a Column without re-accessing cursor attributes."""
+        cdef Column col = <Column>cls.__new__(cls)
+        col._init_from_result(res, encoding, types, index)
+        return col
 
     def __repr__(self) -> str:
         return (
@@ -89,7 +102,20 @@ cdef class Column:
     @property
     def name(self) -> str:
         """The name of the column."""
-        return self._name
+        cdef object name = self._name
+        if name is None:
+            name = self._decode_name()
+            self._name = name
+        return name
+
+    cdef inline object _decode_name(self):
+        if self._fname_bytes is not None:
+            # Decode using the cached encoding; drop bytes to free memory after first use.
+            name = (<bytes>self._fname_bytes).decode(self._encoding)
+            self._fname_bytes = None
+            return name
+        else:
+            return f"column_{self._index + 1}"
 
     @property
     def type_code(self) -> int:

@@ -24,6 +24,7 @@ except ImportError:
     _CColumn = None
     raise ValueError("Cython Column implementation not available")
 
+_CColumn = None
 
 if _CColumn is None:
     # Pure Python implementation (used as fallback)
@@ -31,21 +32,30 @@ if _CColumn is None:
         __module__ = "psycopg"
 
         def __init__(self, cursor: BaseCursor[Any, Any], index: int):
-            res = cursor.pgresult
+            self._init_from_result(cursor.pgresult, cursor._encoding, cursor.adapters.types, index)
+
+        def _init_from_result(self, res: Any, encoding: str, types: Any, index: int) -> None:
             assert res
+            self._name: str | None = None
+            self._fname: bytes | None = None
+            self._encoding = encoding
+            self._index = index
 
             if fname := res.fname(index):
-                self._name = fname.decode(cursor._encoding)
-            else:
-                # COPY_OUT results have columns but no name
-                self._name = f"column_{index + 1}"
+                self._fname = fname
 
             self._ftype = res.ftype(index)
-            self._types = cursor.adapters.types
+            self._types = types
             self._type_has_been_resolved = False
             self._resolved_type: TypeInfo | None = None
             self._fmod = res.fmod(index)
             self._fsize = res.fsize(index)
+
+        @classmethod
+        def _from_result(cls, res: Any, encoding: str, types: Any, index: int) -> Column:
+            obj = cls.__new__(cls)
+            obj._init_from_result(res, encoding, types, index)
+            return obj
 
         _attrs = tuple(
             attrgetter(attr)
@@ -85,7 +95,20 @@ if _CColumn is None:
         @property
         def name(self) -> str:
             """The name of the column."""
-            return self._name
+            name = self._name
+            if name is None:
+                name = self._decode_name()
+                self._name = name
+            return name
+
+        def _decode_name(self) -> str:
+            if self._fname is not None:
+                name = self._fname.decode(self._encoding)
+                self._fname = None
+                return name
+
+            # COPY_OUT results have columns but no name
+            return f"column_{self._index + 1}"
 
         @property
         def type_code(self) -> int:

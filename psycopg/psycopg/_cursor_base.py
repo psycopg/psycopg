@@ -130,7 +130,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
             or res.status == SINGLE_TUPLE
             or res.status == TUPLES_CHUNK
         ):
-            return [Column(self, i) for i in range(res.nfields)]
+            encoding = self._encoding
+            types = self._adapters.types
+            nfields = res.nfields
+            return [Column._from_result(res, encoding, types, i) for i in range(nfields)]
         else:
             return None
 
