@@ -63,7 +63,7 @@ jobs:
           image: tonistiigi/binfmt:qemu-v8.1.5
 
       - name: Cache libpq build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/libpq.build
           key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
@@ -100,7 +100,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
             PYTEST_ADDOPTS="-m 'not slow and not flakey' --color yes"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -137,7 +137,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Cache libpq build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/libpq.build
           key: libpq-macos-${{ env.LIBPQ_VERSION }}-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
@@ -167,7 +167,7 @@ jobs:
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: macos-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -237,7 +237,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -253,7 +253,7 @@ jobs:
       - windows
     steps:
       - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v5
+        uses: actions/upload-artifact/merge@v6
         with:
           name: psycopg-binary-artifact
           delete-merged: true

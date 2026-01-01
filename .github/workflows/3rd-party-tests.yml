@@ -245,7 +245,7 @@ jobs:
           USE_TZ = False
           HERE
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ matrix.python-version }}-pip-${{ hashFiles('workdir/django/tests/requirements/py3.txt', 'workdir/django/setup.cfg') }}
