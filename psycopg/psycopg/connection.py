@@ -126,7 +126,8 @@ class Connection(BaseConnection[Row]):
             lines = [str(last_ex)]
             lines.append("Multiple connection attempts failed. All failures were:")
             lines.extend((f"- {descr}: {error}" for error, descr in conn_errors))
-            raise type(last_ex)("\n".join(lines)).with_traceback(None)
+            new_ex = type(last_ex)("\n".join(lines), pgconn=last_ex.pgconn)
+            raise new_ex.with_traceback(None)
 
         if (
             capabilities.has_used_gssapi()
