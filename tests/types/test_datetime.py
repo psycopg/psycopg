@@ -427,15 +427,13 @@ class TestDateTimeTz:
     @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
-        with cur.copy(
-            """
+        with cur.copy("""
             copy (
                 select
                     '2000-01-01 01:02:03.123456-10:20'::timestamptz,
                     '11111111'::int4
             ) to stdout
-            """
-        ) as copy:
+        """) as copy:
             copy.set_types(["timestamptz", "int4"])
             rec = copy.read_row()
 
@@ -643,15 +641,13 @@ class TestTimeTz:
     @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
-        with cur.copy(
-            """
+        with cur.copy("""
             copy (
                 select
                     '01:02:03.123456-10:20'::timetz,
                     '11111111'::int4
             ) to stdout
-            """
-        ) as copy:
+        """) as copy:
             copy.set_types(["timetz", "int4"])
             rec = copy.read_row()
 
@@ -758,15 +754,13 @@ class TestInterval:
     @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
-        with cur.copy(
-            """
+        with cur.copy("""
             copy (
                 select
                     '1 days +00:00:01.000001'::interval,
                     'foo bar'::text
             ) to stdout
-            """
-        ) as copy:
+        """) as copy:
             copy.set_types(["interval", "text"])
             rec = copy.read_row()
 

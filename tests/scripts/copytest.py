@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Copy operation micro-benchmarks."""
+
 from __future__ import annotations
 
 import sys
@@ -68,22 +69,18 @@ class CopyPutTest:
         fields = sql.SQL(", ").join(
             [sql.SQL(f"f{i} text") for i in range(self.args.nfields)]
         )
-        stmt = sql.SQL(
-            """\
+        stmt = sql.SQL("""\
 create temp table testcopy (id serial primary key, {})
-"""
-        ).format(fields)
+""").format(fields)
         return stmt
 
     def get_copy_stmt(self) -> Query:
         fields = sql.SQL(", ").join(
             [sql.Identifier(f"f{i}") for i in range(self.args.nfields)]
         )
-        stmt = sql.SQL(
-            """\
+        stmt = sql.SQL("""\
 copy testcopy ({}) from stdin
-"""
-        ).format(fields)
+""").format(fields)
         return stmt
 
     def get_record(self) -> tuple[Any, ...]:

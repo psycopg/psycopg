@@ -63,8 +63,7 @@ class CompositeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> abc.QueryNoTemplate:
-        return sql.SQL(
-            """\
+        return sql.SQL("""\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
@@ -88,8 +87,7 @@ LEFT JOIN (
     GROUP BY attrelid
 ) a ON a.attrelid = t.typrelid
 WHERE t.oid = {regtype}
-"""
-        ).format(regtype=cls._to_regtype(conn))
+""").format(regtype=cls._to_regtype(conn))
 
 
 class TupleDumper(RecursiveDumper):
@@ -472,13 +470,11 @@ def _parse_text_record(data: abc.Buffer) -> list[bytes | None]:
     return record
 
 
-_re_tokenize = re.compile(
-    rb"""(?x)
+_re_tokenize = re.compile(rb"""(?x)
       (,)                       # an empty token, representing NULL
     | " ((?: [^"] | "")*) " ,?  # or a quoted string
     | ([^",)]+) ,?              # or an unquoted string
-    """
-)
+    """)
 _re_undouble = re.compile(rb'(["\\])\1')
 
 

@@ -79,7 +79,7 @@ test = [
 ]
 dev = [
     "ast-comments >= 1.1.2",
-    "black >= 24.1.0",
+    "black >= 26.1.0",
     "codespell >= 2.2",
     "cython-lint >= 0.16",
     "dnspython >= 2.1",

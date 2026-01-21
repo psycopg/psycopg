@@ -60,17 +60,14 @@ class Bumper:
         self.package = package
         self.bump_level = BumpLevel(bump_level) if bump_level else None
 
-        self._ini_regex = re.compile(
-            r"""(?ix)
+        self._ini_regex = re.compile(r"""(?ix)
             ^
             (?P<pre> version \s* = \s* ")
             (?P<ver> [^\s"]+)
             (?P<post> " \s*)
             \s* $
-            """
-        )
-        self._extra_regex = re.compile(
-            r"""(?ix)
+            """)
+        self._extra_regex = re.compile(r"""(?ix)
             ^
             (?P<pre> \s* ")
             (?P<package> [^\s]+)
@@ -78,8 +75,7 @@ class Bumper:
             (?P<ver> [^\s]+)
             (?P<post> \s* (?:;.* \s*))
             \s* $
-            """
-        )
+            """)
 
     @cached_property
     def current_version(self) -> Version:

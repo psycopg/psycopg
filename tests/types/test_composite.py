@@ -57,12 +57,10 @@ def test_load_different_records_rows(conn, fmt_out):
 def test_dump_tuple(conn, rec, obj):
     cur = conn.cursor()
     fields = [f"f{i} text" for i in range(len(obj))]
-    cur.execute(
-        f"""
+    cur.execute(f"""
         drop type if exists tmptype;
         create type tmptype as ({', '.join(fields)});
-        """
-    )
+        """)
     info = CompositeInfo.fetch(conn, "tmptype")
     register_composite(info, conn)
 
@@ -72,12 +70,10 @@ def test_dump_tuple(conn, rec, obj):
 
 def test_dump_tuple_null(conn):
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         drop type if exists tmptype;
         create type tmptype as (f1 text, f2 text);
-        """
-    )
+        """)
     info = CompositeInfo.fetch(conn, "tmptype")
     register_composite(info, conn)
     conn.adapters.register_dumper(str, StrNoneDumper)
@@ -105,12 +101,10 @@ def test_load_all_chars(conn, fmt_out):
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty_range(conn, fmt_in):
-    conn.execute(
-        """
+    conn.execute("""
         drop type if exists tmptype;
         create type tmptype as (num integer, range daterange, nums integer[])
-        """
-    )
+        """)
     info = CompositeInfo.fetch(conn, "tmptype")
     register_composite(info, conn)
 
@@ -155,8 +149,7 @@ def testcomp(svcconn):
     if is_crdb(svcconn):
         pytest.skip(crdb_skip_message("composite"))
     cur = svcconn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         create schema if not exists testschema;
 
         drop type if exists testcomp2 cascade;
@@ -166,8 +159,7 @@ def testcomp(svcconn):
         create type testcomp as (foo text, bar int8, baz float8);
         create type testcomp2 as (qux int8, quux testcomp);
         create type testschema.testcomp as (foo text, bar int8, qux bool);
-        """
-    )
+        """)
     return CompositeInfo.fetch(svcconn, "testcomp")
 
 
@@ -472,12 +464,10 @@ def test_no_info_error(conn):
 
 def test_invalid_fields_names(conn):
     conn.execute("set client_encoding to utf8")
-    conn.execute(
-        f"""
+    conn.execute(f"""
         create type "a-b" as ("c-d" text, "{eur}" int);
         create type "-x-{eur}" as ("w-ww" "a-b", "0" int);
-        """
-    )
+        """)
     ab = CompositeInfo.fetch(conn, '"a-b"')
     x = CompositeInfo.fetch(conn, f'"-x-{eur}"')
     register_composite(ab, conn)

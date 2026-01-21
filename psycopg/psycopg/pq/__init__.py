@@ -105,12 +105,10 @@ def import_from_libpq() -> None:
         raise ImportError(f"requested psycopg implementation '{impl}' unknown")
     else:
         sattempts = "\n".join(f"- {attempt}" for attempt in attempts)
-        raise ImportError(
-            f"""\
+        raise ImportError(f"""\
 no pq wrapper available.
 Attempts made:
-{sattempts}"""
-        )
+{sattempts}""")
 
 
 import_from_libpq()

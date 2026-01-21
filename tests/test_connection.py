@@ -319,14 +319,12 @@ def test_commit(conn):
 
 @pytest.mark.crdb_skip("deferrable")
 def test_commit_error(conn):
-    conn.execute(
-        """
+    conn.execute("""
         drop table if exists selfref;
         create table selfref (
             x serial primary key,
             y int references selfref (x) deferrable initially deferred)
-        """
-    )
+        """)
     conn.commit()
 
     conn.execute("insert into selfref (y) values (-1)")

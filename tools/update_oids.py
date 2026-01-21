@@ -102,8 +102,7 @@ def get_version_comment(conn: Connection) -> list[str]:
 
 def get_py_oids(conn: Connection) -> list[str]:
     lines = []
-    for typname, oid in conn.execute(
-        """
+    for typname, oid in conn.execute("""
 select typname, oid
 from pg_type
 where
@@ -111,8 +110,7 @@ where
     and (typtype = any('{b,r,m}') or typname = 'record')
     and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
-"""
-    ):
+"""):
         const_name = typname.upper() + "_OID"
         lines.append(f"{const_name} = {oid}")
 
@@ -138,8 +136,7 @@ def get_py_types(conn: Connection) -> list[str]:
     # Note: "record" is a pseudotype but still a useful one to have.
     # "pg_lsn" is a documented public type and useful in streaming replication
     lines = []
-    for typname, oid, typarray, regtype, typdelim in conn.execute(
-        """
+    for typname, oid, typarray, regtype, typdelim in conn.execute("""
 select typname, oid, typarray,
     -- CRDB might have quotes in the regtype representation
     replace(typname::regtype::text, '''', '') as regtype,
@@ -151,8 +148,7 @@ where
     and (typtype = 'b' or typname = 'record')
     and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
-"""
-    ):
+"""):
         typemod = typemods.get(typname)
 
         # Weird legacy type in postgres catalog
@@ -177,8 +173,7 @@ order by typname
 
 def get_py_ranges(conn: Connection) -> list[str]:
     lines = []
-    for typname, oid, typarray, rngsubtype in conn.execute(
-        """
+    for typname, oid, typarray, rngsubtype in conn.execute("""
 select typname, oid, typarray, rngsubtype
 from
     pg_type t
@@ -187,8 +182,7 @@ where
     oid < 10000
     and typtype = 'r'
 order by typname
-"""
-    ):
+"""):
         params = [f"{typname!r}, {oid}, {typarray}, subtype_oid={rngsubtype}"]
         lines.append(f"RangeInfo({','.join(params)}),")
 
@@ -197,8 +191,7 @@ order by typname
 
 def get_py_multiranges(conn: Connection) -> list[str]:
     lines = []
-    for typname, oid, typarray, rngtypid, rngsubtype in conn.execute(
-        """
+    for typname, oid, typarray, rngtypid, rngsubtype in conn.execute("""
 select typname, oid, typarray, rngtypid, rngsubtype
 from
     pg_type t
@@ -207,8 +200,7 @@ where
     oid < 10000
     and typtype = 'm'
 order by typname
-"""
-    ):
+"""):
         params = [
             f"{typname!r}, {oid}, {typarray},"
             f" range_oid={rngtypid}, subtype_oid={rngsubtype}"
@@ -220,8 +212,7 @@ order by typname
 
 def get_cython_oids(conn: Connection) -> list[str]:
     lines = []
-    for typname, oid in conn.execute(
-        """
+    for typname, oid in conn.execute("""
 select typname, oid
 from pg_type
 where
@@ -229,8 +220,7 @@ where
     and (typtype = any('{b,r,m}') or typname = 'record')
     and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
-"""
-    ):
+"""):
         const_name = typname.upper() + "_OID"
         lines.append(f"    {const_name} = {oid}")
 

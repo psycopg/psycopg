@@ -112,12 +112,10 @@ def fetch_errors(versions):
         "XX000": "InternalError_",
     }
 
-    seen = set(
-        """
+    seen = set("""
         Error Warning InterfaceError DataError DatabaseError ProgrammingError
         IntegrityError InternalError NotSupportedError OperationalError
-        """.split()
-    )
+        """.split())
 
     for c, cerrs in errors.items():
         for sqstate, errlabel in list(cerrs.items()):

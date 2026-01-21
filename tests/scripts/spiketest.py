@@ -8,6 +8,7 @@ The test is inspired to the `spike analysis`__ illustrated by HikariCP
        Welcome-To-The-Jungle.md
 
 """
+
 # mypy: allow-untyped-defs
 # mypy: allow-untyped-calls
 

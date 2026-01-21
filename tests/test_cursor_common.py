@@ -552,13 +552,11 @@ def test_rownumber_none(conn, query):
 
 def test_rownumber_mixed(conn):
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
 select x from generate_series(1, 3) x;
 set timezone to utc;
 select x from generate_series(4, 6) x;
-"""
-    )
+""")
     assert cur.rownumber == 0
     assert cur.fetchone() == (1,)
     assert cur.rownumber == 1
@@ -982,13 +980,11 @@ def test_change_loader_results(conn):
     # With no result
     cur.adapters.register_loader("text", make_loader("1"))
 
-    cur.execute(
-        """
+    cur.execute("""
         values ('foo'::text);
         values ('bar'::text), ('baz');
         values ('qux'::text);
-        """
-    )
+        """)
     assert cur.fetchall() == [("foo1",)]
 
     cur.nextset()

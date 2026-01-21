@@ -186,12 +186,10 @@ def test_copy_in_allchars(conn):
             copy.write_row((i, None, chr(i)))
         copy.write_row((ord(eur), None, eur))
 
-    cur.execute(
-        """
+    cur.execute("""
 select col1 = ascii(data), col2 is null, length(data), count(*)
 from copy_in group by 1, 2, 3
-"""
-    )
+""")
     data = cur.fetchall()
     assert data == [(True, True, 1, 256)]
 

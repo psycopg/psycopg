@@ -9,21 +9,17 @@ from .fix_crdb import crdb_encoding, is_crdb, skip_crdb
 
 def test_description_attribs(conn):
     curs = conn.cursor()
-    curs.execute(
-        """select
+    curs.execute("""select
         3.14::decimal(10,2) as pi,
         'hello'::text as hi,
         '2010-02-18'::date as now
-        """
-    )
+        """)
     assert len(curs.description) == 3
     for c in curs.description:
         len(c) == 7  # DBAPI happy
-        for i, a in enumerate(
-            """
+        for i, a in enumerate("""
             name type_code display_size internal_size precision scale null_ok
-            """.split()
-        ):
+        """.split()):
             assert c[i] == getattr(c, a)
 
         # Won't fill them up
@@ -135,13 +131,11 @@ def test_details_time(conn, type, precision):
 
 def test_pickle(conn):
     curs = conn.cursor()
-    curs.execute(
-        """select
+    curs.execute("""select
         3.14::decimal(10,2) as pi,
         'hello'::text as hi,
         '2010-02-18'::date as now
-        """
-    )
+        """)
     description = curs.description
     pickled = pickle.dumps(description, pickle.HIGHEST_PROTOCOL)
     unpickled = pickle.loads(pickled)

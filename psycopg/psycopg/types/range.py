@@ -55,16 +55,14 @@ class RangeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
-        return sql.SQL(
-            """\
+        return sql.SQL("""\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
 WHERE t.oid = {regtype}
-"""
-        ).format(regtype=cls._to_regtype(conn))
+""").format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: TypesRegistry) -> None:
         # Map ranges subtypes to info

@@ -158,16 +158,14 @@ class TypeInfo:
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
-        return sql.SQL(
-            """\
+        return sql.SQL("""\
 SELECT
     typname AS name, oid, typarray AS array_oid,
     oid::regtype::text AS regtype, typdelim AS delimiter
 FROM pg_type t
 WHERE t.oid = {regtype}
 ORDER BY t.oid
-"""
-        ).format(regtype=cls._to_regtype(conn))
+""").format(regtype=cls._to_regtype(conn))
 
     @classmethod
     def _has_to_regtype_function(cls, conn: BaseConnection[Any]) -> bool:

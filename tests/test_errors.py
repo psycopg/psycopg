@@ -69,12 +69,10 @@ def test_diag_right_attr(pgconn, monkeypatch):
 def test_diag_attr_values(conn):
     if is_crdb(conn):
         conn.execute("set experimental_enable_temp_tables = 'on'")
-    conn.execute(
-        """
+    conn.execute("""
         create temp table test_exc (
             data int constraint chk_eq1 check (data = 1)
-        )"""
-    )
+        )""")
     with pytest.raises(e.Error) as exc:
         conn.execute("insert into test_exc values(2)")
     diag = exc.value.diag
@@ -105,13 +103,11 @@ def test_error_encoding(conn, enc):
         conn.execute(f"set client_encoding to {enc}")
     cur = conn.cursor()
     with pytest.raises(e.DatabaseError) as excinfo:
-        cur.execute(
-            """
+        cur.execute("""
             do $$begin
                 execute format('insert into "%s" values (1)', chr(8364));
             end$$ language plpgsql;
-            """
-        )
+            """)
 
     diag = excinfo.value.diag
     assert diag.message_primary and f'"{eur}"' in diag.message_primary
@@ -218,14 +214,12 @@ def test_diag_independent(conn):
 @pytest.mark.crdb_skip("deferrable")
 def test_diag_from_commit(conn):
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         create temp table test_deferred (
            data int primary key,
            ref int references test_deferred (data)
                deferrable initially deferred)
-    """
-    )
+    """)
     cur.execute("insert into test_deferred values (1,2)")
     with pytest.raises(e.Error) as exc:
         conn.commit()
@@ -236,14 +230,12 @@ def test_diag_from_commit(conn):
 @pytest.mark.crdb_skip("deferrable")
 async def test_diag_from_commit_async(aconn):
     cur = aconn.cursor()
-    await cur.execute(
-        """
+    await cur.execute("""
         create temp table test_deferred (
            data int primary key,
            ref int references test_deferred (data)
                deferrable initially deferred)
-    """
-    )
+    """)
     await cur.execute("insert into test_deferred values (1,2)")
     with pytest.raises(e.Error) as exc:
         await aconn.commit()
@@ -271,13 +263,11 @@ def test_unknown_sqlstate(conn):
         e.lookup(code)
 
     with pytest.raises(e.ProgrammingError) as excinfo:
-        conn.execute(
-            f"""
+        conn.execute(f"""
             do $$begin
             raise exception 'made up code' using errcode = '{code}';
             end$$ language plpgsql
-            """
-        )
+            """)
     exc = excinfo.value
     assert exc.diag.sqlstate == code
     assert exc.sqlstate == code

@@ -49,14 +49,10 @@ def make_test_enums(request, svcconn):
 def ensure_enum(enum, conn):
     name = enum.__name__.lower()
     labels = list(enum.__members__)
-    conn.execute(
-        sql.SQL(
-            """
+    conn.execute(sql.SQL("""
             drop type if exists {name};
             create type {name} as enum ({labels});
-            """
-        ).format(name=sql.Identifier(name), labels=sql.SQL(",").join(labels))
-    )
+            """).format(name=sql.Identifier(name), labels=sql.SQL(",").join(labels)))
     return name, enum, labels
 
 

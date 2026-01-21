@@ -315,14 +315,12 @@ async def test_commit(aconn):
 
 @pytest.mark.crdb_skip("deferrable")
 async def test_commit_error(aconn):
-    await aconn.execute(
-        """
+    await aconn.execute("""
         drop table if exists selfref;
         create table selfref (
             x serial primary key,
             y int references selfref (x) deferrable initially deferred)
-        """
-    )
+        """)
     await aconn.commit()
 
     await aconn.execute("insert into selfref (y) values (-1)")

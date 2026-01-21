@@ -292,14 +292,12 @@ def test_implicit_transaction(conn):
 
 @pytest.mark.crdb_skip("deferrable")
 def test_error_on_commit(conn):
-    conn.execute(
-        """
+    conn.execute("""
         drop table if exists selfref;
         create table selfref (
             x serial primary key,
             y int references selfref (x) deferrable initially deferred)
-        """
-    )
+        """)
     conn.commit()
 
     with conn.pipeline():
@@ -343,10 +341,9 @@ def test_executemany(conn):
 def test_executemany_no_returning(conn):
     conn.set_autocommit(True)
     conn.execute("drop table if exists execmanypipelinenoreturning")
-    conn.execute(
-        """create unlogged table execmanypipelinenoreturning
-            (id serial primary key, num integer)"""
-    )
+    conn.execute("""
+        create unlogged table execmanypipelinenoreturning
+            (id serial primary key, num integer)""")
     with conn.pipeline(), conn.cursor() as cur:
         cur.executemany(
             "insert into execmanypipelinenoreturning(num) values (%s)",
@@ -567,11 +564,10 @@ def test_concurrency(conn):
         conn.execute("drop table if exists pipeline_concurrency")
         conn.execute("drop table if exists accessed")
     with conn.transaction():
-        conn.execute(
-            """create unlogged table pipeline_concurrency (
+        conn.execute("""
+            create unlogged table pipeline_concurrency (
                 id serial primary key,
-                value integer)"""
-        )
+                value integer)""")
         conn.execute("create unlogged table accessed as (select now() as value)")
 
     def update(value):

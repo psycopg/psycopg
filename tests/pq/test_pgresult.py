@@ -102,13 +102,11 @@ def test_fname(pgconn):
 
 @pytest.mark.crdb("skip", reason="ftable")
 def test_ftable_and_col(pgconn):
-    res = pgconn.exec_(
-        b"""
+    res = pgconn.exec_(b"""
         drop table if exists t1, t2;
         create table t1 as select 1 as f1;
         create table t2 as select 2 as f2, 3 as f3;
-        """
-    )
+        """)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     res = pgconn.exec_(

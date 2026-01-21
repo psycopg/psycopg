@@ -147,12 +147,10 @@ def test_close_prepared_no_close(pgconn):
 
 @pytest.mark.crdb_skip("close portal")
 def test_describe_portal(pgconn):
-    res = pgconn.exec_(
-        b"""
+    res = pgconn.exec_(b"""
         begin;
         declare cur cursor for select * from generate_series(1,10) foo;
-        """
-    )
+        """)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     res = pgconn.describe_portal(b"cur")
@@ -168,12 +166,10 @@ def test_describe_portal(pgconn):
 @pytest.mark.crdb_skip("close portal")
 @pytest.mark.libpq(">= 17")
 def test_close_portal(pgconn):
-    res = pgconn.exec_(
-        b"""
+    res = pgconn.exec_(b"""
         begin;
         declare cur cursor for select * from generate_series(1,10) foo;
-        """
-    )
+        """)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     res = pgconn.close_portal(b"cur")

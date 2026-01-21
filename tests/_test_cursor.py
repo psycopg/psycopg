@@ -15,12 +15,10 @@ from psycopg.rows import RowMaker
 
 @pytest.fixture(scope="session")
 def _execmany(svcconn):
-    svcconn.execute(
-        """
+    svcconn.execute("""
         drop table if exists execmany;
         create table execmany (id serial primary key, num integer, data text)
-        """
-    )
+        """)
 
 
 @pytest.fixture(scope="function")

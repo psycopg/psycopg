@@ -289,14 +289,12 @@ async def test_implicit_transaction(aconn):
 
 @pytest.mark.crdb_skip("deferrable")
 async def test_error_on_commit(aconn):
-    await aconn.execute(
-        """
+    await aconn.execute("""
         drop table if exists selfref;
         create table selfref (
             x serial primary key,
             y int references selfref (x) deferrable initially deferred)
-        """
-    )
+        """)
     await aconn.commit()
 
     async with aconn.pipeline():
@@ -340,10 +338,9 @@ async def test_executemany(aconn):
 async def test_executemany_no_returning(aconn):
     await aconn.set_autocommit(True)
     await aconn.execute("drop table if exists execmanypipelinenoreturning")
-    await aconn.execute(
-        """create unlogged table execmanypipelinenoreturning
-            (id serial primary key, num integer)"""
-    )
+    await aconn.execute("""
+        create unlogged table execmanypipelinenoreturning
+            (id serial primary key, num integer)""")
     async with aconn.pipeline(), aconn.cursor() as cur:
         await cur.executemany(
             "insert into execmanypipelinenoreturning(num) values (%s)",
@@ -568,11 +565,10 @@ async def test_concurrency(aconn):
         await aconn.execute("drop table if exists pipeline_concurrency")
         await aconn.execute("drop table if exists accessed")
     async with aconn.transaction():
-        await aconn.execute(
-            """create unlogged table pipeline_concurrency (
+        await aconn.execute("""
+            create unlogged table pipeline_concurrency (
                 id serial primary key,
-                value integer)"""
-        )
+                value integer)""")
         await aconn.execute("create unlogged table accessed as (select now() as value)")
 
     async def update(value):

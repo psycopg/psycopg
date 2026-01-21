@@ -204,14 +204,11 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> re.Pattern[bytes]:
     they are empty strings, contain curly braces, delimiter characters,
     double quotes, backslashes, or white space, or match the word NULL.
     """
-    return re.compile(
-        rb"""(?xi)
+    return re.compile(rb"""(?xi)
           ^$              # the empty string
         | ["{}%s\\\s]      # or a char to escape
         | ^null$          # or the word NULL
-        """
-        % delimiter
-    )
+        """ % delimiter)
 
 
 class ListBinaryDumper(BaseListDumper):
@@ -431,15 +428,12 @@ def _get_array_parse_regexp(delimiter: bytes) -> re.Pattern[bytes]:
     """
     Return a regexp to tokenize an array representation into item and brackets
     """
-    return re.compile(
-        rb"""(?xi)
+    return re.compile(rb"""(?xi)
         (     [{}]                        # open or closed bracket
             | " (?: [^"\\] | \\. )* "     # or a quoted string
             | [^"{}%s\\]+                 # or an unquoted non-empty string
         ) ,?
-        """
-        % delimiter
-    )
+        """ % delimiter)
 
 
 def _load_binary(data: Buffer, tx: Transformer) -> list[Any]:

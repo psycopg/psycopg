@@ -51,16 +51,14 @@ class MultirangeInfo(TypeInfo):
             raise e.NotSupportedError(
                 "multirange types are only available from PostgreSQL 14"
             )
-        return sql.SQL(
-            """\
+        return sql.SQL("""\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngmultitypid
 WHERE t.oid = {regtype}
-"""
-        ).format(regtype=cls._to_regtype(conn))
+""").format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: TypesRegistry) -> None:
         # Map multiranges ranges and subtypes to info

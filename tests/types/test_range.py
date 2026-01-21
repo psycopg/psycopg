@@ -262,8 +262,7 @@ def create_test_range(conn):
     if is_crdb(conn):
         pytest.skip(crdb_skip_message("range"))
 
-    conn.execute(
-        """
+    conn.execute("""
         create schema if not exists testschema;
 
         drop type if exists testrange cascade;
@@ -271,8 +270,7 @@ def create_test_range(conn):
 
         create type testrange as range (subtype = text, collation = "C");
         create type testschema.testrange as range (subtype = float8);
-        """
-    )
+        """)
 
 
 fetch_cases = [

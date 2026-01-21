@@ -142,12 +142,10 @@ def test_fetch_by_schema_qualified_string(conn, name):
     info = TypeInfo.fetch(conn, name)
     assert info.name == "testtype"
     # assert info.schema == "testschema"
-    cur = conn.execute(
-        """
+    cur = conn.execute("""
         select oid, typarray from pg_type
         where oid = 'testschema.testtype'::regtype
-        """
-    )
+        """)
     assert cur.fetchone() == (info.oid, info.array_oid)
 
 

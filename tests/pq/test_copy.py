@@ -57,11 +57,9 @@ def test_copy_out(pgconn):
     for i in range(10):
         data = []
         for j in range(20):
-            data.append(
-                f"""\
+            data.append(f"""\
 {i * 20 + j}\t{j}\t{'X' * (i * 20 + j)}
-"""
-            )
+""")
         rv = pgconn.put_copy_data("".join(data).encode("ascii"))
         assert rv > 0
 
@@ -89,11 +87,9 @@ def test_copy_out_err(pgconn):
     for i in range(10):
         data = []
         for j in range(20):
-            data.append(
-                f"""\
+            data.append(f"""\
 {i * 20 + j}\thardly a number\tnope
-"""
-            )
+""")
         rv = pgconn.put_copy_data("".join(data).encode("ascii"))
         assert rv > 0
 
@@ -117,11 +113,9 @@ def test_copy_out_error_end(pgconn):
     for i in range(10):
         data = []
         for j in range(20):
-            data.append(
-                f"""\
+            data.append(f"""\
 {i * 20 + j}\t{j}\t{'X' * (i * 20 + j)}
-"""
-            )
+""")
         rv = pgconn.put_copy_data("".join(data).encode("ascii"))
         assert rv > 0
 

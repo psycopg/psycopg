@@ -187,12 +187,10 @@ async def test_copy_in_allchars(aconn):
             await copy.write_row((i, None, chr(i)))
         await copy.write_row((ord(eur), None, eur))
 
-    await cur.execute(
-        """
+    await cur.execute("""
 select col1 = ascii(data), col2 is null, length(data), count(*)
 from copy_in group by 1, 2, 3
-"""
-    )
+""")
     data = await cur.fetchall()
     assert data == [(True, True, 1, 256)]
 

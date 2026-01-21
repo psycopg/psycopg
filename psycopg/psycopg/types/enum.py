@@ -52,8 +52,7 @@ class EnumInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
-        return sql.SQL(
-            """\
+        return sql.SQL("""\
 SELECT name, oid, array_oid, array_agg(label) AS labels
 FROM (
     SELECT
@@ -66,8 +65,7 @@ FROM (
     ORDER BY e.enumsortorder
 ) x
 GROUP BY name, oid, array_oid
-"""
-        ).format(regtype=cls._to_regtype(conn))
+""").format(regtype=cls._to_regtype(conn))
 
 
 class _BaseEnumLoader(Loader, Generic[E]):

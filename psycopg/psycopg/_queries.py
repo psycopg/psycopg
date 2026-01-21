@@ -82,7 +82,7 @@ class PostgresQuery:
             else:
                 f = _query2pg_nocache
 
-            (self.query, self._want_formats, self._order, self._parts) = f(
+            self.query, self._want_formats, self._order, self._parts = f(
                 query, self._tx.encoding
             )
         else:
@@ -281,7 +281,7 @@ class PostgresClientQuery(PostgresQuery):
             else:
                 f = _query2pg_client_nocache
 
-            (self.template, self._order, self._parts) = f(query, self._tx.encoding)
+            self.template, self._order, self._parts = f(query, self._tx.encoding)
         else:
             self.query = query
             self._order = None
@@ -360,8 +360,7 @@ def _query2pg_client_nocache(
 _query2pg_client = lru_cache(_query2pg_client_nocache)
 
 
-_re_placeholder = re.compile(
-    rb"""(?x)
+_re_placeholder = re.compile(rb"""(?x)
         %                       # a literal %
         (?:
             (?:
@@ -371,8 +370,7 @@ _re_placeholder = re.compile(
             |
             (?:.)               # or any char, really
         )
-        """
-)
+        """)
 
 
 def _split_query(

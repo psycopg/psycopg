@@ -170,13 +170,11 @@ class TestSqlFormat:
 
     def test_execute(self, conn):
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """
-        )
+            """)
         cur.execute(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
                 sql.Identifier("test_compose"),
@@ -191,13 +189,11 @@ class TestSqlFormat:
 
     def test_executemany(self, conn):
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """
-        )
+            """)
         cur.executemany(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
                 sql.Identifier("test_compose"),
@@ -213,13 +209,11 @@ class TestSqlFormat:
     @pytest.mark.crdb_skip("copy")
     def test_copy(self, conn):
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """
-        )
+            """)
 
         with cur.copy(
             sql.SQL("copy {t} (id, foo, bar, {f}) from stdin").format(
@@ -411,8 +405,7 @@ class TestLiteral:
     def test_invalid_name(self, conn, name):
         if conn.info.parameter_status("is_superuser") != "on":
             pytest.skip("not a superuser")
-        conn.execute(
-            f"""
+        conn.execute(f"""
             set client_encoding to utf8;
             create type "{name}";
             create function invin(cstring) returns "{name}"
@@ -420,8 +413,7 @@ class TestLiteral:
             create function invout("{name}") returns cstring
                 language internal immutable strict as 'textout';
             create type "{name}" (input=invin, output=invout, like=text);
-            """
-        )
+            """)
         info = TypeInfo.fetch(conn, f'"{name}"')
 
         class InvDumper(StrDumper):

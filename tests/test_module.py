@@ -50,12 +50,10 @@ def test_version_c():
 
 
 def test_version_static(mypy):
-    cp = mypy.run_on_source(
-        """\
+    cp = mypy.run_on_source("""\
 from psycopg import __version__
 assert __version__
-"""
-    )
+""")
     assert not cp.stdout
 
 
@@ -64,10 +62,8 @@ def test_version_c_static(mypy):
     # can be psycopg_c, psycopg_binary
     cpackage = _psycopg.__name__.split(".")[0]
 
-    cp = mypy.run_on_source(
-        f"""\
+    cp = mypy.run_on_source(f"""\
 from {cpackage} import __version__
 assert __version__
-"""
-    )
+""")
     assert not cp.stdout

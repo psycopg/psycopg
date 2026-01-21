@@ -94,12 +94,10 @@ async def test_copy_out_param(aconn, ph, params):
 @pytest.mark.parametrize("typetype", ["names", "oids"])
 async def test_read_rows(aconn, format, typetype):
     cur = aconn.cursor()
-    async with cur.copy(
-        """copy (
+    async with cur.copy("""
+        copy (
             select 10::int4, 'hello'::text, '{0.0,1.0}'::float8[]
-        ) to stdout (format %s)"""
-        % format.name
-    ) as copy:
+    ) to stdout (format %s)""" % format.name) as copy:
         copy.set_types(["int4", "text", "float8[]"])
         row = await copy.read_row()
         assert (await copy.read_row()) is None
@@ -580,12 +578,10 @@ async def test_copy_in_allchars(aconn):
             await copy.write_row((i, None, chr(i)))
         await copy.write_row((ord(eur), None, eur))
 
-    await cur.execute(
-        """
+    await cur.execute("""
 select col1 = ascii(data), col2 is null, length(data), count(*)
 from copy_in group by 1, 2, 3
-"""
-    )
+""")
     data = await cur.fetchall()
     assert data == [(True, True, 1, 256)]
 

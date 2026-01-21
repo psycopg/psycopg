@@ -325,14 +325,12 @@ class TimeBinaryLoader(Loader):
 
 
 class TimetzLoader(Loader):
-    _re_format = re.compile(
-        rb"""(?ix)
+    _re_format = re.compile(rb"""(?ix)
         ^
         (\d+) : (\d+) : (\d+) (?: \. (\d+) )?       # Time and micros
         ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
         $
-        """
-    )
+        """)
 
     def load(self, data: Buffer) -> time:
         if not (m := self._re_format.match(data)):
@@ -381,18 +379,15 @@ class TimetzBinaryLoader(Loader):
 
 
 class TimestampLoader(Loader):
-    _re_format = re.compile(
-        rb"""(?ix)
+    _re_format = re.compile(rb"""(?ix)
         ^
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)   # Date
         (?: T | [^a-z0-9] )                     # Separator, including T
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)   # Time
         (?: \.(\d+) )?                          # Micros
         $
-        """
-    )
-    _re_format_pg = re.compile(
-        rb"""(?ix)
+        """)
+    _re_format_pg = re.compile(rb"""(?ix)
         ^
         [a-z]+          [^a-z0-9]               # DoW, separator
         (\d+|[a-z]+)    [^a-z0-9]               # Month or day
@@ -401,8 +396,7 @@ class TimestampLoader(Loader):
         (?: \.(\d+) )?                          # Micros
         [^a-z0-9] (\d+)                         # Year
         $
-        """
-    )
+        """)
 
     _ORDER_YMD = 0
     _ORDER_DMY = 1
@@ -477,8 +471,7 @@ class TimestampBinaryLoader(Loader):
 
 
 class TimestamptzLoader(Loader):
-    _re_format = re.compile(
-        rb"""(?ix)
+    _re_format = re.compile(rb"""(?ix)
         ^
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)       # Date
         (?: T | [^a-z0-9] )                         # Separator, including T
@@ -486,8 +479,7 @@ class TimestamptzLoader(Loader):
         (?: \.(\d+) )?                              # Micros
         ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
         $
-        """
-    )
+        """)
 
     def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)

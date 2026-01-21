@@ -32,12 +32,9 @@ class Column(Sequence[Any]):
         self._fmod = res.fmod(index)
         self._fsize = res.fsize(index)
 
-    _attrs = tuple(
-        attrgetter(attr)
-        for attr in """
+    _attrs = tuple(attrgetter(attr) for attr in """
             name type_code display_size internal_size precision scale null_ok
-            """.split()
-    )
+            """.split())
 
     def __repr__(self) -> str:
         return (
