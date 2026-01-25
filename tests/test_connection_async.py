@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import time
 import logging
@@ -12,7 +13,7 @@ import psycopg
 from psycopg import errors as e
 from psycopg import pq
 from psycopg.rows import tuple_row
-from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
+from psycopg.conninfo import conninfo_to_dict, make_conninfo, timeout_from_conninfo
 from psycopg._conninfo_utils import get_param
 
 from .acompat import asleep, skip_async, skip_sync
@@ -74,6 +75,25 @@ async def test_connect_error_multi_hosts_each_message_preserved(aconn_cls):
 
     assert any(expected_host1 in line and expected_error in line for line in msg_lines)
     assert any(expected_host2 in line and expected_error in line for line in msg_lines)
+
+
+async def test_multi_attempt_pgconn(aconn_cls, dsn, monkeypatch):
+    async with await aconn_cls.connect(dsn) as conn:
+        if not conn.pgconn.used_password:
+            pytest.skip("test connection needs no password")
+
+    monkeypatch.delenv("PGPASSWORD", raising=False)
+    info = conninfo_to_dict(dsn)
+    info.pop("password", None)
+    info["host"] = ",".join([str(info.get("host", os.environ.get("PGHOST", "")))] * 2)
+    dsn = make_conninfo("", **info)
+
+    with pytest.raises(psycopg.OperationalError, match="connection failed:") as e:
+        await aconn_cls.connect(dsn)
+
+    msg = str(e.value)
+    assert MULTI_FAILURE_MESSAGE in msg
+    assert e.value.pgconn
 
 
 async def test_connect_str_subclass(aconn_cls, dsn):
