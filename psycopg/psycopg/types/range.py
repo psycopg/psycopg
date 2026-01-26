@@ -7,7 +7,7 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Generic, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 from decimal import Decimal
 from datetime import date, datetime
 from functools import cache
@@ -86,7 +86,7 @@ class Range(Generic[T]):
         self,
         lower: T | None = None,
         upper: T | None = None,
-        bounds: str = "[)",
+        bounds: Literal["[)", "(]", "()", "[]"] = "[)",
         empty: bool = False,
     ):
         if not empty:
