@@ -89,6 +89,8 @@ class Range(Generic[T]):
         bounds: Literal["[)", "(]", "()", "[]"] = "[)",
         empty: bool = False,
     ):
+        self._bounds: str
+
         if not empty:
             if bounds not in ("[)", "(]", "()", "[]"):
                 raise ValueError("bound flags not valid: %r" % bounds)
@@ -98,9 +100,9 @@ class Range(Generic[T]):
 
             # Make bounds consistent with infs
             if lower is None and bounds[0] == "[":
-                bounds = "(" + bounds[1]
+                bounds = "(" + bounds[1]  # type: ignore[assignment]
             if upper is None and bounds[1] == "]":
-                bounds = bounds[0] + ")"
+                bounds = bounds[0] + ")"  # type: ignore[assignment]
 
             self._bounds = bounds
         else:
@@ -481,7 +483,14 @@ def load_range_text(data: Buffer, load: LoadFunc) -> tuple[Range[Any], int]:
 
     bounds = (m.group(1) + m.group(6)).decode()
 
-    return Range(lower, upper, bounds), m.end()
+    return (
+        Range(
+            lower,
+            upper,
+            bounds,  # type: ignore[arg-type]
+        ),
+        m.end(),
+    )
 
 
 _re_range = re.compile(
@@ -535,7 +544,11 @@ def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
         max = load(data[pos : pos + length])
         pos += length
 
-    return Range(min, max, lb + ub)
+    return Range(
+        min,
+        max,
+        lb + ub,  # type: ignore[arg-type]
+    )
 
 
 def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None:

@@ -426,7 +426,7 @@ class TestRangeObject:
             ("()", False, False),
             ("[]", True, True),
         ]:
-            r = Range(10, 20, bounds)
+            r = Range(10, 20, bounds)  # type: ignore[arg-type]
             assert r.bounds == bounds
             assert r.lower == 10
             assert r.upper == 20
@@ -457,9 +457,9 @@ class TestRangeObject:
 
     def test_bad_bounds(self):
         with pytest.raises(ValueError):
-            Range(bounds="(")
+            Range(bounds="(")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            Range(bounds="[}")
+            Range(bounds="[}")  # type: ignore[arg-type]
 
     def test_in(self):
         r = Range[int](empty=True)
