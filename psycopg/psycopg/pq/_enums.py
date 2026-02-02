@@ -257,3 +257,15 @@ class Trace(IntFlag):
 
     REGRESS_MODE = 2
     """Redact some fields, e.g. OIDs, from messages."""
+
+
+class AuthData(IntEnum):
+    """
+    Enum to represent the available OAuth hook types.
+    """
+
+    PROMPT_OAUTH_DEVICE = 0
+    """user must visit a device-authorization URL."""
+
+    OAUTH_BEARER_TOKEN = auto()
+    """Server requests an OAuth Bearer token."""
