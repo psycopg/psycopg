@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, ppc64le, aarch64, riscv64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp314t]
         platform: [manylinux, musllinux]
 
     steps:
@@ -130,7 +130,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp314t]
 
     steps:
       - name: Checkout repos
@@ -184,7 +184,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [win_amd64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp314t]
 
     defaults:
       run:
