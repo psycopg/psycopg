@@ -13,7 +13,7 @@ from . import errors as e
 from . import pq
 from .abc import ConnDict, ConnParam
 
-# re-exoprts
+# re-exports
 conninfo_attempts = _conninfo_attempts.conninfo_attempts
 conninfo_attempts_async = _conninfo_attempts_async.conninfo_attempts_async
 
