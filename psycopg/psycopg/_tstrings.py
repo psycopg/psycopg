@@ -83,7 +83,7 @@ class TemplateProcessor:
             elif fmt == FMT_SQL:
                 # It must have been processed already
                 raise e.ProgrammingError(
-                    "sql values must be sql.Composite, sql.SQL, or Template;"
+                    "sql values must be sql.Composed, sql.SQL, or Template;"
                     f" got {type(item.value).__qualname__}"
                     f" in {{{item.expression}:{fmt}}}"
                 )
