@@ -281,7 +281,7 @@ See :ref:`transactions` for details about these objects.
 .. class:: psycopg.Transaction.Status()
 .. autoclass:: psycopg.AsyncTransaction.Status()
 
-    .. note: `:members:` doeesn't seem to work currently. Nested class problem?
+    .. note: `:members:` doesn't seem to work currently. Nested class problem?
 
     .. attribute:: NON_STARTED
 
