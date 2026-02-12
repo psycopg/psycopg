@@ -10,7 +10,7 @@
 Current release
 ---------------
 
-Psyocpg 3.3.3 (unreleased)
+Psycopg 3.3.3 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Retain `Error.pgconn` when raising a single exception for multiple connection

@@ -15,7 +15,7 @@ checking.
 .. autoclass:: Dumper(cls, context=None)
 
     This class is a formal `~typing.Protocol`. A partial implementation of
-    this protocol (implementing everything except the `dump()` metood) is
+    this protocol (implementing everything except the `dump()` method) is
     available as `psycopg.adapt.Dumper`.
 
     :param cls: The type that will be managed by this dumper.

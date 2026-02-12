@@ -73,13 +73,13 @@ summary of their differences; follow the links for more details.
    * - Installation Option
      - Command
      - Description
-     - Perfor­mance
+     - Performance
      - Needs Local libpq?
      - Needs Build Tools?
 
    * - :ref:`binary-installation` (recommended for most users)
      - ``pip install psycopg[binary]``
-     - Precompiled C extensions, packaged with client lbiraries.
+     - Precompiled C extensions, packaged with client libraries.
      - 🐇 Fast
      - ❌ No
      - ❌ No
