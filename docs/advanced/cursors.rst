@@ -156,7 +156,7 @@ Simple query protocol
 
 Using the `!ClientCursor` should ensure that psycopg will always use the
 `simple query protocol`__ for querying. In most cases, the choice of the
-fronted/backend protocol used is transparent on PostgreSQL. However, in some
+frontend/backend protocol used is transparent on PostgreSQL. However, in some
 case using the simple query protocol is mandatory. This is the case querying
 the `PgBouncer admin console`__ for instance, which doesn't support the
 extended query protocol.

@@ -79,7 +79,7 @@ summary of their differences; follow the links for more details.
 
    * - :ref:`binary-installation` (recommended for most users)
      - ``pip install psycopg[binary]``
-     - Precompiled C extensions, packaged with client lbiraries.
+     - Precompiled C extensions, packaged with client libraries.
      - 🐇 Fast
      - ❌ No
      - ❌ No
