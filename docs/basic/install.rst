@@ -73,7 +73,7 @@ summary of their differences; follow the links for more details.
    * - Installation Option
      - Command
      - Description
-     - Performance
+     - Perfor­mance
      - Needs Local libpq?
      - Needs Build Tools?
 
