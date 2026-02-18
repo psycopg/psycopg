@@ -289,9 +289,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
             if prep is Prepare.SHOULD:
                 self._send_prepare(name, pgq)
                 if not self._conn._pipeline:
-                    (result,) = yield from execute(self._pgconn)
-                    if result.status == FATAL_ERROR:
-                        raise e.error_from_result(result, encoding=self._encoding)
+                    results = yield from execute(self._pgconn)
+                    for result in results:
+                        if result.status == FATAL_ERROR:
+                            raise e.error_from_result(result, encoding=self._encoding)
             # Then execute it.
             self._send_query_prepared(name, pgq, binary=binary)
 
