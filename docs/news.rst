@@ -10,8 +10,8 @@
 Current release
 ---------------
 
-Psycopg 3.3.3 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.3
+^^^^^^^^^^^^^
 
 - Retain `Error.pgconn` when raising a single exception for multiple connection
   attempt errors (:ticket:`#1246`).
