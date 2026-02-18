@@ -13,8 +13,10 @@ Current release
 Psycopg 3.3.3 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Retain `Error.pgconn` when raising a single exception for multiple connection
-attempt errors (:ticket:`#1246`).
+- Retain `Error.pgconn` when raising a single exception for multiple connection
+  attempt errors (:ticket:`#1246`).
+- Return a proper error when server sends ``ErrorResponse`` for a ``Sync`` after
+  a ``Parse`` (:ticket:`#1260`).
 
 
 Psycopg 3.3.2
