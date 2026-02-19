@@ -9,9 +9,11 @@ libpq and accounting for other platform differences.
 
 import os
 import sys
+import logging
 import subprocess as sp
-from distutils import log
 from distutils.command.build_ext import build_ext
+
+log = logging.getLogger(__name__)
 
 
 def get_config(what: str) -> str:
