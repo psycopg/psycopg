@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Activate the virtualenv and run a command.
+# Equivalent to `. .venv/bin/activate && exec "$@"` but works in contexts
+# where shell builtins aren't available (e.g. Taskfile, pre-commit hooks).
+#
+# The venv location defaults to .venv and can be overridden via:
+#   1. VENV_DIR environment variable
+#   2. VENV_DIR=<path> in .env at the repo root
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "$VENV_DIR" ] && [ -f "$REPO_ROOT/.env" ]; then
+    VENV_DIR=$(grep -m1 '^VENV_DIR=' "$REPO_ROOT/.env" | cut -d= -f2-)
+fi
+VENV_DIR="${VENV_DIR:-.venv}"
+
+# Resolve to absolute path
+case "$VENV_DIR" in
+    /*) ;;
+    *)  VENV_DIR="$REPO_ROOT/$VENV_DIR" ;;
+esac
+
+export VIRTUAL_ENV="$VENV_DIR"
+export PATH="$VIRTUAL_ENV/bin:$PATH"
+unset PYTHONHOME
+exec "$@"

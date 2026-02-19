@@ -13,37 +13,37 @@ repos:
       - id: isort
         name: isort
         language: system
-        entry: isort --diff --color --check
+        entry: tools/venv-run isort --diff --color --check
         files: \.(py[i]?|pxd|pyx)$
 
       - id: black
         name: black
         language: system
-        entry: black --check --diff --color --quiet
+        entry: tools/venv-run black --check --diff --color --quiet
         files: \.py[i]?$
         exclude: tests/test_tstring.py
 
       - id: codespell
         name: codespell
         language: system
-        entry: codespell
+        entry: tools/venv-run codespell
 
       - id: flake8
         name: flake8
         language: system
-        entry: flake8
+        entry: tools/venv-run flake8
         files: \.py$
         exclude: tests/test_tstring.py
 
       - id: mypy
         name: mypy
         language: system
-        entry: mypy --pretty --follow-imports=silent
+        entry: tools/venv-run mypy --pretty --follow-imports=silent
         files: \.py[i]?$
         exclude: tests/test_tstring.py
 
       - id: cython-lint
         name: cython-lint
         language: system
-        entry: cython-lint
+        entry: tools/venv-run cython-lint
         files: \.(pxd|pyx)$
