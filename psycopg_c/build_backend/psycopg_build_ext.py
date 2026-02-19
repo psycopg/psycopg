@@ -15,7 +15,7 @@ from distutils.command.build_ext import build_ext
 
 
 def get_config(what: str) -> str:
-    pg_config = "pg_config"
+    pg_config = os.environ.get("PG_CONFIG", "pg_config")
     try:
         out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
     except Exception as e:
