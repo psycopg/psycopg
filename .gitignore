@@ -9,6 +9,7 @@ __pycache__/
 /psycopg_binary/
 .vscode
 .venv
+.env
 .coverage
 htmlcov
 .idea

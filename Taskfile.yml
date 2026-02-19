@@ -1,0 +1,264 @@
+# https://taskfile.dev
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  VENV_DIR: '{{.VENV_DIR | default ".venv"}}'
+  # tools/venv-run activates the venv (sets VIRTUAL_ENV, PATH, unsets
+  # PYTHONHOME) then exec's the given command.  It reads VENV_DIR from the
+  # environment or .env, so it stays in sync with this Taskfile.
+  RUN: "tools/venv-run"
+  PYTEST: "{{.RUN}} python -bb -m pytest --color=yes"
+  PSYCOPG_TEST_DSN: '{{.PSYCOPG_TEST_DSN | default "dbname=psycopg_test"}}'
+
+env:
+  PSYCOPG_TEST_DSN: "{{.PSYCOPG_TEST_DSN}}"
+
+tasks:
+  # ---------------------------------------------------------------------------
+  # setup — Environment setup
+  # ---------------------------------------------------------------------------
+  setup:
+    desc: "Full setup — venv, packages, and pre-commit hooks"
+    cmds:
+      - task: setup:venv
+      - task: setup:dev
+      - task: setup:pre-commit
+
+  setup:venv:
+    desc: "Create Python virtual environment"
+    cmds:
+      - "python3 -m venv {{.VENV_DIR}}"
+    status:
+      - "test -d {{.VENV_DIR}}"
+
+  setup:dev:
+    desc: "Install psycopg (editable) with dev/test extras and psycopg_pool"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup:venv' first."
+    cmds:
+      - '{{.RUN}} pip install --config-settings editable_mode=strict -e "./psycopg[dev,test]"'
+      - "{{.RUN}} pip install --config-settings editable_mode=strict -e ./psycopg_pool"
+
+  setup:c:
+    aliases: [build:c]
+    desc: "Build and install psycopg_c (requires C compiler)"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup:venv' first."
+    cmds:
+      - "{{.RUN}} pip install ./psycopg_c"
+
+  setup:docs:
+    desc: "Install documentation dependencies"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup:venv' first."
+    cmds:
+      - '{{.RUN}} pip install "./psycopg[docs]" ./psycopg_pool'
+
+  setup:pre-commit:
+    desc: "Install pre-commit git hooks"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup:venv' first."
+    cmds:
+      - "{{.RUN}} pre-commit install"
+
+  # ---------------------------------------------------------------------------
+  # test — Testing
+  # ---------------------------------------------------------------------------
+  test:
+    desc: "Run full test suite with both Python and C implementations"
+    cmds:
+      - task: test:python
+      - task: test:c
+
+  test:python:
+    desc: "Run test suite with Python implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - "{{.PYTEST}} {{.CLI_ARGS}}"
+
+  test:c:
+    desc: "Run test suite with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
+    cmds:
+      - "{{.PYTEST}} {{.CLI_ARGS}}"
+
+  test:fast:
+    desc: "Run tests excluding slow markers (both implementations)"
+    cmds:
+      - task: test:fast:python
+      - task: test:fast:c
+
+  test:fast:python:
+    desc: "Run fast tests with Python implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - '{{.PYTEST}} -m "not slow" {{.CLI_ARGS}}'
+
+  test:fast:c:
+    desc: "Run fast tests with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
+    cmds:
+      - '{{.PYTEST}} -m "not slow" {{.CLI_ARGS}}'
+
+  test:pool:
+    desc: "Run connection pool tests (both implementations)"
+    cmds:
+      - task: test:pool:python
+      - task: test:pool:c
+
+  test:pool:python:
+    desc: "Run pool tests with Python implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - "{{.PYTEST}} -m pool {{.CLI_ARGS}}"
+
+  test:pool:c:
+    desc: "Run pool tests with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
+    cmds:
+      - "{{.PYTEST}} -m pool {{.CLI_ARGS}}"
+
+  # ---------------------------------------------------------------------------
+  # lint — Linting
+  # ---------------------------------------------------------------------------
+  lint:
+    desc: "Run all pre-commit linting hooks"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run -a --color=always"
+
+  lint:isort:
+    desc: "Run isort check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run isort -a --color=always"
+
+  lint:black:
+    desc: "Run black check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run black -a --color=always"
+
+  lint:flake8:
+    desc: "Run flake8 check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run flake8 -a --color=always"
+
+  lint:mypy:
+    desc: "Run mypy type check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run mypy -a --color=always"
+
+  lint:codespell:
+    desc: "Run codespell spell check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run codespell -a --color=always"
+
+  lint:cython:
+    desc: "Run cython-lint check"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} pre-commit run cython-lint -a --color=always"
+
+  # ---------------------------------------------------------------------------
+  # format — Auto-fix formatting
+  # ---------------------------------------------------------------------------
+  format:
+    desc: "Auto-fix formatting with isort and black"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} isort ."
+      - "{{.RUN}} black ."
+
+  # ---------------------------------------------------------------------------
+  # codegen — Async-to-sync code generation
+  # ---------------------------------------------------------------------------
+  codegen:sync:
+    desc: "Regenerate sync code from async sources"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} python ./tools/async_to_sync.py --all"
+
+  codegen:check:
+    desc: "Verify sync/async code is consistent"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    cmds:
+      - "{{.RUN}} python ./tools/async_to_sync.py --check --all"
+
+  # ---------------------------------------------------------------------------
+  # docs — Documentation
+  # ---------------------------------------------------------------------------
+  docs:build:
+    desc: "Build HTML documentation with Sphinx"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+      - sh: "{{.RUN}} python -c 'import sphinx' 2>/dev/null"
+        msg: "Sphinx not installed. Run 'task setup:docs' first."
+    cmds:
+      - "{{.RUN}} sphinx-build -W -T -b html docs docs/_build/html"
+
+  docs:serve:
+    desc: "Serve docs with live-reload (sphinx-autobuild)"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+      - sh: "{{.RUN}} python -c 'import sphinx_autobuild' 2>/dev/null"
+        msg: "sphinx-autobuild not installed. Run 'task setup:docs' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - "{{.RUN}} sphinx-autobuild docs docs/_build/html/"

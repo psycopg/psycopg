@@ -21,6 +21,29 @@ For further information about installation please check `the documentation`__.
 Hacking
 -------
 
+With Taskfile
+^^^^^^^^^^^^^
+
+If you have `Task`__ installed, you can use it to set up the development
+environment and run common commands::
+
+    task setup          # Create venv, install packages, and pre-commit hooks
+    task build:c        # Rebuild and install the C extension (or: setup:c)
+    task test           # Run tests with both Python and C implementations
+    task test:python    # Run tests with the Python implementation only
+    task test:c         # Run tests with the C implementation only
+    task test:fast      # Run tests excluding slow markers (also supports :c and :python)
+    task lint           # Run all linting checks
+    task format         # Auto-fix formatting with isort and black
+    task docs:serve     # Build the serve the HTML documentation
+
+Run ``task --list`` to see all available tasks.
+
+.. __: https://taskfile.dev
+
+Without Taskfile
+^^^^^^^^^^^^^^^^
+
 In order to work on the Psycopg source code, you must have the
 ``libpq`` PostgreSQL client library installed on the system. For instance, on
 Debian systems, you can obtain it by running::
