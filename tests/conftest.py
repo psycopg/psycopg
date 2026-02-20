@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 pytest_plugins = (
+    "tests.fix_pginstance",
     "tests.fix_db",
     "tests.fix_pq",
     "tests.fix_dns",

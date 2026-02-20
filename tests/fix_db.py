@@ -25,7 +25,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--test-dsn",
         metavar="DSN",
-        default=os.environ.get("PSYCOPG_TEST_DSN"),
+        default=os.environ.get("PSYCOPG_TEST_DSN") or None,
         help=(
             "Connection string to run database tests requiring a connection"
             " [you can also use the PSYCOPG_TEST_DSN env var]."
@@ -46,8 +46,13 @@ def pytest_addoption(parser):
 
 
 def pytest_report_header(config):
-    if (dsn := config.getoption("--test-dsn")) is None:
-        return []
+    dsn = config.getoption("--test-dsn")
+    if dsn is None:
+        from .fix_pginstance import find_pg_binary
+
+        if find_pg_binary("pg_ctl") and find_pg_binary("initdb"):
+            return ["PostgreSQL: managed instance (auto-detected pg_ctl/initdb)"]
+        return ["PostgreSQL: not available (no --test-dsn, pg_ctl/initdb not found)"]
 
     try:
         with psycopg.connect(dsn, connect_timeout=10) as conn:
@@ -86,12 +91,17 @@ def pytest_configure(config):
 
 
 @pytest.fixture(scope="session")
-def session_dsn(request):
+def session_dsn(request, managed_pg_instance):
     """
     Return the dsn used to connect to the `--test-dsn` database (session-wide).
     """
-    if (dsn := request.config.getoption("--test-dsn")) is None:
-        pytest.skip("skipping test as no --test-dsn")
+    dsn = request.config.getoption("--test-dsn")
+    if dsn is None and managed_pg_instance is not None:
+        dsn = managed_pg_instance.dsn
+    if dsn is None:
+        pytest.skip(
+            "skipping test as no --test-dsn and no managed PostgreSQL available"
+        )
 
     warm_up_database(dsn)
     return dsn

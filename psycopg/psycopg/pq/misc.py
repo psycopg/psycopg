@@ -51,6 +51,10 @@ class PGresAttDesc(NamedTuple):
 
 @cache
 def find_libpq_full_path() -> str | None:
+    # Allow explicit override via environment variable.
+    if libname := os.environ.get("LIBPQ"):
+        return libname
+
     if sys.platform == "win32":
         if (libname := ctypes.util.find_library("libpq.dll")) is None:
             return None
