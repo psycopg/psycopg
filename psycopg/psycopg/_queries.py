@@ -380,6 +380,7 @@ def _split_query(
     cur = 0
     pending_pre = b""
     phtype = None
+    double_percent_replacement = b"%" if collapse_double_percent else b"%%"
 
     for m in _re_placeholder.finditer(query):
         m_start, m_end = m.span()
@@ -389,7 +390,7 @@ def _split_query(
 
         if ph == b"%%":  # Accumulate into pending_pre for the next iteration
             # unescape '%%' to '%' if necessary
-            pending_pre = pre + (b"%" if collapse_double_percent else b"%%")
+            pending_pre = pre + double_percent_replacement
             continue
 
         pending_pre = b""
