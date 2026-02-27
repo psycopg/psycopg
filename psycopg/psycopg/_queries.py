@@ -376,45 +376,29 @@ _re_placeholder = re.compile(rb"""(?x)
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> list[QueryPart]:
-    parts: list[tuple[bytes, re.Match[bytes] | None]] = []
+    parts: list[QueryPart] = []
     cur = 0
-
-    # pairs [(fragment, match], with the last match None
-    m = None
-    for m in _re_placeholder.finditer(query):
-        pre = query[cur : m.span(0)[0]]
-        parts.append((pre, m))
-        cur = m.span(0)[1]
-    if m:
-        parts.append((query[cur:], None))
-    else:
-        parts.append((query, None))
-
-    rv = []
-
-    # drop the "%%", validate
-    i = 0
+    pending_pre = b""
     phtype = None
-    while i < len(parts):
-        pre, m = parts[i]
-        if m is None:
-            # last part
-            rv.append(QueryPart(pre, 0, PyFormat.AUTO))
-            break
+    ph_index = 0
 
-        if (ph := m.group(0)) == b"%%":
-            # unescape '%%' to '%' if necessary, then merge the parts
-            if collapse_double_percent:
-                ph = b"%"
-            pre1, m1 = parts[i + 1]
-            parts[i + 1] = (pre + ph + pre1, m1)
-            del parts[i]
+    for m in _re_placeholder.finditer(query):
+        m_start, m_end = m.span()
+        pre = pending_pre + query[cur:m_start]
+        cur = m_end
+        ph = m.group(0)
+
+        if ph == b"%%":  # Accumulate into pending_pre for the next iteration
+            # unescape '%%' to '%' if necessary
+            pending_pre = pre + (b"%" if collapse_double_percent else b"%%")
             continue
+
+        pending_pre = b""
 
         if ph == b"%(":
             raise e.ProgrammingError(
                 "incomplete placeholder:"
-                f" '{query[m.span(0)[0]:].split()[0].decode(encoding)}'"
+                f" '{query[m_start:].split()[0].decode(encoding)}'"
             )
         elif ph == b"% ":
             # explicit message for a typical error
@@ -425,12 +409,11 @@ def _split_query(
         elif ph[-1:] not in b"sbt":
             raise e.ProgrammingError(
                 "only '%s', '%b', '%t' are allowed as placeholders, got"
-                f" '{m.group(0).decode(encoding)}'"
+                f" '{ph.decode(encoding)}'"
             )
 
         # Index or name
-        item: int | str
-        item = m.group(1).decode(encoding) if m.group(1) else i
+        item: int | str = m.group(1).decode(encoding) if m.group(1) else ph_index
 
         if not phtype:
             phtype = type(item)
@@ -440,10 +423,13 @@ def _split_query(
             )
 
         format = _ph_to_fmt[ph[-1:]]
-        rv.append(QueryPart(pre, item, format))
-        i += 1
+        parts.append(QueryPart(pre, item, format))
+        ph_index += 1
 
-    return rv
+    # last part (sentinel)
+    parts.append(QueryPart(pending_pre + query[cur:], 0, PyFormat.AUTO))
+
+    return parts
 
 
 _ph_to_fmt = {
