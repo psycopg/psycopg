@@ -396,9 +396,19 @@ def _split_query(
 
         pending_pre = b""
 
+        # Index or name
+        item: int | str = name.decode(encoding) if (name := m.group(1)) else len(parts)
+
+        if not phtype:
+            phtype = type(item)
+        elif phtype is not type(item):
+            raise e.ProgrammingError(
+                "positional and named placeholders cannot be mixed"
+            )
+
         try:
-            format = ph_byte_to_fmt[ph[-1]]
-        except KeyError:
+            parts.append(QueryPart(pre, item, ph_byte_to_fmt[ph[-1]]))
+        except KeyError:  # Not a valid format character (ph_byte_to_fmt lookup fails)
             if ph == b"%(":
                 raise e.ProgrammingError(
                     "incomplete placeholder:"
@@ -414,18 +424,6 @@ def _split_query(
                 "only '%s', '%b', '%t' are allowed as placeholders, got"
                 f" '{ph.decode(encoding)}'"
             )
-
-        # Index or name
-        item: int | str = name.decode(encoding) if (name := m.group(1)) else len(parts)
-
-        if not phtype:
-            phtype = type(item)
-        elif phtype is not type(item):
-            raise e.ProgrammingError(
-                "positional and named placeholders cannot be mixed"
-            )
-
-        parts.append(QueryPart(pre, item, format))
 
     # last part (sentinel)
     parts.append(QueryPart(pending_pre + query[cur:], 0, PyFormat.AUTO))
