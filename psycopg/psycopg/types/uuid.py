@@ -25,14 +25,14 @@ class UUIDDumper(Dumper):
     oid = _oids.UUID_OID
 
     def dump(self, obj: uuid.UUID) -> Buffer | None:
-        return obj.hex.encode()
+        return b"%032x" % obj.int
 
 
 class UUIDBinaryDumper(UUIDDumper):
     format = Format.BINARY
 
     def dump(self, obj: uuid.UUID) -> Buffer | None:
-        return obj.bytes
+        return obj.int.to_bytes(16, "big")
 
 
 class UUIDLoader(Loader):
@@ -43,18 +43,14 @@ class UUIDLoader(Loader):
             from uuid import UUID
 
     def load(self, data: Buffer) -> uuid.UUID:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        return UUID(data.decode())
+        return UUID((bytes(data) if isinstance(data, memoryview) else data).decode())
 
 
 class UUIDBinaryLoader(UUIDLoader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> uuid.UUID:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        return UUID(bytes=data)
+        return UUID(bytes=(bytes(data) if isinstance(data, memoryview) else data))
 
 
 def register_default_adapters(context: AdaptContext) -> None:
