@@ -380,7 +380,7 @@ def _split_query(
     parts: list[QueryPart] = []
     cur = 0
     pending_pre = b""
-    phtype = None
+    seen_named = seen_positional = False
     double_percent_replacement = b"%" if collapse_double_percent else b"%%"
 
     for m in _re_placeholder.finditer(query):
@@ -397,14 +397,13 @@ def _split_query(
         pending_pre = b""
 
         # Index or name
-        item: int | str = name.decode(encoding) if (name := m.group(1)) else len(parts)
-
-        if not phtype:
-            phtype = type(item)
-        elif phtype is not type(item):
-            raise e.ProgrammingError(
-                "positional and named placeholders cannot be mixed"
-            )
+        item: int | str
+        if name := m.group(1):
+            seen_named = True
+            item = name.decode(encoding)
+        else:
+            seen_positional = True
+            item = len(parts)
 
         try:
             parts.append(QueryPart(pre, item, ph_byte_to_fmt[ph[-1]]))
@@ -424,6 +423,13 @@ def _split_query(
                 "only '%s', '%b', '%t' are allowed as placeholders, got"
                 f" '{ph.decode(encoding)}'"
             )
+
+    if seen_named and seen_positional:
+        # For less overhead, we only do this at the end of the loop;
+        # this means that a broken query will see some extra work done
+        # before the error is raised. We assume broken queries to be
+        # rarer than working ones, so that should be acceptable.
+        raise e.ProgrammingError("positional and named placeholders cannot be mixed")
 
     # last part (sentinel)
     parts.append(QueryPart(pending_pre + query[cur:], 0, PyFormat.AUTO))
