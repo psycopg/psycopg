@@ -12,6 +12,7 @@ __pycache__/
 .coverage
 htmlcov
 .idea
+.benchmarks
 
 .eggs/
 dist/
