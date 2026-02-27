@@ -380,7 +380,6 @@ def _split_query(
     cur = 0
     pending_pre = b""
     phtype = None
-    ph_index = 0
 
     for m in _re_placeholder.finditer(query):
         m_start, m_end = m.span()
@@ -415,7 +414,7 @@ def _split_query(
             )
 
         # Index or name
-        item: int | str = name.decode(encoding) if (name := m.group(1)) else ph_index
+        item: int | str = name.decode(encoding) if (name := m.group(1)) else len(parts)
 
         if not phtype:
             phtype = type(item)
@@ -425,7 +424,6 @@ def _split_query(
             )
 
         parts.append(QueryPart(pre, item, format))
-        ph_index += 1
 
     # last part (sentinel)
     parts.append(QueryPart(pending_pre + query[cur:], 0, PyFormat.AUTO))
