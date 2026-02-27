@@ -395,20 +395,20 @@ def _split_query(
 
         pending_pre = b""
 
-        if ph == b"%(":
-            raise e.ProgrammingError(
-                "incomplete placeholder:"
-                f" '{query[m_start:].split()[0].decode(encoding)}'"
-            )
-        elif ph == b"% ":
-            # explicit message for a typical error
-            raise e.ProgrammingError(
-                "incomplete placeholder: '%'; if you want to use '%' as an"
-                " operator you can double it up, i.e. use '%%'"
-            )
         try:
             format = _ph_to_fmt[ph[-1:]]
         except KeyError:
+            if ph == b"%(":
+                raise e.ProgrammingError(
+                    "incomplete placeholder:"
+                    f" '{query[m_start:].split()[0].decode(encoding)}'"
+                )
+            elif ph == b"% ":
+                # explicit message for a typical error
+                raise e.ProgrammingError(
+                    "incomplete placeholder: '%'; if you want to use '%' as an"
+                    " operator you can double it up, i.e. use '%%'"
+                )
             raise e.ProgrammingError(
                 "only '%s', '%b', '%t' are allowed as placeholders, got"
                 f" '{ph.decode(encoding)}'"
