@@ -376,6 +376,7 @@ _re_placeholder = re.compile(rb"""(?x)
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> list[QueryPart]:
+    ph_byte_to_fmt = _ph_byte_to_fmt  # micro-optimize global lookup
     parts: list[QueryPart] = []
     cur = 0
     pending_pre = b""
@@ -396,7 +397,7 @@ def _split_query(
         pending_pre = b""
 
         try:
-            format = _ph_to_fmt[ph[-1:]]
+            format = ph_byte_to_fmt[ph[-1]]
         except KeyError:
             if ph == b"%(":
                 raise e.ProgrammingError(
@@ -432,10 +433,10 @@ def _split_query(
     return parts
 
 
-_ph_to_fmt = {
-    b"s": PyFormat.AUTO,
-    b"t": PyFormat.TEXT,
-    b"b": PyFormat.BINARY,
+_ph_byte_to_fmt = {
+    ord(b"s"): PyFormat.AUTO,
+    ord(b"t"): PyFormat.TEXT,
+    ord(b"b"): PyFormat.BINARY,
 }
 
 
