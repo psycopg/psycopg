@@ -406,7 +406,9 @@ def _split_query(
                 "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
             )
-        elif ph[-1:] not in b"sbt":
+        try:
+            format = _ph_to_fmt[ph[-1:]]
+        except KeyError:
             raise e.ProgrammingError(
                 "only '%s', '%b', '%t' are allowed as placeholders, got"
                 f" '{ph.decode(encoding)}'"
@@ -422,7 +424,6 @@ def _split_query(
                 "positional and named placeholders cannot be mixed"
             )
 
-        format = _ph_to_fmt[ph[-1:]]
         parts.append(QueryPart(pre, item, format))
         ph_index += 1
 
