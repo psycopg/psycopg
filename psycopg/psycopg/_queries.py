@@ -415,7 +415,7 @@ def _split_query(
             )
 
         # Index or name
-        item: int | str = m.group(1).decode(encoding) if m.group(1) else ph_index
+        item: int | str = name.decode(encoding) if (name := m.group(1)) else ph_index
 
         if not phtype:
             phtype = type(item)
