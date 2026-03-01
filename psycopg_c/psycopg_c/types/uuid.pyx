@@ -8,7 +8,7 @@ static const int8_t hex_to_int_map[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0-15
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 16-31
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 32-47
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1,            // 48-63 ('0'-'9')
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,  // 48-63 ('0'-'9')
     -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 64-79 ('A'-'F')
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 80-95
     -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 96-111 ('a'-'f')
@@ -29,17 +29,17 @@ static const int8_t hex_to_int_map[] = {
 cdef class _UUIDLoader(CLoader):
 
     cdef object _object_new
-    cdef object _uuid_type
-    cdef PyObject *_wuuid_type
-    cdef object _safeuuid_unknown
+    cdef object _object_setattr
+    cdef PyObject *_uuid_type
+    cdef PyObject *_safeuuid_unknown
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        from psycopg_c import _uuid
+        import uuid
 
         self._object_new = object.__new__
-        self._uuid_type = _uuid.UUID
-        self._wuuid_type = <PyObject *>_uuid._WritableUUID
-        self._safeuuid_unknown = _uuid.SafeUUID_unknown
+        self._object_setattr = object.__setattr__
+        self._uuid_type = <PyObject *>uuid.UUID
+        self._safeuuid_unknown = <PyObject *>uuid.SafeUUID.unknown
 
     cdef object _return_uuid(self, uint64_t low, uint64_t high):
         cdef object py_low = PyLong_FromUnsignedLongLong(low)
@@ -47,10 +47,13 @@ cdef class _UUIDLoader(CLoader):
         cdef object py_value = (py_high << 64) | py_low
 
         cdef object u = PyObject_CallFunctionObjArgs(
-            self._object_new, self._wuuid_type, NULL)
-        u.int = py_value
-        u.is_safe = self._safeuuid_unknown
-        u.__class__ = self._uuid_type
+            self._object_new, self._uuid_type, NULL)
+        PyObject_CallFunctionObjArgs(
+            self._object_setattr,
+            <PyObject *>u, <PyObject *>"int", <PyObject *>py_value, NULL)
+        PyObject_CallFunctionObjArgs(
+            self._object_setattr,
+            <PyObject *>u, <PyObject *>"is_safe", self._safeuuid_unknown, NULL)
         return u
 
 
