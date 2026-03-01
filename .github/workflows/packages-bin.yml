@@ -100,7 +100,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
             PYTEST_ADDOPTS="-m 'not slow and not flakey' --color yes"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -167,7 +167,7 @@ jobs:
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: macos-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -237,7 +237,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-${{matrix.pyver}}-${{matrix.arch}}
           path: ./wheelhouse/*.whl
@@ -253,7 +253,7 @@ jobs:
       - windows
     steps:
       - name: Merge Artifacts
-        uses: actions/upload-artifact/merge@v6
+        uses: actions/upload-artifact/merge@v7
         with:
           name: psycopg-binary-artifact
           delete-merged: true
