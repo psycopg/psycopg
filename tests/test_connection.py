@@ -19,7 +19,7 @@ from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo, timeout_from_conninfo
 from psycopg._conninfo_utils import get_param
 
-from .acompat import skip_async, skip_sync, sleep
+from .acompat import skip_async, sleep
 from .test_adapt import make_bin_dumper, make_dumper
 from ._test_cursor import my_row_factory
 from ._test_connection import testctx  # noqa: F401  # fixture
@@ -412,13 +412,6 @@ def test_auto_transaction_fail(conn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
 
 
-@skip_sync
-def test_autocommit_readonly_property(conn):
-    with pytest.raises(AttributeError):
-        conn.autocommit = True
-    assert not conn.autocommit
-
-
 def test_autocommit(conn):
     assert conn.autocommit is False
     conn.set_autocommit(True)
@@ -700,13 +693,6 @@ def test_transaction_param_default(conn, param):
     )
     current, default = cur.fetchone()
     assert current == default
-
-
-@skip_sync
-@pytest.mark.parametrize("param", tx_params)
-def test_transaction_param_readonly_property(conn, param):
-    with pytest.raises(AttributeError):
-        setattr(conn, param.name, None)
 
 
 @pytest.mark.parametrize("autocommit", [True, False])

@@ -347,7 +347,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "wait_timeout": "wait",
     }
     _skip_imports = {
-        "acompat": {"alist", "anext"},
+        "acompat": {"alist", "anext", "skip_sync"},
         "_acompat": {"ensure_async"},
     }
 
@@ -357,6 +357,10 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         return node
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST:
+        for deco in node.decorator_list:
+            match deco:
+                case ast.Name(id="skip_sync"):
+                    return None
         self._fix_docstring(node.body)
         node.name = self.names_map.get(node.name, node.name)
         for arg in node.args.args:

@@ -14,7 +14,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
 from ..utils import assert_type, set_autocommit
-from ..acompat import Event, gather, skip_sync, sleep, spawn
+from ..acompat import gather, sleep, spawn
 from .test_pool_common import delay_connection, ensure_waiting
 
 try:
@@ -444,59 +444,6 @@ def test_stats_connect(dsn, proxy, monkeypatch):
         assert stats.get("connections_errors", 0) == 0
         assert stats.get("connections_lost", 0) == 0
         assert 200 <= stats["connections_ms"] < 300
-
-
-@skip_sync
-def test_cancellation_in_queue(dsn):
-    # https://github.com/psycopg/psycopg/issues/509
-
-    nconns = 3
-
-    with pool.NullConnectionPool(dsn, min_size=0, max_size=nconns, timeout=1) as p:
-        p.wait()
-
-        got_conns = []
-        ev = Event()
-
-        def worker(i):
-            try:
-                logging.info("worker %s started", i)
-                with p.connection() as conn:
-                    logging.info("worker %s got conn", i)
-                    cur = conn.execute("select 1")
-                    assert cur.fetchone() == (1,)
-
-                    got_conns.append(conn)
-                    if len(got_conns) >= nconns:
-                        ev.set()
-
-                    sleep(5)
-            except BaseException as ex:
-                logging.info("worker %s stopped: %r", i, ex)
-                raise
-
-        # Start tasks taking up all the connections and getting in the queue
-        tasks = [spawn(worker, (i,)) for i in range(nconns * 3)]
-
-        # wait until the pool has served all the connections and clients are queued.
-        assert ev.wait(3.0)
-        for i in range(10):
-            if p.get_stats().get("requests_queued", 0):
-                break
-            else:
-                sleep(0.1)
-        else:
-            pytest.fail("no client got in the queue")
-
-        [task.cancel() for task in reversed(tasks)]
-        gather(*tasks, return_exceptions=True, timeout=1.0)
-
-        stats = p.get_stats()
-        assert stats.get("requests_waiting", 0) == 0
-
-        with p.connection() as conn:
-            cur = conn.execute("select 1")
-            assert cur.fetchone() == (1,)
 
 
 def test_close_returns(dsn):
