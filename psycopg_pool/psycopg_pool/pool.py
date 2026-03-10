@@ -261,6 +261,8 @@ class ConnectionPool(Generic[CT], BasePool):
             try:
                 conn = pos.wait(timeout=timeout)
             except CLIENT_EXCEPTIONS:
+                if pos.conn:
+                    self.run_task(ReturnConnection(self, pos.conn, from_getconn=True))
                 self._stats[self._REQUESTS_ERRORS] += 1
                 raise
             finally:
@@ -894,11 +896,11 @@ class WaitingClient(Generic[CT]):
                 except CLIENT_EXCEPTIONS as ex:
                     self.error = ex
 
-        if self.conn:
-            return self.conn
-        else:
-            assert self.error
+        if self.error:
             raise self.error
+        else:
+            assert self.conn
+            return self.conn
 
     def set(self, conn: CT) -> bool:
         """Signal the client waiting that a connection is ready.

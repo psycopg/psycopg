@@ -996,6 +996,69 @@ async def test_cancellation_in_queue(dsn):
             assert await cur.fetchone() == (1,)
 
 
+@skip_sync
+@pytest.mark.crdb_skip("backend pid")
+async def test_cancelled_waiter_assigned_conn_is_reclaimed(dsn, monkeypatch):
+    from asyncio import CancelledError
+
+    from psycopg_pool.pool_async import WaitingClient
+
+    from .test_pool_common_async import ensure_waiting
+
+    assigned = AEvent()
+    release = AEvent()
+
+    async def set_blocked(self, conn):
+        async with self._cond:
+            if self.conn or self.error:
+                return False
+
+            self.conn = conn
+            assigned.set()
+            await release.wait()
+            self._cond.notify_all()
+            return True
+
+    monkeypatch.setattr(WaitingClient, "set", set_blocked)
+
+    async with pool.AsyncConnectionPool(dsn, min_size=1, max_size=1, timeout=1) as p:
+        await p.wait()
+
+        held_conn = await p.getconn()
+        held_pid = held_conn.info.backend_pid
+        waiter = spawn(p.getconn)
+        await ensure_waiting(p)
+
+        putter = spawn(p.putconn, args=(held_conn,))
+        await assigned.wait()
+
+        waiter.cancel()
+        release.set()
+
+        try:
+            unexpected_conn = await waiter
+        except CancelledError:
+            pass
+        else:
+            await p.putconn(unexpected_conn)
+            pytest.fail("cancelled waiter returned a connection instead of raising")
+
+        await gather(putter)
+
+        stats = p.get_stats()
+        assert stats["pool_available"] == 1
+        assert stats.get("requests_waiting", 0) == 0
+        assert stats["requests_errors"] == 1
+
+        reclaimed_conn = await p.getconn()
+        try:
+            assert reclaimed_conn.info.backend_pid == held_pid
+            cur = await reclaimed_conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+        finally:
+            await p.putconn(reclaimed_conn)
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_check_backoff(dsn, caplog, monkeypatch):

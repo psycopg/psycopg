@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.3.1 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix residual race condition catching `~asyncio.CancelledError` on connection
+  (:ticket:`#1275`).
+
+
 Current release
 ---------------
 
