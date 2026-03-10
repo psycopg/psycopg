@@ -11,7 +11,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
 from ..utils import assert_type, set_autocommit
-from ..acompat import AEvent, asleep, gather, skip_sync, spawn
+from ..acompat import asleep, gather, skip_sync, spawn
 from .test_pool_common_async import delay_connection, ensure_waiting
 
 try:
@@ -447,6 +447,8 @@ async def test_stats_connect(dsn, proxy, monkeypatch):
 
 @skip_sync
 async def test_cancellation_in_queue(dsn):
+    from ..acompat import AEvent
+
     # https://github.com/psycopg/psycopg/issues/509
 
     nconns = 3

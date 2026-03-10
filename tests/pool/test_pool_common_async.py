@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from time import time
 from typing import Any
-from asyncio import CancelledError
 
 import pytest
 
@@ -709,6 +708,8 @@ async def test_cancellation_in_queue(pool_cls, dsn):
 
 @skip_sync
 async def test_cancel_on_check(pool_cls, dsn):
+    from asyncio import CancelledError
+
     do_cancel = True
 
     async def check(conn):
@@ -734,6 +735,8 @@ async def test_cancel_on_check(pool_cls, dsn):
 
 @skip_sync
 async def test_cancel_on_rollback(pool_cls, dsn, monkeypatch):
+    from asyncio import CancelledError
+
     do_cancel = False
 
     async with pool_cls(dsn, min_size=min_size(pool_cls, 1), timeout=1.0) as p:

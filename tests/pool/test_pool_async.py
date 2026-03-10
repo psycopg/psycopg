@@ -12,6 +12,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
+from .. import acompat
 from ..utils import assert_type, set_autocommit, skip_free_threaded
 from ..acompat import AEvent, asleep, gather, skip_sync, spawn
 from .test_pool_common_async import delay_connection
@@ -522,7 +523,9 @@ async def test_reconnect(proxy, caplog, monkeypatch):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.parametrize("async_cb", [pytest.param(True, marks=skip_sync), False])
+@pytest.mark.parametrize(
+    "async_cb", [pytest.param(True, marks=acompat.skip_sync), False]
+)
 async def test_reconnect_failure(proxy, async_cb):
     proxy.start()
 
