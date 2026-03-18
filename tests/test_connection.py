@@ -122,6 +122,20 @@ def test_connect_timeout(conn_cls, proxy):
     assert elapsed == pytest.approx(2.0, 0.1)
 
 
+@pytest.mark.skipif(pq.__impl__ == "python", reason="only affects C extension")
+def test_connect_timeout_large_monotonic(conn_cls, dsn, monkeypatch):
+    # Regression: deadline was stored as C float (32-bit). At ~777 days of
+    # process uptime the float32 ULP reaches 8 s, so a 2-second timeout is
+    # silently rounded away, causing ConnectionTimeout to fire immediately.
+    # 2^26 = 67_108_864 s ≈ 777 days is the minimum value where this occurs
+    # with psycopg's enforced 2-second minimum connect_timeout.
+    from psycopg._cmodule import _psycopg
+
+    monkeypatch.setattr(_psycopg, "monotonic", lambda: 67108864.5)
+    with conn_cls.connect(dsn, connect_timeout=2):
+        pass
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 def test_multi_hosts(conn_cls, proxy, dsn, monkeypatch):
