@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.4 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix possible spurious connection timeout in systems with very long uptimes
+  in C extension (:ticket:`#1280`).
+
+
 Current release
 ---------------
 

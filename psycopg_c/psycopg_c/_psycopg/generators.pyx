@@ -38,7 +38,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
     cdef object wait, ready
-    cdef float deadline = 0.0
+    cdef double deadline = 0.0
 
     if timeout:
         deadline = monotonic() + timeout
@@ -89,7 +89,7 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
 def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[None]:
     cdef libpq.PGcancelConn *pgcancelconn_ptr = cancel_conn.pgcancelconn_ptr
     cdef int status
-    cdef float deadline = 0.0
+    cdef double deadline = 0.0
 
     if timeout:
         deadline = monotonic() + timeout
