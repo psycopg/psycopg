@@ -634,8 +634,8 @@ def test_nested_transaction_status(conn_cls, dsn):
     """
     Testing nested transactions status property behavior.
     This test case checks the scenario where the inner transaction fails due
-    to a broken connection.  Both the inner and outer transaction end up in
-    FAILED state and an OperationalError propagates out.
+    to a broken connection.  Both transactions end up in FAILED state and an
+    OperationalError propagates out.
     """
     with pytest.raises(e.OperationalError):
         with conn.transaction() as tx6:
