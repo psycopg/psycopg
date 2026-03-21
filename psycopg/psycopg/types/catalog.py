@@ -9,13 +9,11 @@ Covers: cid, xid, xid8, pg_lsn, tid, int2vector, oidvector.
 from __future__ import annotations
 
 import struct
-from typing import Any
 
-from .. import _oids
-from .._struct import pack_uint2, pack_uint4, unpack_uint2, unpack_uint4
-from ..abc import AdaptContext, Buffer
-from ..adapt import Dumper, Loader
 from ..pq import Format
+from ..abc import AdaptContext, Buffer
+from ..adapt import Loader
+from .._struct import unpack_uint4
 
 # ---------------------------------------------------------------------------
 # uint32 types: cid, xid
@@ -71,7 +69,7 @@ class Xid8BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_uint8(data)[0]
+        return int(_unpack_uint8(data)[0])
 
 
 class PgLsnLoader(Loader):
@@ -92,7 +90,7 @@ class PgLsnBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_uint8(data)[0]
+        return int(_unpack_uint8(data)[0])
 
 
 # ---------------------------------------------------------------------------
