@@ -576,14 +576,16 @@ def test_transaction_status(conn_cls, dsn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     """
-    The Transaction.status property ends up in FAILED state when the connection
-    is broken within the transaction block.
+    The Transaction.status property ends up in FAILED state and an
+    OperationalError is raised when the connection is broken within the
+    transaction block with no other exception in flight.
     """
-    with conn.transaction() as tx:
-        assert tx.status == tx.Status.ACTIVE
-        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        conn.close()
-        assert conn.pgconn.status == pq.ConnStatus.BAD
+    with pytest.raises(e.OperationalError):
+        with conn.transaction() as tx:
+            assert tx.status == tx.Status.ACTIVE
+            assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            conn.close()
+            assert conn.pgconn.status == pq.ConnStatus.BAD
     assert tx.status == tx.Status.FAILED
 
 
@@ -631,16 +633,19 @@ def test_nested_transaction_status(conn_cls, dsn):
 
     """
     Testing nested transactions status property behavior.
-    This test case checks the scenario where the inner transaction fails
+    This test case checks the scenario where the inner transaction fails due
+    to a broken connection.  Both the inner and outer transaction end up in
+    FAILED state and an OperationalError propagates out.
     """
-    with conn.transaction() as tx6:
-        assert tx6.status == tx6.Status.ACTIVE
-        assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        with conn.transaction() as tx7:
-            assert tx7.status == tx7.Status.ACTIVE
+    with pytest.raises(e.OperationalError):
+        with conn.transaction() as tx6:
+            assert tx6.status == tx6.Status.ACTIVE
             assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-            conn.close()
-            assert conn.pgconn.status == pq.ConnStatus.BAD
+            with conn.transaction() as tx7:
+                assert tx7.status == tx7.Status.ACTIVE
+                assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+                conn.close()
+                assert conn.pgconn.status == pq.ConnStatus.BAD
     assert tx7.status == tx7.Status.FAILED
     assert tx6.status == tx6.Status.FAILED
 

@@ -583,14 +583,16 @@ async def test_transaction_status(aconn_cls, dsn):
     assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
 
     """
-    The Transaction.status property ends up in FAILED state when the connection
-    is broken within the transaction block.
+    The Transaction.status property ends up in FAILED state and an
+    OperationalError is raised when the connection is broken within the
+    transaction block with no other exception in flight.
     """
-    async with aconn.transaction() as tx:
-        assert tx.status == tx.Status.ACTIVE
-        assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        await aconn.close()
-        assert aconn.pgconn.status == pq.ConnStatus.BAD
+    with pytest.raises(e.OperationalError):
+        async with aconn.transaction() as tx:
+            assert tx.status == tx.Status.ACTIVE
+            assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+            await aconn.close()
+            assert aconn.pgconn.status == pq.ConnStatus.BAD
     assert tx.status == tx.Status.FAILED
 
 
@@ -638,16 +640,19 @@ async def test_nested_transaction_status(aconn_cls, dsn):
 
     """
     Testing nested transactions status property behavior.
-    This test case checks the scenario where the inner transaction fails
+    This test case checks the scenario where the inner transaction fails due
+    to a broken connection.  Both transactions end up in FAILED state and an
+    OperationalError propagates out.
     """
-    async with aconn.transaction() as tx6:
-        assert tx6.status == tx6.Status.ACTIVE
-        assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-        async with aconn.transaction() as tx7:
-            assert tx7.status == tx7.Status.ACTIVE
+    with pytest.raises(e.OperationalError):
+        async with aconn.transaction() as tx6:
+            assert tx6.status == tx6.Status.ACTIVE
             assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
-            await aconn.close()
-            assert aconn.pgconn.status == pq.ConnStatus.BAD
+            async with aconn.transaction() as tx7:
+                assert tx7.status == tx7.Status.ACTIVE
+                assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+                await aconn.close()
+                assert aconn.pgconn.status == pq.ConnStatus.BAD
     assert tx7.status == tx7.Status.FAILED
     assert tx6.status == tx6.Status.FAILED
 
