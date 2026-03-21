@@ -16,22 +16,17 @@ from ..abc import AdaptContext, Buffer
 from ..adapt import Loader
 from .._struct import unpack_uint4
 
-# ---------------------------------------------------------------------------
-# uint32 types: cid, xid
-# ---------------------------------------------------------------------------
-#
-# Both are unsigned 32-bit transaction/command IDs.  They are returned as
-# plain Python ints.  Dumping is intentionally NOT registered for plain int
-# so that round-trips require an explicit cast — consistent with how oid is
-# handled (requires the Oid wrapper).
-
 
 class CidLoader(Loader):
+    """Load cid text values as Python int."""
+
     def load(self, data: Buffer) -> int:
         return int(data)
 
 
 class CidBinaryLoader(Loader):
+    """Load cid binary values as Python int."""
+
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -39,34 +34,34 @@ class CidBinaryLoader(Loader):
 
 
 class XidLoader(Loader):
+    """Load xid text values as Python int."""
+
     def load(self, data: Buffer) -> int:
         return int(data)
 
 
 class XidBinaryLoader(Loader):
+    """Load xid binary values as Python int."""
+
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
         return unpack_uint4(data)[0]
 
 
-# ---------------------------------------------------------------------------
-# uint64 types: xid8, pg_lsn
-# ---------------------------------------------------------------------------
-#
-# xid8 is a full 64-bit transaction ID (PostgreSQL 13+).
-# pg_lsn is a Write-Ahead Log Sequence Number, displayed as X/Y in text.
-
-
 _unpack_uint8 = struct.Struct("!Q").unpack
 
 
 class Xid8Loader(Loader):
+    """Load xid8 text values as Python int."""
+
     def load(self, data: Buffer) -> int:
         return int(data)
 
 
 class Xid8BinaryLoader(Loader):
+    """Load xid8 binary values as Python int."""
+
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -74,12 +69,7 @@ class Xid8BinaryLoader(Loader):
 
 
 class PgLsnLoader(Loader):
-    """
-    Load pg_lsn as an integer (bytes offset from WAL origin).
-
-    The text representation is 'X/YYYYYYYY' where X and Y are hex values.
-    We convert to a single 64-bit integer: (X << 32) | Y.
-    """
+    """Load pg_lsn text values as a 64-bit integer offset."""
 
     def load(self, data: Buffer) -> int:
         text = bytes(data).decode() if isinstance(data, memoryview) else data.decode()
@@ -88,33 +78,30 @@ class PgLsnLoader(Loader):
 
 
 class PgLsnBinaryLoader(Loader):
+    """Load pg_lsn binary values as Python int."""
+
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
         return int(_unpack_uint8(data)[0])
 
 
-# ---------------------------------------------------------------------------
-# tid — tuple identifier (block, offset)
-# ---------------------------------------------------------------------------
-#
-# Binary format: 4 bytes unsigned block + 2 bytes unsigned offset = 6 bytes.
-# Text format:   '(block,offset)' (parenthesised, comma-separated).
-# Returned as a plain (int, int) tuple.
-
 _unpack_tid = struct.Struct("!IH").unpack
 
 
 class TidLoader(Loader):
+    """Load tid text values as ``(block, offset)`` tuple."""
+
     def load(self, data: Buffer) -> tuple[int, int]:
         text = bytes(data).decode() if isinstance(data, memoryview) else data.decode()
-        # strip parens and split: '(3,1)' → ('3', '1')
         text = text.strip("()")
         block_str, offset_str = text.split(",")
         return (int(block_str), int(offset_str))
 
 
 class TidBinaryLoader(Loader):
+    """Load tid binary values as ``(block, offset)`` tuple."""
+
     format = Format.BINARY
 
     def load(self, data: Buffer) -> tuple[int, int]:
@@ -122,19 +109,12 @@ class TidBinaryLoader(Loader):
         return (block, offset)
 
 
-# ---------------------------------------------------------------------------
-# int2vector — space-separated list of int2 values
-# ---------------------------------------------------------------------------
-#
-# Used internally by PostgreSQL for index key attribute lists.
-# Text format:   '1 2 3'
-# Binary format: same as a 1-D int2[] array (PostgreSQL array header).
-# Returned as list[int].
-
 _unpack_int2_s = struct.Struct("!h").unpack
 
 
 class Int2VectorLoader(Loader):
+    """Load int2vector text values as ``list[int]``."""
+
     def load(self, data: Buffer) -> list[int]:
         text = bytes(data).decode() if isinstance(data, memoryview) else data.decode()
         if not text.strip():
@@ -143,17 +123,7 @@ class Int2VectorLoader(Loader):
 
 
 class Int2VectorBinaryLoader(Loader):
-    """
-    Parse a PostgreSQL 1-D int2[] binary representation.
-
-    Binary layout (big-endian):
-        ndim       int32   (must be 1)
-        flags      int32   (0 = no NULLs)
-        element_oid int32  (21 = int2)
-        dim        int32   (number of elements)
-        lbound     int32   (lower bound, usually 0)
-        elements:  for each → int32 len + int16 value
-    """
+    """Load int2vector binary values as ``list[int]``."""
 
     format = Format.BINARY
 
@@ -163,21 +133,20 @@ class Int2VectorBinaryLoader(Loader):
             return []
 
         offset = 0
-        # ndim, flags, element_oid
         ndim = struct.unpack_from("!i", buf, offset)[0]
-        offset += 12  # skip ndim(4) + flags(4) + element_oid(4)
+        offset += 12
         if ndim == 0:
             return []
 
         dim = struct.unpack_from("!i", buf, offset)[0]
-        offset += 8  # skip dim(4) + lbound(4)
+        offset += 8
 
         result: list[int] = []
         for _ in range(dim):
             elem_len = struct.unpack_from("!i", buf, offset)[0]
             offset += 4
             if elem_len == -1:
-                result.append(0)  # NULL → 0
+                result.append(0)
             else:
                 result.append(_unpack_int2_s(buf[offset : offset + elem_len])[0])
                 offset += elem_len
@@ -185,19 +154,12 @@ class Int2VectorBinaryLoader(Loader):
         return result
 
 
-# ---------------------------------------------------------------------------
-# oidvector — space-separated list of oid values
-# ---------------------------------------------------------------------------
-#
-# Used internally for function argument type lists.
-# Text format:   '23 25 1043'
-# Binary format: same as a 1-D oid[] array.
-# Returned as list[int].
-
 _unpack_uint4_s = struct.Struct("!I").unpack
 
 
 class OidVectorLoader(Loader):
+    """Load oidvector text values as ``list[int]``."""
+
     def load(self, data: Buffer) -> list[int]:
         text = bytes(data).decode() if isinstance(data, memoryview) else data.decode()
         if not text.strip():
@@ -206,11 +168,7 @@ class OidVectorLoader(Loader):
 
 
 class OidVectorBinaryLoader(Loader):
-    """
-    Parse a PostgreSQL 1-D oid[] binary representation.
-
-    Same layout as Int2VectorBinaryLoader but elements are uint32.
-    """
+    """Load oidvector binary values as ``list[int]``."""
 
     format = Format.BINARY
 
@@ -219,13 +177,13 @@ class OidVectorBinaryLoader(Loader):
         if len(buf) < 20:
             return []
 
-        offset = 12  # skip ndim + flags + element_oid
+        offset = 12
         ndim = struct.unpack_from("!i", buf, 0)[0]
         if ndim == 0:
             return []
 
         dim = struct.unpack_from("!i", buf, offset)[0]
-        offset += 8  # skip dim + lbound
+        offset += 8
 
         result: list[int] = []
         for _ in range(dim):
@@ -240,12 +198,9 @@ class OidVectorBinaryLoader(Loader):
         return result
 
 
-# ---------------------------------------------------------------------------
-# Registration
-# ---------------------------------------------------------------------------
-
-
 def register_catalog(context: AdaptContext | None = None) -> None:
+    """Register catalog-type loaders in the given context or globally."""
+
     adapters = context.adapters if context else postgres.adapters
 
     adapters.register_loader("cid", CidLoader)
