@@ -271,6 +271,10 @@ class Transaction(BaseTransaction["Connection[Any]"]):
                 return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
             self.status = self.Status.FAILED
+            if exc_type is None:
+                raise e.OperationalError(
+                    "the connection was lost before the transaction could be committed"
+                )
             return False
 
 
@@ -305,4 +309,8 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
                 return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
             self.status = self.Status.FAILED
+            if exc_type is None:
+                raise e.OperationalError(
+                    "the connection was lost before the transaction could be committed"
+                )
             return False
