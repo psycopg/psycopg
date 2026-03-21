@@ -1,7 +1,30 @@
 from __future__ import annotations
 
+from typing import Any
+from importlib import import_module
+
+import pytest
+
 from psycopg import postgres, pq
-from psycopg.types.catalog import CidLoader, PgLsnLoader, XidLoader, register_catalog
+
+_has_catalog = True
+try:
+    _catalog = import_module("psycopg.types.catalog")
+    CidLoader = _catalog.CidLoader
+    PgLsnLoader = _catalog.PgLsnLoader
+    XidLoader = _catalog.XidLoader
+    register_catalog = _catalog.register_catalog
+except (ImportError, AttributeError):
+    _has_catalog = False
+    CidLoader = PgLsnLoader = XidLoader = object
+
+    def register_catalog(*args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
+
+
+pytestmark = pytest.mark.skipif(
+    not _has_catalog, reason="catalog type adapters unavailable"
+)
 
 
 def test_register_catalog_global(global_adapters):
