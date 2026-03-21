@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import struct
 
+from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from ..adapt import Loader
@@ -244,8 +245,8 @@ class OidVectorBinaryLoader(Loader):
 # ---------------------------------------------------------------------------
 
 
-def register_default_adapters(context: AdaptContext) -> None:
-    adapters = context.adapters
+def register_catalog(context: AdaptContext | None = None) -> None:
+    adapters = context.adapters if context else postgres.adapters
 
     adapters.register_loader("cid", CidLoader)
     adapters.register_loader("cid", CidBinaryLoader)
@@ -267,3 +268,7 @@ def register_default_adapters(context: AdaptContext) -> None:
 
     adapters.register_loader("oidvector", OidVectorLoader)
     adapters.register_loader("oidvector", OidVectorBinaryLoader)
+
+
+def register_default_adapters(context: AdaptContext) -> None:
+    register_catalog(context)
