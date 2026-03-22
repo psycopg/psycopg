@@ -27,6 +27,14 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _has_type(ctx: Any, name: str) -> bool:
+    try:
+        ctx.adapters.types[name]
+    except KeyError:
+        return False
+    return True
+
+
 def test_register_catalog_global(global_adapters):
     oid = postgres.types["cid"].oid
 
@@ -38,6 +46,9 @@ def test_register_catalog_global(global_adapters):
 
 
 def test_register_catalog_connection(conn):
+    if not _has_type(conn, "pg_lsn"):
+        pytest.skip("pg_lsn not available in this database")
+
     oid = postgres.types["pg_lsn"].oid
 
     assert conn.adapters.get_loader(oid, pq.Format.TEXT) is not PgLsnLoader
@@ -48,8 +59,12 @@ def test_register_catalog_connection(conn):
 
 
 def test_register_catalog_cursor(conn):
-    oid = postgres.types["xid"].oid
     cur = conn.cursor()
+
+    if not _has_type(cur, "xid"):
+        pytest.skip("xid not available in this database")
+
+    oid = postgres.types["xid"].oid
 
     register_catalog(cur)
 

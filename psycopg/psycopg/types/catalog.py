@@ -199,30 +199,27 @@ class OidVectorBinaryLoader(Loader):
 
 
 def register_catalog(context: AdaptContext | None = None) -> None:
-    """Register catalog-type loaders in the given context or globally."""
+    """Register catalog-type loaders in the given context or globally.
+
+    Types not available in the target registry are skipped.
+    """
 
     adapters = context.adapters if context else postgres.adapters
 
-    adapters.register_loader("cid", CidLoader)
-    adapters.register_loader("cid", CidBinaryLoader)
-
-    adapters.register_loader("xid", XidLoader)
-    adapters.register_loader("xid", XidBinaryLoader)
-
-    adapters.register_loader("xid8", Xid8Loader)
-    adapters.register_loader("xid8", Xid8BinaryLoader)
-
-    adapters.register_loader("pg_lsn", PgLsnLoader)
-    adapters.register_loader("pg_lsn", PgLsnBinaryLoader)
-
-    adapters.register_loader("tid", TidLoader)
-    adapters.register_loader("tid", TidBinaryLoader)
-
-    adapters.register_loader("int2vector", Int2VectorLoader)
-    adapters.register_loader("int2vector", Int2VectorBinaryLoader)
-
-    adapters.register_loader("oidvector", OidVectorLoader)
-    adapters.register_loader("oidvector", OidVectorBinaryLoader)
+    for type_name, text_loader, binary_loader in (
+        ("cid", CidLoader, CidBinaryLoader),
+        ("xid", XidLoader, XidBinaryLoader),
+        ("xid8", Xid8Loader, Xid8BinaryLoader),
+        ("pg_lsn", PgLsnLoader, PgLsnBinaryLoader),
+        ("tid", TidLoader, TidBinaryLoader),
+        ("int2vector", Int2VectorLoader, Int2VectorBinaryLoader),
+        ("oidvector", OidVectorLoader, OidVectorBinaryLoader),
+    ):
+        try:
+            adapters.register_loader(type_name, text_loader)
+            adapters.register_loader(type_name, binary_loader)
+        except KeyError:
+            continue
 
 
 def register_default_adapters(context: AdaptContext) -> None:
