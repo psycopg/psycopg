@@ -98,9 +98,9 @@ class Capabilities:
 
         The expletive messages, are left to the user.
         """
-        if feature in self._cache:
+        try:
             msg = self._cache[feature]
-        else:
+        except KeyError:
             msg = self._get_unsupported_message(feature, want_version)
             self._cache[feature] = msg
 
