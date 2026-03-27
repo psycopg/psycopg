@@ -68,6 +68,7 @@ class _SpecialValuesDumper(Dumper):
         if not isinstance(value, bytes):
             value = bytes(value)
         if value in self._special:
+            # Path taken rarely; `try: except KeyError:` likely slower.
             return self._special[value]
 
         return value if obj >= 0 else b" " + value

@@ -206,13 +206,13 @@ class RecordBinaryLoader(Loader):
         return tx.load_sequence(record)
 
     def _get_transformer(self, key: tuple[int, ...]) -> abc.Transformer:
-        if key in self._txs:
+        try:
             return self._txs[key]
-
-        tx = Transformer(self._ctx)
-        tx.set_loader_types([*key], self.format)
-        self._txs[key] = tx
-        return tx
+        except KeyError:
+            tx = Transformer(self._ctx)
+            tx.set_loader_types([*key], self.format)
+            self._txs[key] = tx
+            return tx
 
 
 class _CompositeLoader(Loader, Generic[T], ABC):
