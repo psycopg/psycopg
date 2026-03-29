@@ -48,7 +48,7 @@ class AdaptersMap:
     already created are not affected if a wider scope (e.g. the global one) is
     changed.
 
-    The connections adapters are initialised using a global `!AdptersMap`
+    The connections adapters are initialised using a global `!AdaptersMap`
     template, exposed as `psycopg.adapters`: changing such mapping allows to
     customise the type mapping for every connections created afterwards.
 
