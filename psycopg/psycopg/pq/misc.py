@@ -167,7 +167,7 @@ def connection_summary(pgconn: abc.PGconn) -> str:
         except ValueError:
             # It might happen if a new status on connection appears
             # before upgrading the ConnStatus enum.
-            status = f"status={pgconn.status} (unkndown)"
+            status = f"status={pgconn.status} (unknown)"
 
     if sparts := " ".join("%s=%s" % part for part in parts):
         sparts = f" ({sparts})"
