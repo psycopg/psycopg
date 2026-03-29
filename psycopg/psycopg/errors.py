@@ -421,6 +421,16 @@ class CancellationTimeout(OperationalError):
     """
 
 
+class ReadMessageTimeout(OperationalError):
+    """
+    Exception raised on timeout of replication cursor's
+    `~psycopg.replication.BaseReplicationCursor.read_message()`
+    and `~psycopg.replication.BaseReplicationCursor.read_backup_message()` methods.
+
+    Subclass of `~psycopg.OperationalError`.
+    """
+
+
 class PipelineAborted(OperationalError):
     """
     Raised when a operation fails because the current pipeline is in aborted state.

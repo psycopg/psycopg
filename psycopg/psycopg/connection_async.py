@@ -528,6 +528,18 @@ class AsyncConnection(BaseConnection[Row]):
                     pass  # as expected
             raise
 
+    async def wait_no_cancel(
+        self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL
+    ) -> RV:
+        """
+        Consume a generator operating on the connection, but don't cancel the query
+        when interrupted by Ctrl+C or a asyncio.CancelledError.
+
+        The function must be used on generators that don't change connection
+        fd (i.e. not on connect and reset).
+        """
+        return await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
+
     def _set_autocommit(self, value: bool) -> None:
         if True:  # ASYNC
             self._no_set_async("autocommit")

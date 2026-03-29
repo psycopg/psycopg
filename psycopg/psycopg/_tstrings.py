@@ -131,7 +131,7 @@ class TemplateProcessor:
             self._chunks.append(item.value.as_bytes(self._tx))
             return
 
-        elif isinstance(item.value, (sql.SQL, sql.Composed)):
+        elif isinstance(item.value, (sql.SQL, sql.Composed, sql.BareIdentifier)):
             self._check_template_format(item, FMT_SQL)
             self._chunks.append(item.value.as_bytes(self._tx))
             return

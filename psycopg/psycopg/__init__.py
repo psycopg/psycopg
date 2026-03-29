@@ -7,7 +7,7 @@ psycopg -- PostgreSQL database adapter for Python
 import logging
 
 from . import pq  # noqa: F401 import early to stabilize side effects
-from . import dbapi20, postgres, types
+from . import dbapi20, postgres, replication, types
 from ._tpc import Xid
 from .copy import AsyncCopy, Copy
 from ._enums import IsolationLevel
@@ -113,4 +113,5 @@ __all__ = [
     "NUMBER",
     "ROWID",
     "STRING",
+    "replication",
 ]

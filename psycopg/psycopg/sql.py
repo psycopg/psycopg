@@ -6,6 +6,7 @@ SQL composition utility module
 
 from __future__ import annotations
 
+import re
 import codecs
 import string
 from abc import ABC, abstractmethod
@@ -342,6 +343,25 @@ class SQL(Composable):
             cs.append(i)
 
         return Composed(cs)
+
+
+class BareIdentifier(Composable):
+    _obj: str
+    _regex = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_$]*$")
+
+    def __init__(self, identifier: str):
+        super().__init__(identifier)
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"SQL identifiers must be strings, got {identifier!r} instead"
+            )
+        if not self._regex.fullmatch(identifier):
+            raise ValueError("Not a valid SQL identifier: {identifier}")
+
+    def as_bytes(self, context: AdaptContext | None = None) -> bytes:
+        conn = context.connection if context else None
+        enc = conn_encoding(conn)
+        return self._obj.encode(enc)
 
 
 class Identifier(Composable):

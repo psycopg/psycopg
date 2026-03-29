@@ -377,6 +377,47 @@ def copy_end(pgconn: PGconn, error: bytes | None) -> PQGen[PGresult]:
     return result
 
 
+def fetch_replication_messages(
+    pgconn: PGconn, timeout: float = 0.0
+) -> PQGen[memoryview | PGresult]:
+    deadline = monotonic() + timeout if timeout else 0.0
+
+    while True:
+        nbytes, data = pgconn.get_copy_data(1)  # 1 is non-blocking
+        if nbytes != 0:
+            break
+
+        if deadline:
+            while not (yield WAIT_R):
+                if monotonic() > deadline:
+                    raise e.ReadMessageTimeout("read message timeout expired")
+                continue
+        else:
+            while not (yield WAIT_R):
+                continue
+
+        pgconn.consume_input()
+
+    if nbytes > 0:
+        return data
+
+    # FIXME: this isn't exactly correct:
+    # See https://www.postgresql.org/docs/current/protocol-replication.html#PROTOCOL-REPLICATION-START-REPLICATION  # noqa: E501
+    # 1) i.e. in the case of ending timeline streaming that isn't the current timeline,
+    #    we get a regular tuple containing info about the next timeline, followed by
+    #    two COMMAND_OK results.
+    if len(results := (yield from _fetch_many(pgconn))) > 1:
+        raise e.ProgrammingError(
+            "Expected only a single result, got "
+            + f"{', '.join(pq.ExecStatus(r.status).name for r in results)}"
+        )
+    if (result := results[0]).status != COMMAND_OK:
+        raise e.error_from_result(result, encoding=pgconn._encoding)
+
+    return result
+
+
+# FIXME: add fast version for base_backups and replication
 # Override functions with fast versions if available
 if _psycopg:
     connect = _psycopg.connect

@@ -34,6 +34,10 @@ ALL_INPUTS = """
     psycopg/psycopg/_copy_async.py
     psycopg/psycopg/connection_async.py
     psycopg/psycopg/cursor_async.py
+    psycopg/psycopg/replication/replication_connection_async.py
+    psycopg/psycopg/replication/base_replication_cursor_async.py
+    psycopg/psycopg/replication/physical_replication_cursor_async.py
+    psycopg/psycopg/replication/logical_replication_cursor_async.py
     psycopg/psycopg/_pipeline_async.py
     psycopg/psycopg/_server_cursor_async.py
     psycopg_pool/psycopg_pool/null_pool_async.py
@@ -290,6 +294,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "ALock": "Lock",
         "AQueue": "Queue",
         "AWorker": "Worker",
+        "AsyncBaseReplicationCursor": "BaseReplicationCursor",
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnectFailedCB": "ConnectFailedCB",
         "AsyncConnection": "Connection",
@@ -303,6 +308,10 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "AsyncGenerator": "Generator",
         "AsyncIterator": "Iterator",
         "AsyncLibpqWriter": "LibpqWriter",
+        "AsyncLogicalReplicationConnection": "LogicalReplicationConnection",
+        "AsyncLogicalReplicationCursor": "LogicalReplicationCursor",
+        "AsyncPhysicalReplicationConnection": "PhysicalReplicationConnection",
+        "AsyncPhysicalReplicationCursor": "PhysicalReplicationCursor",
         "AsyncNullConnectionPool": "NullConnectionPool",
         "AsyncPipeline": "Pipeline",
         "AsyncPoolConnection": "PoolConnection",
@@ -350,6 +359,9 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "wait_async": "wait",
         "wait_conn_async": "wait_conn",
         "wait_timeout": "wait",
+        "base_replication_cursor_async": "base_replication_cursor",
+        "logical_replication_cursor_async": "logical_replication_cursor",
+        "physical_replication_cursor_async": "physical_replication_cursor",
     }
     _skip_imports = {
         "acompat": {"alist", "skip_sync"},
