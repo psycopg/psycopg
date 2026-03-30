@@ -150,6 +150,9 @@ def test_statusmessage(conn):
     cur.execute("select generate_series(1, 10)")
     assert cur.statusmessage == "SELECT 10"
 
+    cur.execute("")
+    assert cur.statusmessage is None
+
     cur.execute("create table statusmessage ()")
     assert cur.statusmessage == "CREATE TABLE"
 
@@ -396,6 +399,26 @@ def test_executemany_rowcount(conn, execmany):
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
+
+
+@pytest.mark.parametrize("returning", [False, True])
+def test_executemany_statusmessage(conn, execmany, returning):
+    cur = conn.cursor()
+    cur.executemany(
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
+        [(10, "hello"), (20, "world")],
+        returning=returning,
+    )
+    assert cur.rowcount == (1 if returning else 2)
+    assert cur.statusmessage is not None
+    assert cur.statusmessage.startswith("INSERT")
+
+    cur.executemany(
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
+        [],
+        returning=returning,
+    )
+    assert cur.statusmessage is None
 
 
 def test_executemany_returning(conn, execmany):

@@ -49,7 +49,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
         _conn format _adapters arraysize _closed _results pgresult _pos
         _iresult _rowcount _query _tx _last_query _row_factory _make_row
-        _pgconn _execmany_returning
+        _pgconn _execmany_returning _statusmessage
         __weakref__
         """.split()
 
@@ -79,6 +79,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
+        self._statusmessage: bytes | None = None
         self._query: PostgresQuery | None
         # None if executemany() not executing, True/False according to returning state
         self._execmany_returning: bool | None = None
@@ -178,8 +179,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         `!None` if the cursor doesn't have a result available.
         """
-        msg = self.pgresult.command_status if self.pgresult else None
-        return msg.decode() if msg else None
+        return self._statusmessage.decode() if self._statusmessage else None
 
     def _make_row_maker(self) -> RowMaker[Row]:
         raise NotImplementedError
@@ -525,6 +525,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
 
+        self._statusmessage = res.command_status
         self._make_row = self._make_row_maker()
 
     def _set_results(self, results: list[PGresult]) -> None:
@@ -540,9 +541,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 self._select_current_result(0)
         else:
             # In non-returning case, set rowcount to the cumulated number of
-            # rows of executed queries.
-            for res in results:
-                self._rowcount += res.command_tuples or 0
+            # rows of executed queries. Keep the last result's command_status
+            # so that statusmessage is available after the batch completes.
+            if results:
+                self._statusmessage = results[-1].command_status
+                for res in results:
+                    self._rowcount += res.command_tuples or 0
 
     @classmethod
     def _loaders_changed(
