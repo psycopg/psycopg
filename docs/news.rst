@@ -17,6 +17,8 @@ Psycopg 3.3.4 (unreleased)
   in C extension (:ticket:`#1280`).
 - Fix client-side adaptation of enums whose name require quotes
   (:ticket:`#1298`).
+- Consistently populate `~Cursor.statusmessage` after `~Cursor.executemany()`
+  (:ticket:`#1302`).
 
 
 Current release
