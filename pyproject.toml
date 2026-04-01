@@ -42,6 +42,16 @@ exclude = '''(?x)(
     | tests/test_tstring\.py
 )'''
 
+# Don't use SQLite cache as it highlights Mypy concurrency issues.
+# See https://github.com/python/mypy/issues/21136
+# The issue is triggered by parallel mypy runs under pre-commit, setting
+# the parameter here allows the use of the same cache both by pre-commit and
+# every other Mypy usage.
+#
+# Check https://github.com/python/mypy/issues/13916 in the future to see
+# if new ways to run mypy under pre-commit emerge.
+sqlite_cache = false
+
 [[tool.mypy.overrides]]
 module = [
     "numpy.*",
