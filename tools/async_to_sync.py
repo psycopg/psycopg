@@ -125,7 +125,11 @@ def convert(fpin: Path, fpout: Path) -> None:
     with fpin.open() as f:
         source = f.read()
 
-    tree = ast.parse(source, filename=str(fpin))
+    try:
+        tree = ast.parse(source, filename=str(fpin))
+    except Exception as e:
+        logger.critical(f"Exception parsing {fpin}: {e}")
+        raise
     tree = async_to_sync(tree, filepath=fpin)
     output = tree_to_str(tree, fpin)
 
