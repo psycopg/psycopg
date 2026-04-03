@@ -34,8 +34,6 @@ files = [
 ]
 warn_unused_ignores = true
 show_error_codes = true
-disable_bytearray_promotion = true
-disable_memoryview_promotion = true
 strict = true
 exclude = '''(?x)(
     ^ docs/lib/.*\.py
