@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import LiteralString
+from typing import Any, LiteralString, cast
 
 from .. import sql
-from ..rows import Row
+from ..rows import Row, tuple_row
 from .._compat import Self
 from .replication_utils import lsn_to_string, string_to_lsn
 from .replication_options import ReplicationType
+from .logical_output_plugins import get_output_plugin_options
 from .base_replication_cursor_async import AsyncBaseReplicationCursor
 
 logger = logging.getLogger("psycopg")
@@ -19,16 +20,58 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
 
     replication_type = ReplicationType.LOGICAL
 
+    def _format_output_plugin_options(
+        self, output_plugin_options: dict[str, str]
+    ) -> sql.Composed:
+        return sql.SQL(", ").join(
+            sql.SQL("{opt_name} {opt}").format(
+                opt_name=sql.Identifier(opt_name), opt=str(opt)
+            )
+            for opt_name, opt in output_plugin_options.items()
+        )
+
+    async def output_plugin_for_slot(self, slot_name: str) -> str:
+        async with self._conn.cursor(row_factory=tuple_row) as cursor:
+            await cursor.execute(
+                "SELECT plugin FROM pg_replication_slots "
+                + "WHERE slot_type = 'logical' AND slot_name = %s;",
+                [slot_name],
+            )
+            result = await cursor.fetchall()
+        if not result:
+            raise ValueError(f"No logical replication slot named {slot_name}")
+        output_plugin = cast(str, result[0][0])
+
+        return output_plugin
+
     async def start_replication(
         self,
         slot_name: str,
         start_lsn: int | str = 0,
+        raw_output_plugin_options: dict[str, str] | None = None,
+        **output_plugin_options: Any,
     ) -> Self:
+
+        if raw_output_plugin_options and output_plugin_options:
+            raise TypeError(
+                "Only one of 'raw_output_plugin_options' and 'output_plugin_options'"
+                + " can be passed to start_replication()"
+            )
 
         if isinstance(start_lsn, str):
             # NOTE: this validates the string format in a simple manner at the
             # expense of an unnecessary conversion.
             start_lsn = string_to_lsn(start_lsn)
+
+        if output_plugin_options:
+            self._output_plugin = await self.output_plugin_for_slot(slot_name)
+            plugin_opts = get_output_plugin_options(self._output_plugin)(
+                output_plugin_options,
+            )
+            plugin_opts.validate_opts()
+            output_plugin_options = plugin_opts.string_opts
+        else:
+            output_plugin_options = raw_output_plugin_options or {}
 
         statement = sql.SQL(
             "START_REPLICATION SLOT {slot_name} LOGICAL {start_lsn}"
@@ -37,6 +80,10 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
             start_lsn=sql.SQL(lsn_to_string(start_lsn)),
         )
 
+        if output_plugin_options:
+            statement += sql.SQL(" ({options})").format(
+                options=self._format_output_plugin_options(output_plugin_options)
+            )
         await self.execute(statement)
         self._last_feedback_time = time.monotonic()
         self._last_received_lsn = start_lsn

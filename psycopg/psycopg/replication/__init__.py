@@ -1,3 +1,4 @@
+from . import logical_output_plugins
 from .replication_messages import (
     PrimaryKeepaliveMessage,
     ReplicationMessage,
@@ -47,3 +48,6 @@ __all__ = [
     "ReplicationMessage",
     "StandbyStatusUpdate",
 ]
+
+# register supported output plugins
+logical_output_plugins.register_default_output_plugins()
