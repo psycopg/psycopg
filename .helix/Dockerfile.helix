@@ -1,0 +1,17 @@
+FROM python:3.11
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y \
+    git \
+    ca-certificates \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN pip install ./psycopg[dev]
+RUN pip install "pytest<9" pytest-asyncio
+
+CMD ["bash"]

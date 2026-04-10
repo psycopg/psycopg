@@ -1,0 +1,21 @@
+{
+  "problem_statement": "The notifies() generator allowed other operations to run on the same connection while notification polling was still active. In the buggy implementation, the connection lock was only held around a single polling step inside the generator loop, then released before the next iteration. This allowed another command such as execute() to interleave with notifies(timeout=...) on the same connection. Update the implementation so the connection remains locked for the full lifetime of the notifies() generator. The main implementation lives in psycopg/psycopg/connection_async.py, and the sync version in psycopg/psycopg/connection.py is generated from it.",
+  "hints": [
+    "Inspect the scope of the connection lock inside notifies().",
+    "The bug is caused by releasing the lock between polling iterations of the generator.",
+    "Fix the async source first, then regenerate the sync counterpart.",
+    "A correct fix should make another operation on the same connection block while notifies(timeout=...) is being consumed."
+  ],
+  "FAIL_TO_PASS": [
+    "tests/test_notify_async.py::test_notifies_blocks_other_operations",
+    "tests/test_notify.py::test_notifies_blocks_other_operations"
+  ],
+  "PASS_TO_PASS": [
+    "tests/test_notify_async.py::test_notify",
+    "tests/test_notify_async.py::test_no_notify_timeout",
+    "tests/test_notify_async.py::test_notify_timeout",
+    "tests/test_notify.py::test_notify",
+    "tests/test_notify.py::test_no_notify_timeout",
+    "tests/test_notify.py::test_notify_timeout"
+  ]
+}
