@@ -190,3 +190,40 @@ async def test_stop_after_batch(aconn_cls, aconn, dsn):
         assert ns[1].payload == "2"
     finally:
         await gather(worker)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_notifies_blocks_other_operations(aconn):
+    await aconn.set_autocommit(True)
+    await aconn.execute("listen foo")
+
+    started = False
+    finished = False
+
+    async def consumer():
+        async for _ in aconn.notifies(timeout=1.0):
+            pass
+
+    async def worker():
+        nonlocal started, finished
+        started = True
+        await aconn.execute("select 1")
+        finished = True
+
+    consumer_task = spawn(consumer)
+    try:
+        await asleep(0.2)
+        assert not finished
+
+        worker_task = spawn(worker)
+        try:
+            await asleep(0.2)
+            assert started
+            assert not finished
+        finally:
+            await gather(worker_task)
+    finally:
+        await gather(consumer_task)
+
+    assert finished

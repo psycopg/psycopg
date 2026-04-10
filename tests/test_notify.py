@@ -193,3 +193,40 @@ def test_stop_after_batch(conn_cls, conn, dsn):
         assert ns[1].payload == "2"
     finally:
         gather(worker)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_notifies_blocks_other_operations(conn):
+    conn.set_autocommit(True)
+    conn.execute("listen foo")
+
+    started = False
+    finished = False
+
+    def consumer():
+        for _ in conn.notifies(timeout=1.0):
+            pass
+
+    def worker():
+        nonlocal started, finished
+        started = True
+        conn.execute("select 1")
+        finished = True
+
+    consumer_task = spawn(consumer)
+    try:
+        sleep(0.2)
+        assert not finished
+
+        worker_task = spawn(worker)
+        try:
+            sleep(0.2)
+            assert started
+            assert not finished
+        finally:
+            gather(worker_task)
+    finally:
+        gather(consumer_task)
+
+    assert finished
