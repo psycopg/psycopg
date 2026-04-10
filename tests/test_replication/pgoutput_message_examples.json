@@ -1,0 +1,430 @@
+{
+    "example_msgs": {
+        "msgs": {
+            "B": "QgAAAAi7HNWwAALz6/c7REkAAKJe",
+            "R": "UgACBbRwdWJsaWMAcmVwbF90ZXN0X2FkZWM1NWMzAGQAAgFpZAAAAAAX/////wBkYXRhAAAAABn/////",
+            "I": "SQACBbROAAJ0AAAAATF0AAAAC2luc2VydF90ZXN0",
+            "C": "QwAAAAAIuxzVsAAAAAi7HNXgAALz6/c7REk=",
+            "Y": "WQACBeJwdWJsaWMAc21hbGxwb2ludAA=",
+            "T": "VAAAAAIDAAIF7wACBfo=",
+            "U": "VQACBjtOAAJ0AAAAATF0AAAADHVwZGF0ZWRfZGF0YQ==",
+            "D": "RAACBlFPAAJ0AAAAATF0AAAABGRhdGE=",
+            "M": "TQAAAAAIuytJaHByw6lmaXgAAAAACGNvbnTDqG50",
+            "b": "YgAAAAi7MwYgAAAACLszB1AAAvPr92+DagAAotFyb2xsYmFja19BdW5pcXXDqUlkZW50aWZpZXIA",
+            "P": "UAAAAAAIuzMGIAAAAAi7MwdQAALz6/dvg2oAAKLRcm9sbGJhY2tfQXVuaXF1w6lJZGVudGlmaWVyAA==",
+            "r": "cgAAAAAIuzMHUAAAAAi7MwegAALz6/dvg2oAAvPr92+YyAAAotFyb2xsYmFja19BdW5pcXXDqUlkZW50aWZpZXIA",
+            "K": "SwAAAAAIuzVeIAAAAAi7NV5wAALz6/d0HjsAAKLcY29tbWl0X0F1bmlxdcOpSWRlbnRpZmllcgA=",
+            "O": "TwAAAAAAAAAAcHN5Y29wZ190ZXN0AA=="
+        },
+        "streaming_xid": {
+            "B": null,
+            "R": null,
+            "I": null,
+            "C": null,
+            "Y": null,
+            "T": null,
+            "U": null,
+            "D": null,
+            "M": null,
+            "b": null,
+            "P": null,
+            "r": null,
+            "K": null,
+            "O": null
+        },
+        "relations": {
+            "132532": {
+                "xid": null,
+                "relation_id": 132532,
+                "namespace": "public",
+                "relation_name": "repl_test_adec55c3",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132602": {
+                "xid": null,
+                "relation_id": 132602,
+                "namespace": "public",
+                "relation_name": "truncate_test_table",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132591": {
+                "xid": null,
+                "relation_id": 132591,
+                "namespace": "public",
+                "relation_name": "repl_test_8f0cfa43",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132667": {
+                "xid": null,
+                "relation_id": 132667,
+                "namespace": "public",
+                "relation_name": "repl_test_c56ce36a",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132689": {
+                "xid": null,
+                "relation_id": 132689,
+                "namespace": "public",
+                "relation_name": "repl_test_09d1c6d4",
+                "replica_identity": 102,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 1,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            }
+        }
+    },
+    "example_msgs_stream": {
+        "msgs": {
+            "S": "UwAAomMB",
+            "R": "UgAAomMAAgW/cHVibGljAHJlcGxfdGVzdF8yZTcwMmEzMABkAAIBaWQAAAAAF/////8AZGF0YQAAAAAZ/////w==",
+            "I": "SQAAomMAAgW/TgACdAAAAAExdAAAAEUxOiB0aGlzIGlzIGEgcHJldHR5IGxvbmcgc3RyaW5nIGZvciB0ZXN0aW5nIHN0cmVhbWluZyB0cmFuc2FjdGlvbnMgOjE=",
+            "E": "RQ==",
+            "p": "cAAAAAAIux6PCAAAAAi7HpA4AALz6/c9VTIAAKJjcm9sbGJhY2tfQXVuaXF1w6lJZGVudGlmaWVyAA==",
+            "r": "cgAAAAAIux6QOAAAAAi7HpCIAALz6/c9VTIAAvPr90CxGwAAomNyb2xsYmFja19BdW5pcXXDqUlkZW50aWZpZXIA",
+            "M": "TQAAAAAIuyJ76HByw6lmaXgAAAAACGNvbnTDqG50",
+            "B": "QgAAAAi7NqXoAALz6/d4qBwAAKLo",
+            "C": "QwAAAAAIuzal6AAAAAi7NqYYAALz6/d4qBw=",
+            "D": "RAAAoukAAgbXSwACdAAAAAExbg==",
+            "T": "VAAAowEAAAACAwACBwMAAgcO",
+            "A": "QQAAoxoAAKMc",
+            "c": "YwAAoxoAAAAACLtDETAAAAAIu0MRYAAC8+v3l/4c",
+            "O": "TwAAAAAAAAAAcHN5Y29wZ190ZXN0AA==",
+            "K": "SwAAAAAIu0zzCAAAAAi7TPNYAALz6/e8EGcAAKNGY29tbWl0X0F1bmlxdcOpSWRlbnRpZmllcgA=",
+            "U": "VQAAo00AAgedSwACbnQAAAAEZGF0YU4AAnQAAAABMXQAAAAMdXBkYXRlZF9kYXRh",
+            "Y": "WQAAo3AAAgfjcHVibGljAHNtYWxscG9pbnQA"
+        },
+        "streaming_xid": {
+            "S": null,
+            "R": 41571,
+            "I": 41571,
+            "E": 41571,
+            "p": null,
+            "r": null,
+            "M": null,
+            "B": null,
+            "C": null,
+            "D": 41705,
+            "T": 41729,
+            "A": null,
+            "c": null,
+            "O": 41768,
+            "K": null,
+            "U": 41805,
+            "Y": 41840
+        },
+        "relations": {
+            "132823": {
+                "xid": null,
+                "relation_id": 132823,
+                "namespace": "public",
+                "relation_name": "repl_test_ccd05016",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132878": {
+                "xid": null,
+                "relation_id": 132878,
+                "namespace": "public",
+                "relation_name": "truncate_test_table",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "132867": {
+                "xid": null,
+                "relation_id": 132867,
+                "namespace": "public",
+                "relation_name": "repl_test_bd41b48d",
+                "replica_identity": 100,
+                "columns": [
+                    {
+                        "flags": 1,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 0,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            },
+            "133021": {
+                "xid": null,
+                "relation_id": 133021,
+                "namespace": "public",
+                "relation_name": "repl_test_e8996cf1",
+                "replica_identity": 105,
+                "columns": [
+                    {
+                        "flags": 0,
+                        "name": "id",
+                        "type_id": 23,
+                        "type_modifier": -1
+                    },
+                    {
+                        "flags": 1,
+                        "name": "data",
+                        "type_id": 25,
+                        "type_modifier": -1
+                    }
+                ]
+            }
+        },
+        "relations_by_xid": {
+            "41571": {
+                "132543": {
+                    "xid": 41571,
+                    "relation_id": 132543,
+                    "namespace": "public",
+                    "relation_name": "repl_test_2e702a30",
+                    "replica_identity": 100,
+                    "columns": [
+                        {
+                            "flags": 1,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 0,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                }
+            },
+            "41705": {
+                "132823": {
+                    "xid": 41705,
+                    "relation_id": 132823,
+                    "namespace": "public",
+                    "relation_name": "repl_test_ccd05016",
+                    "replica_identity": 100,
+                    "columns": [
+                        {
+                            "flags": 1,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 0,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                }
+            },
+            "41729": {
+                "132867": {
+                    "xid": 41729,
+                    "relation_id": 132867,
+                    "namespace": "public",
+                    "relation_name": "repl_test_bd41b48d",
+                    "replica_identity": 100,
+                    "columns": [
+                        {
+                            "flags": 1,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 0,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                },
+                "132878": {
+                    "xid": 41729,
+                    "relation_id": 132878,
+                    "namespace": "public",
+                    "relation_name": "truncate_test_table",
+                    "replica_identity": 100,
+                    "columns": [
+                        {
+                            "flags": 1,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 0,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                }
+            },
+            "41805": {
+                "133021": {
+                    "xid": 41805,
+                    "relation_id": 133021,
+                    "namespace": "public",
+                    "relation_name": "repl_test_e8996cf1",
+                    "replica_identity": 105,
+                    "columns": [
+                        {
+                            "flags": 0,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 1,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "example_msgs_stream_parallel": {
+        "msgs": {
+            "S": "UwAAorUB",
+            "R": "UgAAorUAAgZycHVibGljAHJlcGxfdGVzdF9iMTU2ZWRlZABkAAIBaWQAAAAAF/////8AZGF0YQAAAAAZ/////w==",
+            "I": "SQAAorUAAgZyTgACdAAAAAExdAAAAEUxOiB0aGlzIGlzIGEgcHJldHR5IGxvbmcgc3RyaW5nIGZvciB0ZXN0aW5nIHN0cmVhbWluZyB0cmFuc2FjdGlvbnMgOjE=",
+            "E": "RQ==",
+            "B": "QgAAAAi7LsG4AALz6/ddwHIAAKK2",
+            "C": "QwAAAAAIuy7BuAAAAAi7LsHoAALz6/ddwHI=",
+            "A": "QQAAorUAAKK1AAAACLsuwhAAAvPr92Jv3g=="
+        },
+        "streaming_xid": {
+            "S": null,
+            "R": 41653,
+            "I": 41653,
+            "E": 41653,
+            "B": null,
+            "C": null,
+            "A": null
+        },
+        "relations": {},
+        "relations_by_xid": {
+            "41653": {
+                "132722": {
+                    "xid": 41653,
+                    "relation_id": 132722,
+                    "namespace": "public",
+                    "relation_name": "repl_test_b156eded",
+                    "replica_identity": 100,
+                    "columns": [
+                        {
+                            "flags": 1,
+                            "name": "id",
+                            "type_id": 23,
+                            "type_modifier": -1
+                        },
+                        {
+                            "flags": 0,
+                            "name": "data",
+                            "type_id": 25,
+                            "type_modifier": -1
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
