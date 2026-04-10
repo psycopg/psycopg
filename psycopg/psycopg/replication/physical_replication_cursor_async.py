@@ -5,10 +5,12 @@ import logging
 from typing import cast
 
 from .. import sql
+from .abc import XLogDataDecoder
 from ..rows import Row
 from .._compat import Self
 from .replication_utils import lsn_to_string, string_to_lsn
 from .replication_options import ReplicationType
+from .replication_messages import DecodedPayload
 from .base_replication_cursor_async import AsyncBaseReplicationCursor
 
 logger = logging.getLogger("psycopg")
@@ -24,6 +26,7 @@ class AsyncPhysicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
         slot_name: str | None = None,
         start_lsn: int | str | None = None,
         timeline: int | None = None,
+        decoder: XLogDataDecoder[DecodedPayload] | None = None,
     ) -> Self:
         """
         Start physical replication.
@@ -38,6 +41,10 @@ class AsyncPhysicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
             )
         elif isinstance(start_lsn, str):
             start_lsn = string_to_lsn(start_lsn)
+
+        self.decode_xlogdata = decoder
+        if decoder is not None:
+            decoder.server_encoding = self._encoding
 
         if slot_name is not None:
             statement = sql.SQL(

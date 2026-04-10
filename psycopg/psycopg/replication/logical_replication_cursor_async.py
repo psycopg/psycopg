@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import Any, LiteralString, cast
+from typing import Any, Callable, LiteralString, cast
+from weakref import ReferenceType, ref
+from functools import partial
 
-from .. import sql
+from .. import adapt, sql
+from ..abc import Loader
 from ..rows import Row, tuple_row
 from .._compat import Self
 from .replication_utils import lsn_to_string, string_to_lsn
 from .replication_options import ReplicationType
-from .logical_output_plugins import get_output_plugin_options
+from .replication_messages import DecodedPayload
+from .logical_output_plugins import DispatchingDecoder, get_output_plugin_options
+from .logical_output_plugins.abc import LogicalXLogDataDecoder
 from .base_replication_cursor_async import AsyncBaseReplicationCursor
 
 logger = logging.getLogger("psycopg")
@@ -19,6 +24,7 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
     __module__ = "psycopg.replication"
 
     replication_type = ReplicationType.LOGICAL
+    decode_xlogdata: LogicalXLogDataDecoder[Any] | None
 
     def _format_output_plugin_options(
         self, output_plugin_options: dict[str, str]
@@ -48,6 +54,7 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
         self,
         slot_name: str,
         start_lsn: int | str = 0,
+        decoder: LogicalXLogDataDecoder[DecodedPayload] | None = DispatchingDecoder(),
         raw_output_plugin_options: dict[str, str] | None = None,
         **output_plugin_options: Any,
     ) -> Self:
@@ -63,8 +70,12 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
             # expense of an unnecessary conversion.
             start_lsn = string_to_lsn(start_lsn)
 
-        if output_plugin_options:
+        if output_plugin_options or (
+            decoder is not None and decoder.output_plugin is None
+        ):
             self._output_plugin = await self.output_plugin_for_slot(slot_name)
+
+        if output_plugin_options:
             plugin_opts = get_output_plugin_options(self._output_plugin)(
                 output_plugin_options,
             )
@@ -72,6 +83,21 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
             output_plugin_options = plugin_opts.string_opts
         else:
             output_plugin_options = raw_output_plugin_options or {}
+
+        if decoder is not None:
+            decoder.plugin_options = plugin_opts.opts if output_plugin_options else {}
+            if decoder.output_plugin is None:
+                decoder.output_plugin = self._output_plugin
+            decoder.server_encoding = self._encoding
+            decoder._tx = adapt.Transformer(self)
+            # Set up a callback to allow changing loaders
+            # since decoder shares an adapt context with the cursor
+            _orig_callback = self._adapters._register_loader_callback
+            self._adapters._register_loader_callback = partial(
+                self._loaders_changed_replication, ref(self), _orig_callback
+            )
+            decoder = decoder.get_real_decoder()
+        self.decode_xlogdata = decoder
 
         statement = sql.SQL(
             "START_REPLICATION SLOT {slot_name} LOGICAL {start_lsn}"
@@ -85,12 +111,32 @@ class AsyncLogicalReplicationCursor(AsyncBaseReplicationCursor[Row]):
                 options=self._format_output_plugin_options(output_plugin_options)
             )
         await self.execute(statement)
+        self._started_replication_slot = slot_name
         self._last_feedback_time = time.monotonic()
         self._last_received_lsn = start_lsn
         self.last_flushed_lsn = start_lsn
         self.last_applied_lsn = start_lsn
 
         return self
+
+    @classmethod
+    def _loaders_changed_replication(
+        cls,
+        wself: ReferenceType[AsyncLogicalReplicationCursor[Any]],
+        orig_callback: Callable[[int, type[Loader]], None] | None,
+        oid: int,
+        loader: type[Loader],
+    ) -> None:
+        if not (self := wself()):
+            return
+
+        if orig_callback is not None:
+            orig_callback(oid, loader)
+
+        if self.decode_xlogdata is None:
+            return
+
+        self.decode_xlogdata._tx = adapt.Transformer(self)
 
     async def alter_replication_slot(
         self,

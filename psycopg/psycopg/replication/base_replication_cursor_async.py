@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Iterable, LiteralString, NoRetu
 
 from .. import errors as e
 from .. import generators, pq, sql
+from .abc import XLogDataDecoder
 from ..rows import Row
 from .._compat import Self
 from ..client_cursor import AsyncClientCursor
@@ -69,6 +70,7 @@ class AsyncBaseReplicationCursor(AsyncClientCursor[Row]):
     __module__ = "psycopg.replication"
 
     replication_type: ReplicationType | None = None
+    decode_xlogdata: XLogDataDecoder[Any] | None
     _base_backup_started: bool = False
 
     last_flushed_lsn: int = 0
@@ -251,12 +253,20 @@ class AsyncBaseReplicationCursor(AsyncClientCursor[Row]):
             if msg_type == "w":  # XLogData
                 # See https://www.postgresql.org/docs/current/protocol-replication.html#PROTOCOL-REPLICATION-XLOGDATA  # noqa: E501
                 wal_data = data[25:]
+
+                if self.decode_xlogdata is not None:
+                    wal_data = self.decode_xlogdata(wal_data)
+                    # decoder can filter which messages are delivered
+                    if wal_data is None:
+                        continue
+
                 data_start, wal_end, microseconds_since_2000 = parse_xlogdata(
                     data[1:25]
                 )
                 self._last_received_lsn = data_start
                 if auto_flushed:
                     self.last_flushed_lsn = data_start
+
                 return XLogDataMessage(
                     wal_data, data_start, wal_end, microseconds_since_2000
                 )
@@ -343,7 +353,7 @@ class AsyncBaseReplicationCursor(AsyncClientCursor[Row]):
             )
             await consume(self, msg)
             if not consume_all_messages or isinstance(msg, XLogDataMessage):
-                msg = cast(XLogDataMessage, msg)
+                msg = cast(XLogDataMessage[Any], msg)
                 flush_lsn = None
                 apply_lsn = None
                 if flushes:

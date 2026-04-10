@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import (
-    TYPE_CHECKING,
-    cast,
-)
+from typing import TYPE_CHECKING, cast
 
 from ..abc import AdaptContext, ConnParam
 from ..rows import AsyncRowFactory, Row, tuple_row

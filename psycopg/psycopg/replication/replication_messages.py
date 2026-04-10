@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 from struct import Struct
-from typing import Callable, ClassVar, Literal, cast
+from typing import Callable, ClassVar, Generic, Literal, TypeVar, cast
 from datetime import datetime
 from dataclasses import dataclass
 
 from ..abc import Buffer
 from .replication_utils import lsn_to_string, pg_epoch_to_datetime
+
+DecodedPayload = TypeVar("DecodedPayload", covariant=True)
 
 
 class ReplicationMessage:
@@ -19,7 +23,7 @@ class ReplicationMessage:
 
 
 @dataclass(slots=True, weakref_slot=True)
-class XLogDataMessage(ReplicationMessage):
+class XLogDataMessage(ReplicationMessage, Generic[DecodedPayload]):
     """
     Class representing WAL data delivered by a replication stream.
     `!XLogDataMessage.payload` is the actual data and varies
@@ -31,8 +35,11 @@ class XLogDataMessage(ReplicationMessage):
 
     message_type = "w"
 
-    # TODO: should this be copied to bytes so the memory can be freed?
-    payload: Buffer
+    # NOTE: mypy doesn't play nice with generics in dataclasses, we get:
+    # `error: Cannot use a covariant type variable as a parameter  [misc]`.
+    # But, payload is only set on creation, so this should be fine.
+    # See https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092/40  # noqa: E501
+    payload: DecodedPayload  # type: ignore[misc]
     data_start: int  # LSN where this data starts
     wal_end: int  # Last LSN on the server
     send_time_microseconds_since_2000: int  # Server send timestamp
