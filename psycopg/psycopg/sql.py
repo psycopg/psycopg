@@ -337,7 +337,7 @@ class SQL(Composable):
         cs = [first]
         for i in it:
             if isinstance(i, Template):
-                raise TypeError(f"can't mix Template and {type(i).__name__}")
+                raise TypeError(f"can't mix Template and {type(first).__name__}")
             cs.append(self)
             cs.append(i)
 
