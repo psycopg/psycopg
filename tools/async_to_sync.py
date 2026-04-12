@@ -64,6 +64,8 @@ ALL_INPUTS = """
     tests/test_tpc_async.py
     tests/test_transaction_async.py
     tests/test_waiting_async.py
+    tests/test_replication/fix_db_async.py
+    tests/test_replication/utils_async.py
 """.split()
 
 PROJECT_DIR = Path(__file__).parent.parent
@@ -362,6 +364,17 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "base_replication_cursor_async": "base_replication_cursor",
         "logical_replication_cursor_async": "logical_replication_cursor",
         "physical_replication_cursor_async": "physical_replication_cursor",
+        "aconn": "conn",
+        "alogical_conn": "logical_conn",
+        "alogical_started_cur": "logical_started_cur",
+        "aphysical_conn": "physical_conn",
+        "aphysical_started_cur": "physical_started_cur",
+        "arepl_cur": "repl_cur",
+        "arepl_started_cur": "repl_started_cur",
+        "arepl_conn_cls": "repl_conn_cls",
+        "arepl_cur_cls": "repl_cur_cls",
+        "utils_async": "utils",
+        "aset_origin": "set_origin",
     }
     _skip_imports = {
         "acompat": {"alist", "skip_sync"},
