@@ -70,6 +70,7 @@ ALL_INPUTS = """
     tests/test_replication/test_base_replication_cursor_async.py
     tests/test_replication/test_logical_replication_cursor_async.py
     tests/test_replication/test_physical_replication_cursor_async.py
+    tests/test_replication/test_pgoutput_stream_async.py
 """.split()
 
 PROJECT_DIR = Path(__file__).parent.parent
