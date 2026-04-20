@@ -21,7 +21,7 @@ from .... import errors as e
 from .... import pq
 from ....abc import Buffer, Transformer
 from ...._compat import Self
-from ..logical_rows import LogicalRow
+from ..logical_rows import LogicalRow, RowValue
 from ...replication_utils import pg_epoch_to_datetime
 from ...replication_options import ReplicaIdentity
 
@@ -151,14 +151,16 @@ def parse_tuple_data(
     offset: int,
     tx: Transformer,
     format: pq.Format,
+    unchanged_sentinel: Any,
 ) -> tuple[list[Any] | tuple[Any], int]:
     # Number of columns (2 bytes)
     ncolumns = int.from_bytes(data[offset : offset + 2], byteorder="big", signed=False)
     offset += 2
 
     tuple_: list[bytes | None] = []
+    unchanged_indices: list[int] = []
 
-    for _ in range(ncolumns):
+    for i in range(ncolumns):
         # Column data format (1 byte): 'n' = null, 't' = text, 'u' = unchanged TOAST
         col_type = chr(data[offset])
         offset += 1
@@ -168,7 +170,9 @@ def parse_tuple_data(
             tuple_.append(None)
         elif col_type == "u":
             # Unchanged TOAST value
-            tuple_.append(None)
+            # DISCUSS: it might be more reasonable to handle this in the Transformer
+            tuple_.append(None)  # RowValue.UNCHANGED is added below after adaption
+            unchanged_indices.append(i)
         elif col_type in ("t", "b"):
             if format is pq.Format.TEXT:
                 if col_type == "b":
@@ -188,6 +192,11 @@ def parse_tuple_data(
             raise e.DataError(f"Unknown column data type: {col_type}")
 
     adapted_tuple: list[Any] | tuple[Any] = tx.load_sequence(tuple_)
+    # DISCUSS: it might be more reasonable to handle this in the Transformer
+    if unchanged_indices:
+        adapted_tuple = list(adapted_tuple)
+        for i in unchanged_indices:
+            adapted_tuple[i] = unchanged_sentinel
 
     return adapted_tuple, offset
 
@@ -208,6 +217,7 @@ def _create_row(
         offset,
         tx=decoder.tx,
         format=decoder.format,
+        unchanged_sentinel=RowValue.UNCHANGED,
     )
     row_maker = decoder.get_row_maker(relation)
     return row_maker(tuple_), offset
