@@ -434,6 +434,8 @@ class BaseReplicationCursor(ClientCursor[Row]):
 
         See https://www.postgresql.org/docs/current/protocol-replication.html#PROTOCOL-REPLICATION-BASE-BACKUP
         """  # noqa: E501
+        server_version = self._conn.info.server_version
+        old_style_options = server_version < 150000
         statement: sql.Composed | sql.SQL = sql.SQL("BASE_BACKUP")
 
         options_snips: list[sql.Composable] = []
@@ -441,8 +443,14 @@ class BaseReplicationCursor(ClientCursor[Row]):
         if label is not None:
             options_snips.append(sql.SQL("LABEL {label}").format(label=label))
         if target is not None:
+            if old_style_options:
+                raise self._raise_unsupported_error("<15", "TARGET", "BASE_BACKUP")
             options_snips.append(sql.SQL("TARGET {target}").format(target=target))
         if target_detail is not None:
+            if old_style_options:
+                raise self._raise_unsupported_error(
+                    "<15", "TARGET_DETAIL", "BASE_BACKUP"
+                )
             if target != BackupTarget.SERVER:
                 # DISCUSS: leave this to PostgreSQL to error?
                 raise ValueError(
@@ -454,30 +462,52 @@ class BaseReplicationCursor(ClientCursor[Row]):
                 )
             )
         if progress is not None:
-            options_snips.append(
-                sql.SQL("PROGRESS {progress}").format(
-                    progress=str(bool(progress)).lower()
+            if old_style_options:
+                if progress:
+                    options_snips.append(sql.SQL("PROGRESS"))
+            else:
+                options_snips.append(
+                    sql.SQL("PROGRESS {progress}").format(
+                        progress=str(bool(progress)).lower()
+                    )
                 )
-            )
         if checkpoint is not None:
-            options_snips.append(
-                sql.SQL("CHECKPOINT {checkpoint}").format(
-                    checkpoint=sql.BareIdentifier(checkpoint)
+            if old_style_options:
+                if checkpoint == CheckpointMode.FAST:
+                    options_snips.append(sql.SQL("FAST"))
+            else:
+                options_snips.append(
+                    sql.SQL("CHECKPOINT {checkpoint}").format(
+                        checkpoint=sql.BareIdentifier(checkpoint)
+                    )
                 )
-            )
         if wal is not None:
-            options_snips.append(
-                sql.SQL("WAL {wal}").format(wal=str(bool(wal)).lower())
-            )
+            if old_style_options:
+                if wal:
+                    options_snips.append(sql.SQL("WAL"))
+            else:
+                options_snips.append(
+                    sql.SQL("WAL {wal}").format(wal=str(bool(wal)).lower())
+                )
         if wait is not None:
-            options_snips.append(
-                sql.SQL("WAIT {wait}").format(wait=str(bool(wait)).lower())
-            )
+            if old_style_options:
+                if not wait:
+                    options_snips.append(sql.SQL("NOWAIT"))
+            else:
+                options_snips.append(
+                    sql.SQL("WAIT {wait}").format(wait=str(bool(wait)).lower())
+                )
         if compression is not None:
+            if old_style_options:
+                raise self._raise_unsupported_error("<15", "COMPRESSION", "BASE_BACKUP")
             options_snips.append(
                 sql.SQL("COMPRESSION {compression}").format(compression=compression)
             )
         if compression_detail is not None:
+            if old_style_options:
+                raise self._raise_unsupported_error(
+                    "<15", "COMPRESSION_DETAIL", "BASE_BACKUP"
+                )
             if compression is None:
                 # DISCUSS: leave PostgreSQL to handle this case?
                 raise ValueError("compression_detail requires compression to be set")
@@ -497,17 +527,25 @@ class BaseReplicationCursor(ClientCursor[Row]):
                 sql.SQL("MAX_RATE {max_rate}").format(max_rate=max_rate)
             )
         if tablespace_map is not None:
-            options_snips.append(
-                sql.SQL("TABLESPACE_MAP {tablespace_map}").format(
-                    tablespace_map=str(bool(tablespace_map)).lower()
+            if old_style_options:
+                if tablespace_map:
+                    options_snips.append(sql.SQL("TABLESPACE_MAP"))
+            else:
+                options_snips.append(
+                    sql.SQL("TABLESPACE_MAP {tablespace_map}").format(
+                        tablespace_map=str(bool(tablespace_map)).lower()
+                    )
                 )
-            )
         if verify_checksums is not None:
-            options_snips.append(
-                sql.SQL("VERIFY_CHECKSUMS {verify_checksums}").format(
-                    verify_checksums=str(bool(verify_checksums)).lower()
+            if old_style_options:
+                if not verify_checksums:
+                    options_snips.append(sql.SQL("NOVERIFY_CHECKSUMS"))
+            else:
+                options_snips.append(
+                    sql.SQL("VERIFY_CHECKSUMS {verify_checksums}").format(
+                        verify_checksums=str(bool(verify_checksums)).lower()
+                    )
                 )
-            )
         if manifest is not None:
             # DISCUSS: should this be set to YES by default?
             options_snips.append(
@@ -521,12 +559,19 @@ class BaseReplicationCursor(ClientCursor[Row]):
                 )
             )
         if incremental:
+            if old_style_options:
+                raise self._raise_unsupported_error("<15", "INCREMENTAL", "BASE_BACKUP")
             options_snips.append(sql.SQL("INCREMENTAL"))
 
         if options_snips:
-            statement = statement + sql.SQL(" ({options})").format(
-                options=sql.SQL(", ").join(options_snips)
-            )
+            if old_style_options:
+                statement = statement + sql.SQL(" {options}").format(
+                    options=sql.SQL(" ").join(options_snips)
+                )
+            else:
+                statement = statement + sql.SQL(" ({options})").format(
+                    options=sql.SQL(", ").join(options_snips)
+                )
         self._conn.wait(self._start_base_backup_gen(statement))
         self._base_backup_started = True
         start_position = self.fetchone()
@@ -558,6 +603,13 @@ class BaseReplicationCursor(ClientCursor[Row]):
         The callable must accept two positional parameters: the cursor and the current
         message.
         """
+        if self._conn.info.server_version < 150000:
+            # NOTE: The message stream is totally different for BASE_BACKUPS
+            # See https://www.postgresql.org/docs/14/protocol-replication.html#PROTOCOL-REPLICATION-BASE-BACKUP  # noqa: E501
+            raise NotImplementedError(
+                "psycopg does not support consume_base_backup for PostgreSQL <15"
+            )
+
         while (msg := self.read_backup_message()) is not None:
             consume(self, msg)
 
@@ -586,6 +638,13 @@ class BaseReplicationCursor(ClientCursor[Row]):
         if not self._base_backup_started:
             # DISCUSS: should raise an error here instead?
             return None
+
+        if self._conn.info.server_version < 150000:
+            # NOTE: The message stream is totally different for BASE_BACKUPS
+            # See https://www.postgresql.org/docs/14/protocol-replication.html#PROTOCOL-REPLICATION-BASE-BACKUP  # noqa: E501
+            raise NotImplementedError(
+                "psycopg does not support read_backup_message for PostgreSQL <15"
+            )
 
         data = self._conn.wait_no_cancel(self._read_backup_gen(timeout=timeout))
 
