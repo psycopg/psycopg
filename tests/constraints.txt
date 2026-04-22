@@ -24,10 +24,10 @@ types-setuptools == 57.4.0
 wheel == 0.37
 
 # From the 'docs' extra
-Sphinx == 5.0
-furo == 2022.6.21
-sphinx-autobuild == 2021.3.14
-sphinx-autodoc-typehints == 1.12.0
+Sphinx == 9.1.0
+furo == 2025.12.19
+sphinx-autobuild == 2025.8.25
+sphinx-autodoc-typehints == 3.10.2
 
 # Build tools
 wheel == 0.37

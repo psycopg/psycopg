@@ -93,10 +93,10 @@ dev = [
     "wheel >= 0.37",
 ]
 docs = [
-    "Sphinx >= 5.0",
-    "furo == 2022.6.21",
-    "sphinx-autobuild >= 2021.3.14",
-    "sphinx-autodoc-typehints >= 1.12",
+    "Sphinx >= 9.1",
+    "furo == 2025.12.19",
+    "sphinx-autobuild >= 2025.8.25",
+    "sphinx-autodoc-typehints >= 3.10.2",
 ]
 
 [tool.setuptools]

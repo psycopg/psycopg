@@ -16,7 +16,7 @@ vint = 16
 
 async def test_connection_no_params(aconn):
     with pytest.raises(TypeError):
-        await aconn.execute(t"select 1", [])    # noqa: F542
+        await aconn.execute(t"select 1", [])  # noqa: F542
 
 
 async def test_cursor_no_params(aconn):
@@ -170,7 +170,7 @@ async def test_sql_literal(aconn):
     lit = sql.Literal(42)
     cur = await aconn.execute(t"select {lit:l} as foo")
     assert await cur.fetchone() == (42,)
-    assert cur._query.query == b'select 42 as foo'
+    assert cur._query.query == b"select 42 as foo"
 
     with pytest.raises(psycopg.ProgrammingError, match=r"sql\.Literal.*':l'"):
         await aconn.execute(t"select {lit} as foo")
@@ -185,7 +185,7 @@ async def test_sql_placeholder(aconn):
 @pytest.mark.xfail(reason="Template.join() needed")
 async def test_template_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
-    fields = t','.join(ts)  # noqa: F542
+    fields = t",".join(ts)  # noqa: F542
     cur = await aconn.execute(t"select {fields}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
@@ -194,7 +194,7 @@ async def test_template_join(aconn):
 
 async def test_sql_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
-    fields = sql.SQL(',').join(ts)
+    fields = sql.SQL(",").join(ts)
     cur = await aconn.execute(t"select {fields:q}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"

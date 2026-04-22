@@ -27,7 +27,7 @@ import ast_comments as ast  # type: ignore
 # The version of Python officially used for the conversion.
 # Output may differ in other versions.
 # Should be consistent with the Python version used in lint.yml
-PYVER = "3.11"
+PYVER = "3.14"
 
 ALL_INPUTS = """
     psycopg/psycopg/_conninfo_attempts_async.py
@@ -183,7 +183,8 @@ RUN pip install ./psycopg[dev]
 
 ENTRYPOINT ["tools/async_to_sync.py"]
 """
-        cmdline = [engine, "build", "--tag", tag, "-f", "-", str(PROJECT_DIR)]
+        cmdline = [engine, "build", "--network=host", "--tag", tag, "-f", "-"]
+        cmdline += [str(PROJECT_DIR)]
         sp.run(cmdline, check=True, text=True, input=containerfile)
 
     cmdline = sys.argv[1:]

@@ -78,6 +78,3 @@ profile = "black"
 length_sort = true
 multi_line_output = 9
 sort_order = "psycopg"  # requires the isort-psycopg module
-
-[tool.black]
-force_exclude = "tests/test_tstring.py"
