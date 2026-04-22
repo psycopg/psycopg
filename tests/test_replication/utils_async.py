@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any
 from contextlib import asynccontextmanager
 
+import pytest
+
 import psycopg
+from psycopg import errors as e
 from psycopg.rows import scalar_row
 from psycopg.replication.replication_messages import XLogDataMessage
 from psycopg.replication.logical_output_plugins.pgoutput.pgoutput_messages import (
@@ -113,6 +116,33 @@ async def start_streaming_insert(
 async def streaming_insert(aconn, table, exec_first=None):
     async with start_streaming_insert(aconn, table, exec_first) as xid:
         return xid
+
+
+@asynccontextmanager
+async def two_phase_insert(aconn, xname, table, streaming, rollback=False):
+    await aconn.set_autocommit(False)
+
+    # DISCUSS: test hangs if `xname`` already exists; shouldn't psycopg handle this?
+    await aconn.tpc_begin(xname)
+    async with aconn.cursor() as cur:
+        xid = await get_xid(cur)
+    if streaming == "on":
+        await execute_streaming_insert(aconn, table)
+    else:
+        await insert_data(aconn, table, "two phase")
+
+    try:
+        await aconn.tpc_prepare()
+    except e.NotSupportedError as err:
+        pytest.skip(str(err))
+
+    try:
+        yield xid
+    finally:
+        if rollback:
+            await aconn.tpc_rollback()
+        else:
+            await aconn.tpc_commit()
 
 
 @asynccontextmanager

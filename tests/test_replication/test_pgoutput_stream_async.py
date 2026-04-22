@@ -21,14 +21,19 @@ from psycopg.replication.logical_output_plugins.logical_rows import (
 )
 from psycopg.replication.logical_output_plugins.pgoutput.pgoutput_messages import (
     BeginMessage,
+    BeginPrepareMessage,
     CommitMessage,
+    CommitPreparedMessage,
     DeleteMessage,
     EmitMessage,
     InsertMessage,
     OriginMessage,
+    PrepareMessage,
     RelationMessage,
+    RollbackPreparedMessage,
     StreamAbortMessage,
     StreamCommitMessage,
+    StreamPrepareMessage,
     StreamStartMessage,
     StreamStopMessage,
     TruncateMessage,
@@ -36,7 +41,7 @@ from psycopg.replication.logical_output_plugins.pgoutput.pgoutput_messages impor
     UpdateMessage,
 )
 
-from .params import format_param, oname_param, stream_param
+from .params import format_param, oname_param, stream_param, tp_param
 from ..test_adapt import make_bin_loader, make_loader
 from .utils_async import (
     collect_xlogdata_messages,
@@ -46,10 +51,83 @@ from .utils_async import (
     replica_identity_index,
     start_streaming_insert,
     streaming_insert,
+    two_phase_insert,
 )
 
 if True:  # ASYNC
     pytestmark = [pytest.mark.anyio]
+
+
+@pytest.mark.pg(">=15")
+@pytest.mark.parametrize("streaming", [stream_param("on"), stream_param("off")])
+@pytest.mark.parametrize("row_factory", [oname_param(namedtuple_row)])
+@pytest.mark.parametrize("two_phase", [tp_param(True)])
+async def test_pgoutput_two_phase_commit(
+    alogical_started_cur,
+    aconn,
+    test_table,
+    streaming,
+    cleanup_prepared_xacts,
+):
+
+    xname = "commit_AuniquéIdentifier"
+
+    async with two_phase_insert(aconn, xname, test_table, streaming=streaming) as xid:
+        begin, *_, prepare = await collect_xlogdata_messages(
+            alogical_started_cur, until=PrepareMessage
+        )
+        begin, prepare = (msg.payload for msg in (begin, prepare))
+        decoder = alogical_started_cur.decode_xlogdata.get_real_decoder()
+        assert not decoder.relations_by_xid
+        if streaming == "off":
+            assert isinstance(begin, BeginPrepareMessage)
+            assert isinstance(prepare, PrepareMessage)
+            assert begin.transaction_name == xname
+            assert begin.end_lsn == prepare.end_lsn
+            assert begin.prepare_ts == prepare.prepare_ts
+        else:
+            assert isinstance(begin, StreamStartMessage)
+            assert isinstance(prepare, StreamPrepareMessage)
+            assert not decoder.relations
+        assert begin.xid == xid
+        assert prepare.xid == xid
+        assert prepare.transaction_name == xname
+
+    commit = (await collect_xlogdata_messages(alogical_started_cur, n=1))[0].payload
+
+    assert isinstance(commit, CommitPreparedMessage)
+    assert commit.xid == xid
+    assert commit.transaction_name == xname
+    assert prepare.end_lsn <= commit.end_lsn
+
+
+@pytest.mark.pg(">=15")
+@pytest.mark.parametrize("streaming", [stream_param("on"), stream_param("off")])
+@pytest.mark.parametrize("row_factory", [oname_param(namedtuple_row)])
+@pytest.mark.parametrize("two_phase", [tp_param(True)])
+async def test_pgoutput_two_phase_rollback(
+    alogical_started_cur,
+    aconn,
+    test_table,
+    streaming,
+    cleanup_prepared_xacts,
+):
+    xname = "rollback_AuniquéIdentifier"
+
+    async with two_phase_insert(
+        aconn, xname, test_table, streaming=streaming, rollback=True
+    ) as xid:
+        begin, *_, prepare = await collect_xlogdata_messages(
+            alogical_started_cur, until=PrepareMessage
+        )
+        begin, prepare = (msg.payload for msg in (begin, prepare))
+    rollback = (await collect_xlogdata_messages(alogical_started_cur, n=1))[0].payload
+
+    assert isinstance(rollback, RollbackPreparedMessage)
+    assert rollback.xid == xid
+    assert rollback.transaction_name == xname
+    assert prepare.end_lsn == rollback.end_lsn
+    assert prepare.prepare_ts == rollback.prepare_ts
 
 
 async def test_pgoutput_begin_commit_messages(

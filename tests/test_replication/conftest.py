@@ -109,3 +109,15 @@ def intpoint_type(conn):
         yield "intpoint"
     finally:
         conn.execute("DROP TYPE intpoint CASCADE")
+
+
+@pytest.fixture
+def cleanup_prepared_xacts(request, dsn):
+    def cleanup_prepared_xacts():
+        with psycopg.Connection.connect(dsn) as conn:
+            prepared_xacts = conn.tpc_recover()
+            for xact in prepared_xacts:
+                if xact.database == conn.info.dbname:
+                    conn.tpc_rollback(xact)
+
+    request.addfinalizer(cleanup_prepared_xacts)

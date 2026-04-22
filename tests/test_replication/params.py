@@ -18,6 +18,10 @@ def oname_param(*vals):
     return pytest.param(*vals, id=vals[0].__name__)
 
 
+def tp_param(*vals):
+    return pytest.param(*vals, id=f"two_phase_{'enabled' if vals[0] else 'disabled'}")
+
+
 def format_param(*vals):
     return pytest.param(*vals, id=pq.Format(vals[0]).name)
     return pytest.param(*vals, id=pq.Format(vals[0]).name)
