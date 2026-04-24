@@ -124,7 +124,7 @@ class BasePool:
         if max_size < min_size:
             raise ValueError("max_size must be greater or equal than min_size")
         if min_size == max_size == 0:
-            raise ValueError("if min_size is 0 max_size must be greater or than 0")
+            raise ValueError("if min_size is 0 max_size must be greater than 0")
 
         return min_size, max_size
 
