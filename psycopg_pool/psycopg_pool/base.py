@@ -11,8 +11,6 @@ from random import random
 from typing import TYPE_CHECKING, Any
 from collections import Counter, deque
 
-from psycopg import errors as e
-
 from .errors import PoolClosed
 
 if TYPE_CHECKING:
@@ -132,9 +130,7 @@ class BasePool:
 
     def _check_open(self) -> None:
         if self._closed and self._opened:
-            raise e.OperationalError(
-                "pool has already been opened/closed and cannot be reused"
-            )
+            raise PoolClosed("pool has already been opened/closed and cannot be reused")
 
     def _check_open_getconn(self) -> None:
         if self._closed:

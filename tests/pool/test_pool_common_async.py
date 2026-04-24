@@ -504,7 +504,7 @@ async def test_reopen(pool_cls, dsn):
     assert p._sched_runner is None
     assert not p._workers
 
-    with pytest.raises(psycopg.OperationalError, match="cannot be reused"):
+    with pytest.raises(pool.PoolClosed, match="cannot be reused"):
         await p.open()
 
 
