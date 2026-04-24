@@ -228,6 +228,8 @@ The `!ConnectionPool` class
           with ConnectionPool(...) as pool:
               # code using the pool
 
+   .. autoattribute:: closed
+
    .. automethod:: wait
 
    .. attribute:: name
