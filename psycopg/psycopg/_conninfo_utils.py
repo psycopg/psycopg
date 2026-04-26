@@ -70,8 +70,10 @@ def get_param(params: ConnMapping, name: str) -> str | None:
 
     The value may be also specified in a PG* env var.
     """
-    if name in params:
+    try:
         return str(params[name])
+    except KeyError:
+        pass
 
     # TODO: check if in service
 

@@ -212,8 +212,10 @@ class AdaptersMap:
 
         # Look for the right class, including looking at superclasses
         for scls in cls.__mro__:
-            if scls in dmap:
+            try:
                 return dmap[scls]
+            except KeyError:
+                pass
 
             # If the adapter is not found, look for its name as a string
             fqn = scls.__module__ + "." + scls.__qualname__

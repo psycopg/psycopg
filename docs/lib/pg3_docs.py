@@ -87,14 +87,16 @@ def monkeypatch_autodoc():
     orig_attr_add_content = AttributeDocumenter.add_content
 
     def fixed_doc_get_real_modname(self):
-        if self.object in recovered_classes:
+        try:
             return recovered_classes[self.object]
-        return orig_doc_get_real_modname(self)
+        except KeyError:
+            return orig_doc_get_real_modname(self)
 
     def fixed_attr_get_real_modname(self):
-        if self.parent in recovered_classes:
+        try:
             return recovered_classes[self.parent]
-        return orig_attr_get_real_modname(self)
+        except KeyError:
+            return orig_attr_get_real_modname(self)
 
     def fixed_attr_add_content(self, more_content):
         """
