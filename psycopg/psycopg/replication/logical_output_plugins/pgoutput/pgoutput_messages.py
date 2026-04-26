@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+import functools
 from abc import abstractmethod
 from enum import StrEnum
 from struct import Struct
@@ -14,6 +16,7 @@ from typing import (
     cast,
     dataclass_transform,
 )
+from weakref import WeakValueDictionary
 from datetime import datetime
 from dataclasses import dataclass, field
 
@@ -241,12 +244,56 @@ class PgOutputMessage(Protocol[LogicalRow]):
     ) -> Self: ...
 
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Any)
 
 
 @dataclass_transform()
 def msg_dataclass(cls: type[T]) -> type[T]:
     return dataclass(slots=True, weakref_slot=True)(cls)
+
+
+@dataclass_transform(kw_only_default=True, frozen_default=True)
+def cached_msg_dataclass(cls: type[T]) -> type[T]:
+    cls.__annotations__["_initialized"] = bool
+    cls._initialized = field(
+        default=False, init=False, compare=False, hash=False, repr=False
+    )
+    cls = dataclass(slots=True, weakref_slot=True, frozen=True, kw_only=True)(cls)
+    generated_init = cls.__init__
+    __instances: WeakValueDictionary[frozenset[tuple[str, Any]], T] = (
+        WeakValueDictionary()
+    )
+
+    def __new__(cls: type[T], **kwargs: Any) -> T:
+        key = frozenset(kwargs.items())
+        existing = __instances.get(key)
+        if existing is not None:
+            return existing
+        new = __instances.setdefault(key, object.__new__(cls))
+        object.__setattr__(new, "_initialized", False)
+        return new
+
+    @functools.wraps(generated_init)
+    def __init__(self: T, **kwargs: Any) -> None:
+        if not self._initialized:
+            generated_init(self, **kwargs)
+            object.__setattr__(self, "_initialized", True)
+
+    # Needed for Sphinx docs to get the correct signature
+    __new__.__dict__["__signature__"] = inspect.Signature(
+        [
+            inspect.Parameter(
+                "cls", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation="type[T]"
+            )
+        ]
+        + list(inspect.signature(cls.__init__).parameters.values())[1:],
+        return_annotation="T",
+    )
+
+    setattr(cls, "__init__", __init__)
+    setattr(cls, "__new__", __new__)
+
+    return cls
 
 
 @msg_dataclass
@@ -432,7 +479,7 @@ class OriginMessage(PgOutputMessage):
         return origin
 
 
-@msg_dataclass
+@cached_msg_dataclass
 class ColumnDefinition:
     """Column metadata from Relation message."""
 
@@ -449,7 +496,7 @@ class ColumnDefinition:
 
 def parse_relation(
     data: Buffer, is_streaming: bool, encoding: str, column_cls: type[ColumnDefinition]
-) -> tuple[int | None, int, str, str, str, list[ColumnDefinition]]:
+) -> tuple[int | None, int, str, str, str, tuple[ColumnDefinition, ...]]:
     # Relation ID (4 bytes)
     offset = 4
 
@@ -503,11 +550,11 @@ def parse_relation(
         namespace,
         relation_name,
         chr(replica_identity),
-        columns,
+        tuple(columns),
     )
 
 
-@msg_dataclass
+@cached_msg_dataclass
 class RelationMessage(PgOutputMessage):
     """Relation (table schema) message."""
 
@@ -515,12 +562,11 @@ class RelationMessage(PgOutputMessage):
     msg_type_name = MessageType(MessageType.RELATION).name
 
     xid: int | None = field(compare=False)
-    # mypy thinks xid has a default value
-    relation_id: int  # type: ignore[misc]
-    namespace: str  # type: ignore[misc]
-    relation_name: str  # type: ignore[misc]
-    replica_identity: ReplicaIdentity  # type: ignore[misc]
-    columns: list[ColumnDefinition]  # type: ignore[misc]
+    relation_id: int
+    namespace: str
+    relation_name: str
+    replica_identity: ReplicaIdentity
+    columns: tuple[ColumnDefinition, ...]
 
     @classmethod
     def decode(
@@ -592,7 +638,7 @@ def parse_type(
     return xid, type_id, namespace, name
 
 
-@msg_dataclass
+@cached_msg_dataclass
 class TypeMessage(PgOutputMessage):
     """Type message - contains information about a data type."""
 

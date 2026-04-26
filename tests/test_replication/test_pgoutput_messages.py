@@ -162,7 +162,7 @@ class MessageTestBase(ABC, Generic[MsgCls]):
                     relation_id=relation_id,
                     relation_name="fakerelation",
                     namespace="public",
-                    columns=[],
+                    columns=(),
                     replica_identity=ReplicaIdentity.DEFAULT,
                     xid=self.xid,
                 ),
@@ -173,7 +173,9 @@ class MessageTestBase(ABC, Generic[MsgCls]):
     @staticmethod
     def relation_from_dict(rel_dict):
         return RelationMessage(
-            columns=[ColumnDefinition(**def_dict) for def_dict in rel_dict["columns"]],
+            columns=tuple(
+                ColumnDefinition(**def_dict) for def_dict in rel_dict["columns"]
+            ),
             **{key: value for key, value in rel_dict.items() if key != "columns"},
         )
 
@@ -308,7 +310,7 @@ class TestRelationMessage(MessageTestBase[RelationMessage]):
         assert isinstance(msg, RelationMessage)
         assert msg.relation_name == "mytable"
         assert msg.namespace == "public"
-        assert msg.columns == []
+        assert msg.columns == ()
 
     def test_decode_with_columns(self):
         cols = [
