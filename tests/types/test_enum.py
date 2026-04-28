@@ -123,6 +123,7 @@ def test_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == enum[label]
 
 
+@pytest.mark.crdb_skip("broken regtype")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_enum_quoted_name(conn, fmt_in):
     enum = CamelCaseEnum
