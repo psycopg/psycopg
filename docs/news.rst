@@ -15,6 +15,8 @@ Psycopg 3.3.4 (unreleased)
 
 - Fix possible spurious connection timeout in systems with very long uptimes
   in C extension (:ticket:`#1280`).
+- Fix client-side adaptation of enums whose name require quotes
+  (:ticket:`#1298`).
 
 
 Current release

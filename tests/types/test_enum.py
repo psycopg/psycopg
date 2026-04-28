@@ -2,6 +2,7 @@ from enum import Enum, auto
 
 import pytest
 
+from psycopg import ClientCursor
 from psycopg import errors as e
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat
@@ -36,6 +37,12 @@ class IntTestEnum(int, Enum):
     THREE = 3
 
 
+class CamelCaseEnum(int, Enum):
+    one = 1
+    TWO = 2
+    Three = 3
+
+
 enum_cases = [PureTestEnum, StrTestEnum, IntTestEnum]
 encodings = ["utf8", crdb_encoding("latin1")]
 
@@ -44,10 +51,12 @@ encodings = ["utf8", crdb_encoding("latin1")]
 def make_test_enums(request, svcconn):
     for enum in enum_cases + [NonAsciiEnum]:
         ensure_enum(enum, svcconn)
+    ensure_enum(CamelCaseEnum, svcconn, name="CamelCaseEnum")
 
 
-def ensure_enum(enum, conn):
-    name = enum.__name__.lower()
+def ensure_enum(enum, conn, name=""):
+    if not name:
+        name = enum.__name__.lower()
     labels = list(enum.__members__)
     conn.execute(sql.SQL("""
             drop type if exists {name};
@@ -112,6 +121,19 @@ def test_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
             f"select %{fmt_in.value}::{info.name}", [label], binary=fmt_out
         )
         assert cur.fetchone()[0] == enum[label]
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_enum_quoted_name(conn, fmt_in):
+    enum = CamelCaseEnum
+
+    info = EnumInfo.fetch(conn, sql.Identifier(enum.__name__))
+    register_enum(info, conn, enum=enum)
+
+    cur = ClientCursor(conn)
+    for value in enum:
+        cur.execute(f"select %{fmt_in.value}", [value])
+        assert next(cur)[0] is value
 
 
 @pytest.mark.crdb_skip("encoding")
