@@ -315,7 +315,7 @@ jobs:
 
       - name: Export GitHub Actions cache environment variables
       # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const path = require('path')
