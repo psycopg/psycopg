@@ -117,6 +117,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if True:  # ASYNC
             if open:
                 self._warn_open_async()
+        else:
+            # Construct the lock during single-threaded `__init__` so that
+            # threads concurrently calling `open()` can't race on it.
+            self._lock = ALock()
 
         if open is None:
             open = self._open_implicit = True
@@ -418,8 +422,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         because the pool was initialized with *open* = `!True`) but you cannot
         currently re-open a closed pool.
         """
-        # Make sure the lock is created after there is an event loop
-        self._ensure_lock()
+        if True:  # ASYNC
+            # Make sure the lock is created after there is an event loop
+            self._ensure_lock()
 
         async with self._lock:
             self._open()
@@ -433,8 +438,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         self._check_open()
 
-        # A lock has been most likely, but not necessarily, created in `open()`.
-        self._ensure_lock()
+        if True:  # ASYNC
+            # A lock has been most likely, but not necessarily, created
+            # in `open()`. The sync pool creates it in `__init__()`.
+            self._ensure_lock()
 
         # Create these objects now to attach them to the right loop.
         # See #219
@@ -447,12 +454,16 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._start_workers()
         self._start_initial_tasks()
 
-    def _ensure_lock(self) -> None:
-        """Make sure the pool lock is created.
+    if True:  # ASYNC
 
-        In async code, also make sure that the loop is running.
-        """
-        if True:  # ASYNC
+        def _ensure_lock(self) -> None:
+            """Make sure the pool lock is created and the loop is running."""
+            try:
+                self._lock
+                return
+            except AttributeError:
+                pass
+
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
@@ -460,9 +471,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     f"{type(self).__name__} open with no running loop"
                 ) from None
 
-        try:
-            self._lock
-        except AttributeError:
             self._lock = ALock()
 
     def _start_workers(self) -> None:
