@@ -401,7 +401,7 @@ class TestLiteral:
         assert sql.Literal("foo").as_string(conn) == "'foo'"
 
     @pytest.mark.crdb_skip("composite")  # create type, actually
-    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
+    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar", "FooBar"])
     def test_invalid_name(self, conn, name):
         if conn.info.parameter_status("is_superuser") != "on":
             pytest.skip("not a superuser")

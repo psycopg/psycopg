@@ -86,6 +86,7 @@ _crdb_reasons = {
     "batch statements": 44803,
     "begin_read_only": 87012,
     "binary decimal": 82492,
+    "broken regtype": 169272,
     "cancel": 41335,
     "cast adds tz": 51692,
     "cidr": 18846,

@@ -43,9 +43,13 @@ class EnumInfo(TypeInfo):
         name: str,
         oid: int,
         array_oid: int,
+        # A bit ugly: this should have been a keyword-only argument, but it has
+        # been it the wild accepting a positional argument for too long to fix.
         labels: Sequence[str],
+        *,
+        regtype: str = "",
     ):
-        super().__init__(name, oid, array_oid)
+        super().__init__(name, oid, array_oid, regtype=regtype)
         self.labels = labels
         # Will be set by register_enum()
         self.enum: type[Enum] | None = None
@@ -53,18 +57,18 @@ class EnumInfo(TypeInfo):
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
         return sql.SQL("""\
-SELECT name, oid, array_oid, array_agg(label) AS labels
+SELECT name, oid, array_oid, regtype, array_agg(label) AS labels
 FROM (
     SELECT
         t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
-        e.enumlabel AS label
+        t.oid::regtype::text AS regtype, e.enumlabel AS label
     FROM pg_type t
     LEFT JOIN  pg_enum e
     ON e.enumtypid = t.oid
     WHERE t.oid = {regtype}
     ORDER BY e.enumsortorder
 ) x
-GROUP BY name, oid, array_oid
+GROUP BY name, oid, array_oid, regtype
 """).format(regtype=cls._to_regtype(conn))
 
 
