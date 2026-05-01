@@ -65,7 +65,7 @@ def gather(*ts, return_exceptions=False, timeout=None):
     """
     if ts and inspect.isawaitable(ts[0]):
         rv: Any = asyncio.gather(*ts, return_exceptions=return_exceptions)
-        if timeout is None:
+        if timeout is not None:
             rv = asyncio.wait_for(rv, timeout)
         return rv
     else:
