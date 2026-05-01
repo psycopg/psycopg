@@ -105,6 +105,10 @@ class ConnectionPool(Generic[CT], BasePool):
             num_workers=num_workers,
         )
 
+        # Construct the lock during single-threaded `__init__` so that
+        # threads concurrently calling `open()` can't race on it.
+        self._lock = Lock()
+
         if open is None:
             open = self._open_implicit = True
 
@@ -380,8 +384,6 @@ class ConnectionPool(Generic[CT], BasePool):
         because the pool was initialized with *open* = `!True`) but you cannot
         currently re-open a closed pool.
         """
-        # Make sure the lock is created after there is an event loop
-        self._ensure_lock()
 
         with self._lock:
             self._open()
@@ -395,9 +397,6 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._check_open()
 
-        # A lock has been most likely, but not necessarily, created in `open()`.
-        self._ensure_lock()
-
         # Create these objects now to attach them to the right loop.
         # See #219
         self._tasks = Queue()
@@ -408,17 +407,6 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._start_workers()
         self._start_initial_tasks()
-
-    def _ensure_lock(self) -> None:
-        """Make sure the pool lock is created.
-
-        In async code, also make sure that the loop is running.
-        """
-
-        try:
-            self._lock
-        except AttributeError:
-            self._lock = Lock()
 
     def _start_workers(self) -> None:
         self._sched_runner = spawn(self._sched.run, name=f"{self.name}-scheduler")
