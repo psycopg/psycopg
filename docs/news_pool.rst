@@ -7,20 +7,17 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.3.1 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.3.1
+^^^^^^^^^^^^^^^^^^
 
 - Fix residual race condition catching `~asyncio.CancelledError` on connection
   (:ticket:`#1275`).
 - Fix race condition constructing the lock that makes sync
   `~ConnectionPool.open()` thread-safe (:ticket:`#1300`).
 
-
-Current release
----------------
 
 psycopg_pool 3.3.0
 ------------------
