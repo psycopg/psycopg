@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.4 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.4
+^^^^^^^^^^^^^
 
 - Fix possible spurious connection timeout in systems with very long uptimes
   in C extension (:ticket:`#1280`).
@@ -20,9 +20,6 @@ Psycopg 3.3.4 (unreleased)
 - Consistently populate `~Cursor.statusmessage` after `~Cursor.executemany()`
   (:ticket:`#1302`).
 
-
-Current release
----------------
 
 Psycopg 3.3.3
 ^^^^^^^^^^^^^
