@@ -59,14 +59,13 @@ def spawn(f, args=None):
         return t
 
 
-def gather(*ts, return_exceptions=False, timeout=None):
+def gather(*ts, return_exceptions=False, timeout=10):
     """
     Equivalent to asyncio.gather or Thread.join()
     """
     if ts and inspect.isawaitable(ts[0]):
         rv: Any = asyncio.gather(*ts, return_exceptions=return_exceptions)
-        if timeout is None:
-            rv = asyncio.wait_for(rv, timeout)
+        rv = asyncio.wait_for(rv, timeout)
         return rv
     else:
         for t in ts:
