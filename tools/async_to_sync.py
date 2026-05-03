@@ -352,7 +352,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "wait_timeout": "wait",
     }
     _skip_imports = {
-        "acompat": {"alist", "anext", "skip_sync"},
+        "acompat": {"alist", "skip_sync"},
         "_acompat": {"ensure_async"},
     }
 
