@@ -417,6 +417,47 @@ def fetch_replication_messages(
     return result
 
 
+def base_backup(
+    pgconn: PGconn, timeout: float = 0.0
+) -> PQGen[memoryview | list[PGresult]]:
+    deadline = monotonic() + timeout if timeout else 0.0
+
+    while True:
+        nbytes, data = pgconn.get_copy_data(1)
+        if nbytes != 0:
+            break
+
+        if deadline:
+            while not (yield WAIT_R):
+                if monotonic() > deadline:
+                    raise e.ReadMessageTimeout("read backup message timeout expired")
+                continue
+        else:
+            while not (yield WAIT_R):
+                continue
+
+        pgconn.consume_input()
+
+    if nbytes > 0:
+        return data
+
+    # Retrieve the final result of base backup
+    results = yield from _fetch_many(pgconn)
+
+    if (result := results[-1]).status != COMMAND_OK:
+        raise e.error_from_result(result, encoding=pgconn._encoding)
+
+    if len(results) != 2:
+        # FIXME: error type and handling in general
+        raise e.ProgrammingError(
+            "End of base backup should provide two responses, a "
+            + "TUPLES_OK and a COMMAND_OK, got "
+            + f"{", ".join(pq.ExecStatus(r.status).name for r in results)}"
+        )
+
+    return results
+
+
 # FIXME: add fast version for base_backups and replication
 # Override functions with fast versions if available
 if _psycopg:
