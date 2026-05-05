@@ -159,6 +159,7 @@ def connection_summary(pgconn: abc.PGconn) -> str:
             parts.append(("port", port))
         if pgconn.user != pgconn.db:
             parts.append(("user", pgconn.user.decode()))
+        # DISCUSS: maybe we should add the replication status here?
         parts.append(("database", pgconn.db.decode()))
 
     else:
