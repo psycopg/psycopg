@@ -138,9 +138,14 @@ class VersionCheck:
             assert len(version_tuple) <= 2
             version_tuple = version_tuple[:1] + (0,) + version_tuple[1:]
 
-        op: Callable[[tuple[int, ...], tuple[int, ...]], bool]
-        op = getattr(operator, self._OP_NAMES[self.op])
-        return op(got_tuple, version_tuple)
+        if self.op == "==":
+            return all(
+                got_tuple[i] == version_tuple[i] for i in range(len(version_tuple))
+            )
+        else:
+            op: Callable[[tuple[int, ...], tuple[int, ...]], bool]
+            op = getattr(operator, self._OP_NAMES[self.op])
+            return op(got_tuple, version_tuple)
 
     def _parse_int_version(self, version: int | None) -> tuple[int, ...]:
         if version is None:
