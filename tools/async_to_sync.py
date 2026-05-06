@@ -66,6 +66,7 @@ ALL_INPUTS = """
     tests/test_waiting_async.py
     tests/test_replication/fix_db_async.py
     tests/test_replication/utils_async.py
+    tests/test_replication/test_replication_connection_async.py
 """.split()
 
 PROJECT_DIR = Path(__file__).parent.parent
