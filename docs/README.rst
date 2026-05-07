@@ -10,3 +10,6 @@ Quick start::
     make serve
 
 and connect to <http://localhost:8000>.
+
+.. note::
+    Requires Python ≤ 3.12
