@@ -191,6 +191,34 @@ class ConnectionPool(Generic[CT], BasePool):
             t1 = monotonic()
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
 
+    def dedicated_connection(self, timeout: float | None = None) -> CT:
+        """Return a new connection not managed by the pool.
+
+        The connection is created using the pool's conninfo, connection_class,
+        and configure callback, but the pool does not track it. The caller is
+        responsible for closing it.
+        """
+        conninfo = self._resolve_conninfo()
+        kwargs = self._resolve_kwargs()
+        if timeout:
+            kwargs = kwargs.copy()
+            kwargs["connect_timeout"] = max(round(timeout), 1)
+        conn = self.connection_class.connect(conninfo, **kwargs)
+        if self._configure:
+            try:
+                self._configure(conn)
+            except Exception:
+                conn.close()
+                raise
+            if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
+                sname = TransactionStatus(status).name
+                conn.close()
+                raise e.ProgrammingError(
+                    f"connection left in status {sname} by configure function"
+                    f" {self._configure}: discarded"
+                )
+        return conn
+
     def getconn(self, timeout: float | None = None) -> CT:
         """Obtain a connection from the pool.
 

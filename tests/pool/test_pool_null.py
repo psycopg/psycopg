@@ -453,3 +453,14 @@ def test_close_returns(dsn):
         assert not conn.closed
         conn.close()
         assert conn.closed
+
+
+def test_dedicated_connection(dsn):
+    with pool.NullConnectionPool(dsn) as p:
+        conn = p.dedicated_connection()
+        try:
+            res = conn.execute("select 1")
+            assert res.fetchone() == (1,)
+            assert getattr(conn, "_pool", None) is None
+        finally:
+            conn.close()

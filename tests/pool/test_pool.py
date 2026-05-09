@@ -1177,6 +1177,90 @@ def test_get_config_rotates_connections(dsn):
         p.close()
 
 
+def test_dedicated_connection(dsn):
+    with pool.ConnectionPool(dsn, min_size=1) as p:
+        conn = p.dedicated_connection()
+        try:
+            res = conn.execute("select 1")
+            assert res.fetchone() == (1,)
+            assert getattr(conn, "_pool", None) is None
+        finally:
+            conn.close()
+
+
+def test_dedicated_connection_not_in_stats(dsn):
+    with pool.ConnectionPool(dsn, min_size=1) as p:
+        p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+
+        conn = p.dedicated_connection()
+        try:
+            stats_after = p.get_stats()
+            assert stats_after["connections_num"] == stats_before["connections_num"]
+        finally:
+            conn.close()
+
+
+def test_dedicated_connection_configure(dsn):
+    def configure(conn):
+        with conn.transaction():
+            conn.execute("set default_transaction_read_only to on")
+
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
+        conn = p.dedicated_connection()
+        try:
+            res = conn.execute("show default_transaction_read_only")
+            assert res.fetchone()[0] == "on"
+        finally:
+            conn.close()
+
+
+def test_dedicated_connection_survives_pool_close(dsn):
+    with pool.ConnectionPool(dsn, min_size=1) as p:
+        conn = p.dedicated_connection()
+
+    try:
+        res = conn.execute("select 1")
+        assert res.fetchone() == (1,)
+    finally:
+        conn.close()
+
+
+def test_dedicated_connection_configure_bad_state(dsn):
+    def configure(conn):
+        conn.execute("begin")
+
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
+        with pytest.raises(psycopg.ProgrammingError, match="configure function"):
+            p.dedicated_connection()
+
+
+def test_dedicated_connection_callable_conninfo(dsn):
+    def get_conninfo():
+        return dsn
+
+    with pool.ConnectionPool(get_conninfo, min_size=1) as p:
+        conn = p.dedicated_connection()
+        try:
+            res = conn.execute("select 1")
+            assert res.fetchone() == (1,)
+        finally:
+            conn.close()
+
+
+def test_dedicated_connection_pool_unaffected(dsn):
+    with pool.ConnectionPool(dsn, min_size=2) as p:
+        p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+
+        conn = p.dedicated_connection()
+        try:
+            stats_after = p.get_stats()
+            assert stats_after["pool_available"] == stats_before["pool_available"]
+        finally:
+            conn.close()
+
+
 @pytest.mark.slow
 def test_get_config_raise_exception(dsn, caplog):
 

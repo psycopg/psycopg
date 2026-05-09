@@ -1296,6 +1296,90 @@ async def test_get_config_rotates_connections(dsn):
         await p.close()
 
 
+async def test_dedicated_connection(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
+        conn = await p.dedicated_connection()
+        try:
+            res = await conn.execute("select 1")
+            assert (await res.fetchone()) == (1,)
+            assert getattr(conn, "_pool", None) is None
+        finally:
+            await conn.close()
+
+
+async def test_dedicated_connection_not_in_stats(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
+        await p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+
+        conn = await p.dedicated_connection()
+        try:
+            stats_after = p.get_stats()
+            assert stats_after["connections_num"] == stats_before["connections_num"]
+        finally:
+            await conn.close()
+
+
+async def test_dedicated_connection_configure(dsn):
+    async def configure(conn):
+        async with conn.transaction():
+            await conn.execute("set default_transaction_read_only to on")
+
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
+        conn = await p.dedicated_connection()
+        try:
+            res = await conn.execute("show default_transaction_read_only")
+            assert (await res.fetchone())[0] == "on"
+        finally:
+            await conn.close()
+
+
+async def test_dedicated_connection_survives_pool_close(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
+        conn = await p.dedicated_connection()
+
+    try:
+        res = await conn.execute("select 1")
+        assert (await res.fetchone()) == (1,)
+    finally:
+        await conn.close()
+
+
+async def test_dedicated_connection_configure_bad_state(dsn):
+    async def configure(conn):
+        await conn.execute("begin")
+
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
+        with pytest.raises(psycopg.ProgrammingError, match="configure function"):
+            await p.dedicated_connection()
+
+
+async def test_dedicated_connection_callable_conninfo(dsn):
+    async def get_conninfo():
+        return dsn
+
+    async with pool.AsyncConnectionPool(get_conninfo, min_size=1) as p:
+        conn = await p.dedicated_connection()
+        try:
+            res = await conn.execute("select 1")
+            assert (await res.fetchone()) == (1,)
+        finally:
+            await conn.close()
+
+
+async def test_dedicated_connection_pool_unaffected(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
+        await p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+
+        conn = await p.dedicated_connection()
+        try:
+            stats_after = p.get_stats()
+            assert stats_after["pool_available"] == stats_before["pool_available"]
+        finally:
+            await conn.close()
+
+
 @pytest.mark.slow
 async def test_get_config_raise_exception(dsn, caplog):
 

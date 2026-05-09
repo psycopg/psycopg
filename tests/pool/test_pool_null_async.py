@@ -510,3 +510,14 @@ async def test_close_returns(dsn):
         assert not conn.closed
         await conn.close()
         assert conn.closed
+
+
+async def test_dedicated_connection(dsn):
+    async with pool.AsyncNullConnectionPool(dsn) as p:
+        conn = await p.dedicated_connection()
+        try:
+            res = await conn.execute("select 1")
+            assert (await res.fetchone()) == (1,)
+            assert getattr(conn, "_pool", None) is None
+        finally:
+            await conn.close()
