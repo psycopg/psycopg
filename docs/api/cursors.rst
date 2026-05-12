@@ -522,6 +522,83 @@ The `!RawCursor` and `!RawServerCursor` class
     .. versionadded:: 3.2
 
 
+The `!LogicalReplicationCursor` and `!PhysicalReplicationCursor` class
+----------------------------------------------------------------------
+.. seealso:: See :doc:`/advanced/replication` for details.
+
+.. note::
+    Replication connections only support
+    :ref:`client-side binding<client-side-binding-cursors>`.
+
+.. autoclass:: psycopg.replication.BaseReplicationCursor
+
+    This `ClientCursor` subclass has the same interface as the parent class but
+    supports additional methods specific to replication connections (i.e.
+    connections with `replication=[database | true]` in the connection parameters).
+
+    .. versionadded:: 3.4
+
+
+    Replication methods
+    -------------------
+    .. automethod:: read_message
+    .. automethod:: consume_stream
+    .. automethod:: send_feedback
+
+    Administrative methods
+    ----------------------
+    .. automethod:: identify_system
+    .. automethod:: create_replication_slot
+    .. automethod:: drop_replication_slot
+
+    Base backup methods
+    -------------------
+    .. automethod:: start_base_backup
+    .. automethod:: upload_manifest
+    .. automethod:: read_backup_message
+    .. automethod:: consume_base_backup
+
+
+.. autoclass:: psycopg.replication.LogicalReplicationCursor
+
+    This `BaseReplicationCursor` subclass has the same interface as the parent class but
+    supports additional methods specific to logical replication connections (i.e.
+    connections with `replication=database` in the connection parameters).
+
+    .. versionadded:: 3.4
+
+    Replication methods
+    -------------------
+    .. automethod:: start_replication
+
+    Administrative methods
+    ----------------------
+    .. automethod:: alter_replication_slot
+
+
+.. autoclass:: psycopg.replication.PhysicalReplicationCursor
+
+    This `BaseReplicationCursor` subclass has the same interface as the parent class but
+    supports additional methods specific to physical replication connections (i.e.
+    connections with `replication=true` in the connection parameters).
+
+    .. note::
+        Physical replication connections do not support regular SQL commands, so use
+        of `PhysicalReplicationCursor.execute()` will be limited to replication commands
+        as outlined in `the PostgreSQL replication protocol documentation
+        <https://www.postgresql.org/docs/current/protocol-replication.html>`_.
+
+
+    .. versionadded:: 3.4
+
+    Replication methods
+    -------------------
+    .. automethod:: start_replication
+
+    Administrative methods
+    ----------------------
+    .. automethod:: read_replication_slot
+
 
 Async cursor classes
 --------------------
@@ -648,3 +725,51 @@ semantic with an `!async` interface. The main interface is described in
     w.r.t. the sync counterpart are the same described in `AsyncServerCursor`.
 
     .. versionadded:: 3.2
+
+
+.. autoclass:: psycopg.replication.AsyncBaseReplicationCursor
+
+    This class is the `!async` equivalent of `BaseReplicationCursor`. The differences
+    w.r.t. the sync counterpart are the same described in `~psycopg.AsyncCursor`, except for the
+    following replication-specific methods exposing a different (async) interface from
+    the `BaseReplicationCursor` counterpart, but sharing the same semantics.
+
+    .. versionadded:: 3.4
+
+    .. automethod:: read_message
+    .. automethod:: consume_stream
+    .. automethod:: send_feedback
+    .. automethod:: identify_system
+    .. automethod:: create_replication_slot
+    .. automethod:: drop_replication_slot
+    .. automethod:: start_base_backup
+    .. automethod:: upload_manifest
+    .. automethod:: read_backup_message
+    .. automethod:: consume_base_backup
+
+.. autoclass:: psycopg.replication.AsyncLogicalReplicationCursor
+
+    This class is the `!async` equivalent of `LogicalReplicationCursor`. The differences
+    w.r.t. the sync counterpart are the same described in `AsyncBaseReplicationCursor`,
+    except for the following replication-specific methods exposing a different (async)
+    interface from the `LogicalReplicationCursor` counterpart, but sharing the same
+    semantics.
+
+    .. versionadded:: 3.4
+
+    .. automethod:: start_replication
+    .. automethod:: alter_replication_slot
+
+
+.. autoclass:: psycopg.replication.AsyncPhysicalReplicationCursor
+
+    This class is the `!async` equivalent of `PhysicalReplicationCursor`. The differences
+    w.r.t. the sync counterpart are the same described in `AsyncBaseReplicationCursor`,
+    except for the following replication-specific methods exposing a different (async)
+    interface from the `PhysicalReplicationCursor` counterpart, but sharing the same
+    semantics.
+
+    .. versionadded:: 3.4
+
+    .. automethod:: start_replication
+    .. automethod:: read_replication_slot

@@ -575,3 +575,26 @@ The `!AsyncConnection` class
     .. automethod:: tpc_commit
     .. automethod:: tpc_rollback
     .. automethod:: tpc_recover
+
+
+Replication Connection classes
+------------------------------
+
+.. currentmodule:: psycopg.replication
+
+`LogicalReplicationConnection` and `PhysicalReplicationConnection` (and their async
+variants `AsyncLogicalReplicationConnection` and `AsyncPhysicalReplicationConnection`)
+are convenience connection classes to establish logical and physical streaming
+replication connections, respectively.
+
+They work the same way as other `psycopg` connection classes, except that they
+pass `replication=database` or `replication=true` as a connection parameter (and
+prevent the user from passing a `replication` parameter) and
+they use `LogicalReplicationCursor` and `PhysicalReplicationCursor` as the default
+cursor factory.
+
+Additional functionality may be added in the future.
+
+.. note::
+    Any `ClientCursor` could be used with these connection classes, but a regular cursor
+    can't be used as replication connections only support the simple query protocol.

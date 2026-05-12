@@ -19,3 +19,4 @@ usages.
     adapt
     prepare
     pipeline
+    replication

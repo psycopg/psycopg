@@ -27,3 +27,8 @@ This sections is a reference for all the public objects exposed by the
     pq
     crdb
     dns
+    logical_rows
+    replication_decoders
+    replication_messages
+    pgoutput_messages
+    output_plugin_options
