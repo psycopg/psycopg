@@ -244,6 +244,7 @@ def test_dedicated_connection_configure(dsn):
 
 
 def test_dedicated_connection_configure_badstate(dsn):
+
     def configure(conn):
         conn.execute("begin")
 
