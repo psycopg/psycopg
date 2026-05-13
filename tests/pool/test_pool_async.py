@@ -201,6 +201,59 @@ async def test_configure(dsn):
             assert (await res.fetchone())[0] == "on"
 
 
+async def test_dedicated_connection(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
+        await p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+        conn = await p.dedicated_connection()
+        try:
+            assert getattr(conn, "_pool", None) is None
+            res = await conn.execute("select 1")
+            assert (await res.fetchone()) == (1,)
+        finally:
+            await conn.close()
+        # Pool counters and size are unaffected.
+        stats_after = p.get_stats()
+        assert stats_after["connections_num"] == stats_before["connections_num"]
+        assert stats_after["pool_size"] == stats_before["pool_size"]
+        # Pool's own connections still work after a dedicated connection use.
+        async with p.connection() as conn:
+            res = await conn.execute("select 2")
+            assert (await res.fetchone()) == (2,)
+
+
+async def test_dedicated_connection_configure(dsn):
+    inits = 0
+
+    async def configure(conn):
+        nonlocal inits
+        inits += 1
+        async with conn.transaction():
+            await conn.execute("set default_transaction_read_only to on")
+
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
+        await p.wait(timeout=1.0)
+        inits_before = inits
+        conn = await p.dedicated_connection()
+        try:
+            assert inits == inits_before + 1
+            res = await conn.execute("show default_transaction_read_only")
+            assert (await res.fetchone())[0] == "on"
+        finally:
+            await conn.close()
+
+
+async def test_dedicated_connection_configure_badstate(dsn):
+    async def configure(conn):
+        await conn.execute("begin")
+
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=0, max_size=1, configure=configure
+    ) as p:
+        with pytest.raises(psycopg.ProgrammingError):
+            await p.dedicated_connection()
+
+
 async def test_reset(dsn):
     resets = 0
 

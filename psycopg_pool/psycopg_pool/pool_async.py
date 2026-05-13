@@ -369,6 +369,33 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         await self._putconn(conn, from_getconn=False)
 
+    async def dedicated_connection(self) -> ACT:
+        """Return a new connection configured like the pool's connections,
+        but not managed by the pool.
+
+        The pool does not track the returned connection: it is not counted in
+        the pool size, not subject to `!max_lifetime` or `!max_idle`, and not
+        returned to the pool on close. The caller is responsible for closing
+        it. The pool's `!conninfo`, `!kwargs`, `!connection_class`, and
+        `!configure` callback are applied as for any pool-managed connection.
+        """
+        conninfo = await self._resolve_conninfo()
+        kwargs = await self._resolve_kwargs()
+        conn = await self.connection_class.connect(conninfo, **kwargs)
+        try:
+            if self._configure:
+                await self._configure(conn)
+                if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
+                    sname = TransactionStatus(status).name
+                    raise e.ProgrammingError(
+                        f"connection left in status {sname}"
+                        f" by configure function {self._configure}: discarded"
+                    )
+        except BaseException:
+            await conn.close()
+            raise
+        return conn
+
     async def drain(self) -> None:
         """
         Remove all the connections from the pool and create new ones.

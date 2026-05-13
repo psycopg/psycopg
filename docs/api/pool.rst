@@ -263,6 +263,9 @@ The `!ConnectionPool` class
 
    .. automethod:: getconn
    .. automethod:: putconn
+   .. automethod:: dedicated_connection
+
+      .. versionadded:: 3.3.2
 
 
 Pool exceptions
