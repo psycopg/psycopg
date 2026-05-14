@@ -9,7 +9,7 @@ from typing import cast
 
 from .. import sql
 from .abc import XLogDataDecoder
-from ..rows import Row
+from ..rows import Row, tuple_row
 from .._compat import Self
 from .replication_utils import lsn_to_string, string_to_lsn
 from .replication_options import ReplicationType
@@ -24,6 +24,12 @@ class PhysicalReplicationCursor(BaseReplicationCursor[Row]):
 
     replication_type = ReplicationType.PHYSICAL
 
+    @staticmethod
+    def _to_str(ascii_text: str | bytes) -> str:
+        if isinstance(ascii_text, bytes):
+            ascii_text = ascii_text.decode("ascii")
+        return ascii_text
+
     def start_replication(
         self,
         slot_name: str | None = None,
@@ -33,16 +39,36 @@ class PhysicalReplicationCursor(BaseReplicationCursor[Row]):
     ) -> Self:
         """
         Start physical replication.
+
+        Executes the
+        `START_REPLICATION [ SLOT slot_name ] [ PHYSICAL ] XXX/XXX [ TIMELINE tli ]`
+        command.
+
+        `start_lsn` is required when no `slot_name` is given or on PostgreSQL versions
+        less than 15.  Otherwise, it defaults to the `restart_lsn` of the named slot,
+        obtained by calling `PhysicalReplicationCursor.read_replication_slot`
+
+        .. note::
+           The slot must be created with `reserve_wal=True` for the `restart_lsn` to
+           exist.
         """
         if start_lsn is None:
-            # TASK: When PostgreSQL 14 goes out of support,
-            # we can default this to using the restart_lsn from
-            # read_replication_slot.
-            raise TypeError(
-                f"{type(self).__name__}.start_replication() missing 1 required"
-                + " argument: 'start_lsn'"
-            )
+            restart_lsn = None
+            if slot_name is not None and self._conn.info.server_version >= 150000:
+                with PhysicalReplicationCursor(
+                    self.connection, row_factory=tuple_row
+                ) as cur:
+                    _, restart_lsn, _ = cur.read_replication_slot(slot_name)
+
+            if restart_lsn is None:
+                raise TypeError(
+                    f"{type(self).__name__}.start_replication() missing 1 required"
+                    + " argument: 'start_lsn'"
+                )
+            cast(str | bytes, restart_lsn)
+            start_lsn = string_to_lsn(self._to_str(restart_lsn))
         elif isinstance(start_lsn, str):
+            # NOTE: this sanitizes the input
             start_lsn = string_to_lsn(start_lsn)
 
         self.decode_xlogdata = decoder
