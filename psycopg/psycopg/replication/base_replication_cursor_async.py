@@ -3,7 +3,8 @@ from __future__ import annotations
 import time
 import logging
 import datetime
-from typing import TYPE_CHECKING, Any, Callable, Iterable, LiteralString, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, LiteralString
+from typing import NoReturn, cast, overload
 
 from .. import errors as e
 from .. import generators, pq, sql
@@ -94,6 +95,33 @@ class AsyncBaseReplicationCursor(AsyncClientCursor[Row]):
         """
         await self.execute("TIMELINE_HISTORY %s", [timeline])
         return cast(Row, await self.fetchone())
+
+    @overload
+    async def create_replication_slot(
+        self,
+        slot_name: str,
+        replication_type: Literal[ReplicationType.PHYSICAL] | None,
+        *,
+        temporary: bool = False,
+        reserve_wal: bool | None = None,
+    ) -> Row:
+        """create a physical slot"""
+        ...
+
+    @overload
+    async def create_replication_slot(
+        self,
+        slot_name: str,
+        replication_type: Literal[ReplicationType.LOGICAL] | None,
+        *,
+        temporary: bool = False,
+        output_plugin: str = "pgoutput",
+        two_phase: bool | None = None,
+        snapshot: SnapshotOption | None = None,
+        failover: bool | None = None,
+    ) -> Row:
+        """create a logical slot"""
+        ...
 
     async def create_replication_slot(
         self,
