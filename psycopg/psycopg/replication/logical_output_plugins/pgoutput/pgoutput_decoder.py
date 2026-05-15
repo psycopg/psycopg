@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from .... import errors as e
 from .... import pq
-from ..abc import LogicalXLogDataDecoder
+from ..abc import LogicalRowFactoryXLogDataDecoder
 from ....abc import Buffer, Transformer
 from ..logical_rows import LogicalRow, LogicalRowFactory, LogicalRowMaker, tuple_row
 from .pgoutput_messages import (
@@ -18,7 +18,7 @@ from .pgoutput_messages import (
 
 
 class PgOutputDecoder(
-    LogicalXLogDataDecoder[PgOutputMessage[LogicalRow]],
+    LogicalRowFactoryXLogDataDecoder[PgOutputMessage[LogicalRow]],
 ):
     __module__ = "psycopg.replication.logical_output_plugins.pgoutput"
 
@@ -91,4 +91,4 @@ class PgOutputDecoder(
             return self.relations_by_xid[self.streaming][relation_id]
 
     def get_row_maker(self, relation: RelationMessage) -> LogicalRowMaker[LogicalRow]:
-        return self.row_factory(self, [col.name for col in relation.columns])
+        return self.row_factory(self, relation.relation_id)

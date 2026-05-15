@@ -10,7 +10,7 @@ from ..._compat import TypeVar
 from ..._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
-    from .abc import LogicalXLogDataDecoder
+    from .abc import LogicalRowFactoryXLogDataDecoder
 
 T = TypeVar("T", covariant=True)
 LogicalRow = TypeVar("LogicalRow", covariant=True, default="LogicalTupleRow")
@@ -38,14 +38,14 @@ class LogicalRowMaker(Protocol[LogicalRow]):
 class LogicalRowFactory(Protocol[LogicalRow]):
     """
     Callable protocol taking a
-    `~psycopg.replication.logical_output_plugins.abc.LogicalXLogDataDecoder`
-    and a list of column names and returning a `LogicalRowMaker`.
+    `~psycopg.replication.logical_output_plugins.abc.LogicalRowFactoryXLogDataDecoder`
+    and a `relation_id` and returning a `LogicalRowMaker`.
     """
 
     def __call__(
         self,
-        __decoder: LogicalXLogDataDecoder[Any],
-        names: list[str],
+        __decoder: LogicalRowFactoryXLogDataDecoder[Any],
+        relation_id: int,
     ) -> LogicalRowMaker[LogicalRow]: ...
 
 
@@ -63,7 +63,7 @@ string and any value returned by the database).
 
 
 def tuple_row(
-    decoder: LogicalXLogDataDecoder[Any], names: list[str]
+    decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
 ) -> LogicalRowMaker[LogicalTupleRow]:
     r"""Row factory to represent rows as simple tuples.
 
@@ -75,13 +75,15 @@ def tuple_row(
 
 
 def dict_row(
-    decoder: LogicalXLogDataDecoder[Any], names: list[str]
+    decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
 ) -> LogicalRowMaker[LogicalDictRow]:
     """Row factory to represent rows as dictionaries.
 
-    The dictionary keys are taken from the provided column names.
+    The dictionary keys are taken from the column names of the provided relation.
     In the builtin decoders, these are taken from the latest relation message.
     """
+
+    names = get_names(decoder, relation_id)
 
     def dict_row_(values: Sequence[Any]) -> dict[str, Any]:
         return dict(zip(names, values))
@@ -90,14 +92,13 @@ def dict_row(
 
 
 def namedtuple_row(
-    decoder: LogicalXLogDataDecoder[Any], names: list[str]
+    decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
 ) -> LogicalRowMaker[NamedTuple]:
     """Row factory to represent rows as `~collections.namedtuple`.
 
-    The field names are taken from the provided column names.
-    In the builtin decoders, these are taken from the latest relation message.
+    The field names are taken from the column names of the provided relation.
     """
-    nt = _make_nt(*names)
+    nt = _make_nt(*get_names(decoder, relation_id))
     return nt._make
 
 
@@ -107,13 +108,14 @@ def class_row(cls: type[T]) -> LogicalRowFactory[T]:
     The class must support every output column name as a keyword parameter.
 
     :param cls: The class to return for each row. It must support the fields
-        returned by logical decoding as keyword arguments.
+        on the relation returned by logical decoding as keyword arguments.
     :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
     """
 
     def class_row_(
-        decoder: LogicalXLogDataDecoder[Any], names: list[str]
+        decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
     ) -> LogicalRowMaker[T]:
+        names = get_names(decoder, relation_id)
 
         def class_row__(values: Sequence[Any]) -> T:
             return cls(**dict(zip(names, values)))
@@ -127,11 +129,11 @@ def args_row(func: Callable[..., T]) -> LogicalRowFactory[T]:
     """Generate a row factory calling `!func` with positional parameters for every row.
 
     :param func: The function to call for each row. It must support the fields
-        returned by logical decoding as positional arguments.
+        on the relation returned by logical decoding as positional arguments.
     """
 
     def args_row_(
-        decoder: LogicalXLogDataDecoder[Any], names: list[str]
+        decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
     ) -> LogicalRowMaker[T]:
         def args_row__(values: Sequence[Any]) -> T:
             return func(*values)
@@ -145,12 +147,14 @@ def kwargs_row(func: Callable[..., T]) -> LogicalRowFactory[T]:
     """Generate a row factory calling `!func` with keyword parameters for every row.
 
     :param func: The function to call for each row. It must support the fields
-        returned by logical decoding as keyword arguments.
+        on the relation returned by logical decoding as keyword arguments.
     """
 
     def kwargs_row_(
-        decoder: LogicalXLogDataDecoder[Any], names: list[str]
+        decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
     ) -> LogicalRowMaker[T]:
+
+        names = get_names(decoder, relation_id)
 
         def kwargs_row__(values: Sequence[Any]) -> T:
             return func(**dict(zip(names, values)))
@@ -158,6 +162,13 @@ def kwargs_row(func: Callable[..., T]) -> LogicalRowFactory[T]:
         return kwargs_row__
 
     return kwargs_row_
+
+
+def get_names(
+    decoder: LogicalRowFactoryXLogDataDecoder[Any], relation_id: int
+) -> list[str]:
+    relation = decoder.get_relation(relation_id)
+    return [col.name for col in relation.columns]
 
 
 @functools.lru_cache(512)
