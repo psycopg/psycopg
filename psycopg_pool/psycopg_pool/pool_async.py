@@ -378,19 +378,20 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         returned to the pool on close. The caller is responsible for closing
         it. The pool's `!conninfo`, `!kwargs`, `!connection_class`, and
         `!configure` callback are applied as for any pool-managed connection.
+
+        The connection still contributes to the `!connections_num` and
+        `!connections_errors` stats counters.
         """
+        self._stats[self._CONNECTIONS_NUM] += 1
         conninfo = await self._resolve_conninfo()
         kwargs = await self._resolve_kwargs()
-        conn = await self.connection_class.connect(conninfo, **kwargs)
         try:
-            if self._configure:
-                await self._configure(conn)
-                if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
-                    sname = TransactionStatus(status).name
-                    raise e.ProgrammingError(
-                        f"connection left in status {sname}"
-                        f" by configure function {self._configure}: discarded"
-                    )
+            conn = await self.connection_class.connect(conninfo, **kwargs)
+        except CLIENT_EXCEPTIONS:
+            self._stats[self._CONNECTIONS_ERRORS] += 1
+            raise
+        try:
+            await self._do_configure(conn)
         except BaseException:
             await conn.close()
             raise
@@ -726,18 +727,24 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         conn._pool = self
 
-        if self._configure:
-            await self._configure(conn)
-            if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
-                sname = TransactionStatus(status).name
-                raise e.ProgrammingError(
-                    f"connection left in status {sname} by configure function"
-                    f" {self._configure}: discarded"
-                )
+        await self._do_configure(conn)
 
         # Set an expiry date, with some randomness to avoid mass reconnection
         self._set_connection_expiry_date(conn)
         return conn
+
+    async def _do_configure(self, conn: ACT) -> None:
+        """Run the `!configure` callback on a new connection, if set."""
+        if not self._configure:
+            return
+
+        await self._configure(conn)
+        if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
+            sname = TransactionStatus(status).name
+            raise e.ProgrammingError(
+                f"connection left in status {sname} by configure function"
+                f" {self._configure}: discarded"
+            )
 
     async def _resolve_conninfo(self) -> str:
         """Resolve conninfo (static string, sync callable, or async callable)."""

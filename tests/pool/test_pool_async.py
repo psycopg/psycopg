@@ -205,16 +205,13 @@ async def test_dedicated_connection(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         await p.wait(timeout=1.0)
         stats_before = p.get_stats()
-        conn = await p.dedicated_connection()
-        try:
+        async with await p.dedicated_connection() as conn:
             assert getattr(conn, "_pool", None) is None
             res = await conn.execute("select 1")
             assert (await res.fetchone()) == (1,)
-        finally:
-            await conn.close()
-        # Pool counters and size are unaffected.
+        # The connection is counted in the stats but not in the pool size.
         stats_after = p.get_stats()
-        assert stats_after["connections_num"] == stats_before["connections_num"]
+        assert stats_after["connections_num"] == stats_before["connections_num"] + 1
         assert stats_after["pool_size"] == stats_before["pool_size"]
         # Pool's own connections still work after a dedicated connection use.
         async with p.connection() as conn:

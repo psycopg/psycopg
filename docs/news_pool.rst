@@ -7,15 +7,18 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Current release
+Future releases
 ---------------
 
-psycopg_pool 3.3.2 (unreleased)
+psycopg_pool 3.4.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add `~ConnectionPool.dedicated_connection()` method to obtain a connection
   configured like the pool's but not managed by it (:ticket:`#1244`).
 
+
+Current release
+---------------
 
 psycopg_pool 3.3.1
 ^^^^^^^^^^^^^^^^^^

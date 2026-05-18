@@ -205,16 +205,13 @@ def test_dedicated_connection(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         p.wait(timeout=1.0)
         stats_before = p.get_stats()
-        conn = p.dedicated_connection()
-        try:
+        with p.dedicated_connection() as conn:
             assert getattr(conn, "_pool", None) is None
             res = conn.execute("select 1")
             assert res.fetchone() == (1,)
-        finally:
-            conn.close()
-        # Pool counters and size are unaffected.
+        # The connection is counted in the stats but not in the pool size.
         stats_after = p.get_stats()
-        assert stats_after["connections_num"] == stats_before["connections_num"]
+        assert stats_after["connections_num"] == stats_before["connections_num"] + 1
         assert stats_after["pool_size"] == stats_before["pool_size"]
         # Pool's own connections still work after a dedicated connection use.
         with p.connection() as conn:
