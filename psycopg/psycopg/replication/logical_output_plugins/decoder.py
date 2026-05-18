@@ -81,3 +81,21 @@ class DispatchingDecoder(LogicalXLogDataDecoder[DecodedPayload]):
         if decoder is None:
             return payload
         return decoder(payload)
+
+
+class TextDecoder(LogicalXLogDataDecoder[str]):
+    """
+    A `~abc.LogicalXLogDataDecoder` that works with output plugins that deliver only `text
+    in the server encoding`__.
+
+    .. __: https://www.postgresql.org/docs/current/logicaldecoding-output-plugin.html#LOGICALDECODING-OUTPUT-MODE
+    """  # noqa: E501
+
+    server_encoding: str
+    output_plugin: str
+
+    def __call__(
+        self,
+        payload: Buffer,
+    ) -> str:
+        return str(payload, self.server_encoding)
