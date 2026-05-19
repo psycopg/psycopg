@@ -249,7 +249,9 @@ async def test_dedicated_connection_configure_badstate(dsn):
     ) as p:
         # PostgreSQL raises ProgrammingError from the transaction-status check;
         # CockroachDB rejects the leftover transaction with ActiveSqlTransaction.
-        with pytest.raises((psycopg.ProgrammingError, psycopg.errors.ActiveSqlTransaction)):
+        with pytest.raises(
+            (psycopg.ProgrammingError, psycopg.errors.ActiveSqlTransaction)
+        ):
             await p.dedicated_connection()
 
 
