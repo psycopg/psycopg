@@ -6,6 +6,7 @@ import sys
 import logging
 import datetime as dt
 from decimal import Decimal
+from operator import itemgetter
 
 import pytest
 
@@ -304,6 +305,29 @@ async def test_change_type_savepoint(aconn):
                         {"enum_col": ["foo"]},
                     )
                     raise ZeroDivisionError()
+
+
+async def test_alter_table_clears_state(aconn):
+    aconn.prepare_threshold = 0
+    await aconn.execute("DROP TABLE IF EXISTS testalter")
+    await aconn.execute("CREATE TABLE testalter (id serial primary key, data text)")
+    await aconn.execute("INSERT INTO testalter (data) values (%s)", ["foo"])
+    cur = await aconn.execute("SELECT * from testalter ORDER BY id")
+    assert list(map(itemgetter(1), await cur.fetchall())) == ["foo"]
+    await aconn.execute("ALTER TABLE testalter ADD data2 text")
+    await aconn.execute("INSERT INTO testalter (data) values (%s)", ["bar"])
+    cur = await aconn.execute("SELECT * from testalter ORDER BY id")
+    assert list(map(itemgetter(1), await cur.fetchall())) == ["foo", "bar"]
+
+
+async def test_discard_clears_state(aconn):
+    await aconn.set_autocommit(True)
+    aconn.prepare_threshold = 0
+    await aconn.execute("DROP TABLE IF EXISTS testdisc")
+    await aconn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
+    await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
+    await aconn.execute("DISCARD ALL")
+    await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
 
 
 async def get_prepared_statements(aconn):

@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Discard prepared statements upon :sql:`ALTER *` or `DISCARD *`
+  (:ticket:`#1307`).
+
+
 Current release
 ---------------
 
