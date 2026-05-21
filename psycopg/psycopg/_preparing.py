@@ -6,6 +6,7 @@ Support for prepared statements
 
 from __future__ import annotations
 
+import re
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Any, TypeAlias
 from collections import OrderedDict, deque
@@ -78,7 +79,12 @@ class PrepareManager:
             # The query is not to be prepared yet
             return Prepare.NO, b""
 
-    def _should_discard(self, prep: Prepare, results: Sequence[PGresult]) -> bool:
+    def _should_discard(
+        self,
+        prep: Prepare,
+        results: Sequence[PGresult],
+        __should_clear: Any = re.compile(rb"^(?:DROP|ALTER|ROLLBACK|DISCARD)\b").match,
+    ) -> bool:
         """Check if we need to discard our entire state: it should happen on
         rollback or on dropping objects, because the same object may get
         recreated and postgres would fail internal lookups.
@@ -87,8 +93,7 @@ class PrepareManager:
             for result in results:
                 if result.status != COMMAND_OK:
                     continue
-                cmdstat = result.command_status
-                if cmdstat and (cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"):
+                if (cmdstat := result.command_status) and __should_clear(cmdstat):
                     return self.clear()
         return False
 

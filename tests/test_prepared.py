@@ -9,6 +9,7 @@ import sys
 import logging
 import datetime as dt
 from decimal import Decimal
+from operator import itemgetter
 
 import pytest
 
@@ -301,6 +302,29 @@ def test_change_type_savepoint(conn):
                         {"enum_col": ["foo"]},
                     )
                     raise ZeroDivisionError()
+
+
+def test_alter_table_clears_state(conn):
+    conn.prepare_threshold = 0
+    conn.execute("DROP TABLE IF EXISTS testalter")
+    conn.execute("CREATE TABLE testalter (id serial primary key, data text)")
+    conn.execute("INSERT INTO testalter (data) values (%s)", ["foo"])
+    cur = conn.execute("SELECT * from testalter ORDER BY id")
+    assert list(map(itemgetter(1), cur.fetchall())) == ["foo"]
+    conn.execute("ALTER TABLE testalter ADD data2 text")
+    conn.execute("INSERT INTO testalter (data) values (%s)", ["bar"])
+    cur = conn.execute("SELECT * from testalter ORDER BY id")
+    assert list(map(itemgetter(1), cur.fetchall())) == ["foo", "bar"]
+
+
+def test_discard_clears_state(conn):
+    conn.set_autocommit(True)
+    conn.prepare_threshold = 0
+    conn.execute("DROP TABLE IF EXISTS testdisc")
+    conn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
+    conn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
+    conn.execute("DISCARD ALL")
+    conn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
 
 
 def get_prepared_statements(conn):
