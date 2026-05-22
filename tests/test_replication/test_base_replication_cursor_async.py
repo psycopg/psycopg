@@ -395,9 +395,22 @@ async def test_read_message_auto_flushed(aconn, arepl_started_cur, test_table):
 
 @parametrize_all_replication_cursors
 @parametrize_replication_connections
-async def test_read_message_no_start(arepl_cur):
+async def test_read_message_no_start(arepl_cur, pytestconfig):
+    # TODO: pre-existing bug triggered by `--cov=psycopg.XXX` causes the raised
+    # OperationalError to be different from psycopg.errors.OperationalError
+    # when using the c module (and probably also the binary module).
+    coverage_args = pytestconfig.getoption("--cov")
+    if any(isinstance(arg, str) for arg in coverage_args):
+        try:
+            await arepl_cur.read_message()
+        except Exception as err:
+            ex_cls = type(err)
+            assert ex_cls.__name__ == "OperationalError"
+            assert ex_cls.__module__ == "psycopg"
+    else:
+        ex_cls = e.OperationalError
     # DISCUSS: should we raise a more informative error here?
-    with pytest.raises(e.OperationalError, match="no COPY in progress"):
+    with pytest.raises(ex_cls, match="no COPY in progress"):
         await arepl_cur.read_message()
 
 
