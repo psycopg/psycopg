@@ -6,6 +6,7 @@ from datetime import datetime
 from dataclasses import dataclass
 
 from ..abc import Buffer
+from .._cmodule import _psycopg
 from .replication_utils import lsn_to_string, pg_epoch_to_datetime
 
 DecodedPayload = TypeVar("DecodedPayload", covariant=True)
@@ -105,12 +106,12 @@ class StandbyStatusUpdate(ReplicationMessage):
         return pg_epoch_to_datetime(microseconds=self.send_time_microseconds_since_2000)
 
 
-def parse_xlogdata(data: Buffer) -> tuple[int, int, int]:
+def _parse_xlogdata(data: Buffer) -> tuple[int, int, int]:
     # data_start, wal_end, microseconds
     return unpack_xlogdata(data)
 
 
-def parse_primarykeepalive(data: Buffer) -> tuple[int, int, bool]:
+def _parse_primarykeepalive(data: Buffer) -> tuple[int, int, bool]:
     wal_end, microseconds_since_2000, reply_asap = unpack_primary_keepalive_message(
         data
     )
@@ -134,3 +135,12 @@ _primary_keepalive_message_struct = Struct(">QQB")
 unpack_primary_keepalive_message = cast(
     Callable[[Buffer], tuple[int, int, int]], _primary_keepalive_message_struct.unpack
 )
+
+
+# Override functions with fast versions if available
+if _psycopg:
+    parse_primarykeepalive = _psycopg.parse_primarykeepalive
+    parse_xlogdata = _psycopg.parse_xlogdata
+else:
+    parse_primarykeepalive = _parse_primarykeepalive
+    parse_xlogdata = _parse_xlogdata

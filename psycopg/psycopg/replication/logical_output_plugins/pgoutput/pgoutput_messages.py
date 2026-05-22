@@ -24,6 +24,7 @@ from .... import errors as e
 from .... import pq
 from ....abc import Buffer, Transformer
 from ...._compat import Self
+from ...._cmodule import _psycopg
 from ..logical_rows import LogicalRow, RowValue
 from ...replication_utils import pg_epoch_to_datetime
 from ...replication_options import ReplicaIdentity
@@ -65,10 +66,10 @@ _unpack_int8_3int64_int32 = cast(
 )
 
 _begin_struct = Struct(">QQI")
-unpack_begin = cast(Callable[[Buffer], tuple[int, int, int]], _begin_struct.unpack)
+_unpack_begin = cast(Callable[[Buffer], tuple[int, int, int]], _begin_struct.unpack)
 
 _commit_struct = Struct(">BQQQ")
-unpack_commit = cast(
+_unpack_commit = cast(
     Callable[[Buffer], tuple[int, int, int, int]], _commit_struct.unpack
 )
 
@@ -111,27 +112,27 @@ unpack_streaming_emit_message_header = cast(
     Callable[[Buffer], tuple[int, int, int]], _streaming_emit_message_struct.unpack
 )
 
-unpack_stream_start = _unpack_int32_int8
+_unpack_stream_start = _unpack_int32_int8
 
 _stream_commit_struct = Struct(">IBQQQ")
-unpack_stream_commit = cast(
+_unpack_stream_commit = cast(
     Callable[[Buffer], tuple[int, int, int, int, int]], _stream_commit_struct.unpack
 )
 
-unpack_stream_abort = _unpack_2int32
+_unpack_stream_abort = _unpack_2int32
 _stream_abort_parallel_struct = Struct(">IIQQ")
-unpack_stream_abort_parallel = cast(
+_unpack_stream_abort_parallel = cast(
     Callable[[Buffer], tuple[int, int, int, int]], _stream_abort_parallel_struct.unpack
 )
 
 _begin_prepare_struct = Struct(">QQQI")
-unpack_begin_prepare = cast(
+_unpack_begin_prepare = cast(
     Callable[[Buffer], tuple[int, int, int, int]], _begin_prepare_struct.unpack
 )
-unpack_prepare = _unpack_int8_3int64_int32
-unpack_commit_prepared = _unpack_int8_3int64_int32
+_unpack_prepare = _unpack_int8_3int64_int32
+_unpack_commit_prepared = _unpack_int8_3int64_int32
 _rollback_prepared_struct = Struct(">BQQQQI")
-unpack_rollback_prepared = cast(
+_unpack_rollback_prepared = cast(
     Callable[[Buffer], tuple[int, int, int, int, int, int]],
     _rollback_prepared_struct.unpack,
 )
@@ -149,7 +150,7 @@ def _read_null_terminated_string(
     return string, end + 1  # Skip null terminator
 
 
-def parse_tuple_data(
+def _parse_tuple_data(
     data: Buffer,
     offset: int,
     tx: Transformer,
@@ -333,7 +334,7 @@ class BeginMessage(PgOutputMessage):
         )
 
 
-def parse_emit_message(
+def _parse_emit_message(
     data: Buffer, is_streaming: bool, encoding: str
 ) -> tuple[int | None, bool, int, str, str]:
     # Flags, LSN (1 + 8 = 9 bytes)
@@ -494,7 +495,7 @@ class ColumnDefinition:
         return bool(self.flags & 0x01)
 
 
-def parse_relation(
+def _parse_relation(
     data: Buffer, is_streaming: bool, encoding: str, column_cls: type[ColumnDefinition]
 ) -> tuple[int | None, int, str, str, str, tuple[ColumnDefinition, ...]]:
     # Relation ID (4 bytes)
@@ -619,7 +620,7 @@ class RelationMessage(PgOutputMessage):
         return relation
 
 
-def parse_type(
+def _parse_type(
     data: Buffer, is_streaming: bool, encoding: str
 ) -> tuple[int | None, int, str, str]:
     # Type ID (4 bytes)
@@ -916,7 +917,7 @@ class DeleteMessage(PgOutputMessage[LogicalRow]):
         )
 
 
-def parse_truncate(
+def _parse_truncate(
     data: Buffer, is_streaming: bool
 ) -> tuple[int | None, int, list[int]]:
     # Number of relations (4 bytes) + Options (1 byte)
@@ -1391,3 +1392,38 @@ class StreamPrepareMessage(PrepareMessage):
         decoder.types_by_xid.pop(msg.xid, None)
 
         return msg
+
+
+# Override functions with fast versions if available
+if _psycopg:
+    parse_tuple_data = _psycopg.parse_pgoutput_row
+    parse_emit_message = _psycopg.parse_emit_message
+    unpack_begin = _psycopg.unpack_begin
+    unpack_commit = _psycopg.unpack_commit
+    parse_relation = _psycopg.parse_relation
+    parse_type = _psycopg.parse_type
+    parse_truncate = _psycopg.parse_truncate
+    unpack_stream_start = _psycopg.unpack_stream_start
+    unpack_stream_commit = _psycopg.unpack_stream_commit
+    unpack_stream_abort = _psycopg.unpack_stream_abort
+    unpack_stream_abort_parallel = _psycopg.unpack_stream_abort_parallel
+    unpack_begin_prepare = _psycopg.unpack_begin_prepare
+    unpack_prepare = _psycopg.unpack_prepare
+    unpack_commit_prepared = _psycopg.unpack_commit_prepared
+    unpack_rollback_prepared = _psycopg.unpack_rollback_prepared
+else:
+    parse_tuple_data = _parse_tuple_data
+    parse_emit_message = _parse_emit_message
+    unpack_begin = _unpack_begin
+    unpack_commit = _unpack_commit
+    parse_relation = _parse_relation
+    parse_type = _parse_type
+    parse_truncate = _parse_truncate
+    unpack_stream_start = _unpack_stream_start
+    unpack_stream_commit = _unpack_stream_commit
+    unpack_stream_abort = _unpack_stream_abort
+    unpack_stream_abort_parallel = _unpack_stream_abort_parallel
+    unpack_begin_prepare = _unpack_begin_prepare
+    unpack_prepare = _unpack_prepare
+    unpack_commit_prepared = _unpack_commit_prepared
+    unpack_rollback_prepared = _unpack_rollback_prepared
