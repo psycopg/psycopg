@@ -176,7 +176,13 @@ In order to perform a local installation you need some prerequisites:
 - a C compiler,
 - Python development headers (e.g. the ``python3-dev`` package).
 - PostgreSQL client development headers (e.g. the ``libpq-dev`` package).
-- The :program:`pg_config` program available in the :envvar:`PATH`.
+
+The build will need access to the include folder and lib folder of libpq.
+On most systems this can be determined through the :program:`pg_config` if it
+is in the :envvar:`PATH`.
+Alternatively the path to :program:`pg_config` can be either configured via the
+:envvar:`PSYCOPG_PG_CONFIG` or the paths can directly be configured via
+:envvar:`PSYCOPG_PG_INCLUDEDIR` and :envvar:`PSYCOPG_PG_LIBDIR`.
 
 You **must be able** to troubleshoot an extension build, for instance you must
 be able to read your compiler's error message. If you are not, please don't
