@@ -17,12 +17,24 @@ log = logging.getLogger(__name__)
 
 
 def get_config(what: str) -> str:
-    pg_config = "pg_config"
+    env_map = {
+        "includedir": "PSYCOPG_PG_INCLUDEDIR",
+        "libdir": "PSYCOPG_PG_LIBDIR",
+    }
+    if envvar := env_map.get(what):
+        if value := os.environ.get(envvar):
+            return value
+
+    pg_config = os.environ.get("PSYCOPG_PG_CONFIG", "pg_config")
     try:
         out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
     except Exception as e:
-        log.error(f"couldn't run {pg_config!r} --{what}: %s", e)
-        raise
+        msg = (
+            f"couldn't determine PostgreSQL {what}: set {env_map.get(what, 'PSYCOPG_PG_CONFIG')} "
+            f"or make {pg_config!r} available"
+        )
+        log.error("%s: %s", msg, e)
+        raise RuntimeError(msg) from e
     else:
         return out.stdout.strip().decode()
 
