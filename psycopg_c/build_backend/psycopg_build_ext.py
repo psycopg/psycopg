@@ -30,7 +30,8 @@ def get_config(what: str) -> str:
         out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
     except Exception as e:
         msg = (
-            f"couldn't determine PostgreSQL {what}: set {env_map.get(what, 'PSYCOPG_PG_CONFIG')} "
+            f"couldn't determine PostgreSQL {what}: "
+            f"set {env_map.get(what, 'PSYCOPG_PG_CONFIG')} "
             f"or make {pg_config!r} available"
         )
         log.error("%s: %s", msg, e)
