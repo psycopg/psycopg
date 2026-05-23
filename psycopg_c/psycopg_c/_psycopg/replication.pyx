@@ -13,7 +13,7 @@ from psycopg import errors as e
 def parse_pgoutput_row(
     data,
     Py_ssize_t offset,
-    tx: Transformer,
+    tx: Transformer | None,
     object format,
     object unchanged_sentinel,
 ):
@@ -44,13 +44,16 @@ def parse_pgoutput_row(
             elif col_type == "u":
                 # Unchanged TOAST value
                 # DISCUSS: it might be more reasonable to handle this in the Transformer
-                if not has_unchanged_indices:
-                    unchanged_indices = <bint *>PyMem_Calloc(
-                        <size_t>nfields, <size_t>sizeof(bint)
-                    )
-                    has_unchanged_indices = True
-                field = None
-                unchanged_indices[col] = True
+                if tx is not None:
+                    if not has_unchanged_indices:
+                        unchanged_indices = <bint *>PyMem_Calloc(
+                            <size_t>nfields, <size_t>sizeof(bint)
+                        )
+                        has_unchanged_indices = True
+                    field = None
+                    unchanged_indices[col] = True
+                else:
+                    field = unchanged_sentinel
             elif col_type in ("t", "b"):
                 if format == PQ_TEXT:
                     if col_type == "b":
@@ -75,19 +78,22 @@ def parse_pgoutput_row(
             Py_INCREF(field)
             PyList_SET_ITEM(row, <Py_ssize_t>col, field)
 
-        adapted_row = tx.load_sequence(row)
-        if has_unchanged_indices:
-            for i in range(nfields):
-                if unchanged_indices[i] is True:
-                    assert row[i] is None
-                    field = unchanged_sentinel
-                else:
-                    field = <object>PyTuple_GET_ITEM(adapted_row, <Py_ssize_t>i)
-                Py_INCREF(field)
-                PyList_SetItem(row, <Py_ssize_t>i, field)
-            result = row
+        if tx is not None:
+            adapted_row = tx.load_sequence(row)
+            if has_unchanged_indices:
+                for i in range(nfields):
+                    if unchanged_indices[i] is True:
+                        assert row[i] is None
+                        field = unchanged_sentinel
+                    else:
+                        field = <object>PyTuple_GET_ITEM(adapted_row, <Py_ssize_t>i)
+                    Py_INCREF(field)
+                    PyList_SetItem(row, <Py_ssize_t>i, field)
+                result = row
+            else:
+                result = adapted_row
         else:
-            result = adapted_row
+            result = row
 
         return result, offset
 

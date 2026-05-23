@@ -145,16 +145,13 @@ class MessageTestBase(ABC, Generic[MsgCls]):
 
     @pytest.fixture
     def no_loaders(self, monkeypatch):
+        @property  # type: ignore[misc]
+        def tx_none(self):
+            return None
+
         with monkeypatch.context() as m:
             m.setattr(self.decoder, "get_row_maker", lambda relation: tuple)
-            try:
-                m.setattr(self.decoder.tx, "load_sequence", lambda tuple_: tuple_)
-            except AttributeError:
-                # TODO: Make these tests run with the c-module
-                del m._setattr[-1]
-                raise pytest.skip(
-                    "c-module loaded. These tests only run in pure-python."
-                )
+            m.setattr(type(self.decoder), "tx", tx_none)
             m.setattr(
                 self.decoder,
                 "get_relation",

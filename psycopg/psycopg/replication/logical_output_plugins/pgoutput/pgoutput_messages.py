@@ -195,7 +195,11 @@ def _parse_tuple_data(
         else:
             raise e.DataError(f"Unknown column data type: {col_type}")
 
-    adapted_tuple: list[Any] | tuple[Any] = tx.load_sequence(tuple_)
+    if tx is not None:
+        adapted_tuple: list[Any] | tuple[Any] = tx.load_sequence(tuple_)
+    else:
+        adapted_tuple = tuple_
+
     # DISCUSS: it might be more reasonable to handle this in the Transformer
     if unchanged_indices:
         adapted_tuple = list(adapted_tuple)
