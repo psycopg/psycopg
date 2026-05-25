@@ -214,7 +214,7 @@ cdef class BytesDumper(CDumper):
         libpq.PQfreemem(out)
         return len_out
 
-    def quote(self, obj) -> Buffer:
+    def quote(self, obj) -> abc.Buffer:
         cdef char *ptr
         cdef Py_ssize_t length
         cdef const char *scs
