@@ -120,6 +120,25 @@ cdef inline void assert_expected_bufend_gte_bufend(
         )
 
 
+cdef inline void _extract_3_uint64_t(
+    unsigned char** ptr_ptr, uint64_t* var1, uint64_t* var2, uint64_t* var3
+) noexcept nogil:
+    var1[0] = endian.be64toh((<uint64_t*>(ptr_ptr[0]))[0])
+    ptr_ptr[0] += sizeof(uint64_t)
+    var2[0] = endian.be64toh((<uint64_t*>(ptr_ptr[0]))[0])
+    ptr_ptr[0] += sizeof(uint64_t)
+    var3[0] = endian.be64toh((<uint64_t*>(ptr_ptr[0]))[0])
+
+
+cdef inline void _extract_4_uint64_t(
+    unsigned char** ptr_ptr,
+    uint64_t* var1, uint64_t* var2, uint64_t* var3, uint64_t* var4
+) noexcept nogil:
+    _extract_3_uint64_t(ptr_ptr, var1, var2, var3)
+    ptr_ptr[0] += sizeof(uint64_t)
+    var4[0] = endian.be64toh((<uint64_t*>(ptr_ptr[0]))[0])
+
+
 def parse_xlogdata(data):
     cdef unsigned char *ptr
     cdef Py_ssize_t bufsize
@@ -134,11 +153,7 @@ def parse_xlogdata(data):
     assert_expected_bufend_lte_bufend(expected_bufend, bufend)
     assert_expected_bufend_gte_bufend(expected_bufend, bufend)
 
-    wal_start = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    wal_end = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    microseconds = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &wal_start, &wal_end, &microseconds)
 
     cdef tuple row = (wal_start, wal_end, microseconds)
 
@@ -398,11 +413,7 @@ def unpack_commit(data):
 
     flags = (<uint8_t*>ptr)[0]
     ptr += sizeof(uint8_t)
-    final_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    commit_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &final_lsn, &end_lsn, &commit_ts_micro)
 
     cdef tuple row = (flags, final_lsn, end_lsn, commit_ts_micro)
 
@@ -495,11 +506,7 @@ def unpack_stream_commit(data):
     ptr += sizeof(uint32_t)
     flags = (<uint8_t*>ptr)[0]
     ptr += sizeof(uint8_t)
-    commit_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    commit_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &commit_lsn, &end_lsn, &commit_ts_micro)
 
     cdef tuple row = (xid, flags, commit_lsn, end_lsn, commit_ts_micro)
 
@@ -578,11 +585,7 @@ def unpack_begin_prepare(data):
     assert_expected_bufend_lte_bufend(expected_bufend, bufend)
     assert_expected_bufend_gte_bufend(expected_bufend, bufend)
 
-    prepare_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    prepare_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &prepare_lsn, &end_lsn, &prepare_ts_micro)
     ptr += sizeof(uint64_t)
     xid = endian.be32toh((<uint32_t*>ptr)[0])
 
@@ -612,11 +615,7 @@ def unpack_prepare(data):
 
     flags = (<uint8_t*>ptr)[0]
     ptr += sizeof(uint8_t)
-    prepare_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    prepare_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &prepare_lsn, &end_lsn, &prepare_ts_micro)
     ptr += sizeof(uint64_t)
     xid = endian.be32toh((<uint32_t*>ptr)[0])
 
@@ -645,11 +644,7 @@ def unpack_commit_prepared(data):
 
     flags = (<uint8_t*>ptr)[0]
     ptr += sizeof(uint8_t)
-    commit_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    commit_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_3_uint64_t(&ptr, &commit_lsn, &end_lsn, &commit_ts_micro)
     ptr += sizeof(uint64_t)
     xid = endian.be32toh((<uint32_t*>ptr)[0])
 
@@ -679,13 +674,9 @@ def unpack_rollback_prepared(data):
 
     flags = (<uint8_t*>ptr)[0]
     ptr += sizeof(uint8_t)
-    end_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    rollback_lsn = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    prepare_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
-    ptr += sizeof(uint64_t)
-    rollback_ts_micro = endian.be64toh((<uint64_t*>ptr)[0])
+    _extract_4_uint64_t(
+        &ptr, &end_lsn, &rollback_lsn, &prepare_ts_micro, &rollback_ts_micro
+    )
     ptr += sizeof(uint64_t)
     xid = endian.be32toh((<uint32_t*>ptr)[0])
 
