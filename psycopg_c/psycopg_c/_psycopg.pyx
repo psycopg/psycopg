@@ -14,6 +14,7 @@ from psycopg_c._psycopg cimport oids
 import logging
 
 from psycopg.pq import Format as _pq_Format
+from psycopg.abc import Buffer
 from psycopg._enums import PyFormat as _py_Format
 
 logger = logging.getLogger("psycopg")
