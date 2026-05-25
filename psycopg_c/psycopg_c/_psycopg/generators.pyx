@@ -10,7 +10,6 @@ from time import monotonic
 from collections import deque
 
 from psycopg import errors as e
-from psycopg.pq import abc
 from psycopg.abc import PipelineCommand, PQGen
 from psycopg._enums import Ready, Wait
 from psycopg._encodings import conninfo_encoding

@@ -54,14 +54,14 @@ cdef class CDumper:
         """
         raise NotImplementedError()
 
-    def dump(self, obj) -> Buffer | None:
+    def dump(self, obj) -> abc.Buffer | None:
         """Return the Postgres representation of *obj* as Python array of bytes"""
         cdef rv = PyByteArray_FromStringAndSize("", 0)
         cdef Py_ssize_t length = self.cdump(obj, rv, 0)
         PyByteArray_Resize(rv, length)
         return rv
 
-    def quote(self, obj) -> Buffer:
+    def quote(self, obj) -> abc.Buffer:
         cdef char *ptr
         cdef char *ptr_out
         cdef Py_ssize_t length

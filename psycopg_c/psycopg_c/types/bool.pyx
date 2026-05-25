@@ -28,7 +28,7 @@ cdef class BoolDumper(CDumper):
 
         return 1
 
-    def quote(self, obj: bool) -> Buffer | None:
+    def quote(self, obj: bool) -> abc.Buffer | None:
         if obj is True:
             return b"true"
         elif obj is False:
