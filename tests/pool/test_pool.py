@@ -231,13 +231,10 @@ def test_dedicated_connection_configure(dsn):
     with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
         p.wait(timeout=1.0)
         inits_before = inits
-        conn = p.dedicated_connection()
-        try:
+        with p.dedicated_connection() as conn:
             assert inits == inits_before + 1
             res = conn.execute("show default_transaction_read_only")
             assert res.fetchone()[0] == "on"
-        finally:
-            conn.close()
 
 
 def test_dedicated_connection_configure_badstate(dsn):

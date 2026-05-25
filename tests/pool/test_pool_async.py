@@ -231,13 +231,10 @@ async def test_dedicated_connection_configure(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
         await p.wait(timeout=1.0)
         inits_before = inits
-        conn = await p.dedicated_connection()
-        try:
+        async with await p.dedicated_connection() as conn:
             assert inits == inits_before + 1
             res = await conn.execute("show default_transaction_read_only")
             assert (await res.fetchone())[0] == "on"
-        finally:
-            await conn.close()
 
 
 async def test_dedicated_connection_configure_badstate(dsn):
