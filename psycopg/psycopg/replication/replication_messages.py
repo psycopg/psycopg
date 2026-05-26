@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sys import intern
 from struct import Struct
 from typing import Callable, ClassVar, Generic, Literal, TypeVar, cast
 from datetime import datetime
@@ -34,7 +35,7 @@ class XLogDataMessage(ReplicationMessage, Generic[DecodedPayload]):
 
     __module__ = "psycopg.replication"
 
-    message_type = "w"
+    message_type = cast(Literal["w"], intern("w"))
 
     # NOTE: mypy doesn't play nice with generics in dataclasses, we get:
     # `error: Cannot use a covariant type variable as a parameter  [misc]`.
@@ -58,7 +59,7 @@ class PrimaryKeepaliveMessage(ReplicationMessage):
 
     __module__ = "psycopg.replication"
 
-    message_type = "k"
+    message_type = cast(Literal["k"], intern("k"))
 
     wal_end: int  # Last LSN on the server
     reply_asap: bool  # Server requests a reply as soon as possible

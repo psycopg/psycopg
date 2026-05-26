@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import functools
 from abc import abstractmethod
+from sys import intern
 from enum import StrEnum
 from struct import Struct
 from typing import (
@@ -34,25 +35,25 @@ if TYPE_CHECKING:
 
 
 class MessageType(StrEnum):
-    BEGIN = "B"
-    MESSAGE = "M"
-    COMMIT = "C"
-    ORIGIN = "O"
-    RELATION = "R"
-    TYPE = "Y"
-    INSERT = "I"
-    UPDATE = "U"
-    DELETE = "D"
-    TRUNCATE = "T"
-    STREAM_START = "S"
-    STREAM_STOP = "E"
-    STREAM_COMMIT = "c"
-    STREAM_ABORT = "A"
-    BEGIN_PREPARE = "b"
-    PREPARE = "P"
-    COMMIT_PREPARED = "K"
-    ROLLBACK_PREPARED = "r"
-    STREAM_PREPARE = "p"
+    BEGIN = intern("B")
+    MESSAGE = intern("M")
+    COMMIT = intern("C")
+    ORIGIN = intern("O")
+    RELATION = intern("R")
+    TYPE = intern("Y")
+    INSERT = intern("I")
+    UPDATE = intern("U")
+    DELETE = intern("D")
+    TRUNCATE = intern("T")
+    STREAM_START = intern("S")
+    STREAM_STOP = intern("E")
+    STREAM_COMMIT = intern("c")
+    STREAM_ABORT = intern("A")
+    BEGIN_PREPARE = intern("b")
+    PREPARE = intern("P")
+    COMMIT_PREPARED = intern("K")
+    ROLLBACK_PREPARED = intern("r")
+    STREAM_PREPARE = intern("p")
 
 
 _type_to_decode_map: dict[str, type[PgOutputMessage[Any]]] = {}

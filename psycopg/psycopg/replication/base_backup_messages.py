@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sys import intern
 from struct import Struct
 from typing import Callable, ClassVar, Literal, cast
 from dataclasses import dataclass
@@ -24,7 +25,7 @@ class BackupMessage:
 class BackupData(BackupMessage):
     """Archive or manifest data chunk from BASE_BACKUP ('d' message)."""
 
-    message_type = "d"
+    message_type = cast(Literal["d"], intern("d"))
     message_type_name = "manifest or backup data"
 
     data: Buffer
@@ -37,7 +38,7 @@ class BackupNewArchive(BackupMessage):
     Indicates the start of a new tar archive.
     """
 
-    message_type = "n"
+    message_type = cast(Literal["n"], intern("n"))
     message_type_name = "manifest or backup data"
 
     archive_name: str
@@ -52,7 +53,7 @@ class BackupManifestStart(BackupMessage):
 
     __slots__ = ()
 
-    message_type = "m"
+    message_type = cast(Literal["m"], intern("m"))
     message_type_name = "manifest start"
 
     _instance: BackupManifestStart
@@ -68,7 +69,7 @@ BackupManifestStart._instance = object.__new__(BackupManifestStart)
 class BackupProgress(BackupMessage):
     """Progress report from BASE_BACKUP ('p' message)."""
 
-    message_type = "p"
+    message_type = cast(Literal["p"], intern("p"))
     message_type_name = "progress"
 
     total_bytes: int
