@@ -1,9 +1,7 @@
 
-from cpython.mem cimport PyMem_Calloc, PyMem_Free
 from libc.stdint cimport int32_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.string cimport strlen
-from cpython.list cimport PyList_New, PyList_SET_ITEM, PyList_SetItem
-from cpython.tuple cimport PyTuple_GET_ITEM, PyTuple_New, PyTuple_SET_ITEM
+from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 from psycopg_c._psycopg cimport endian
 
@@ -24,82 +22,59 @@ def parse_pgoutput_row(
 
     cdef int nfields = endian.be16toh((<uint16_t*>(ptr + offset))[0])
     offset += sizeof(uint16_t)
-    cdef list row = PyList_New(nfields)
+    cdef tuple row = PyTuple_New(nfields)
     cdef tuple adapted_row
 
     cdef int col
     cdef Py_ssize_t length
     cdef char col_type
-    cdef bint * unchanged_indices
     cdef bint has_unchanged_indices = False
 
-    try:
-        for col in range(nfields):
-            col_type = (ptr + offset)[0]
-            offset += sizeof(col_type)
+    for col in range(nfields):
+        col_type = (ptr + offset)[0]
+        offset += sizeof(col_type)
 
-            if col_type == "n":
-                # Null value
-                field = None
-            elif col_type == "u":
-                # Unchanged TOAST value
-                # DISCUSS: it might be more reasonable to handle this in the Transformer
-                if tx is not None:
-                    if not has_unchanged_indices:
-                        unchanged_indices = <bint *>PyMem_Calloc(
-                            <size_t>nfields, <size_t>sizeof(bint)
-                        )
-                        has_unchanged_indices = True
-                    field = None
-                    unchanged_indices[col] = True
-                else:
-                    field = unchanged_sentinel
-            elif col_type in ("t", "b"):
-                if format == PQ_TEXT:
-                    if col_type == "b":
-                        raise e.DataError("Expected TEXT format but got BINARY format")
-                elif col_type == "t":
-                    raise e.DataError("Expected BINARY format but got TEXT format")
+        if col_type == "n":
+            # Null value
+            field = None
+        elif col_type == "u":
+            # Unchanged TOAST value
+            if not has_unchanged_indices:
+                has_unchanged_indices = True
+            field = unchanged_sentinel
+        elif col_type in ("t", "b"):
+            if format == PQ_TEXT:
+                if col_type == "b":
+                    raise e.DataError("Expected TEXT format but got BINARY format")
+            elif col_type == "t":
+                raise e.DataError("Expected BINARY format but got TEXT format")
 
-                length = <Py_ssize_t>endian.be32toh((<uint32_t*>(ptr + offset))[0])
-                offset += sizeof(uint32_t)
-                if length <= 0:
-                    raise e.DataError("bad replication data: negative length")
+            length = <Py_ssize_t>endian.be32toh((<uint32_t*>(ptr + offset))[0])
+            offset += sizeof(uint32_t)
+            if length <= 0:
+                raise e.DataError("bad replication data: negative length")
 
-                assert_expected_bufend_lte_bufend(ptr + length, bufend)
+            assert_expected_bufend_lte_bufend(ptr + length, bufend)
 
-                field = PyMemoryView_FromObject(
-                    ViewBuffer._from_buffer(data, ptr + offset, length)
-                )
-                offset += length
-            else:
-                raise e.DataError(f"Unknown column data type: {col_type}")
-
-            Py_INCREF(field)
-            PyList_SET_ITEM(row, <Py_ssize_t>col, field)
-
-        if tx is not None:
-            adapted_row = tx.load_sequence(row)
-            if has_unchanged_indices:
-                for i in range(nfields):
-                    if unchanged_indices[i] is True:
-                        assert row[i] is None
-                        field = unchanged_sentinel
-                    else:
-                        field = <object>PyTuple_GET_ITEM(adapted_row, <Py_ssize_t>i)
-                    Py_INCREF(field)
-                    PyList_SetItem(row, <Py_ssize_t>i, field)
-                result = row
-            else:
-                result = adapted_row
+            field = PyMemoryView_FromObject(
+                ViewBuffer._from_buffer(data, ptr + offset, length)
+            )
+            offset += length
         else:
-            result = row
+            raise e.DataError(f"Unknown column data type: {col_type}")
 
-        return result, offset
+        Py_INCREF(field)
+        PyTuple_SET_ITEM(row, <Py_ssize_t>col, field)
 
-    finally:
-        if has_unchanged_indices:
-            PyMem_Free(<void *>unchanged_indices)
+    if tx is not None:
+        adapted_row = tx.load_sequence(
+            row, passthrough=unchanged_sentinel if has_unchanged_indices else None
+        )
+        result = adapted_row
+    else:
+        result = row
+
+    return result, offset
 
 
 cdef inline void assert_expected_bufend_lte_bufend(

@@ -530,7 +530,9 @@ cdef class Transformer:
                 make_row, <PyObject *>record, NULL)
         return record
 
-    cpdef object load_sequence(self, record: Sequence[Buffer | None]):
+    cpdef object load_sequence(
+        self, record: Sequence[Buffer | None | object], passthrough: object | None=None
+    ):
         cdef record_fast = PySequence_Fast(record, "'record' is not a valid sequence")
         cdef Py_ssize_t nfields = PySequence_Fast_GET_SIZE(record_fast)
         cdef PyObject *loader  # borrowed RowLoader
@@ -550,6 +552,8 @@ cdef class Transformer:
             item = PySequence_Fast_GET_ITEM(record_fast, col)
             if item == <PyObject *>None:
                 pyval = None
+            elif passthrough is not None and item == <PyObject *>passthrough:
+                pyval = passthrough
             else:
                 loader = PyList_GET_ITEM(row_loaders, col)
                 if (<RowLoader>loader).cloader is not None:

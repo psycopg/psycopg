@@ -332,7 +332,9 @@ class Transformer(AdaptContext):
 
         return make_row(record)
 
-    def load_sequence(self, record: Sequence[Buffer | None]) -> tuple[Any, ...]:
+    def load_sequence(
+        self, record: Sequence[Buffer | None], passthrough: object | None = None
+    ) -> tuple[Any, ...]:
         if len(self._row_loaders) != len(record):
             raise e.ProgrammingError(
                 f"cannot load sequence of {len(record)} items:"
@@ -340,7 +342,15 @@ class Transformer(AdaptContext):
             )
 
         return tuple(
-            (self._row_loaders[i](val) if val is not None else None)
+            (
+                None
+                if val is None
+                else (
+                    val
+                    if passthrough is not None and val == passthrough
+                    else self._row_loaders[i](val)
+                )
+            )
             for i, val in enumerate(record)
         )
 

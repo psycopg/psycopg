@@ -163,7 +163,6 @@ def _parse_tuple_data(
     offset += 2
 
     tuple_: list[bytes | None] = []
-    unchanged_indices: list[int] = []
 
     for i in range(ncolumns):
         # Column data format (1 byte): 'n' = null, 't' = text, 'u' = unchanged TOAST
@@ -175,9 +174,7 @@ def _parse_tuple_data(
             tuple_.append(None)
         elif col_type == "u":
             # Unchanged TOAST value
-            # DISCUSS: it might be more reasonable to handle this in the Transformer
-            tuple_.append(None)  # RowValue.UNCHANGED is added below after adaption
-            unchanged_indices.append(i)
+            tuple_.append(unchanged_sentinel)
         elif col_type in ("t", "b"):
             if format is pq.Format.TEXT:
                 if col_type == "b":
@@ -197,15 +194,11 @@ def _parse_tuple_data(
             raise e.DataError(f"Unknown column data type: {col_type}")
 
     if tx is not None:
-        adapted_tuple: list[Any] | tuple[Any] = tx.load_sequence(tuple_)
+        adapted_tuple: list[Any] | tuple[Any] = tx.load_sequence(
+            tuple_, passthrough=unchanged_sentinel
+        )
     else:
         adapted_tuple = tuple_
-
-    # DISCUSS: it might be more reasonable to handle this in the Transformer
-    if unchanged_indices:
-        adapted_tuple = list(adapted_tuple)
-        for i in unchanged_indices:
-            adapted_tuple[i] = unchanged_sentinel
 
     return adapted_tuple, offset
 
