@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from functools import lru_cache
 from collections import defaultdict
 
 from .... import errors as e
@@ -91,4 +92,10 @@ class PgOutputDecoder(
             return self.relations_by_xid[self.streaming][relation_id]
 
     def get_row_maker(self, relation: RelationMessage) -> LogicalRowMaker[LogicalRow]:
+        if self.row_factory is tuple_row:
+            return tuple  # type: ignore[return-value]
+        return self._get_row_maker(relation)
+
+    @lru_cache(maxsize=128)
+    def _get_row_maker(self, relation: RelationMessage) -> LogicalRowMaker[LogicalRow]:
         return self.row_factory(self, relation.relation_id)
