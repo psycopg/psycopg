@@ -6,14 +6,14 @@ from __future__ import annotations
 import time
 import logging
 import datetime
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, LiteralString
-from typing import NoReturn, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, NoReturn, cast
+from typing import overload
 
 from .. import errors as e
 from .. import generators, pq, sql
 from .abc import XLogDataDecoder
 from ..rows import Row
-from .._compat import Self
+from .._compat import LiteralString, Self
 from ..connection import _INTERRUPTED
 from ..client_cursor import ClientCursor
 from .replication_utils import PG_EPOCH
@@ -285,7 +285,7 @@ class BaseReplicationCursor(ClientCursor[Row]):
             # where the stream is not infinite.
             msg_type = chr(data[0])
 
-            if msg_type is XLOG_DATA_MSGTYPE:  # XLogData
+            if msg_type is XLOG_DATA_MSGTYPE or msg_type == XLOG_DATA_MSGTYPE:
                 # See https://www.postgresql.org/docs/current/protocol-replication.html#PROTOCOL-REPLICATION-XLOGDATA  # noqa: E501
                 wal_data = data[25:]
 
@@ -305,7 +305,10 @@ class BaseReplicationCursor(ClientCursor[Row]):
                 return XLogDataMessage(
                     wal_data, data_start, wal_end, microseconds_since_2000
                 )
-            elif msg_type is PRIMARY_KEEP_ALIVE_MSGTYPE:  # Primary keepalive message
+            elif (
+                msg_type is PRIMARY_KEEP_ALIVE_MSGTYPE
+                or msg_type == PRIMARY_KEEP_ALIVE_MSGTYPE
+            ):
                 # See https://www.postgresql.org/docs/current/protocol-replication.html#PROTOCOL-REPLICATION-PRIMARY-KEEPALIVE-MESSAGE  # noqa: E501
                 wal_end, microseconds_since_2000, reply_asap = parse_primarykeepalive(
                     data[1:]
@@ -707,10 +710,13 @@ class BaseReplicationCursor(ClientCursor[Row]):
 
         msg_type = chr(data[0])
 
-        if msg_type is BACKUP_DATA_MSGTYPE:  # Archive or manifest data
+        if msg_type is BACKUP_DATA_MSGTYPE or msg_type == BACKUP_DATA_MSGTYPE:
             # Data chunk for current archive or manifest
             return BackupData(data=data[1:])
-        elif msg_type is BACKUP_NEW_ARCHIVE_MSGTYPE:  # New archive
+        elif (
+            msg_type is BACKUP_NEW_ARCHIVE_MSGTYPE
+            or msg_type == BACKUP_NEW_ARCHIVE_MSGTYPE
+        ):
             # New archive notification - archive name and optional tablespace path
             # as null-terminated strings
             payload = bytes(data[1:])
@@ -731,10 +737,13 @@ class BaseReplicationCursor(ClientCursor[Row]):
             return BackupNewArchive(
                 archive_name=archive_name, tablespace_path=tablespace_path
             )
-        elif msg_type is BACKUP_MANIFEST_START_MSGTYPE:  # Manifest start
+        elif (
+            msg_type is BACKUP_MANIFEST_START_MSGTYPE
+            or msg_type == BACKUP_MANIFEST_START_MSGTYPE
+        ):
             # no data, just indicates manifest will follow
             return BackupManifestStart()
-        elif msg_type is BACKUP_PROGRESS_MSGTYPE:  # Progress
+        elif msg_type is BACKUP_PROGRESS_MSGTYPE or msg_type == BACKUP_PROGRESS_MSGTYPE:
             # total size downloaded so far
             total_bytes = unpack_backup_progress(data[1:9])[0]
             return BackupProgress(total_bytes=total_bytes)

@@ -5,14 +5,14 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import Any, Callable, LiteralString, cast
+from typing import Any, Callable, cast
 from weakref import ReferenceType, ref
 from functools import partial
 
 from .. import adapt, sql
 from ..abc import Loader
 from ..rows import Row, tuple_row
-from .._compat import Self
+from .._compat import LiteralString, Self
 from .replication_utils import lsn_to_string, string_to_lsn
 from .replication_options import ReplicationType
 from .replication_messages import DecodedPayload

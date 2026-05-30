@@ -452,7 +452,7 @@ def base_backup(
         raise e.ProgrammingError(
             "End of base backup should provide two responses, a "
             + "TUPLES_OK and a COMMAND_OK, got "
-            + f"{", ".join(pq.ExecStatus(r.status).name for r in results)}"
+            + f"{', '.join(pq.ExecStatus(r.status).name for r in results)}"
         )
 
     return results

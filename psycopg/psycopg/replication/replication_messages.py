@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from sys import intern
 from struct import Struct
-from typing import Callable, ClassVar, Generic, Literal, TypeVar, cast
+from typing import Callable, ClassVar, Generic, Literal, cast
 from datetime import datetime
 from dataclasses import dataclass
 
 from ..abc import Buffer
+from .._compat import TypeVar
 from .._cmodule import _psycopg
 from .replication_utils import lsn_to_string, pg_epoch_to_datetime
 

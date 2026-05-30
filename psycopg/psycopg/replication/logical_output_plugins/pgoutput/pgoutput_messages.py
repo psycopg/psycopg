@@ -13,7 +13,6 @@ from typing import (
     ClassVar,
     Literal,
     Protocol,
-    TypeVar,
     cast,
     dataclass_transform,
 )
@@ -24,7 +23,7 @@ from dataclasses import dataclass, field
 from .... import errors as e
 from .... import pq
 from ....abc import Buffer, Transformer
-from ...._compat import Self
+from ...._compat import Self, TypeVar
 from ...._cmodule import _psycopg
 from ..logical_rows import LogicalRow, RowValue
 from ...replication_utils import pg_epoch_to_datetime
@@ -1384,7 +1383,7 @@ class StreamPrepareMessage(PrepareMessage):
 
         .. __: https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html#PROTOCOL-LOGICALREP-MESSAGE-FORMATS-STREAM-PREPARE
         """  # noqa: E501
-        msg = super().decode(decoder, data)
+        msg = super(StreamPrepareMessage, cls).decode(decoder, data)
 
         decoder.relations_by_xid.pop(msg.xid, None)
         decoder.types_by_xid.pop(msg.xid, None)

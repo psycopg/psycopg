@@ -28,5 +28,5 @@ from .params import tname_param
     ],
 )
 def test_slots(msg):
-    with pytest.raises(AttributeError, match="no __dict__ for setting new attributes"):
+    with pytest.raises(AttributeError):
         msg.xxx_does_not_exist = 9

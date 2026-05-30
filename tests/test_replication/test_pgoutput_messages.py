@@ -234,9 +234,7 @@ class MessageTestBase(ABC, Generic[MsgCls]):
     def test_slots(self):
         payload = self.get_real_msg()
         msg = self.decode(payload)
-        with pytest.raises(
-            AttributeError, match="no __dict__ for setting new attributes"
-        ):
+        with pytest.raises(AttributeError):
             msg.xxx_does_not_exist = 9  # type: ignore[attr-defined]
 
     def test_msg_type(self):

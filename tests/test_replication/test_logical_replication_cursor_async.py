@@ -194,7 +194,7 @@ async def test_create_slot_snapshot_nothing(alogical_conn, slot_name):
 async def test_alter_replication_slot(alogical_conn, slot_name, replication_slot_opts):
     async def get_options(cur):
         await cur.execute(
-            f"SELECT {", ".join(replication_slot_opts)}"
+            f"SELECT {', '.join(replication_slot_opts)}"
             + " FROM pg_replication_slots WHERE slot_name = %s",
             [slot_name],
         )

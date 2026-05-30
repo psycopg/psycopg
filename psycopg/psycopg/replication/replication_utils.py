@@ -1,5 +1,7 @@
-from typing import LiteralString, cast
+from typing import cast
 from datetime import datetime, timedelta, timezone
+
+from .._compat import LiteralString
 
 # PostgreSQL epoch (2000-01-01 00:00:00 UTC)
 PG_EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)

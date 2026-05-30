@@ -78,7 +78,7 @@ async def execute_streaming_insert(has_execute, table, extra_data=None, n=320):
     columns = "data"
     extra_vals = ""
     if extra_data is not None:
-        columns = f"{columns}, {", ".join(extra_data.keys())}"
+        columns = f"{columns}, {', '.join(extra_data.keys())}"
         extra_vals = ", " + ", ".join(extra_data.values())
 
     await has_execute.execute(
