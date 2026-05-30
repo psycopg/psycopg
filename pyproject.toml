@@ -26,7 +26,6 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-mypy_path = "psycopg"
 files = [
     "psycopg/psycopg",
     "psycopg_pool/psycopg_pool",
