@@ -1,4 +1,5 @@
 from random import random
+from typing import Any
 
 import pytest
 
@@ -6,7 +7,7 @@ import psycopg
 from psycopg import sql
 from psycopg.pq import Format
 
-from .acompat import alist
+from .acompat import alist, skip_async
 from .test_sql import no_e
 from .test_adapt import make_dumper
 
@@ -199,6 +200,15 @@ async def test_sql_join(aconn):
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
     assert cur.description[2].name == "baz"
+
+
+@skip_async
+def test_sql_join_mixed_types():
+    ts: list[Any] = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar"))]
+    ts.append(sql.Literal(2))
+    for it in (ts, reversed(ts)):
+        with pytest.raises(TypeError, match="Template and Literal"):
+            fields = sql.SQL(",").join(it)
 
 
 async def test_copy(aconn):
