@@ -225,7 +225,7 @@ def _create_row(
 
 
 class PgOutputMessage(Protocol[LogicalRow]):
-    __slots__ = ()
+    __slots__ = ("__weakref__",)
     msg_type: ClassVar[str]
     msg_type_name: ClassVar[str]
 
@@ -247,7 +247,7 @@ T = TypeVar("T", bound=Any)
 
 @dataclass_transform()
 def msg_dataclass(cls: type[T]) -> type[T]:
-    return dataclass(slots=True, weakref_slot=True)(cls)
+    return dataclass(slots=True)(cls)
 
 
 @dataclass_transform(kw_only_default=True, frozen_default=True)
@@ -256,7 +256,7 @@ def cached_msg_dataclass(cls: type[T]) -> type[T]:
     cls._initialized = field(
         default=False, init=False, compare=False, hash=False, repr=False
     )
-    cls = dataclass(slots=True, weakref_slot=True, frozen=True, kw_only=True)(cls)
+    cls = dataclass(slots=True, frozen=True, kw_only=True)(cls)
     generated_init = cls.__init__
     __instances: WeakValueDictionary[frozenset[tuple[str, Any]], T] = (
         WeakValueDictionary()
@@ -1038,7 +1038,7 @@ class StreamStartMessage(PgOutputMessage):
 class StreamStopMessage(PgOutputMessage):
     """Stream stop message - ends a streaming transaction."""
 
-    __slots__ = ("__weakref__",)
+    __slots__ = ()
     msg_type = MessageType.STREAM_STOP
     msg_type_name = MessageType(MessageType.STREAM_STOP).name
 
