@@ -1,4 +1,5 @@
 from random import random
+from typing import Any
 
 import pytest
 
@@ -185,7 +186,7 @@ async def test_sql_placeholder(aconn):
 @pytest.mark.xfail(reason="Template.join() needed")
 async def test_template_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
-    fields = t",".join(ts)
+    fields = t",".join(ts)  # type: ignore[attr-defined]
     cur = await aconn.execute(t"select {fields}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
@@ -207,7 +208,7 @@ def test_sql_join_mixed_types():
     ts.append(sql.Literal(2))
     for it in (ts, reversed(ts)):
         with pytest.raises(TypeError, match="Template and Literal"):
-            fields = sql.SQL(",").join(it)
+            sql.SQL(",").join(it)
 
 
 async def test_copy(aconn):
@@ -223,11 +224,13 @@ async def test_client_cursor(aconn):
     cur = psycopg.AsyncClientCursor(aconn)
     await cur.execute(t"select {vint}, {vstr} as {vstr:i}")
     assert await cur.fetchone() == (vint, vstr)
+    assert cur.description
     assert cur.description[1].name == vstr
+    assert cur._query
     assert str(vint) in cur._query.query.decode()
-    assert str(vint) == cur._query.params[0].decode()
+    assert str(vint) == cur._query.params[0].decode()  # type: ignore
     assert f"'{vstr}'" in cur._query.query.decode()
-    assert f"'{vstr}'" in cur._query.params[1].decode()
+    assert f"'{vstr}'" in cur._query.params[1].decode()  # type: ignore
 
 
 async def test_mogrify(aconn):
@@ -246,7 +249,9 @@ async def test_server_cursor(aconn):
     async with psycopg.AsyncServerCursor(aconn, "test") as cur:
         await cur.execute(t"select {vint}, {vstr} as {vstr:i}")
         assert await cur.fetchone() == (vint, vstr)
+        assert cur.description
         assert cur.description[1].name == vstr
+        assert cur._query
         assert b"$2" in cur._query.query
         assert b"$3" not in cur._query.query
 
