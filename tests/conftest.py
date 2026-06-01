@@ -23,6 +23,7 @@ pytest_plugins = (
 collect_ignore: list[str] = []
 if sys.version_info[:2] < (3, 14):
     collect_ignore.append("test_tstring.py")
+    collect_ignore.append("test_tstring_async.py")
 
 
 def pytest_configure(config):
