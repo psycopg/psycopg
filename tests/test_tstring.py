@@ -19,13 +19,13 @@ vint = 16
 
 def test_connection_no_params(conn):
     with pytest.raises(TypeError):
-        conn.execute(t"select 1", [])  # noqa: F542
+        conn.execute(t"select 1", [])
 
 
 def test_cursor_no_params(conn):
     cur = conn.cursor()
     with pytest.raises(TypeError):
-        cur.execute(t"select 1", [])  # noqa: F542
+        cur.execute(t"select 1", [])
 
 
 def test_connection_execute(conn):
@@ -112,10 +112,10 @@ def test_nested(conn):
 
 
 def test_scope(conn):
-    t = t"select "  # noqa: F542
+    t = t"select "
     for i, name in enumerate(("foo", "bar", "baz")):
         if i:
-            t += t", "  # noqa: F542
+            t += t", "
         t += t"{i} as {name:i}"
 
     cur = conn.execute(t)
@@ -188,7 +188,7 @@ def test_sql_placeholder(conn):
 @pytest.mark.xfail(reason="Template.join() needed")
 def test_template_join(conn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
-    fields = t",".join(ts)  # noqa: F542
+    fields = t",".join(ts)
     cur = conn.execute(t"select {fields}")
     assert cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"

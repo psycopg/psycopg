@@ -16,13 +16,13 @@ vint = 16
 
 async def test_connection_no_params(aconn):
     with pytest.raises(TypeError):
-        await aconn.execute(t"select 1", [])  # noqa: F542
+        await aconn.execute(t"select 1", [])
 
 
 async def test_cursor_no_params(aconn):
     cur = aconn.cursor()
     with pytest.raises(TypeError):
-        await cur.execute(t"select 1", [])  # noqa: F542
+        await cur.execute(t"select 1", [])
 
 
 async def test_connection_execute(aconn):
@@ -109,10 +109,10 @@ async def test_nested(aconn):
 
 
 async def test_scope(aconn):
-    t = t"select "  # noqa: F542
+    t = t"select "
     for i, name in enumerate(("foo", "bar", "baz")):
         if i:
-            t += t", "  # noqa: F542
+            t += t", "
         t += t"{i} as {name:i}"
 
     cur = await aconn.execute(t)
@@ -185,7 +185,7 @@ async def test_sql_placeholder(aconn):
 @pytest.mark.xfail(reason="Template.join() needed")
 async def test_template_join(aconn):
     ts = [t"{i} as {name:i}" for i, name in enumerate(("foo", "bar", "baz"))]
-    fields = t",".join(ts)  # noqa: F542
+    fields = t",".join(ts)
     cur = await aconn.execute(t"select {fields}")
     assert await cur.fetchone() == (0, 1, 2)
     assert cur.description[0].name == "foo"
