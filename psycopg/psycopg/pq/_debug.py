@@ -76,7 +76,7 @@ class PGconnDebug:
         return cls(debugging(PGconn.connect_start)(conninfo))
 
     @classmethod
-    def ping(self, conninfo: bytes) -> int:
+    def ping(cls, conninfo: bytes) -> int:
         return debugging(PGconn.ping)(conninfo)
 
 
