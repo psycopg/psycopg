@@ -6,6 +6,11 @@
 # pre-commit should give the same result of running them manually.
 #
 # Please check README.rst about setting up a development env.
+#
+# Note: this file is kept compatible with Python versions < 3.14, so the
+# files including tstrings are excluded. However the `lint.yml` will sed it
+# inplace removing the `exclude` entries in order to run linting of those files
+# too in CI.
 
 repos:
   - repo: local
