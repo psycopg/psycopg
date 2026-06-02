@@ -54,6 +54,8 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
+maximum_signature_line_length = 100
+
 # -- Options for HTML output -------------------------------------------------
 
 # The announcement may be in the website but not shipped with the docs
