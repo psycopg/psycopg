@@ -99,6 +99,10 @@ will save you time and frustrations.
 
 .. __: https://pre-commit.com/
 
+Please follow the `conventional commits`__ specification for your commit messages.
+
+.. __: https://www.conventionalcommits.org/en/v1.0.0/
+
 
 Cross-compiling
 ---------------
