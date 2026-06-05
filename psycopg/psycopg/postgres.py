@@ -133,8 +133,9 @@ def register_default_types(types: TypesRegistry) -> None:
 
 
 def register_default_adapters(context: AdaptContext) -> None:
-    from .types import array, bool, composite, datetime, enum, json, multirange, net
-    from .types import none, numeric, numpy, range, string, uuid
+    from .types import array, bool, cid, composite, datetime, enum, int2vector, json
+    from .types import lsn, multirange, net, none, numeric, numpy, oidvector, range
+    from .types import string, tid, uuid, xid
 
     array.register_default_adapters(context)
     composite.register_default_adapters(context)
@@ -147,6 +148,14 @@ def register_default_adapters(context: AdaptContext) -> None:
     range.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
+
+    # catalog types
+    cid.register_default_adapters(context)
+    int2vector.register_default_adapters(context)
+    lsn.register_default_adapters(context)
+    oidvector.register_default_adapters(context)
+    tid.register_default_adapters(context)
+    xid.register_default_adapters(context)
 
     # Both numpy Decimal and uint64 dumpers use the numeric oid, but the former
     # covers the entire numeric domain, whereas the latter only deals with
