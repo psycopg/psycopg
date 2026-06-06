@@ -43,7 +43,7 @@ class UUIDLoader(Loader):
             from uuid import UUID
 
     def load(self, data: Buffer) -> uuid.UUID:
-        return UUID((bytes(data) if isinstance(data, memoryview) else data).decode())
+        return UUID(str(data, "utf-8"))
 
 
 class UUIDBinaryLoader(UUIDLoader):

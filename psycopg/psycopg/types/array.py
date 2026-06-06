@@ -172,8 +172,6 @@ class ListDumper(BaseListDumper):
                         tokens.append(b"NULL")
                     else:
                         if needs_quotes(ad):
-                            if not isinstance(ad, bytes):
-                                ad = bytes(ad)
                             ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
                         tokens.append(ad)
                 else:
