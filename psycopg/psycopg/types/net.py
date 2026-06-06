@@ -6,6 +6,7 @@ Adapters for network types.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, TypeAlias
 from collections.abc import Callable
 
@@ -36,6 +37,7 @@ PGSQL_AF_INET = 2
 PGSQL_AF_INET6 = 3
 IPV4_PREFIXLEN = 32
 IPV6_PREFIXLEN = 128
+_SLASH_RE = re.compile(b"/")
 
 
 class _LazyIpaddress:
@@ -126,13 +128,10 @@ class _LazyIpaddressLoader(Loader, _LazyIpaddress):
 
 class InetLoader(_LazyIpaddressLoader):
     def load(self, data: Buffer) -> Address | Interface:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-
-        if b"/" in data:
-            return ip_interface(data.decode())
+        if _SLASH_RE.search(data):
+            return ip_interface(str(data, "utf-8"))
         else:
-            return ip_address(data.decode())
+            return ip_address(str(data, "utf-8"))
 
 
 class InetBinaryLoader(_LazyIpaddressLoader):
@@ -158,10 +157,7 @@ class InetBinaryLoader(_LazyIpaddressLoader):
 
 class CidrLoader(_LazyIpaddressLoader):
     def load(self, data: Buffer) -> Network:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-
-        return ip_network(data.decode())
+        return ip_network(str(data, "utf-8"))
 
 
 class CidrBinaryLoader(_LazyIpaddressLoader):

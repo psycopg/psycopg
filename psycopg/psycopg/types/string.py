@@ -112,9 +112,7 @@ class TextLoader(Loader):
 
     def load(self, data: Buffer) -> bytes | str:
         if self._encoding:
-            if isinstance(data, memoryview):
-                data = bytes(data)
-            return data.decode(self._encoding)
+            return str(data, self._encoding)
         else:
             # return bytes for SQL_ASCII db
             if not isinstance(data, bytes):

@@ -267,9 +267,7 @@ class Float8BinaryLoader(Loader):
 
 class NumericLoader(Loader):
     def load(self, data: Buffer) -> Decimal:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        return Decimal(data.decode())
+        return Decimal(str(data, "utf-8"))
 
 
 DEC_DIGITS = 4  # decimal digits per Postgres "digit"
