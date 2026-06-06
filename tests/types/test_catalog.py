@@ -15,29 +15,40 @@ from psycopg.types.int2vector import Int2Vector
 pytestmark = pytest.mark.crdb_skip("pg_catalog_types")
 
 
+def unregister_loaders(adapters, typname, format):
+    adapters.unregister_loader(typname, format)
+    if format is pq.Format.BINARY:
+        pytest.skip("Backwards compatibility not preserved for binary")
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["0", "MAX"])
 @pytest.mark.parametrize(
     "cls", [CID, XID, pytest.param(XID8, marks=pytest.mark.pg(">=13"))]
 )
+@pytest.mark.parametrize("with_loaders", [True, False])
 def test_roundtrip_int_catalog_types(conn, val, fmt_in, fmt_out, cls, with_loaders):
     if val == "MAX":
         val = str(2**64 - 1 if cls is XID8 else str(2**32 - 1))
     cur = conn.cursor(binary=fmt_out)
     typname = cls.__name__.lower()
+
+    if not with_loaders:
+        unregister_loaders(cur.adapters, typname, fmt_out)
+
     result = cur.execute(f"select %{fmt_in.value}::{typname}", (val,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].oid
     assert isinstance(result, str)
-    assert isinstance(result, cls)
+    assert isinstance(result, cls) is with_loaders
     assert result == val
 
     result = cur.execute(f"select %{fmt_in.value}::{typname}[]", ([val],)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].array_oid
     assert isinstance(result[0], str)
-    assert isinstance(result[0], cls)
+    assert isinstance(result[0], cls) is with_loaders
     assert result[0] == val
 
 
@@ -60,21 +71,26 @@ def test_quote_int_catalog_types(conn, cls):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["0/0", LSN.from_int(2**64 - 1)])
-def test_roundtrip_lsn(conn, val, fmt_in, fmt_out):
+@pytest.mark.parametrize("with_loaders", [True, False])
+def test_roundtrip_lsn(conn, val, fmt_in, fmt_out, with_loaders):
     cur = conn.cursor(binary=fmt_out)
     typname = "pg_lsn"
+
+    if not with_loaders:
+        unregister_loaders(cur.adapters, typname, fmt_out)
+
     result = cur.execute(f"select %{fmt_in.value}::{typname}", (val,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].oid
     assert isinstance(result, str)
-    assert isinstance(result, LSN)
+    assert isinstance(result, LSN) is with_loaders
     assert result == val
 
     result = cur.execute(f"select %{fmt_in.value}::{typname}[]", ([val],)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].array_oid
     assert isinstance(result[0], str)
-    assert isinstance(result[0], LSN)
+    assert isinstance(result[0], LSN) is with_loaders
     assert result[0] == val
 
 
@@ -96,21 +112,26 @@ def test_quote_lsn(conn):
 @pytest.mark.parametrize(
     "val", ["(0,0)", TID.from_block_and_offset(2**32 - 1, 2**16 - 1)]
 )
-def test_roundtrip_tid(conn, val, fmt_in, fmt_out):
+@pytest.mark.parametrize("with_loaders", [True, False])
+def test_roundtrip_tid(conn, val, fmt_in, fmt_out, with_loaders):
     cur = conn.cursor(binary=fmt_out)
     typname = "tid"
+
+    if not with_loaders:
+        unregister_loaders(cur.adapters, typname, fmt_out)
+
     result = cur.execute(f"select %{fmt_in.value}::{typname}", (val,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].oid
     assert isinstance(result, str)
-    assert isinstance(result, TID)
+    assert isinstance(result, TID) is with_loaders
     assert result == val
 
     result = cur.execute(f"select %{fmt_in.value}::{typname}[]", ([val],)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].array_oid
     assert isinstance(result[0], str)
-    assert isinstance(result[0], TID)
+    assert isinstance(result[0], TID) is with_loaders
     assert result[0] == val
 
 
@@ -131,25 +152,30 @@ def test_quote_tid(conn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["", "0 0 0", "MAX"])
 @pytest.mark.parametrize("cls", [Int2Vector, OidVector])
-def test_roundtrip_vector_catalog_types(conn, val, fmt_in, fmt_out, cls):
+@pytest.mark.parametrize("with_loaders", [True, False])
+def test_roundtrip_vector_catalog_types(conn, val, fmt_in, fmt_out, cls, with_loaders):
     if val == "MAX":
         val = " ".join(
             str(2**15 - 1 if cls is Int2Vector else str(2**32 - 1)) for _ in range(3)
         )
     cur = conn.cursor(binary=fmt_out)
     typname = cls.__name__.lower()
+
+    if not with_loaders:
+        unregister_loaders(cur.adapters, typname, fmt_out)
+
     result = cur.execute(f"select %{fmt_in.value}::{typname}", (val,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].oid
     assert isinstance(result, str)
-    assert isinstance(result, cls)
+    assert isinstance(result, cls) is with_loaders
     assert result == val
 
     result = cur.execute(f"select %{fmt_in.value}::{typname}[]", ([val],)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[typname].array_oid
     assert isinstance(result[0], str)
-    assert isinstance(result[0], cls)
+    assert isinstance(result[0], cls) is with_loaders
     assert result[0] == val
 
 
