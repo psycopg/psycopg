@@ -12,7 +12,7 @@ from psycopg.types.xid import XID, XID8
 from psycopg.types.oidvector import OidVector
 from psycopg.types.int2vector import Int2Vector
 
-pytestmark = pytest.mark.crdb_skip("pg_catalog_types")
+pytestmark = pytest.mark.crdb_skip("catalog types")
 
 
 def unregister_loaders(adapters, typname, format):
