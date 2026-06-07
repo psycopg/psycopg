@@ -327,8 +327,8 @@ class Faker:
         return spec(bytes([randrange(256) for i in range(length)]))
 
     def make_date(self, spec):
-        day = randrange(dt.date.max.toordinal())
-        return dt.date.fromordinal(day + 1)
+        day = randrange(1, dt.date.max.toordinal())
+        return dt.date.fromordinal(day)
 
     def schema_datetime(self, cls):
         return self.schema_time(cls)
