@@ -59,6 +59,7 @@ ALL_INPUTS = """
     tests/test_prepared_async.py
     tests/test_tpc_async.py
     tests/test_transaction_async.py
+    tests/test_tstring_async.py
     tests/test_waiting_async.py
 """.split()
 
@@ -93,7 +94,7 @@ def main() -> int:
         inputs, outputs = [], []
         for fpin in opt.inputs:
             fpout = fpin.parent / fpin.name.replace("_async", "")
-            if fpout.stat().st_mtime >= fpin.stat().st_mtime:
+            if fpout.exists() and fpout.stat().st_mtime >= fpin.stat().st_mtime:
                 logger.debug("not converting %s as %s is up to date", fpin, fpout)
                 continue
             inputs.append(fpin)

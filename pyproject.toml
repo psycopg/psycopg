@@ -40,6 +40,7 @@ strict = true
 exclude = '''(?x)(
     ^ docs/lib/.*\.py
     | tests/test_tstring\.py
+    | tests/test_tstring_async\.py
 )'''
 
 # Don't use SQLite cache as it highlights Mypy concurrency issues.
