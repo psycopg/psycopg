@@ -174,8 +174,6 @@ class CidrBinaryLoader(_LazyIpaddressLoader):
         else:
             return IPv6Network((packed, prefix))
 
-        return ip_network(data.decode())
-
 
 def register_default_adapters(context: AdaptContext) -> None:
     adapters = context.adapters
