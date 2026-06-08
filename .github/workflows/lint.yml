@@ -6,6 +6,8 @@ on:
     # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
     branches:
       - "**"
+    tags-ignore:
+      - "**"
   pull_request:
   schedule:
     - cron: '18 6 * * *'

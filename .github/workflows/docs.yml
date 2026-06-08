@@ -5,6 +5,8 @@ on:
     branches:
       # This should match the DOC3_BRANCH value in the psycopg-website Makefile
       - master
+    tags-ignore:
+      - "**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}

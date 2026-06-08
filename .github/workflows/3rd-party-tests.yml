@@ -11,6 +11,8 @@ on:
     paths-ignore:
       - "docs/*"
       - "tools/*"
+    tags-ignore:
+      - "**"
   workflow_dispatch:
 
 concurrency:
