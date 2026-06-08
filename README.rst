@@ -88,6 +88,12 @@ Now hack away! You can run the tests using::
     export PSYCOPG_TEST_DSN="dbname=psycopg_test"
     pytest
 
+If some of the tests fail on your local host, it may be helpful to exclude the
+`proxy`, `subprocess`, and/or `timing` tests to get a clean test run, for
+example::
+
+     pytest  -m 'not proxy and not timing'
+
 The project includes some `pre-commit`__ hooks to check that the code is valid
 according to the project coding convention. Please make sure to install them
 by running::
