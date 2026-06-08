@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from ..adapt import Loader
@@ -7,8 +9,17 @@ from ._catalog import _StrSubclass, _StrSubclassLoader
 
 
 class TID(_StrSubclass):
-    block: int
-    offset: int
+    @cached_property
+    def block(self) -> int:
+        block, offset = self[1:-1].split(",")
+        self.offset = int(offset)
+        return int(block)
+
+    @cached_property
+    def offset(self) -> int:
+        block, offset = self[1:-1].split(",")
+        self.block = int(block)
+        return int(offset)
 
     @classmethod
     def from_buffer(cls, val: Buffer) -> Self:

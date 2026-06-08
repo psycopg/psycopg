@@ -1,9 +1,16 @@
+from functools import cached_property
+
 from ..abc import AdaptContext, Buffer
 from .._compat import Self
 from ._catalog import _Int8IntStrBinaryLoader, _IntStr, _StrSubclassLoader
 
 
 class LSN(_IntStr):
+    @cached_property
+    def value(self) -> int:
+        hi, lo = self.split("/")
+        return (int(hi, 16) << 32) | int(lo, 16)
+
     @classmethod
     def from_buffer(cls, val: Buffer) -> Self:
         obj = cls(str(val, "ascii"))
@@ -20,11 +27,11 @@ class LSN(_IntStr):
 
         return obj
 
-    @property
+    @cached_property
     def high(self) -> int:
         return (self.value >> 32) & 0xFFFFFFFF
 
-    @property
+    @cached_property
     def low(self) -> int:
         return self.value & 0xFFFFFFFF
 

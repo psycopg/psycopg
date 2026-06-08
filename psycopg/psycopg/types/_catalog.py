@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from typing import Callable, Generic
+from functools import cached_property
 
 from ..pq import Format
 from ..abc import Buffer
@@ -26,7 +27,9 @@ class _StrSubclass(str):
 
 
 class _IntStr(_StrSubclass):
-    value: int
+    @cached_property
+    def value(self) -> int:
+        return int(self)
 
     @classmethod
     def from_buffer(cls, val: Buffer) -> Self:
@@ -45,7 +48,9 @@ class _IntStr(_StrSubclass):
 
 
 class _IntVectorStr(_StrSubclass):
-    value: list[int]
+    @cached_property
+    def value(self) -> list[int]:
+        return [int(val) for val in self.split()]
 
     @classmethod
     def from_buffer(cls, val: Buffer) -> Self:
