@@ -13,7 +13,9 @@ from psycopg_c.pq.libpq cimport Oid
 @cython.final
 cdef class RecordLoader(_CRecursiveLoader):
     format = PQ_TEXT
+    _text_oid = oids.TEXT_OID
 
+    cdef PyObject *row_loader
     # A memory area used to unescape elements.
     # Keep it here to avoid a malloc per element and to
     # make sure to free it on error.
@@ -21,22 +23,38 @@ cdef class RecordLoader(_CRecursiveLoader):
     cdef char *scratch
     cdef size_t sclen
 
-    def __cinit__(RecordLoader self, libpq.Oid oid, context: AdaptContext | None = None):
-        self.sclen = 0
-
     cdef object cload(self, const char *data, size_t length):
         if length == 2:
             return ()
 
-        load = self._tx.get_loader(oids.TEXT_OID, self.format).load
-        return _parse_text_record(data+1, length-2, &(self.scratch), &(self.sclen), load)
+        if self.row_loader is NULL:
+            self.row_loader = self._tx._c_get_loader(
+                <PyObject *>self._text_oid, <PyObject *>PQ_TEXT)
+
+        cdef RowLoader row_loader = <RowLoader>self.row_loader
+        cdef CLoader cloader = None
+        cdef object pyload = None
+        if row_loader.cloader is not None:
+            cloader = row_loader.cloader
+        else:
+            pyload = row_loader.loadfunc
+
+        return _parse_text_record(
+            data + 1, length - 2, &(self.scratch), &(self.sclen), cloader, pyload
+        )
 
     def __dealloc__(self):
         if self.sclen > 0:
             PyMem_Free(self.scratch)
 
+
 cdef tuple _parse_text_record(
-    const char *data, size_t length, char **scratch_ptr, size_t *sclen, load
+    const char *data,
+    size_t length,
+    char **scratch_ptr,
+    size_t *sclen_ptr,
+    CLoader cloader,
+    object load,
 ):
     cdef char *buf = data
 
@@ -44,20 +62,23 @@ cdef tuple _parse_text_record(
     cdef size_t required_bytes
     nfields, required_bytes = _get_nfields_and_required_bytes(&data, length)
 
-    if required_bytes > sclen[0]:
+    if required_bytes > sclen_ptr[0]:
         scratch_ptr[0] = <char*>PyMem_Realloc(scratch_ptr[0], required_bytes)
 
     cdef tuple record = PyTuple_New(nfields)
 
     cdef char * start
-    cdef size_t len
+    cdef size_t size
     cdef Py_ssize_t i = 0
     while buf < data + length:
-        start, len = _parse_record_token(&buf, data + length, scratch_ptr)
+        start, size = _parse_record_token(&buf, data + length, scratch_ptr)
         if start is NULL:
             field = None
         else:
-            field = load(start[:len])
+            if cloader is not None:
+                field = cloader.cload(start, size)
+            else:
+                field = load(start[:size])
         Py_INCREF(field)
         PyTuple_SET_ITEM(record, i, field)
         i += 1
