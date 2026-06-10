@@ -77,8 +77,10 @@ cdef tuple _parse_text_record(
         else:
             if cloader is not None:
                 field = cloader.cload(start, size)
-            else:
+            elif load is not None:
                 field = load(start[:size])
+            else:
+                field = start[:size]
         Py_INCREF(field)
         PyTuple_SET_ITEM(record, i, field)
         i += 1
@@ -221,11 +223,9 @@ cdef class RecordBinaryLoader(CLoader):
 
 
 cdef inline tuple _parse_binary_record(const char *data):
-    cdef int32_t benfields
-    memcpy(&benfields, data, sizeof(benfields))
-    cdef Py_ssize_t nfields = endian.be32toh(benfields)
-    cdef size_t offset = 0
-    offset += sizeof(benfields)
+    cdef Py_ssize_t nfields
+    cdef size_t offset
+    nfields, offset = _get_nfields_and_offset(data)
     cdef tuple record = PyTuple_New(nfields)
     cdef tuple oids = PyTuple_New(nfields)
 
@@ -255,3 +255,105 @@ cdef inline tuple _parse_binary_record(const char *data):
         PyTuple_SET_ITEM(record, i, field)
 
     return record, oids
+
+
+cdef class _CompositeLoader(CLoader):
+    """
+    Base class to create text loaders of specific composite types.
+
+    The class is complete but lack information about the fields types and
+    object factory. These will be added by register_composite(), which will
+    create a subclass of this class.
+    """
+    format = PQ_TEXT
+
+    cdef Transformer _tx
+    # A memory area used to unescape elements.
+    # Keep it here to avoid a malloc per element and to
+    # make sure to free it on error.
+    # Cython initializes these to NULL and 0, respectively
+    cdef char *scratch
+    cdef size_t sclen
+
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        # Note: we cannot use the RecursiveLoader base class here because we
+        # always want a different Transformer instance, otherwise the types
+        # loaded will conflict with the types loaded by the record.
+        self._tx = Transformer(context)
+
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
+        self._tx.set_loader_types(self.info.field_types, self.format)
+
+    cdef object cload(self, const char *data, size_t length):
+        if length == 2:
+            args = ()
+        else:
+            targs = _parse_text_record(
+                data + 1, length - 2, &(self.scratch), &(self.sclen), None, None
+            )
+            args = self._tx.load_sequence(targs)
+        return type(self).make_object(args, self.info)
+
+    def __dealloc__(self):
+        if self.sclen > 0:
+            PyMem_Free(self.scratch)
+
+
+cdef class _CompositeBinaryLoader(CLoader):
+    """
+    Base class to create text loaders of specific composite types.
+
+    The class is complete but lack information about the fields types, names,
+    and object factory. These will be added by register_composite(), which will
+    create a subclass of this class.
+    """
+    format = PQ_BINARY
+
+    cdef Transformer _tx
+
+    def __cinit__(self, oid: int, context: abc.AdaptContext | None = None):
+        self._tx = Transformer(context)
+        self._tx.set_loader_types(self.info.field_types, self.format)
+
+    def __init__(self, oid: int, context: abc.AdaptContext | None = None):
+        self._tx.set_loader_types(self.info.field_types, self.format)
+
+    cdef object cload(self, const char *data, size_t length):
+        bargs = _parse_binary_composite(data)
+        args = self._tx.load_sequence(bargs)
+        return type(self).make_object(args, self.info)
+
+
+cdef inline tuple _parse_binary_composite(const char *data):
+    cdef size_t offset
+    cdef Py_ssize_t nfields
+    nfields, offset = _get_nfields_and_offset(data)
+    cdef tuple record = PyTuple_New(nfields)
+
+    cdef int32_t befieldlength, fieldlength
+
+    cdef Py_ssize_t i
+    for i in range(nfields):
+        offset += sizeof(int32_t)  # skip oid
+
+        memcpy(&befieldlength, data + offset, sizeof(befieldlength))
+        offset += sizeof(befieldlength)
+
+        if befieldlength == _binary_null:
+            field = None
+        else:
+            fieldlength = endian.be32toh(befieldlength)
+            field = data[offset:offset + fieldlength]
+            offset += fieldlength
+
+        Py_INCREF(field)
+        PyTuple_SET_ITEM(record, i, field)
+
+    return record
+
+
+cdef inline (Py_ssize_t, size_t) _get_nfields_and_offset(char *data) noexcept nogil:
+    cdef int32_t benfields
+    memcpy(&benfields, data, sizeof(benfields))
+    cdef Py_ssize_t nfields = endian.be32toh(benfields)
+    return nfields, <size_t>sizeof(benfields)

@@ -7,6 +7,7 @@ Support for composite types adaptation.
 from __future__ import annotations
 
 import re
+import types
 import struct
 import logging
 from abc import ABC, abstractmethod
@@ -20,6 +21,7 @@ from .._oids import TEXT_OID
 from ..adapt import Buffer, Dumper, Loader, PyFormat, RecursiveDumper, RecursiveLoader
 from ..adapt import Transformer
 from .._struct import pack_len, unpack_len
+from .._cmodule import _psycopg
 from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier
 
@@ -331,7 +333,7 @@ def register_composite(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: type[Loader] = _make_loader(info, make_object)
+    loader: type[abc.CompositeLoader[T]] = _make_loader(info, make_object)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
@@ -517,19 +519,32 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 @cache
 def _make_loader(
     info: CompositeInfo, make_object: ObjectMaker[T]
-) -> type[_CompositeLoader[T]]:
+) -> type[abc.CompositeLoader[T]]:
     doc = f"Text loader for the '{info.name}' composite."
     d = {"__doc__": doc, "info": info, "make_object": make_object}
-    return type(f"{info.name.title()}Loader", (_CompositeLoader,), d)
+    name = f"{info.name.title()}Loader"
+    if _psycopg:
+        return type(name, (_psycopg._CompositeLoader,), d)
+    else:
+        return types.new_class(
+            name, (_CompositeLoader[T],), {}, lambda ns: ns.update(d)
+        )
 
 
 @cache
 def _make_binary_loader(
     info: CompositeInfo, make_object: ObjectMaker[T]
-) -> type[_CompositeBinaryLoader[T]]:
+) -> type[abc.CompositeLoader[T]]:
     doc = f"Binary loader for the '{info.name}' composite."
     d = {"__doc__": doc, "info": info, "make_object": make_object}
-    return type(f"{info.name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
+    name = f"{info.name.title()}BinaryLoader"
+    if _psycopg:
+        return type(name, (_psycopg._CompositeBinaryLoader,), d)
+
+    else:
+        return types.new_class(
+            name, (_CompositeBinaryLoader[T],), {}, lambda ns: ns.update(d)
+        )
 
 
 @cache
