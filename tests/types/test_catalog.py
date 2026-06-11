@@ -5,12 +5,25 @@ import pytest
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat, Transformer
 from psycopg.postgres import types as builtins
-from psycopg.types.cid import CID
-from psycopg.types.lsn import LSN
-from psycopg.types.tid import TID
-from psycopg.types.xid import XID, XID8
-from psycopg.types.oidvector import OidVector
-from psycopg.types.int2vector import Int2Vector
+
+try:
+    from psycopg.types.cid import CID
+    from psycopg.types.lsn import LSN
+    from psycopg.types.tid import TID
+    from psycopg.types.xid import XID, XID8
+    from psycopg.types.oidvector import OidVector
+    from psycopg.types.int2vector import Int2Vector
+except ImportError:
+    # allow importing on older versions of psycopg
+    # so that psycopg_pool compatibility tests can run.
+    class Dummy(type):
+        def __call__(self, *args, **kwargs):
+            return self
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    CID = LSN = TID = XID = XID8 = OidVector = Int2Vector = Dummy()  # type: ignore
 
 pytestmark = pytest.mark.crdb_skip("catalog types")
 
@@ -52,22 +65,6 @@ def test_roundtrip_int_catalog_types(conn, val, fmt_in, fmt_out, cls, with_loade
     assert result[0] == val
 
 
-@pytest.mark.parametrize(
-    "cls", [CID, XID, pytest.param(XID8, marks=pytest.mark.pg(">=13"))]
-)
-def test_quote_int_catalog_types(conn, cls):
-    tx = Transformer()
-    val = cls.from_int(12)
-    typname = cls.__name__.lower()
-
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == b"'12'"
-
-    cur = conn.cursor()
-    cur.execute(sql.SQL("select {v}::" + typname).format(v=sql.Literal(val)))
-    assert isinstance(val, cls)
-    assert cur.fetchone()[0] == val
-
-
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["0/0", LSN.from_int(2**64 - 1)])
@@ -92,19 +89,6 @@ def test_roundtrip_lsn(conn, val, fmt_in, fmt_out, with_loaders):
     assert isinstance(result[0], str)
     assert isinstance(result[0], LSN) is with_loaders
     assert result[0] == val
-
-
-def test_quote_lsn(conn):
-    tx = Transformer()
-    val = LSN.from_int(12)
-    typname = "pg_lsn"
-
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == b"'0/C'"
-
-    cur = conn.cursor()
-    cur.execute(sql.SQL("select {v}::" + typname).format(v=sql.Literal(val)))
-    assert isinstance(val, LSN)
-    assert cur.fetchone()[0] == val
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -133,19 +117,6 @@ def test_roundtrip_tid(conn, val, fmt_in, fmt_out, with_loaders):
     assert isinstance(result[0], str)
     assert isinstance(result[0], TID) is with_loaders
     assert result[0] == val
-
-
-def test_quote_tid(conn):
-    tx = Transformer()
-    val = TID.from_block_and_offset(400, 12)
-    typname = "tid"
-
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == b"'(400,12)'"
-
-    cur = conn.cursor()
-    cur.execute(sql.SQL("select {v}::" + typname).format(v=sql.Literal(val)))
-    assert isinstance(val, TID)
-    assert cur.fetchone()[0] == val
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -179,22 +150,45 @@ def test_roundtrip_vector_catalog_types(conn, val, fmt_in, fmt_out, cls, with_lo
     assert result[0] == val
 
 
-@pytest.mark.parametrize("cls", [Int2Vector, OidVector])
-def test_quote_vector_catalog_types(conn, cls):
+@pytest.mark.parametrize(
+    "typname,val,quoted",
+    [
+        ("cid", CID.from_int(12), b"'12'"),
+        ("xid", XID.from_int(12), b"'12'"),
+        pytest.param("xid8", XID8.from_int(12), b"'12'", marks=pytest.mark.pg(">=13")),
+        ("pg_lsn", LSN.from_int(12), b"'0/C'"),
+        ("tid", TID.from_tuple((400, 12)), b"'(400,12)'"),
+        ("int2vector", Int2Vector.from_list([12, 30, 56]), b"'12 30 56'"),
+        ("oidvector", OidVector.from_list([12, 30, 56]), b"'12 30 56'"),
+    ],
+)
+def test_quote_catalog_types(conn, typname, val, quoted):
     tx = Transformer()
-    val = cls.from_list([12, 30, 56])
-    typname = cls.__name__.lower()
 
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == b"'12 30 56'"
+    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == quoted
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}::" + typname).format(v=sql.Literal(val)))
-    assert isinstance(val, cls)
+    assert isinstance(val, type(val))
     assert cur.fetchone()[0] == val
 
 
 class TestStrSubclasses:
-    @pytest.mark.parametrize("lsn", [LSN.from_int(12), LSN.from_buffer(b"0/C")])
+    @pytest.mark.parametrize(
+        "val",
+        [
+            LSN.from_int(0),
+            TID.from_tuple((0, 0)),
+            XID.from_int(0),
+            XID8.from_int(0),
+            Int2Vector.from_list([]),
+            OidVector.from_list([]),
+        ],
+    )
+    def test_slots(self, val):
+        assert not hasattr(val, "__dict__")
+
+    @pytest.mark.parametrize("lsn", [LSN.from_int(12), LSN("0/C")])
     def test_lsn(self, lsn):
         assert lsn.value == 12
         assert lsn.high == 0
@@ -202,16 +196,15 @@ class TestStrSubclasses:
         assert repr(lsn) == "LSN('0/C')"
         assert lsn == "0/C"
 
-    @pytest.mark.parametrize(
-        "tid", [TID.from_block_and_offset(12, 3), TID.from_buffer(b"(12,3)")]
-    )
+    @pytest.mark.parametrize("tid", [TID.from_tuple((12, 3)), TID("(12,3)")])
     def test_tid(self, tid):
+        assert tid.value == (12, 3)
         assert tid.block == 12
         assert tid.offset == 3
         assert repr(tid) == "TID('(12,3)')"
         assert tid == "(12,3)"
 
-    @pytest.mark.parametrize("xid", [XID.from_int(12), XID.from_buffer(b"12")])
+    @pytest.mark.parametrize("xid", [XID.from_int(12), XID("12")])
     def test_xid(self, xid):
         assert xid.value == 12
         assert repr(xid) == "XID('12')"
@@ -219,7 +212,7 @@ class TestStrSubclasses:
 
     @pytest.mark.parametrize(
         "xid8",
-        [XID8.from_int(2**32 + 12), XID8.from_buffer(str(2**32 + 12).encode("ascii"))],
+        [XID8.from_int(2**32 + 12), XID8(str(2**32 + 12))],
     )
     def test_xid8(self, xid8):
         xid = xid8.xid
@@ -233,7 +226,7 @@ class TestStrSubclasses:
 
     @pytest.mark.parametrize(
         "int2vector",
-        [Int2Vector.from_list([12, 2, 0]), Int2Vector.from_buffer(b"12 2 0")],
+        [Int2Vector.from_list([12, 2, 0]), Int2Vector("12 2 0")],
     )
     def test_int2vector(self, int2vector):
         assert int2vector.value == [12, 2, 0]
@@ -242,7 +235,7 @@ class TestStrSubclasses:
 
     @pytest.mark.parametrize(
         "oidvector",
-        [OidVector.from_list([12, 2, 0]), OidVector.from_buffer(b"12 2 0")],
+        [OidVector.from_list([12, 2, 0]), OidVector("12 2 0")],
     )
     def test_oidvector(self, oidvector):
         assert oidvector.value == [12, 2, 0]
