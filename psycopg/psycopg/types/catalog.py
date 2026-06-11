@@ -27,18 +27,19 @@ class Lsn(str):
     _value: int
 
     def __new__(cls, value: int | str) -> Lsn:
-        if isinstance(value, int):
-            high = value >> 32
-            low = value & 0xFFFFFFFF
-            s = f"{high:X}/{low:X}"
-            lsn = super().__new__(cls, s)
-            lsn._value = value
-        else:
-            s = str(value).upper()
-            lsn = super().__new__(cls, s)
+        if isinstance(value, str):
             shigh, slow = value.split("/")
-            lsn._value = (int(shigh, 16) << 32) | int(slow, 16)
+            value = (int(shigh, 16) << 32) | int(slow, 16)
 
+        if not 0 <= value < 2**64:
+            raise OverflowError("Lsn value must be in the unsigned 64 bits range")
+
+        high = value >> 32
+        low = value & 0xFFFFFFFF
+        s = f"{high:X}/{low:X}"
+
+        lsn = super().__new__(cls, s)
+        lsn._value = value
         return lsn
 
     def __repr__(self) -> str:
