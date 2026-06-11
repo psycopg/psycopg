@@ -32,6 +32,14 @@ def test_from_int_roundtrip() -> None:
         assert int(Lsn(v)) == v
 
 
+@pytest.mark.parametrize("base, delta", [("0/1", -1), ("FFFFFFFF/FFFFFFFE", 1)])
+def test_overflow(base: str, delta: int) -> None:
+    lsn = Lsn(base)
+    lsn + delta
+    with pytest.raises(OverflowError):
+        lsn + (2 * delta)
+
+
 def test_from_string_uppercase() -> None:
     assert Lsn("A/3B000000") == "A/3B000000"
 
