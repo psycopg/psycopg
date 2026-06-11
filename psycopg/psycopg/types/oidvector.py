@@ -4,7 +4,7 @@ from ._catalog import _IntVectorStr, _StrSubclassLoader, _VectorBinaryLoader
 
 
 class OidVector(_IntVectorStr):
-    pass
+    __slots__ = ()
 
 
 class OidVectorLoader(_StrSubclassLoader[OidVector]):

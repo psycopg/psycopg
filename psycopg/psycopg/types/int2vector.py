@@ -4,7 +4,7 @@ from ._catalog import _IntVectorStr, _StrSubclassLoader, _VectorBinaryLoader
 
 
 class Int2Vector(_IntVectorStr):
-    pass
+    __slots__ = ()
 
 
 class Int2VectorLoader(_StrSubclassLoader[Int2Vector]):

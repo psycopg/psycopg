@@ -1,44 +1,36 @@
-from functools import cached_property
+import struct
+from typing import Callable, cast
 
 from ..pq import Format
 from ..abc import AdaptContext, Buffer
 from ..adapt import Loader
 from .._compat import Self
-from .._struct import unpack_uint4_uint2
 from ._catalog import _StrSubclass, _StrSubclassLoader
 
+unpack_tid = cast(Callable[[Buffer], tuple[int, int]], struct.Struct("!IH").unpack)
 
-class TID(_StrSubclass):
-    @cached_property
+
+class TID(_StrSubclass[tuple[int, int]]):
+    __slots__ = ()
+    value: tuple[int, int]
+
+    def _get_value(self) -> tuple[int, int]:
+        i = self.index(",")
+        return (int(self[1:i]), int(self[i + 1 : -1]))
+
+    @property
     def block(self) -> int:
-        block, offset = self[1:-1].split(",")
-        self.offset = int(offset)
-        return int(block)
+        return self.value[0]
 
-    @cached_property
+    @property
     def offset(self) -> int:
-        block, offset = self[1:-1].split(",")
-        self.block = int(block)
-        return int(offset)
+        return self.value[1]
 
     @classmethod
-    def from_buffer(cls, val: Buffer) -> Self:
-        block, offset = bytes(val)[1:-1].split(b",")
-        obj = cls(f"({block.decode('ascii')},{offset.decode('ascii')})")
-        obj.block = int(block)
-        obj.offset = int(offset)
-
+    def from_tuple(cls, value: tuple[int, int]) -> Self:
+        obj = cls(f"({value[0]},{value[1]})")
+        obj.value = value
         return obj
-
-    @classmethod
-    def from_block_and_offset(cls, block: int, offset: int) -> Self:
-        obj = cls(f"({block},{offset})")
-        obj.block = block
-        obj.offset = offset
-        return obj
-
-    def __repr__(self) -> str:
-        return f"TID('{self}')"
 
 
 class TidLoader(_StrSubclassLoader[TID]):
@@ -53,7 +45,7 @@ class TidBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> TID:
-        return TID.from_block_and_offset(*unpack_uint4_uint2(data))
+        return TID.from_tuple(unpack_tid(data))
 
 
 def register_default_adapters(context: AdaptContext) -> None:

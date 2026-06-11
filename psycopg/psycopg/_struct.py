@@ -17,7 +17,6 @@ PackInt: TypeAlias = Callable[[int], bytes]
 UnpackInt: TypeAlias = Callable[[Buffer], tuple[int]]
 PackFloat: TypeAlias = Callable[[float], bytes]
 UnpackFloat: TypeAlias = Callable[[Buffer], tuple[float]]
-Unpack2Int: TypeAlias = Callable[[Buffer], tuple[int, int]]
 
 
 class UnpackLen(Protocol):
@@ -40,7 +39,6 @@ unpack_int8 = cast(UnpackInt, struct.Struct("!q").unpack)
 unpack_uint8 = cast(UnpackInt, struct.Struct("!Q").unpack)
 unpack_float4 = cast(UnpackFloat, struct.Struct("!f").unpack)
 unpack_float8 = cast(UnpackFloat, struct.Struct("!d").unpack)
-unpack_uint4_uint2 = cast(Unpack2Int, struct.Struct("!IH").unpack)
 
 _struct_len = struct.Struct("!i")
 pack_len = cast(Callable[[int], bytes], _struct_len.pack)

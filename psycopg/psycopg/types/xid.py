@@ -4,10 +4,12 @@ from ._catalog import _StrSubclassLoader
 
 
 class XID(_IntStr):
-    pass
+    __slots__ = ()
 
 
 class XID8(_IntStr):
+    __slots__ = ()
+
     @property
     def xid(self) -> XID:
         return XID.from_int(self.value & 0xFFFFFFFF)
