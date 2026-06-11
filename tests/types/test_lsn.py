@@ -110,6 +110,7 @@ def test_lsn_binary_dumper_registered() -> None:
     assert Lsn in binary_dumpers, "Lsn binary dumper not registered"
 
 
+@pytest.mark.crdb_skip("pg_current_wal_lsn")
 @pytest.mark.parametrize("format", psycopg.pq.Format)
 def test_lsn_type_from_db(
     conn: psycopg.Connection[Any], format: psycopg.pq.Format
