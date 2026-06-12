@@ -189,22 +189,6 @@ class AdaptersMap:
         if self._register_loader_callback:
             self._register_loader_callback(oid, loader)
 
-    def unregister_loader(self, oid: int | str, format: pq.Format) -> type[Loader]:
-        if isinstance(oid, str):
-            oid = self.types[oid].oid
-        if not isinstance(oid, int):
-            raise TypeError(f"loaders should be registered on oid, got {oid} instead")
-
-        if not self._own_loaders[fmt := format]:
-            self._loaders[fmt] = self._loaders[fmt].copy()
-            self._own_loaders[fmt] = True
-
-        loader = self._loaders[fmt].pop(oid)
-        if self._register_loader_callback:
-            self._register_loader_callback(oid, loader)
-
-        return loader
-
     def get_dumper(self, cls: type, format: PyFormat) -> type[Dumper]:
         """
         Return the dumper class for the given type and format.
