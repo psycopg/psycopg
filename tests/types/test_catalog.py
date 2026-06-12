@@ -3,10 +3,15 @@ from __future__ import annotations
 import pytest
 
 import psycopg
-from psycopg import _oids, adapt, adapters, pq, sql
+from psycopg import adapt, adapters, pq, sql
 from psycopg.adapt import PyFormat, Transformer
 from psycopg.postgres import types as builtins
 from psycopg.types.array import register_all_arrays
+
+try:
+    from psycopg._oids import INVALID_OID
+except ImportError:
+    from psycopg.postgres import INVALID_OID  # type: ignore
 
 from ..fix_db import check_connection_version, maybe_trace
 
@@ -34,8 +39,8 @@ pytestmark = pytest.mark.crdb_skip("catalog types")
 # Construct a minimal AdaptersMap to test back compat
 empty_map = adapt.AdaptersMap(types=adapters.types)
 empty_map.adapters.register_loader(
-    _oids.INVALID_OID,
-    adapters.get_loader(_oids.INVALID_OID, pq.Format.TEXT),  # type: ignore
+    INVALID_OID,
+    adapters.get_loader(INVALID_OID, pq.Format.TEXT),  # type: ignore
 )
 register_all_arrays(empty_map)
 for fmt in PyFormat:
