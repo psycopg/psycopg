@@ -6,6 +6,14 @@ from ._catalog import _IntVectorStr, _StrSubclassLoader, _VectorBinaryLoader
 class OidVector(_IntVectorStr):
     __slots__ = ()
 
+    def _set_value(self, value: list[int]) -> None:
+        for i in value:
+            if not 0 <= value[0] < 2**32:
+                raise OverflowError(
+                    "OidVector values must be in the unsigned 32 bits range"
+                )
+        self.value = value
+
 
 class OidVectorLoader(_StrSubclassLoader[OidVector]):
     """Load oidvector text values as `OidVector` (a string subclass)"""

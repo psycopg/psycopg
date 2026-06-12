@@ -6,9 +6,19 @@ from ._catalog import _StrSubclassLoader
 class XID(_IntStr):
     __slots__ = ()
 
+    def _set_value(self, value: int) -> None:
+        if not 0 <= value < 2**32:
+            raise OverflowError("XID value must be in the unsigned 32 bits range")
+        self.value = value
+
 
 class XID8(_IntStr):
     __slots__ = ()
+
+    def _set_value(self, value: int) -> None:
+        if not 0 <= value < 2**64:
+            raise OverflowError("XID8 value must be in the unsigned 64 bits range")
+        self.value = value
 
     @property
     def xid(self) -> XID:

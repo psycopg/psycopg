@@ -6,7 +6,7 @@ Covers: cid, xid, xid8, pg_lsn, tid, int2vector, oidvector.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Generic
+from typing import Any, Callable, Generic, overload
 
 from ..pq import Format
 from ..abc import Buffer
@@ -25,10 +25,13 @@ class _StrSubclass(str, Generic[Value_T]):
         # making this abstract causes type errors below
         raise NotImplementedError
 
+    def _set_value(self, value: Value_T) -> None:
+        self.value = value
+
     def __getattr__(self, name: str) -> Any:
         if name == "value":
             value = self._get_value()
-            self.value = value
+            self._set_value(value)
             return value
         raise AttributeError(
             f"'{self.__class__.__name__}' object has no attribute '{name}'"
@@ -66,9 +69,9 @@ class _IntStr(_StrSubclass[int]):
         return int(str(self))
 
     @classmethod
-    def from_int(cls, val: int) -> Self:
-        obj = cls(val)
-        obj.value = val
+    def from_int(cls, value: int) -> Self:
+        obj = cls(value)
+        obj._set_value(value)
 
         return obj
 
@@ -81,8 +84,16 @@ class _IntStr(_StrSubclass[int]):
     def __add__(self, other: int) -> Self:  # type: ignore[override]
         return type(self).from_int(self.value + other)
 
-    def __sub__(self, other: Self) -> int:
-        return self.value - other.value
+    @overload
+    def __sub__(self, other: Self) -> int: ...
+
+    @overload
+    def __sub__(self, other: int) -> Self: ...
+
+    def __sub__(self, other: int | Self) -> Self | int:
+        if isinstance(other, int):
+            return type(self).from_int(self.value - other)
+        return type(self)(self.value - other.value)
 
 
 class _IntVectorStr(_StrSubclass[list[int]]):
@@ -93,9 +104,9 @@ class _IntVectorStr(_StrSubclass[list[int]]):
         return [int(val) for val in self.split()]
 
     @classmethod
-    def from_list(cls, val: list[int]) -> Self:
-        obj = cls(" ".join(str(i) for i in val))
-        obj.value = val
+    def from_list(cls, value: list[int]) -> Self:
+        obj = cls(" ".join(str(i) for i in value))
+        obj._set_value(value)
         return obj
 
 

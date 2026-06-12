@@ -3,7 +3,12 @@ from ._catalog import _Int4IntStrBinaryLoader, _IntStr, _StrSubclassLoader
 
 
 class CID(_IntStr):
-    pass
+    __slots__ = ()
+
+    def _set_value(self, value: int) -> None:
+        if not 0 <= value < 2**32:
+            raise OverflowError("CID value must be in the unsigned 32 bits range")
+        self.value = value
 
 
 class CidLoader(_StrSubclassLoader[CID]):

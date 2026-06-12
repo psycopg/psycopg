@@ -18,6 +18,13 @@ class TID(_StrSubclass[tuple[int, int]]):
         i = self.index(",")
         return (int(self[1:i]), int(self[i + 1 : -1]))
 
+    def _set_value(self, value: tuple[int, int]) -> None:
+        if not 0 <= value[0] < 2**32:
+            raise OverflowError("TID block must be in the unsigned 32 bits range")
+        if not 0 <= value[1] < 2**16:
+            raise OverflowError("TID offset must be in the unsigned 16 bits range")
+        self.value = value
+
     @property
     def block(self) -> int:
         return self.value[0]
@@ -29,7 +36,7 @@ class TID(_StrSubclass[tuple[int, int]]):
     @classmethod
     def from_tuple(cls, value: tuple[int, int]) -> Self:
         obj = cls(f"({value[0]},{value[1]})")
-        obj.value = value
+        obj._set_value(value)
         return obj
 
 

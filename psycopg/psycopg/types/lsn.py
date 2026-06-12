@@ -10,12 +10,17 @@ class LSN(_IntStr):
         hi, lo = self.split("/")
         return (int(hi, 16) << 32) | int(lo, 16)
 
+    def _set_value(self, value: int) -> None:
+        if not 0 <= value < 2**64:
+            raise OverflowError("LSN value must be in the unsigned 64 bits range")
+        self.value = value
+
     @classmethod
-    def from_int(cls, val: int) -> Self:
-        high = (val >> 32) & 0xFFFFFFFF
-        low = val & 0xFFFFFFFF
+    def from_int(cls, value: int) -> Self:
+        high = (value >> 32) & 0xFFFFFFFF
+        low = value & 0xFFFFFFFF
         obj = cls(f"{high:X}/{low:X}")
-        obj.value = val
+        obj._set_value(value)
 
         return obj
 
