@@ -65,6 +65,7 @@ class Transformer(AdaptContext):
 
     def __init__(self, context: AdaptContext | None = None):
         self._pgresult = self.types = self.formats = None
+        self._none_oid = -1
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
@@ -187,12 +188,16 @@ class Transformer(AdaptContext):
                     out[i] = self._row_dumpers[i].dump(param)
             return out
 
-        types = [self._get_none_oid()] * nparams
+        types = [-1] * nparams
         pqformats = [TEXT] * nparams
 
         for i in range(nparams):
             if (param := params[i]) is None:
+                if self._none_oid < 0:
+                    self._none_oid = self._get_none_oid()
+                types[i] = self._none_oid
                 continue
+
             dumper = self.get_dumper(param, formats[i])
             out[i] = dumper.dump(param)
             types[i] = dumper.oid
@@ -267,16 +272,9 @@ class Transformer(AdaptContext):
 
     def _get_none_oid(self) -> int:
         try:
-            return self._none_oid
-        except AttributeError:
-            pass
-
-        try:
-            rv = self._none_oid = self._adapters.get_dumper(NoneType, PY_TEXT).oid
+            return self._adapters.get_dumper(NoneType, PY_TEXT).oid
         except KeyError:
             raise e.InterfaceError("None dumper not found")
-
-        return rv
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> abc.Dumper:
         """
