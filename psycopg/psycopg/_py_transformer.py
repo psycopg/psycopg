@@ -187,12 +187,17 @@ class Transformer(AdaptContext):
                     out[i] = self._row_dumpers[i].dump(param)
             return out
 
-        types = [self._get_none_oid()] * nparams
+        none_oid = None
+        types = [-1] * nparams
         pqformats = [TEXT] * nparams
 
         for i in range(nparams):
             if (param := params[i]) is None:
+                if none_oid is None:
+                    none_oid = self._get_none_oid()
+                types[i] = none_oid
                 continue
+
             dumper = self.get_dumper(param, formats[i])
             out[i] = dumper.dump(param)
             types[i] = dumper.oid
