@@ -8,7 +8,11 @@ class LSN(_IntStr):
 
     def _get_value(self) -> int:
         hi, lo = self.split("/")
-        return (int(hi, 16) << 32) | int(lo, 16)
+        lo_in = int(lo, 16)
+        if (lo_int := lo_in & 0xFFFFFFFF) != lo_in:
+            # hi overflow is check in _set_value
+            raise OverflowError("LSN low bytes must be in the unsigned 32 bits range")
+        return (int(hi, 16) << 32) | lo_int
 
     def _set_value(self, value: int) -> None:
         if not 0 <= value < 2**64:

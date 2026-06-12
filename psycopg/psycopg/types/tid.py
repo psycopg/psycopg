@@ -25,6 +25,9 @@ class TID(_StrSubclass[tuple[int, int]]):
             raise OverflowError("TID offset must be in the unsigned 16 bits range")
         self.value = value
 
+    def __bool__(self) -> bool:
+        return bool(self.value[0] or self.value[1])
+
     @property
     def block(self) -> int:
         return self.value[0]

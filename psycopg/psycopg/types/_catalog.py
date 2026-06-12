@@ -93,7 +93,7 @@ class _IntStr(_StrSubclass[int]):
     def __sub__(self, other: int | Self) -> Self | int:
         if isinstance(other, int):
             return type(self).from_int(self.value - other)
-        return type(self)(self.value - other.value)
+        return self.value - other.value
 
 
 class _IntVectorStr(_StrSubclass[list[int]]):
