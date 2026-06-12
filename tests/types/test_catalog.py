@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import psycopg
@@ -70,6 +72,55 @@ def check_roundtrip(cur, typname, cls, val, fmt_in, with_loaders=True):
     assert isinstance(result[0], str)
     assert isinstance(result[0], cls) is with_loaders
     assert result[0] == val
+
+
+@pytest.mark.parametrize("format", pq.Format)
+def test_system_columns(conn, format):
+    conn.execute("CREATE TABLE test_system_columns (id BIGSERIAL)")
+    conn.execute("INSERT INTO test_system_columns DEFAULT VALUES")
+    with conn.cursor(binary=format) as cur:
+        cur.execute(
+            "SELECT tableoid, cmax, xmax, cmin, xmin, ctid from test_system_columns"
+        )
+        tableoid, cmax, xmax, cmin, xmin, ctid = cur.fetchone()
+        for c in (cmax, cmin):
+            assert isinstance(c, CID)
+        for x in (xmax, xmin):
+            assert isinstance(x, XID)
+        assert isinstance(ctid, TID)
+        assert isinstance(tableoid, int)
+
+
+@pytest.mark.parametrize("format", pq.Format)
+def test_current_lsn(conn, format):
+    with conn.cursor(binary=format) as cur:
+        cur.execute("SELECT pg_current_wal_lsn()")
+        (lsn,) = cur.fetchone()
+        assert isinstance(lsn, LSN)
+
+
+@pytest.mark.parametrize("format", pq.Format)
+def test_current_xid8(conn, format):
+    with conn.cursor(binary=format) as cur:
+        cur.execute("SELECT pg_current_xact_id()")
+        (lsn,) = cur.fetchone()
+        assert isinstance(lsn, XID8)
+
+
+@pytest.mark.parametrize("format", pq.Format)
+def test_indoption_int2vector(conn, format):
+    with conn.cursor(binary=format) as cur:
+        cur.execute("SELECT indoption from pg_index")
+        (int2vector,) = cur.fetchone()
+        assert isinstance(int2vector, Int2Vector)
+
+
+@pytest.mark.parametrize("format", pq.Format)
+def test_indclass_oidvector(conn, format):
+    with conn.cursor(binary=format) as cur:
+        cur.execute("SELECT indclass from pg_index")
+        (int2vector,) = cur.fetchone()
+        assert isinstance(int2vector, OidVector)
 
 
 parametrize_roundtrip_int_val = pytest.mark.parametrize("val", ["0", "MAX"])
@@ -226,8 +277,91 @@ class TestStrSubclasses:
         assert not hasattr(val, "__dict__")
 
     @pytest.mark.parametrize(
+        "cls",
+        [LSN, CID, XID, XID8],
+    )
+    def test_add(self, cls):
+        assert cls.from_int(1) + 1 == cls.from_int(2)
+        with pytest.raises(TypeError):
+            _ = 1 + cls.from_int(1) == 2
+
+    @pytest.mark.parametrize(
+        "cls",
+        [LSN, CID, XID, XID8],
+    )
+    def test_sub(self, cls):
+        assert cls.from_int(1) - 1 == cls.from_int(0)
+        with pytest.raises(OverflowError, match=cls.__name__):
+            _ = cls.from_int(0) - 1
+        assert cls.from_int(2) - cls.from_int(1) == 1
+        with pytest.raises(TypeError):
+            _ = 1 - cls.from_int(1)
+
+    @pytest.mark.parametrize(
+        "cls,trueval,falseval",
+        [
+            (LSN, "0/1", "0/0"),
+            (CID, "1", "0"),
+            (TID, "(0,1)", "(0,0)"),
+            (XID, "1", "0"),
+            (XID8, "1", "0"),
+            (Int2Vector, "1", ""),
+            (OidVector, "1", ""),
+        ],
+    )
+    def test_bool(self, cls, trueval, falseval):
+        assert cls(trueval)
+        assert not cls(falseval)
+
+    @pytest.mark.parametrize(
+        "constructor,unsorted_vals,sorted_vals",
+        [
+            (
+                LSN.from_int,
+                [1, 45, 12, 0],
+                [0, 1, 12, 45],
+            ),
+            (
+                CID.from_int,
+                [1, 45, 12, 0],
+                [0, 1, 12, 45],
+            ),
+            (
+                TID.from_tuple,
+                [(1, 1), (0, 0), (1, 0), (0, 1)],
+                [(0, 0), (0, 1), (1, 0), (1, 1)],
+            ),
+            (
+                XID.from_int,
+                [1, 45, 12, 0],
+                [0, 1, 12, 45],
+            ),
+            (
+                XID8.from_int,
+                [1, 45, 12, 0],
+                [0, 1, 12, 45],
+            ),
+            (
+                Int2Vector.from_list,
+                [[1, 1, 1], [], [1, 1], [1, 1, 0], [0, 0], [0], [0, 1], [1]],
+                [[], [0], [0, 0], [0, 1], [1], [1, 1], [1, 1, 0], [1, 1, 1]],
+            ),
+            (
+                OidVector.from_list,
+                [[1, 1, 1], [], [1, 1], [1, 1, 0], [0, 0], [0], [0, 1], [1]],
+                [[], [0], [0, 0], [0, 1], [1], [1, 1], [1, 1, 0], [1, 1, 1]],
+            ),
+        ],
+    )
+    def test_ordering(self, constructor, unsorted_vals, sorted_vals):
+        assert list(sorted(constructor(val) for val in unsorted_vals)) == list(
+            constructor(val) for val in sorted_vals
+        )
+
+    @pytest.mark.parametrize(
         "cls,overval,underval",
         [
+            (LSN, "100000000/00000000", "0/100000000"),
             (CID, 2**32, -1),
             (TID, (2**32, 1), (-1, 1)),
             (TID, (1, 2**16), (1, -1)),
@@ -240,17 +374,20 @@ class TestStrSubclasses:
     def test_overflow_default(self, cls, overval, underval):
         for val in (overval, underval):
             obj = cls(str(val))
-            with pytest.raises(OverflowError):
+            with pytest.raises(OverflowError, match=cls.__name__):
                 obj.value
 
         if isinstance(overval, int):
-            valid_over = overval - 1
-            valid_under = underval + 1
+            valid_vals: tuple[Any, Any] = (overval - 1, underval + 1)
+        elif cls is LSN:
+            valid_vals = ("FFFFFFFF/FFFFFFFF", "0/0")
         else:
-            valid_over = tuple(val - 1 for val in overval)  # type: ignore
-            valid_under = tuple(val + 1 for val in underval)
+            valid_vals = (
+                tuple(val - 1 for val in overval),
+                tuple(val + 1 for val in underval),
+            )
 
-        for val in (valid_over, valid_under):
+        for val in valid_vals:
             obj = cls(str(val))
             obj.value
 
@@ -269,7 +406,7 @@ class TestStrSubclasses:
     )
     def test_overflow_from(self, constructor, overval, underval):
         for val in (overval, underval):
-            with pytest.raises(OverflowError):
+            with pytest.raises(OverflowError, match=constructor.__self__.__name__):
                 obj = constructor(val)
 
         if isinstance(overval, int):
