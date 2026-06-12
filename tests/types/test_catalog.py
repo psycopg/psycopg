@@ -214,6 +214,7 @@ class TestStrSubclasses:
         "val",
         [
             LSN.from_int(0),
+            CID.from_int(0),
             TID.from_tuple((0, 0)),
             XID.from_int(0),
             XID8.from_int(0),
@@ -223,6 +224,64 @@ class TestStrSubclasses:
     )
     def test_slots(self, val):
         assert not hasattr(val, "__dict__")
+
+    @pytest.mark.parametrize(
+        "cls,overval,underval",
+        [
+            (CID, 2**32, -1),
+            (TID, (2**32, 1), (-1, 1)),
+            (TID, (1, 2**16), (1, -1)),
+            (XID, 2**32, -1),
+            (XID8, 2**64, -1),
+            (Int2Vector, 2**15, -(2**15) - 1),
+            (OidVector, 2**32, -1),
+        ],
+    )
+    def test_overflow_default(self, cls, overval, underval):
+        for val in (overval, underval):
+            obj = cls(str(val))
+            with pytest.raises(OverflowError):
+                obj.value
+
+        if isinstance(overval, int):
+            valid_over = overval - 1
+            valid_under = underval + 1
+        else:
+            valid_over = tuple(val - 1 for val in overval)  # type: ignore
+            valid_under = tuple(val + 1 for val in underval)
+
+        for val in (valid_over, valid_under):
+            obj = cls(str(val))
+            obj.value
+
+    @pytest.mark.parametrize(
+        "constructor,overval,underval",
+        [
+            (LSN.from_int, 2**64, -1),
+            (CID.from_int, 2**32, -1),
+            (TID.from_tuple, (2**32, 1), (-1, 1)),
+            (TID.from_tuple, (1, 2**16), (1, -1)),
+            (XID.from_int, 2**32, -1),
+            (XID8.from_int, 2**64, -1),
+            (Int2Vector.from_list, [2**15], [-(2**15) - 1]),
+            (OidVector.from_list, [2**32], [-1]),
+        ],
+    )
+    def test_overflow_from(self, constructor, overval, underval):
+        for val in (overval, underval):
+            with pytest.raises(OverflowError):
+                obj = constructor(val)
+
+        if isinstance(overval, int):
+            valid_over = overval - 1
+            valid_under = underval + 1
+        else:
+            valid_over = tuple(val - 1 for val in overval)  # type: ignore
+            valid_under = tuple(val + 1 for val in underval)
+
+        for val in (valid_over, valid_under):
+            obj = constructor(val)
+            obj.value
 
     @pytest.mark.parametrize("lsn", [LSN.from_int(12), LSN("0/C")])
     def test_lsn(self, lsn):
