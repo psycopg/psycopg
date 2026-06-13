@@ -235,6 +235,16 @@ class LSN(_IntStr):
 
         return obj
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, type(self)):
+            return self.value == other.value
+        if isinstance(other, str):
+            return self.upper() == other.upper()
+        if isinstance(other, int):
+            return self.value == other
+
+        return False
+
     @property
     def high(self) -> int:
         return (self.value >> 32) & 0xFFFFFFFF
