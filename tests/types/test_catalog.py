@@ -256,6 +256,14 @@ def test_quote_catalog_types(conn, typname, val, quoted):
 
 
 class TestStrSubclasses:
+
+    @pytest.mark.parametrize(
+        "cls",
+        [LSN, CID, TID, XID, XID8, Int2Vector, OidVector],
+    )
+    def test_right_module_defined(self, cls):
+        assert cls.__module__ == "psycopg.types.catalog"
+
     @pytest.mark.parametrize(
         "val",
         [
@@ -291,6 +299,37 @@ class TestStrSubclasses:
         assert cls.from_int(2) - cls.from_int(1) == 1
         with pytest.raises(TypeError):
             _ = 1 - cls.from_int(1)
+
+    @pytest.mark.parametrize(
+        "cls",
+        [LSN, CID, XID, XID8],
+    )
+    def test_eq_int(self, cls):
+        assert cls.from_int(0) == 0
+
+    @pytest.mark.parametrize(
+        "cls",
+        # LSN tested in test_lsn_eq_ignores_case
+        [CID, XID, XID8],
+    )
+    def test_eq_str(self, cls):
+        assert cls.from_int(0) == "0"
+
+    @pytest.mark.parametrize(
+        "cls",
+        [LSN, CID, XID, XID8],
+    )
+    def test_from_int_roundtrip(self, cls):
+        for v in [0, 1, 2**32 - 1, 0xABCDEF12]:
+            assert int(cls.from_int(v)) == v
+
+    @pytest.mark.parametrize(
+        "cls",
+        [CID, XID, XID8],
+    )
+    def test_int_roundtrip(self, cls):
+        for v in [0, 1, 2**32 - 1, 0xABCDEF12]:
+            assert int(cls(v)) == v
 
     @pytest.mark.parametrize(
         "cls,trueval,falseval",
@@ -422,6 +461,11 @@ class TestStrSubclasses:
         assert lsn.low == 12
         assert repr(lsn) == "LSN('0/C')"
         assert lsn == "0/C"
+
+    def test_lsn_eq_ignores_case(self):
+        assert LSN("a/3b000000") == "A/3B000000"
+        assert "a/3b000000" == LSN("A/3B000000")
+        assert LSN("a/3b000000") == LSN("A/3B000000")
 
     @pytest.mark.parametrize("tid", [TID.from_tuple((12, 3)), TID("(12,3)")])
     def test_tid(self, tid):
