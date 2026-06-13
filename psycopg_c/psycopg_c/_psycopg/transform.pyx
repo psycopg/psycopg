@@ -17,9 +17,11 @@ from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 from cpython.sequence cimport PySequence_Fast, PySequence_Fast_GET_ITEM
 from cpython.sequence cimport PySequence_Fast_GET_SIZE
+from cpython.memoryview cimport PyMemoryView_FromObject
 
 from typing import Sequence
 
+from psycopg_c.pq cimport ViewBuffer
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row
@@ -541,10 +543,7 @@ cdef class Transformer:
 
         out = PyTuple_New(nfields)
         row_loaders = self._row_loaders  # avoid an incref/decref per item
-        if PyList_GET_SIZE(row_loaders) != nfields:
-            raise e.ProgrammingError(
-                f"cannot load sequence of {nfields} items:"
-                f" {len(self._row_loaders)} loaders registered")
+        self._c_check_num_loaders(nfields)
 
         for col in range(nfields):
             item = PySequence_Fast_GET_ITEM(record_fast, col)
@@ -563,6 +562,29 @@ cdef class Transformer:
             PyTuple_SET_ITEM(out, col, pyval)
 
         return out
+
+    cdef inline _c_check_num_loaders(self, nfields):
+        if PyList_GET_SIZE(self._row_loaders) != nfields:
+            raise e.ProgrammingError(
+                f"cannot load sequence of {nfields} items:"
+                f" {len(self._row_loaders)} loaders registered")
+
+    cdef inline _c_load_item(
+        self, unsigned char *ptr, Py_ssize_t size, Py_ssize_t index
+    ):
+        cdef RowLoader loader
+
+        row_loaders = self._row_loaders
+        loader = <RowLoader>PyList_GET_ITEM(row_loaders, index)
+        if (<RowLoader>loader).cloader is not None:
+            pyval = loader.cloader.cload(<char *>ptr, size)
+        else:
+            item = PyMemoryView_FromObject(
+                ViewBuffer._from_buffer(self, ptr, size)
+            )
+            pyval = PyObject_CallFunctionObjArgs(
+                loader.loadfunc, <PyObject*>item, NULL)
+        return pyval
 
     def get_loader(self, oid: int, format: PqFormat) -> "Loader":
         cdef PyObject *row_loader = self._c_get_loader(
