@@ -18,12 +18,7 @@ except ImportError:
 from ..fix_db import check_connection_version, maybe_trace
 
 try:
-    from psycopg.types.cid import CID
-    from psycopg.types.lsn import LSN
-    from psycopg.types.tid import TID
-    from psycopg.types.xid import XID, XID8
-    from psycopg.types.oidvector import OidVector
-    from psycopg.types.int2vector import Int2Vector
+    from psycopg.types.catalog import CID, LSN, TID, XID, XID8, Int2Vector, OidVector
 except ImportError:
     # allow importing on older versions of psycopg
     # so that psycopg_pool compatibility tests can run.
