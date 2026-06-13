@@ -18,6 +18,7 @@ from psycopg import sql
 from psycopg.adapt import PyFormat
 from psycopg.types.json import Json, Jsonb
 from psycopg.types.range import Range
+from psycopg.types.catalog import CID, LSN, TID, XID, XID8, Int2Vector, OidVector
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
 
@@ -326,6 +327,9 @@ class Faker:
         length = randrange(self.str_max_length)
         return spec(bytes([randrange(256) for i in range(length)]))
 
+    def make_CID(self, spec):
+        return CID.from_int(randrange(0, 2**32))
+
     def make_date(self, spec):
         day = randrange(1, dt.date.max.toordinal())
         return dt.date.fromordinal(day)
@@ -538,6 +542,9 @@ class Faker:
         m = self.get_matcher(spec[1])
         for g, w in zip(got, want):
             m(spec[1], g, w)
+
+    def make_LSN(self, spec):
+        return LSN.from_int(randrange(0, 2**64))
 
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
@@ -818,8 +825,25 @@ class Faker:
                 m = self.get_matcher(s)
                 m(s, g, w)
 
+    def make_TID(self, spec):
+        return TID.from_tuple((randrange(0, 2**32), randrange(0, 2**16)))
+
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))
+
+    def make_Int2Vector(self, spec):
+        len = randrange(0, 10)
+        return Int2Vector.from_list([randrange(-(2**15), 2**15) for _ in range(len)])
+
+    def make_OidVector(self, spec):
+        len = randrange(0, 10)
+        return OidVector.from_list([randrange(0, 2**32) for _ in range(len)])
+
+    def make_XID(self, spec):
+        return XID.from_int(randrange(0, 2**32))
+
+    def make_XID8(self, spec):
+        return XID8.from_int(randrange(0, 2**64))
 
     def _make_json(self, container_chance=0.66):
         rec_types = [list, dict]
