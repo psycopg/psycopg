@@ -76,6 +76,11 @@ class _IntStr(_StrSubclass[int]):
 
         return obj
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, int):
+            return self.value == other
+        return super().__eq__(other)
+
     def __int__(self) -> int:
         return self.value
 
