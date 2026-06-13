@@ -1,6 +1,5 @@
-from ..abc import AdaptContext
-from ._catalog import _Int4IntStrBinaryLoader, _Int8IntStrBinaryLoader, _IntStr
-from ._catalog import _StrSubclassLoader
+from .catalog import _Int4IntStrBinaryLoader, _Int8IntStrBinaryLoader, _IntStr
+from .catalog import _StrSubclassLoader
 
 
 class XID(_IntStr):
@@ -51,12 +50,3 @@ class Xid8BinaryLoader(_Int8IntStrBinaryLoader[XID8]):
     """Load xid8 binary values as `XID8` (a string subclass)"""
 
     cls = XID8
-
-
-def register_default_adapters(context: AdaptContext) -> None:
-    adapters = context.adapters
-
-    adapters.register_loader("xid", XidLoader)
-    adapters.register_loader("xid", XidBinaryLoader)
-    adapters.register_loader("xid8", Xid8Loader)
-    adapters.register_loader("xid8", Xid8BinaryLoader)
