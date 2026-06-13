@@ -18,7 +18,12 @@ from psycopg import sql
 from psycopg.adapt import PyFormat
 from psycopg.types.json import Json, Jsonb
 from psycopg.types.range import Range
-from psycopg.types.catalog import CID, LSN, TID, XID, XID8, Int2Vector, OidVector
+
+try:
+    from psycopg.types.catalog import CID, LSN, TID, XID, XID8, Int2Vector, OidVector
+except ImportError:
+    # allow to import in pool compatibility tests running old versions of psycopg
+    pass
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
 
