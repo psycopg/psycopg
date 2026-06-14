@@ -15,6 +15,8 @@ Psycopg 3.3.5 (unreleased)
 
 - Discard prepared statements upon :sql:`ALTER *` or `DISCARD *`
   (:ticket:`#1307`).
+- Fix `!ProgrammingError` when dumping non-`!None` values with
+  no `!NoneType` dumper registered in python implementation (:ticket:`#1325`).
 - Fix `!wait_selector` wait function to not raise `!KeyError`
   (:ticket:`#1327`).
 
