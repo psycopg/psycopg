@@ -15,6 +15,7 @@ Psycopg 3.3.5 (unreleased)
 
 - Discard prepared statements upon :sql:`ALTER *` or `DISCARD *`
   (:ticket:`#1307`).
+- Fix `~waiting.wait_selector` wait function to not raise `KeyError`.
 
 
 Current release
