@@ -8,6 +8,8 @@ These functions are designed to consume the generators returned by the
 
 # Copyright (C) 2020 The Psycopg Team
 
+# mypy: disable-error-code=attr-defined
+
 from __future__ import annotations
 
 import os
