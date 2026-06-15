@@ -72,7 +72,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     try:
         s = next(gen)
         with DefaultSelector() as sel:
-            sel.register(fileno, s)
+            sel.register(fileno, (last_s := s))
             while True:
                 if not (rlist := sel.select(timeout=interval)):
                     # Check if it was a timeout or we were disconnected
@@ -82,7 +82,9 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
 
                 ready = rlist[0][1]
                 s = gen.send(ready)
-                sel.register(fileno, s)
+                if last_s != s:
+                    sel.unregister(fileno)
+                    sel.register(fileno, (last_s := s))
 
     except StopIteration as ex:
         rv: RV = ex.value
