@@ -25,7 +25,7 @@ env:
   # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.5.4"
+  OPENSSL_VERSION: "3.5.7"
 
   # A string to differentiate build cacke keys to allow building different
   # flavours of libpq in different branches without mixups. Currently used to
