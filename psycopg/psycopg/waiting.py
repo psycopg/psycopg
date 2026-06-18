@@ -60,7 +60,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     Wait for a generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
-        `Ready` values when it would block.
+        `Wait` pairs when it would block.
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
@@ -96,7 +96,7 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     Wait for a connection generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
-        (fd, `Ready`) pairs when it would block.
+        (fd, `Wait`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
