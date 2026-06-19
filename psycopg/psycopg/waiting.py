@@ -15,7 +15,8 @@ import sys
 import select
 import logging
 import selectors
-from asyncio import Event, TimeoutError, get_running_loop, wait_for
+from asyncio import AbstractEventLoop, Event, TimeoutError, get_running_loop, sleep
+from asyncio import wait_for
 from selectors import DefaultSelector
 
 from . import errors as e
@@ -126,6 +127,19 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
         return rv
 
 
+def _ensure_reader_writer_removed(
+    loop: AbstractEventLoop, fileno: int
+) -> OSError | None:
+    error = None
+    for remove in (loop.remove_reader, loop.remove_writer):
+        try:
+            remove(fileno)
+        except OSError as ex:
+            error = ex
+
+    return error
+
+
 async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Coroutine waiting for a generator to complete.
@@ -142,44 +156,55 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_running_loop()
     ready: int
     s: Wait
 
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready |= state
-        ev.set()
-
     try:
         s = next(gen)
+
+        loop = get_running_loop()
+        end = loop.time() + interval
+        done = False
+
+        def set_done() -> None:
+            nonlocal done
+            done = True
+
+        def set_ready(state: Ready) -> None:
+            nonlocal ready
+            ready |= state
+
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
             ready = 0
             if reader:
-                loop.add_reader(fileno, wakeup, READY_R)
+                loop.add_reader(fileno, set_ready, READY_R)
             if writer:
-                loop.add_writer(fileno, wakeup, READY_W)
+                loop.add_writer(fileno, set_ready, READY_W)
+            h = loop.call_at(end, set_done)
             try:
-                try:
-                    await wait_for(ev.wait(), interval)
-                except TimeoutError:
-                    pass
+                while True:
+                    await sleep(0)  # let the loop set ready or done
+                    if ready:
+                        h.cancel()
+                        break
+                    if done:
+                        break
             finally:
                 if reader:
                     loop.remove_reader(fileno)
                 if writer:
                     loop.remove_writer(fileno)
+
             s = gen.send(ready)
+            done = False
+            end = loop.time() + interval
 
     except OSError as ex:
+        _ensure_reader_writer_removed(loop, fileno)
         # Assume the connection was closed
         raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
