@@ -15,7 +15,7 @@ import sys
 import select
 import logging
 import selectors
-from asyncio import Event, TimeoutError, get_running_loop, sleep, wait_for
+from asyncio import get_running_loop, sleep
 from selectors import DefaultSelector
 
 from . import errors as e
@@ -219,49 +219,70 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_running_loop()
-    ready: Ready
+    ready: Ready | int
     s: Wait
-
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready = state
-        ev.set()
 
     try:
         fileno, s = next(gen)
-        while True:
-            reader = s & WAIT_R
-            writer = s & WAIT_W
-            if not (reader or writer):
-                raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
-            ready = 0  # type: ignore[assignment]
-            if reader:
-                loop.add_reader(fileno, wakeup, READY_R)
-            if writer:
-                loop.add_writer(fileno, wakeup, READY_W)
-            try:
-                if interval:
-                    try:
-                        await wait_for(ev.wait(), interval)
-                    except TimeoutError:
-                        pass
-                else:
-                    await ev.wait()
-            finally:
-                if reader:
-                    loop.remove_reader(fileno)
-                if writer:
-                    loop.remove_writer(fileno)
-            fileno, s = gen.send(ready)
-
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
+
+    old_fileno = fileno
+
+    loop = get_running_loop()
+    end = loop.time() + interval
+    done = False
+
+    def set_done() -> None:
+        nonlocal done
+        done = True
+
+    def set_ready(state: Ready) -> None:
+        nonlocal ready
+        ready |= state
+
+    try:
+        loop.add_reader(fileno, set_ready, READY_R)
+        loop.add_writer(fileno, set_ready, READY_W)
+        while True:
+            ready = 0
+            h = loop.call_at(end, set_done)
+            while True:
+                try:
+                    await sleep(0)  # let the loop set ready or done
+                except BaseException:
+                    h.cancel()
+                    raise
+                if ready := ready & s:
+                    h.cancel()
+                    break
+                if done:
+                    _check_fd_closed(fileno)
+                    break
+
+            fileno, s = gen.send(ready)
+            done = False
+            end = loop.time() + interval
+            if fileno != old_fileno:
+                loop.add_reader(fileno, set_ready, READY_R)
+                loop.add_writer(fileno, set_ready, READY_W)
+
+    except OSError as ex:
+        # Assume the connection was closed
+        raise e.OperationalError("connection socket closed") from ex
+    except StopIteration as ex:
+        rv = ex.value
+        return rv
+    finally:
+        try:
+            loop.remove_reader(fileno)
+        except OSError:
+            pass
+        try:
+            loop.remove_writer(fileno)
+        except OSError:
+            pass
 
 
 # Specialised implementation of wait functions.
