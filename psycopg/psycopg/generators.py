@@ -181,7 +181,7 @@ def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
     results: list[PGresult] = []
     while True:
         try:
-            res = yield from _fetch(pgconn)
+            result = yield from _fetch(pgconn)
         except e.DatabaseError:
             # What might have happened here is that a previuos error disconnected
             # the connection, for example a idle in transaction timeout.
@@ -193,11 +193,11 @@ def _fetch_many(pgconn: PGconn) -> PQGen[list[PGresult]]:
             else:
                 raise
 
-        if not res:
+        if not result:
             break
 
-        results.append(res)
-        status = res.status
+        results.append(result)
+        status = result.status
         if status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
