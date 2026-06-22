@@ -185,7 +185,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[list[PGresult]]:
             # disconnected the connection, for example a idle in transaction
             # timeout. Check if we had received an error before, and raise it
             # as exception, because it should contain more details. See #988.
-            if any(result.status == libpq.PGRES_FATAL_ERROR for res in results):
+            if any(res.status == libpq.PGRES_FATAL_ERROR for res in results):
                 break
             else:
                 raise
