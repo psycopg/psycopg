@@ -487,7 +487,7 @@ cdef class NumericBinaryLoader(CLoader):
         cdef uint16_t dscale = endian.be16toh(behead[3])
 
         cdef int shift
-        cdef int i
+        cdef int _i
         cdef PyObject *pctx
         cdef object key
         cdef const char *digitptr
@@ -499,7 +499,7 @@ cdef class NumericBinaryLoader(CLoader):
 
             val = 0
             digitptr = data + sizeof(behead)
-            for i in range(ndigits):
+            for _i in range(ndigits):
                 memcpy(&bedigit, digitptr, sizeof(bedigit))
                 digitptr += sizeof(bedigit)
                 val *= 10_000
