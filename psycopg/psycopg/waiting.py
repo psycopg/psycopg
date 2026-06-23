@@ -15,7 +15,7 @@ import sys
 import select
 import logging
 import selectors
-from typing import Any, no_type_check
+from typing import Any
 from asyncio import Event, TimeoutError, get_event_loop, wait_for
 from selectors import DefaultSelector
 
@@ -290,23 +290,24 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
 
 
 if hasattr(selectors, "EpollSelector"):
+    epoll = select.epoll  # type: ignore[attr-defined,unused-ignore]
+    EPOLLIN = select.EPOLLIN  # type: ignore[attr-defined,unused-ignore]
+    EPOLLOUT = select.EPOLLOUT  # type: ignore[attr-defined,unused-ignore]
+    EPOLLONESHOT = select.EPOLLONESHOT  # type: ignore[attr-defined,unused-ignore]
 
-    @no_type_check
-    def _get_epoll_values():
-        _epoll_evmasks = {
-            WAIT_R: select.EPOLLONESHOT | select.EPOLLIN,
-            WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT,
-            WAIT_RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
-        }
-        return select.epoll, _epoll_evmasks, select.EPOLLIN, select.EPOLLOUT
-
-    select_epoll, _epoll_evmasks, EPOLLIN, EPOLLOUT = _get_epoll_values()
+    _epoll_evmasks = {
+        WAIT_R: EPOLLONESHOT | EPOLLIN,
+        WAIT_W: EPOLLONESHOT | EPOLLOUT,
+        WAIT_RW: EPOLLONESHOT | EPOLLIN | EPOLLOUT,
+    }
 else:
     _epoll_evmasks = {}
     EPOLLIN = 0
     EPOLLOUT = 0
 
-    def select_epoll(timeout: float | None = None) -> Any:
+    def epoll(  # type: ignore[no-redef,unused-ignore]
+        timeout: float | None = None,
+    ) -> Any:
         raise AttributeError(
             "module 'select' has no attribute 'epoll'. Did you mean: 'poll'?"
         )
@@ -336,11 +337,11 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
         if interval < 0:
             interval = 0.0
 
-        with select_epoll() as epoll:
+        with epoll() as ep:
             evmask = _epoll_evmasks[s]
-            epoll.register(fileno, evmask)
+            ep.register(fileno, evmask)
             while True:
-                if not (fileevs := epoll.poll(interval)):
+                if not (fileevs := ep.poll(interval)):
                     _check_fd_closed(fileno)
                     gen.send(READY_NONE)
                     continue
@@ -352,7 +353,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                     ready |= READY_W
                 s = gen.send(ready)
                 evmask = _epoll_evmasks[s]
-                epoll.modify(fileno, evmask)
+                ep.modify(fileno, evmask)
 
     except StopIteration as ex:
         rv: RV = ex.value
