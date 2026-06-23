@@ -193,9 +193,7 @@ class Transformer(AdaptContext):
 
         for i in range(nparams):
             if (param := params[i]) is None:
-                if self._none_oid < 0:
-                    self._none_oid = self._get_none_oid()
-                types[i] = self._none_oid
+                types[i] = self._get_none_oid()
                 continue
 
             dumper = self.get_dumper(param, formats[i])
@@ -271,10 +269,12 @@ class Transformer(AdaptContext):
             return dumper
 
     def _get_none_oid(self) -> int:
-        try:
-            return self._adapters.get_dumper(NoneType, PY_TEXT).oid
-        except KeyError:
-            raise e.InterfaceError("None dumper not found")
+        if self._none_oid < 0:
+            try:
+                self._none_oid = self._adapters.get_dumper(NoneType, PY_TEXT).oid
+            except KeyError:
+                raise e.InterfaceError("None dumper not found")
+        return self._none_oid
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> abc.Dumper:
         """
