@@ -8,8 +8,6 @@ These functions are designed to consume the generators returned by the
 
 # Copyright (C) 2020 The Psycopg Team
 
-# mypy: disable-error-code=attr-defined
-
 from __future__ import annotations
 
 import os
@@ -17,6 +15,7 @@ import sys
 import select
 import logging
 import selectors
+from typing import Any, no_type_check
 from asyncio import Event, TimeoutError, get_event_loop, wait_for
 from selectors import DefaultSelector
 
@@ -291,13 +290,26 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
 
 
 if hasattr(selectors, "EpollSelector"):
-    _epoll_evmasks = {
-        WAIT_R: select.EPOLLONESHOT | select.EPOLLIN,
-        WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT,
-        WAIT_RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
-    }
+
+    @no_type_check
+    def _get_epoll_values():
+        _epoll_evmasks = {
+            WAIT_R: select.EPOLLONESHOT | select.EPOLLIN,
+            WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT,
+            WAIT_RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
+        }
+        return select.epoll, _epoll_evmasks, select.EPOLLIN, select.EPOLLOUT
+
+    select_epoll, _epoll_evmasks, EPOLLIN, EPOLLOUT = _get_epoll_values()
 else:
     _epoll_evmasks = {}
+    EPOLLIN = 0
+    EPOLLOUT = 0
+
+    def select_epoll(timeout: float | None = None) -> Any:
+        raise AttributeError(
+            "module 'select' has no attribute 'epoll'. Did you mean: 'poll'?"
+        )
 
 
 def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
@@ -324,7 +336,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
         if interval < 0:
             interval = 0.0
 
-        with select.epoll() as epoll:
+        with select_epoll() as epoll:
             evmask = _epoll_evmasks[s]
             epoll.register(fileno, evmask)
             while True:
@@ -334,9 +346,9 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                     continue
                 ev = fileevs[0][1]
                 ready = 0
-                if ev & select.EPOLLIN:
+                if ev & EPOLLIN:
                     ready = READY_R
-                if ev & select.EPOLLOUT:
+                if ev & EPOLLOUT:
                     ready |= READY_W
                 s = gen.send(ready)
                 evmask = _epoll_evmasks[s]
