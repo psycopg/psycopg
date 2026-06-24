@@ -36,6 +36,7 @@ unpack_uint2 = cast(UnpackInt, struct.Struct("!H").unpack)
 unpack_int4 = cast(UnpackInt, struct.Struct("!i").unpack)
 unpack_uint4 = cast(UnpackInt, struct.Struct("!I").unpack)
 unpack_int8 = cast(UnpackInt, struct.Struct("!q").unpack)
+unpack_uint8 = cast(UnpackInt, struct.Struct("!Q").unpack)
 unpack_float4 = cast(UnpackFloat, struct.Struct("!f").unpack)
 unpack_float8 = cast(UnpackFloat, struct.Struct("!d").unpack)
 

@@ -133,10 +133,11 @@ def register_default_types(types: TypesRegistry) -> None:
 
 
 def register_default_adapters(context: AdaptContext) -> None:
-    from .types import array, bool, composite, datetime, enum, json, multirange, net
-    from .types import none, numeric, numpy, range, string, uuid
+    from .types import array, bool, catalog, composite, datetime, enum, json
+    from .types import multirange, net, none, numeric, numpy, range, string, uuid
 
     array.register_default_adapters(context)
+    catalog.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
     enum.register_default_adapters(context)
