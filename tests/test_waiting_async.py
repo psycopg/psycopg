@@ -44,9 +44,11 @@ events = ["R", "W", "RW"]
 intervals = [0, 0.2, 2]
 
 
-def tgen(wait):
+def tgen(wait, times=1):
     """A generator waiting for a specific event and returning what waited on."""
-    r = yield wait
+    assert times >= 1
+    for _ in range(times):
+        r = yield wait
     return r
 
 
@@ -69,8 +71,9 @@ async def test_wait_conn_bad(dsn):
 @pytest.mark.parametrize("interval", [i for i in intervals if i > 0])
 @pytest.mark.parametrize("ready", ["R", "NONE"])
 @pytest.mark.parametrize("event", ["R", "RW"])
+@pytest.mark.parametrize("nevents", [1, 2])
 @pytest.mark.parametrize("waitfn", waitfns)
-async def test_wait_r(waitfn, event, ready, interval, request):
+async def test_wait_r(waitfn, event, nevents, ready, interval, request):
     # Test that wait functions handle waiting and returning state correctly
     # This test doesn't work on macOS for some internal race condition betwwn
     # listen/connect/accept.
@@ -104,12 +107,15 @@ async def test_wait_r(waitfn, event, ready, interval, request):
             ev.set()
             # Wait for socket ready to read or timing out
             t0 = time.time()
-            r = await waitfn(tgen(wait), s.fileno(), interval)
+            r = await waitfn(tgen(wait, times=nevents), s.fileno(), interval)
             dt = time.time() - t0
             # Check timing and received waiting state
             assert r == ready
             if check_timing(request):
-                exptime = {waiting.Ready.R: delay, waiting.Ready.NONE: interval}[ready]
+                exptime = {
+                    waiting.Ready.R: delay,
+                    waiting.Ready.NONE: nevents * interval,
+                }[ready]
                 assert exptime <= dt < (exptime * 1.2)
     finally:
         await gather(*tasks)
@@ -119,8 +125,9 @@ async def test_wait_r(waitfn, event, ready, interval, request):
 @pytest.mark.skipif("sys.platform == 'linux'")
 @pytest.mark.parametrize("interval", [2])
 @pytest.mark.parametrize("ready", ["R", "NONE"])
+@pytest.mark.parametrize("nevents", [1, 2])
 @pytest.mark.parametrize("waitfn", waitfns)
-async def test_wait_r_no_linux(waitfn, ready, interval, request):
+async def test_wait_r_no_linux(waitfn, nevents, ready, interval, request):
     # A version of test_wait_r that works on macOS too, but doesn't allow to
     # test for the RW wait (because it seems that the sockets returned by
     # socketpair() is immediately w-ready, including the r one.
@@ -159,7 +166,7 @@ async def test_wait_r_no_linux(waitfn, ready, interval, request):
         ev.set()
         # Wait for socket ready to read or timing out
         t0 = time.time()
-        r = await waitfn(tgen(wait), rs.fileno(), interval)
+        r = await waitfn(tgen(wait, times=nevents), rs.fileno(), interval)
         dt = time.time() - t0
         # Check timing and received waiting state
         assert r == ready
@@ -174,8 +181,9 @@ async def test_wait_r_no_linux(waitfn, ready, interval, request):
 
 @pytest.mark.parametrize("ready", ["R", "NONE"])
 @pytest.mark.parametrize("event", ["R", "RW"])
+@pytest.mark.parametrize("nevents", [1, 2])
 @pytest.mark.parametrize("waitfn", waitfns)
-async def test_wait_r_nowait(waitfn, event, ready, request):
+async def test_wait_r_nowait(waitfn, event, nevents, ready, request):
     # Test that wait functions handle a poll when called with no timeout
     waitfn = getattr(waiting, waitfn)
     wait = getattr(waiting.Wait, event)
@@ -213,7 +221,7 @@ async def test_wait_r_nowait(waitfn, event, ready, request):
             ev1.set()
             await ev2.wait()
             t0 = time.time()
-            r = await waitfn(tgen(wait), s.fileno())
+            r = await waitfn(tgen(wait, times=nevents), s.fileno())
             dt = time.time() - t0
             ev3.set()  # unblock the unblocker
             if check_timing(request):
@@ -226,8 +234,9 @@ async def test_wait_r_nowait(waitfn, event, ready, request):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("event", ["W", "RW"])
+@pytest.mark.parametrize("nevents", [1, 2])
 @pytest.mark.parametrize("waitfn", waitfns)
-async def test_wait_w(waitfn, event, request):
+async def test_wait_w(waitfn, event, nevents, request):
     # Test that wait functions handle waiting and returning state correctly
     waitfn = getattr(waiting, waitfn)
     wait = getattr(waiting.Wait, event)
@@ -237,7 +246,7 @@ async def test_wait_w(waitfn, event, request):
     ws.setblocking(False)
     with rs, ws:
         t0 = time.time()
-        r = await waitfn(tgen(wait), ws.fileno(), 0.5)
+        r = await waitfn(tgen(wait, times=nevents), ws.fileno(), 0.5)
         dt = time.time() - t0
         # Check timing and received waiting state
         assert r == waiting.Ready.W
