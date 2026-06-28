@@ -59,6 +59,15 @@ def test_quote_none(data, result, global_adapters):
     assert dumper.quote(data) == result
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_no_none_dumper_registered(dsn, fmt_in):
+    with psycopg.connect(dsn, context=make_str_map()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT %{fmt_in.value}", ["not_none"])
+            with pytest.raises(e.ProgrammingError, match="NoneType"):
+                cur.execute(f"SELECT %{fmt_in.value}", [None])
+
+
 def test_register_dumper_by_class(conn):
     dumper = make_dumper("x")
     assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is not dumper
@@ -561,3 +570,17 @@ def make_bin_loader(suffix):
     cls = make_loader(suffix)
     cls.format = pq.Format.BINARY
     return cls
+
+
+def make_str_map():
+    from psycopg._oids import INVALID_OID
+
+    # Construct a minimal AdaptersMap to no none dumper bug
+    str_map = psycopg.adapt.AdaptersMap()
+    invalid_oid_loader = psycopg.adapters.get_loader(INVALID_OID, pq.Format.TEXT)
+    assert invalid_oid_loader is not None
+    str_map.adapters.register_loader(INVALID_OID, invalid_oid_loader)
+    str_map.register_dumper(str, StrDumper)
+    str_map.register_dumper(str, StrBinaryDumper)
+
+    return str_map
