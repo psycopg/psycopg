@@ -55,7 +55,7 @@ def test_cancel(pgconn, conn, generators):
     cancel_conn = pgconn.cancel_conn()
     assert cancel_conn.status != pq.ConnStatus.BAD
     cancel_conn.start()
-    gen = generators.cancel(cancel_conn)
+    gen = generators.cancel(cancel_conn, timeout=5)
     waiting.wait_conn(gen)
     assert cancel_conn.status == pq.ConnStatus.OK
 

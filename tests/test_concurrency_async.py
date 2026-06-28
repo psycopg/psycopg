@@ -61,7 +61,7 @@ async def test_concurrent_execution(aconn_cls, dsn):
 async def canceller(aconn, errors):
     try:
         await asyncio.sleep(0.5)
-        await aconn.cancel_safe()
+        await aconn.cancel_safe(timeout=5)
     except Exception as exc:
         errors.append(exc)
 
