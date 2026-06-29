@@ -36,39 +36,40 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
-    cdef object wait, ready
+    cdef object wait
     cdef double deadline = 0.0
+    cdef int socket
+
+    logger.debug("connection started: %s", conn)
+
+    if conn_status == libpq.CONNECTION_BAD:
+        encoding = conninfo_encoding(conninfo)
+        raise e.OperationalError(
+            f"connection is bad: {conn.get_error_message(encoding)}",
+            pgconn=conn
+        )
 
     if timeout:
         deadline = monotonic() + timeout
 
-    logger.debug("connection started: %s", conn)
+    wait = WAIT_W
     while True:
-        if conn_status == libpq.CONNECTION_BAD:
-            encoding = conninfo_encoding(conninfo)
-            raise e.OperationalError(
-                f"connection is bad: {conn.get_error_message(encoding)}",
-                pgconn=conn
-            )
+        with nogil:
+            socket = libpq.PQsocket(pgconn_ptr)
+        while not (yield socket, wait):
+            if deadline and monotonic() > deadline:
+                raise e.ConnectionTimeout("connection timeout expired")
 
         with nogil:
             poll_status = libpq.PQconnectPoll(pgconn_ptr)
         logger.debug("connection polled: %s", conn)
 
-        if (
-            poll_status == libpq.PGRES_POLLING_READING
-            or poll_status == libpq.PGRES_POLLING_WRITING
-        ):
-            wait = WAIT_R if poll_status == libpq.PGRES_POLLING_READING else WAIT_W
-            while True:
-                ready = yield (libpq.PQsocket(pgconn_ptr), wait)
-                if deadline and monotonic() > deadline:
-                    raise e.ConnectionTimeout("connection timeout expired")
-                if ready:
-                    break
-
-        elif poll_status == libpq.PGRES_POLLING_OK:
+        if poll_status == libpq.PGRES_POLLING_OK:
             break
+        elif poll_status == libpq.PGRES_POLLING_READING:
+            wait = WAIT_R
+        elif poll_status == libpq.PGRES_POLLING_WRITING:
+            wait = WAIT_W
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
