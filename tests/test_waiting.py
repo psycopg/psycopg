@@ -163,7 +163,9 @@ def test_wait_r_no_linux(waitfn, nevents, ready, interval, request):
         # Check timing and received waiting state
         assert r == ready
         if check_timing(request):
-            exptime = {waiting.Ready.R: delay, waiting.Ready.NONE: interval}[ready]
+            exptime = {waiting.Ready.R: delay, waiting.Ready.NONE: nevents * interval}[
+                ready
+            ]
             assert exptime <= dt < exptime * 1.2
     finally:
         gather(*tasks)
