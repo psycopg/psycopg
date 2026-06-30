@@ -233,60 +233,65 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
 
     try:
         fileno, s = next(gen)
+    except StopIteration as ex:
+        rv: RV = ex.value
+        return rv
 
-        loop = get_running_loop()
-        end = loop.time() + interval
-        done = False
+    old_fileno = fileno
 
-        def set_done() -> None:
-            nonlocal done
-            done = True
+    loop = get_running_loop()
+    end = loop.time() + interval
+    done = False
 
-        def set_ready(state: Ready) -> None:
-            nonlocal ready
-            ready |= state
+    def set_done() -> None:
+        nonlocal done
+        done = True
 
+    def set_ready(state: Ready) -> None:
+        nonlocal ready
+        ready |= state
+
+    try:
+        loop.add_reader(fileno, set_ready, READY_R)
+        loop.add_writer(fileno, set_ready, READY_W)
+    except OSError as ex:
+        # Assume the connection was closed
+        raise e.OperationalError("connection socket closed") from ex
+
+    try:
         while True:
-            reader = s & WAIT_R
-            writer = s & WAIT_W
-            if not (reader or writer):
-                raise e.InternalError(f"bad poll status: {s}")
-
             ready = 0
-            if reader:
-                loop.add_reader(fileno, set_ready, READY_R)
-            if writer:
-                loop.add_writer(fileno, set_ready, READY_W)
             h = loop.call_at(end, set_done)
-            try:
-                while True:
-                    try:
-                        await sleep(0)  # let the loop set ready or done
-                    except BaseException:
-                        h.cancel()
-                        raise
-                    if ready:
-                        h.cancel()
-                        break
-                    if done:
-                        break
-            finally:
-                if reader:
-                    loop.remove_reader(fileno)
-                if writer:
-                    loop.remove_writer(fileno)
+            while True:
+                try:
+                    await sleep(0)  # let the loop set ready or done
+                except BaseException:
+                    h.cancel()
+                    raise
+                if ready := ready & s:
+                    h.cancel()
+                    break
+                if done:
+                    _check_fd_closed(fileno)
+                    break
 
             fileno, s = gen.send(ready)
             done = False
             end = loop.time() + interval
+            if fileno != old_fileno:
+                try:
+                    _ensure_reader_writer_removed(loop, old_fileno)
+                    loop.add_reader(fileno, set_ready, READY_R)
+                    loop.add_writer(fileno, set_ready, READY_W)
+                except OSError as ex:
+                    # Assume the connection was closed
+                    raise e.OperationalError("connection socket closed") from ex
 
-    except OSError as ex:
-        _ensure_reader_writer_removed(loop, fileno)
-        # Assume the connection was closed
-        raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
-        rv: RV = ex.value
+        rv = ex.value
         return rv
+    finally:
+        _ensure_reader_writer_removed(loop, fileno)
 
 
 # Specialised implementation of wait functions.
