@@ -7,13 +7,12 @@ C optimised functions for the copy system.
 
 from libc.stdint cimport int32_t, uint16_t, uint32_t
 from libc.string cimport memcpy
+from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.sequence cimport PySequence_Fast, PySequence_Fast_GET_ITEM
 from cpython.sequence cimport PySequence_Fast_GET_SIZE
-from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_FromStringAndSize
-from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_Resize
-from cpython.memoryview cimport PyMemoryView_FromObject
+from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_GET_SIZE
+from cpython.bytearray cimport PyByteArray_Resize
 
-from psycopg_c.pq cimport ViewBuffer
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
@@ -244,8 +243,10 @@ def parse_row_binary(data, tx: Transformer) -> tuple[Any, ...]:
     memcpy(&benfields, ptr, sizeof(benfields))
     cdef int nfields = endian.be16toh(benfields)
     ptr += sizeof(benfields)
-    cdef list row = PyList_New(nfields)
 
+    tx._c_check_num_loaders(nfields)
+
+    cdef tuple row = PyTuple_New(nfields)
     cdef int col
     cdef int32_t belength
     cdef Py_ssize_t length
@@ -259,14 +260,13 @@ def parse_row_binary(data, tx: Transformer) -> tuple[Any, ...]:
             length = endian.be32toh(belength)
             if ptr + length > bufend:
                 raise e.DataError("bad copy data: length exceeding data")
-            field = PyMemoryView_FromObject(
-                ViewBuffer._from_buffer(data, ptr, length))
+            field = tx._c_load_item(ptr, length, col)
             ptr += length
 
         Py_INCREF(field)
-        PyList_SET_ITEM(row, col, field)
+        PyTuple_SET_ITEM(row, col, field)
 
-    return tx.load_sequence(row)
+    return row
 
 
 def parse_row_text(data, tx: Transformer) -> tuple[Any, ...]:
@@ -276,11 +276,15 @@ def parse_row_text(data, tx: Transformer) -> tuple[Any, ...]:
 
     # politely assume that the number of fields will be what in the result
     cdef int nfields = tx._nfields
-    cdef list row = PyList_New(nfields)
 
+    tx._c_check_num_loaders(nfields)
+
+    cdef tuple row = PyTuple_New(nfields)
     cdef unsigned char *fend
     cdef unsigned char *rowend = fstart + size
     cdef unsigned char *src
+    cdef unsigned char *scratch = NULL
+    cdef size_t sclen = 0
     cdef unsigned char *tgt
     cdef int col
     cdef int num_bs
@@ -312,15 +316,18 @@ def parse_row_text(data, tx: Transformer) -> tuple[Any, ...]:
         # Is this a field with no backslash?
         elif num_bs == 0:
             # Nothing to unescape: we don't need a copy
-            field = PyMemoryView_FromObject(
-                ViewBuffer._from_buffer(data, fstart, fend - fstart))
+            field = tx._c_load_item(fstart, fend - fstart, col)
 
         # This is a field containing backslashes
         else:
             # We need a copy of the buffer to unescape
-            field = PyByteArray_FromStringAndSize("", 0)
-            PyByteArray_Resize(field, fend - fstart - num_bs)
-            tgt = <unsigned char *>PyByteArray_AS_STRING(field)
+            if <unsigned int>(fend - fstart - num_bs) > sclen:
+                # Above condition will always be true on the first run
+                # since sclen is 0. After that, we only extend scratch
+                # if it's too small.
+                sclen = fend - fstart - num_bs
+                scratch = <unsigned char *>PyMem_Realloc(scratch, sclen)
+            tgt = scratch
             src = fstart
             while (src < fend):
                 if src[0] != b'\\':
@@ -330,15 +337,18 @@ def parse_row_text(data, tx: Transformer) -> tuple[Any, ...]:
                     tgt[0] = copy_unescape_lut[src[0]]
                 src += 1
                 tgt += 1
+            field = tx._c_load_item(scratch, fend - fstart - num_bs, col)
 
         Py_INCREF(field)
-        PyList_SET_ITEM(row, col, field)
+        PyTuple_SET_ITEM(row, col, field)
 
         # Start of the field
         fstart = fend + 1
 
-    # Convert the array of buffers into Python objects
-    return tx.load_sequence(row)
+    if sclen > 0:
+        PyMem_Free(scratch)
+
+    return row
 
 
 cdef extern from *:
