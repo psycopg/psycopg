@@ -201,6 +201,56 @@ def test_configure(dsn):
             assert res.fetchone()[0] == "on"
 
 
+def test_dedicated_connection(dsn):
+    with pool.ConnectionPool(dsn, min_size=1) as p:
+        p.wait(timeout=1.0)
+        stats_before = p.get_stats()
+        with p.dedicated_connection() as conn:
+            assert getattr(conn, "_pool", None) is None
+            res = conn.execute("select 1")
+            assert res.fetchone() == (1,)
+        # The connection is counted in the stats but not in the pool size.
+        stats_after = p.get_stats()
+        assert stats_after["connections_num"] == stats_before["connections_num"] + 1
+        assert stats_after["pool_size"] == stats_before["pool_size"]
+        # Pool's own connections still work after a dedicated connection use.
+        with p.connection() as conn:
+            res = conn.execute("select 2")
+            assert res.fetchone() == (2,)
+
+
+def test_dedicated_connection_configure(dsn):
+    inits = 0
+
+    def configure(conn):
+        nonlocal inits
+        inits += 1
+        with conn.transaction():
+            conn.execute("set default_transaction_read_only to on")
+
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
+        p.wait(timeout=1.0)
+        inits_before = inits
+        with p.dedicated_connection() as conn:
+            assert inits == inits_before + 1
+            res = conn.execute("show default_transaction_read_only")
+            assert res.fetchone()[0] == "on"
+
+
+def test_dedicated_connection_configure_badstate(dsn):
+
+    def configure(conn):
+        conn.execute("begin")
+
+    with pool.ConnectionPool(dsn, min_size=0, max_size=1, configure=configure) as p:
+        # PostgreSQL raises ProgrammingError from the transaction-status check;
+        # CockroachDB rejects the leftover transaction with ActiveSqlTransaction.
+        with pytest.raises(
+            (psycopg.ProgrammingError, psycopg.errors.ActiveSqlTransaction)
+        ):
+            p.dedicated_connection()
+
+
 def test_reset(dsn):
     resets = 0
 
