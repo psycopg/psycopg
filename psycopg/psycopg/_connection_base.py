@@ -477,7 +477,13 @@ class BaseConnection(Generic[Row]):
         else:
             self.pgconn.send_query_params(command, None, result_format=result_format)
 
-        result: PGresult = (yield from generators.execute(self.pgconn))[-1]
+        results: list[PGresult] = (yield from generators.execute(self.pgconn))
+        if len(results) != 1:
+            raise e.InternalError(
+                f"received {len(results)} results from command {command.decode()!r}"
+            )
+
+        result = results[0]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=self.pgconn._encoding)
@@ -514,7 +520,10 @@ class BaseConnection(Generic[Row]):
 
         self.pgconn.send_close_prepared(name)
 
-        result = (yield from generators.execute(self.pgconn))[-1]
+        if not (results := (yield from generators.execute(self.pgconn))):
+            raise e.InternalError("no result from deallocate command")
+
+        result = results[-1]
         if result.status != COMMAND_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=self.pgconn._encoding)
