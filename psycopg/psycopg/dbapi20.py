@@ -79,18 +79,18 @@ class Binary:
 
 class BinaryBinaryDumper(BytesBinaryDumper):
     def dump(self, obj: Buffer | Binary) -> Buffer | None:
-        if isinstance(obj, Binary):
-            return super().dump(obj.obj)
-        else:
-            return super().dump(obj)
+        # Unwrap any level of Binary() nesting before dumping the buffer.
+        while isinstance(obj, Binary):
+            obj = obj.obj
+        return super().dump(obj)
 
 
 class BinaryTextDumper(BytesDumper):
     def dump(self, obj: Buffer | Binary) -> Buffer | None:
-        if isinstance(obj, Binary):
-            return super().dump(obj.obj)
-        else:
-            return super().dump(obj)
+        # Unwrap any level of Binary() nesting before dumping the buffer.
+        while isinstance(obj, Binary):
+            obj = obj.obj
+        return super().dump(obj)
 
 
 def Date(year: int, month: int, day: int) -> dt.date:

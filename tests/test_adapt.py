@@ -11,6 +11,7 @@ from psycopg import errors as e
 from psycopg import postgres, pq, sql
 from psycopg.abc import Buffer
 from psycopg.adapt import Dumper, Loader, PyFormat, Transformer
+from psycopg.dbapi20 import Binary, BinaryBinaryDumper, BinaryTextDumper
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins
 from psycopg.types.array import ListBinaryDumper, ListDumper
@@ -33,6 +34,16 @@ def test_dump(data, format, result, type):
         assert dumper.oid == 0
     else:
         assert dumper.oid == builtins[type].oid
+
+
+@pytest.mark.parametrize("dumper_cls", [BinaryTextDumper, BinaryBinaryDumper])
+def test_dump_nested_binary(dumper_cls):
+    # gh-1352: a Binary() wrapping another Binary() must be unwrapped fully
+    # instead of raising a low-level TypeError.
+    dumper = dumper_cls(Binary)
+    expected = dumper.dump(b"hello")
+    assert dumper.dump(Binary(b"hello")) == expected
+    assert dumper.dump(Binary(Binary(Binary(b"hello")))) == expected
 
 
 @pytest.mark.parametrize(
