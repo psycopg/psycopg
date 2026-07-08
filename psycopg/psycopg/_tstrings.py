@@ -40,7 +40,7 @@ class TemplateProcessor:
         self._process_template(self.template)
         self.query = b"".join(self._chunks)
 
-    def _check_template_format(self, item: Interpolation, want_fmt: str) -> None:
+    def _check_template_format(self, item: Interpolation[Any], want_fmt: str) -> None:
         if item.format_spec == want_fmt:
             return
         fmt = f":{item.format_spec}" if item.format_spec else ""
@@ -94,7 +94,7 @@ class TemplateProcessor:
                 else:
                     self._process_client_variable(item, fmt)
 
-    def _process_server_variable(self, item: Interpolation, fmt: str) -> None:
+    def _process_server_variable(self, item: Interpolation[Any], fmt: str) -> None:
         try:
             pyfmt = PyFormat(fmt)
         except ValueError:
@@ -107,7 +107,7 @@ class TemplateProcessor:
         self.params.append(item.value)
         self._chunks.append(b"$%d" % len(self.params))
 
-    def _process_client_variable(self, item: Interpolation, fmt: str) -> None:
+    def _process_client_variable(self, item: Interpolation[Any], fmt: str) -> None:
         try:
             PyFormat(fmt)
         except ValueError:
@@ -120,7 +120,7 @@ class TemplateProcessor:
         self._chunks.append(param)
         self.params.append(param)
 
-    def _process_composable(self, item: Interpolation) -> None:
+    def _process_composable(self, item: Interpolation[Any]) -> None:
         if isinstance(item.value, sql.Identifier):
             self._check_template_format(item, FMT_IDENT)
             self._chunks.append(item.value.as_bytes(self._tx))
