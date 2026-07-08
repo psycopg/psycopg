@@ -68,6 +68,15 @@ def test_namedtuple_row(conn):
     assert r3.f_eur == 5
 
 
+def test_make_nt_duplicate_columns():
+    # gh-1348: duplicate column names (e.g. `SELECT a.*, b.*` on a join) must
+    # not raise; the duplicates are renamed to positional _N names.
+    rows._make_nt.cache_clear()
+    nt = rows._make_nt("utf-8", b"id", b"name", b"id")
+    assert nt._fields == ("id", "name", "_2")
+    assert tuple(nt("a", "b", "c")) == ("a", "b", "c")
+
+
 def test_class_row(conn):
     cur = conn.cursor(row_factory=rows.class_row(Person))
     cur.execute("select 'John' as first, 'Doe' as last")

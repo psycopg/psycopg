@@ -142,7 +142,9 @@ def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
 @functools.lru_cache(512)
 def _make_nt(enc: str, *names: bytes) -> type[NamedTuple]:
     snames = tuple(_as_python_identifier(n.decode(enc)) for n in names)
-    return namedtuple("Row", snames)  # type: ignore[return-value]
+    # ``rename`` renames duplicate columns (e.g. ``SELECT a.*, b.*`` on a join)
+    # to positional ``_N`` names instead of raising ``ValueError``.
+    return namedtuple("Row", snames, rename=True)  # type: ignore[return-value]
 
 
 def class_row(cls: type[T]) -> BaseRowFactory[T]:
