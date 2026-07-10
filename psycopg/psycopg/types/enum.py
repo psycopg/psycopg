@@ -174,7 +174,12 @@ def register_enum(
 
 @cache
 def _make_enum(name: str, labels: tuple[str, ...]) -> Enum:
-    return Enum(name.title(), labels, module=__name__)
+    try:
+        return Enum(name.title(), labels, module=__name__)
+    except ValueError as ex:
+        raise e.DataError(
+            f"cannot create a Python enum for the {name!r} type: {ex}"
+        ) from ex
 
 
 @cache
