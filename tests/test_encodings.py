@@ -48,10 +48,14 @@ def test_pg2py_missing(pgenc):
     "conninfo, pyenc",
     [
         ("", "utf-8"),
-        ("user=foo, dbname=bar", "utf-8"),
-        ("user=foo, dbname=bar, client_encoding=EUC_JP", "euc_jp"),
-        ("user=foo, dbname=bar, client_encoding=euc-jp", "euc_jp"),
-        ("user=foo, dbname=bar, client_encoding=WAT", "utf-8"),
+        ("user=foo dbname=bar", "utf-8"),
+        ("user=foo dbname=bar client_encoding=Unicode", "utf-8"),
+        ("user=foo dbname=bar client_encoding=UNICODE", "utf-8"),
+        ("user=foo dbname=bar client_encoding=MSKANJI", "shift_jis"),
+        ("user=foo dbname=bar client_encoding=mskanji", "shift_jis"),
+        ("user=foo dbname=bar client_encoding=EUC_JP", "euc_jp"),
+        ("user=foo dbname=bar client_encoding=euc-jp", "euc_jp"),
+        ("user=foo dbname=bar client_encoding=WAT", "utf-8"),
     ],
 )
 def test_conninfo_encoding(conninfo, pyenc):
