@@ -22,61 +22,65 @@ OK = ConnStatus.OK
 
 
 _py_codecs = {
-    "BIG5": "big5",
-    "EUC_CN": "gb2312",
-    "EUC_JIS_2004": "euc_jis_2004",
-    "EUC_JP": "euc_jp",
-    "EUC_KR": "euc_kr",
-    # "EUC_TW": not available in Python
-    "GB18030": "gb18030",
-    "GBK": "gbk",
-    "ISO_8859_5": "iso8859-5",
-    "ISO_8859_6": "iso8859-6",
-    "ISO_8859_7": "iso8859-7",
-    "ISO_8859_8": "iso8859-8",
-    "JOHAB": "johab",
-    "KOI8R": "koi8-r",
-    "KOI8U": "koi8-u",
-    "LATIN1": "iso8859-1",
-    "LATIN10": "iso8859-16",
-    "LATIN2": "iso8859-2",
-    "LATIN3": "iso8859-3",
-    "LATIN4": "iso8859-4",
-    "LATIN5": "iso8859-9",
-    "LATIN6": "iso8859-10",
-    "LATIN7": "iso8859-13",
-    "LATIN8": "iso8859-14",
-    "LATIN9": "iso8859-15",
-    # "MULE_INTERNAL": not available in Python
-    "SHIFT_JIS_2004": "shift_jis_2004",
-    "SJIS": "shift_jis",
+    ("BIG5", "WIN950", "Windows950"): "big5",
+    ("EUC_CN",): "gb2312",
+    ("EUC_JIS_2004",): "euc_jis_2004",
+    ("EUC_JP",): "euc_jp",
+    ("EUC_KR",): "euc_kr",
+    # ("EUC_TW",): not available in Python
+    ("GB18030",): "gb18030",
+    ("GBK", "WIN936", "Windows936"): "gbk",
+    ("ISO_8859_5",): "iso8859-5",
+    ("ISO_8859_6",): "iso8859-6",
+    ("ISO_8859_7",): "iso8859-7",
+    ("ISO_8859_8",): "iso8859-8",
+    ("JOHAB",): "johab",
+    ("KOI8R", "KOI8"): "koi8-r",
+    ("KOI8U",): "koi8-u",
+    ("LATIN1", "ISO88591"): "iso8859-1",
+    ("LATIN10", "ISO885916"): "iso8859-16",
+    ("LATIN2", "ISO88592"): "iso8859-2",
+    ("LATIN3", "ISO88593"): "iso8859-3",
+    ("LATIN4", "ISO88594"): "iso8859-4",
+    ("LATIN5", "ISO88599"): "iso8859-9",
+    ("LATIN6", "ISO885910"): "iso8859-10",
+    ("LATIN7", "ISO885913"): "iso8859-13",
+    ("LATIN8", "ISO885914"): "iso8859-14",
+    ("LATIN9", "ISO885915"): "iso8859-15",
+    # ("MULE_INTERNAL",): not available in Python
+    ("SHIFT_JIS_2004",): "shift_jis_2004",
+    ("SJIS", "Mskanji", "ShiftJIS", "WIN932", "Windows932"): "shift_jis",
     # this actually means no encoding, see PostgreSQL docs
     # it is special-cased by the text loader.
-    "SQL_ASCII": "ascii",
-    "UHC": "cp949",
-    "UTF8": "utf-8",
-    "WIN1250": "cp1250",
-    "WIN1251": "cp1251",
-    "WIN1252": "cp1252",
-    "WIN1253": "cp1253",
-    "WIN1254": "cp1254",
-    "WIN1255": "cp1255",
-    "WIN1256": "cp1256",
-    "WIN1257": "cp1257",
-    "WIN1258": "cp1258",
-    "WIN866": "cp866",
-    "WIN874": "cp874",
+    ("SQL_ASCII",): "ascii",
+    ("UHC", "WIN949", "Windows949"): "cp949",
+    ("UTF8", "Unicode"): "utf-8",
+    ("WIN1250",): "cp1250",
+    ("WIN1251", "WIN"): "cp1251",
+    ("WIN1252",): "cp1252",
+    ("WIN1253",): "cp1253",
+    ("WIN1254",): "cp1254",
+    ("WIN1255",): "cp1255",
+    ("WIN1256",): "cp1256",
+    ("WIN1257",): "cp1257",
+    ("WIN1258", "ABC", "TCVN", "TCVN5712", "VSCII"): "cp1258",
+    ("WIN866", "ALT"): "cp866",
+    ("WIN874",): "cp874",
 }
 
-py_codecs: dict[bytes, str] = {}
-py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
+py_codecs = dict(
+    (k.upper().encode(), v) for aliases, v in _py_codecs.items() for k in aliases
+)
 
 # Add an alias without underscore, for lenient lookups
 py_codecs.update(
-    (k.replace("_", "").encode(), v) for k, v in _py_codecs.items() if "_" in k
+    (k.replace("_", "").encode(), v)
+    for aliases, v in _py_codecs.items()
+    for k in aliases
+    if "_" in k
 )
 
-pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
+pg_codecs = {v: k[0].encode() for k, v in _py_codecs.items()}
 
 
 def conn_encoding(conn: BaseConnection[Any] | None) -> str:
