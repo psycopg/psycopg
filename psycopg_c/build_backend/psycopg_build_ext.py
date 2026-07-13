@@ -38,6 +38,7 @@ class psycopg_build_ext(build_ext):
         # MSVC requires an explicit "libpq"
         libpq = "pq" if sys.platform != "win32" else "libpq"
 
+        assert self.distribution.ext_modules is not None
         for ext in self.distribution.ext_modules:
             ext.libraries.append(libpq)
             ext.include_dirs.append(get_config("includedir"))

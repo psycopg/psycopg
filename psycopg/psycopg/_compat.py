@@ -33,24 +33,27 @@ else:
 if sys.version_info >= (3, 14):
     from string.templatelib import Interpolation, Template
 else:
+    from typing import Generic, Literal
     from dataclasses import dataclass
+
+    T = TypeVar("T")
 
     class Template:
         strings: tuple[str]
-        interpolations: tuple[Interpolation]
+        interpolations: tuple[Interpolation[Any]]
 
-        def __new__(cls, *args: str | Interpolation) -> Self:
+        def __new__(cls, *args: str | Interpolation[Any]) -> Self:
             return cls()
 
-        def __iter__(self) -> Iterator[str | Interpolation]:
+        def __iter__(self) -> Iterator[str | Interpolation[Any]]:
             return
             yield
 
     @dataclass
-    class Interpolation:
-        value: Any
+    class Interpolation(Generic[T]):
+        value: T
         expression: str
-        conversion: str | None
+        conversion: Literal["a", "r", "s"] | None
         format_spec: str
 
 
