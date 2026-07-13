@@ -38,12 +38,12 @@ def test_dump(data, format, result, type):
 
 @pytest.mark.parametrize("dumper_cls", [BinaryTextDumper, BinaryBinaryDumper])
 def test_dump_nested_binary(dumper_cls):
-    # gh-1352: a Binary() wrapping another Binary() must be unwrapped fully
-    # instead of raising a low-level TypeError.
     dumper = dumper_cls(Binary)
     expected = dumper.dump(b"hello")
-    assert dumper.dump(Binary(b"hello")) == expected
-    assert dumper.dump(Binary(Binary(Binary(b"hello")))) == expected
+    wrapped = Binary(b"hello")
+    assert Binary(wrapped) is wrapped
+    assert Binary(Binary(Binary(wrapped))) is wrapped
+    assert dumper.dump(wrapped) == expected
 
 
 @pytest.mark.parametrize(

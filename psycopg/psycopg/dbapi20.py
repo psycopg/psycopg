@@ -68,8 +68,14 @@ STRING = DBAPITypeObject(
 
 
 class Binary:
-    def __init__(self, obj: Any):
+    obj: Any
+
+    def __new__(cls, obj: Any) -> "Binary":
+        if isinstance(obj, Binary):
+            return obj
+        self = super().__new__(cls)
         self.obj = obj
+        return self
 
     def __repr__(self) -> str:
         if len(sobj := repr(self.obj)) > 40:
@@ -79,18 +85,18 @@ class Binary:
 
 class BinaryBinaryDumper(BytesBinaryDumper):
     def dump(self, obj: Buffer | Binary) -> Buffer | None:
-        # Unwrap any level of Binary() nesting before dumping the buffer.
-        while isinstance(obj, Binary):
-            obj = obj.obj
-        return super().dump(obj)
+        if isinstance(obj, Binary):
+            return super().dump(obj.obj)
+        else:
+            return super().dump(obj)
 
 
 class BinaryTextDumper(BytesDumper):
     def dump(self, obj: Buffer | Binary) -> Buffer | None:
-        # Unwrap any level of Binary() nesting before dumping the buffer.
-        while isinstance(obj, Binary):
-            obj = obj.obj
-        return super().dump(obj)
+        if isinstance(obj, Binary):
+            return super().dump(obj.obj)
+        else:
+            return super().dump(obj)
 
 
 def Date(year: int, month: int, day: int) -> dt.date:
