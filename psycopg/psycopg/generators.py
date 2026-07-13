@@ -74,27 +74,28 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
 
     conn = pq.PGconn.connect_start(conninfo.encode())
     logger.debug("connection started: %s", conn)
+    if conn.status == BAD:
+        encoding = conninfo_encoding(conninfo)
+        raise e.OperationalError(
+            f"connection is bad: {conn.get_error_message(encoding)}", pgconn=conn
+        )
+    wait = WAIT_W
     while True:
-        if conn.status == BAD:
-            encoding = conninfo_encoding(conninfo)
-            raise e.OperationalError(
-                f"connection is bad: {conn.get_error_message(encoding)}", pgconn=conn
-            )
+        socket = conn.socket
+
+        while not (yield socket, wait):
+            if deadline and monotonic() > deadline:
+                raise e.ConnectionTimeout("connection timeout expired")
 
         status = conn.connect_poll()
         logger.debug("connection polled: %s", conn)
 
-        if status == POLL_READING or status == POLL_WRITING:
-            wait = WAIT_R if status == POLL_READING else WAIT_W
-            while True:
-                ready = yield conn.socket, wait
-                if deadline and monotonic() > deadline:
-                    raise e.ConnectionTimeout("connection timeout expired")
-                if ready:
-                    break
-
-        elif status == POLL_OK:
+        if status == POLL_OK:
             break
+        elif status == POLL_READING:
+            wait = WAIT_R
+        elif status == POLL_WRITING:
+            wait = WAIT_W
         elif status == POLL_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
