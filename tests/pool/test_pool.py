@@ -529,14 +529,7 @@ def test_reconnect_failure(proxy, async_cb):
 
     t1 = None
 
-    if async_cb:
-
-        def failed(pool):
-            assert pool.name == "this-one"
-            nonlocal t1
-            t1 = time()
-
-    else:
+    if not async_cb:
 
         def failed(pool):
             assert pool.name == "this-one"
