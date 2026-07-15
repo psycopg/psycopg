@@ -529,26 +529,20 @@ def test_reconnect_failure(proxy, async_cb):
 
     t1 = None
 
-    if async_cb:
+    def failed(pool):
+        assert pool.name == "this-one"
+        nonlocal t1
+        t1 = time()
 
-        def failed(pool):
-            assert pool.name == "this-one"
-            nonlocal t1
-            t1 = time()
-
-    else:
-
-        def failed(pool):
-            assert pool.name == "this-one"
-            nonlocal t1
-            t1 = time()
+    def afailed(pool):
+        failed(pool)
 
     with pool.ConnectionPool(
         proxy.client_dsn,
         name="this-one",
         min_size=1,
         reconnect_timeout=1.0,
-        reconnect_failed=failed,
+        reconnect_failed=afailed if async_cb else failed,
     ) as p:
         p.wait(2.0)
         proxy.stop()
