@@ -334,10 +334,10 @@ class Faker:
         return self.schema_time(cls)
 
     def make_datetime(self, spec):
-        # Add a day because with timezone we might go BC
+        # Add/subtract a day because with timezone we might overflow
         dtmin = dt.datetime.min + dt.timedelta(days=1)
-        delta = dt.datetime.max - dtmin
-        micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
+        delta = dt.datetime.max - dt.timedelta(days=1) - dtmin
+        micros = randrange(int(delta.total_seconds() * 1_000_000))
         rv = dtmin + dt.timedelta(microseconds=micros)
         if spec[1]:
             rv = rv.replace(tzinfo=self._make_tz(spec))
