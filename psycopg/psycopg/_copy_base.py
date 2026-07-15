@@ -360,18 +360,21 @@ def _parse_row_text(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
 
 def _parse_row_binary(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
     row: list[Buffer | None] = []
-    nfields = _unpack_int2(data, 0)[0]
-    pos = 2
-    for i in range(nfields):
-        length = _unpack_int4(data, pos)[0]
-        pos += 4
-        if length >= 0:
-            if pos + length > len(data):
-                raise e.DataError("bad copy data: length exceeding data")
-            row.append(data[pos : pos + length])
-            pos += length
-        else:
-            row.append(None)
+    try:
+        nfields = _unpack_int2(data, 0)[0]
+        pos = 2
+        for i in range(nfields):
+            length = _unpack_int4(data, pos)[0]
+            pos += 4
+            if length >= 0:
+                if pos + length > len(data):
+                    raise e.DataError("bad copy data: length exceeding data")
+                row.append(data[pos : pos + length])
+                pos += length
+            else:
+                row.append(None)
+    except struct.error as ex:
+        raise e.DataError("bad copy data: truncated row header") from ex
 
     return tx.load_sequence(row)
 
