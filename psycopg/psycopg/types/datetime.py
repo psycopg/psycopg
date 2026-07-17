@@ -689,7 +689,7 @@ def _get_timestamp_load_error(
             return len(s.split()[-1]) > 4  # year is last token
 
     if s == "-infinity" or s.endswith("BC"):
-        return DataError("timestamp too small (before year 1): {s!r}")
+        return DataError(f"timestamp too small (before year 1): {s!r}")
     elif s == "infinity" or is_overflow(s):
         return DataError(f"timestamp too large (after year 10K): {s!r}")
     else:
