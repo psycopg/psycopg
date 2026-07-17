@@ -277,7 +277,7 @@ class JsonbBinaryLoader(_JsonLoader):
 
     def load(self, data: Buffer) -> Any:
         if data and data[0] != 1:
-            raise DataError("unknown jsonb binary format: {data[0]}")
+            raise DataError(f"unknown jsonb binary format: {data[0]}")
         if not isinstance((data := data[1:]), bytes):
             data = bytes(data)
         return self.loads(data)

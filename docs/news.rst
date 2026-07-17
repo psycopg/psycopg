@@ -19,6 +19,9 @@ Psycopg 3.3.5 (unreleased)
   no `!NoneType` dumper registered in python implementation (:ticket:`#1325`).
 - Fix `!wait_selector` wait function to not raise `!KeyError`
   (:ticket:`#1327`).
+- Fix `!DataError` messages leaking the literal ``{...}`` placeholder instead
+  of the offending value when loading a pre-year-1 :sql:`timestamp` or a
+  malformed binary :sql:`jsonb` value (:ticket:`#1372`).
 
 
 Current release
