@@ -12,6 +12,7 @@ jobs:
 
   sdist:
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false

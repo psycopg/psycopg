@@ -43,7 +43,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
@@ -124,7 +124,7 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: true
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
@@ -178,7 +178,7 @@ jobs:
   windows:  # {{{
     # TODO: move it back to windows-latest when the default runner switches.
     runs-on: windows-2025
-    if: true
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false

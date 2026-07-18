@@ -19,7 +19,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    if: true
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     steps:
       - uses: actions/checkout@v6
