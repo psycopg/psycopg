@@ -19,6 +19,8 @@ Psycopg 3.3.5 (unreleased)
   no `!NoneType` dumper registered in python implementation (:ticket:`#1325`).
 - Fix `!wait_selector` wait function to not raise `!KeyError`
   (:ticket:`#1327`).
+- Fix `Connection.cancel_safe()` sometimes hanging or raising
+  `errors.CancellationTimeout` when it should have succeeded (:ticket:`#1335`).
 
 
 Current release
