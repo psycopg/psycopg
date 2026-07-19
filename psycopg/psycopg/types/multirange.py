@@ -342,14 +342,20 @@ class MultirangeBinaryLoader(BaseMultirangeLoader[T]):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Multirange[T]:
+        if len(data) < 4:
+            raise e.DataError(f"invalid multirange data: len = {len(data)}")
+
         nelems = unpack_len(data, 0)[0]
         pos = 4
         out = Multirange[T]()
-        for i in range(nelems):
-            length = unpack_len(data, pos)[0]
-            pos += 4
-            out.append(load_range_binary(data[pos : pos + length], self._load))
-            pos += length
+        try:
+            for i in range(nelems):
+                length = unpack_len(data, pos)[0]
+                pos += 4
+                out.append(load_range_binary(data[pos : pos + length], self._load))
+                pos += length
+        except Exception as ex:
+            raise e.DataError(f"invalid multirange data: {type(ex).__name__} - {ex}")
 
         if pos != len(data):
             raise e.DataError("unexpected trailing data in multirange")
