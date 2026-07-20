@@ -296,6 +296,29 @@ def test_dump_list_no_comma_separator(conn):
     assert got == "{(3,4),(1,2);(5,4),(3,2)}"
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_recursive_list_with_oid(fmt_in):
+    # gh-1350: a self-referential list must raise DataError (not RecursionError)
+    # even when the dumper's oid is already set - e.g. via COPY set_types(),
+    # which bypasses the get_key()/upgrade() step where cycle detection lives.
+    from psycopg.types.array import ListBinaryDumper, ListDumper
+    from psycopg.types.numeric import Int2BinaryDumper, Int2Dumper
+
+    tx = Transformer()
+    if fmt_in == PyFormat.BINARY:
+        dumper: Any = ListBinaryDumper(list, tx)
+        dumper.sub_dumper = Int2BinaryDumper(int, tx)
+    else:
+        dumper = ListDumper(list, tx)
+        dumper.sub_dumper = Int2Dumper(int, tx)
+    dumper.oid = builtins["int2"].array_oid
+
+    recursive: list[Any] = []
+    recursive.append(recursive)
+    with pytest.raises(psycopg.errors.DataError):
+        dumper.dump(recursive)
+
+
 @pytest.mark.crdb_skip("geometric types")
 def test_load_array_no_comma_separator(conn):
     cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")

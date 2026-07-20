@@ -158,7 +158,11 @@ class ListDumper(BaseListDumper):
         tokens: list[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
-        def dump_list(obj: list[Any]) -> None:
+        def dump_list(obj: list[Any], seen: set[int]) -> None:
+            if id(obj) in seen:
+                raise e.DataError("cannot dump a recursive list")
+            seen.add(id(obj))
+
             if not obj:
                 tokens.append(b"{}")
                 return
@@ -166,7 +170,7 @@ class ListDumper(BaseListDumper):
             tokens.append(b"{")
             for item in obj:
                 if isinstance(item, list):
-                    dump_list(item)
+                    dump_list(item, seen)
                 elif item is not None:
                     if (ad := self._dump_item(item)) is None:
                         tokens.append(b"NULL")
@@ -181,7 +185,7 @@ class ListDumper(BaseListDumper):
 
             tokens[-1] = b"}"
 
-        dump_list(obj)
+        dump_list(obj, set())
 
         return b"".join(tokens)
 
@@ -249,14 +253,17 @@ class ListBinaryDumper(BaseListDumper):
         dims: list[int] = []
         hasnull = 0
 
-        def calc_dims(L: list[Any]) -> None:
+        def calc_dims(L: list[Any], seen: set[int]) -> None:
             if isinstance(L, self.cls):
+                if id(L) in seen:
+                    raise e.DataError("cannot dump a recursive list")
+                seen.add(id(L))
                 if not L:
                     raise e.DataError("lists cannot contain empty lists")
                 dims.append(len(L))
-                calc_dims(L[0])
+                calc_dims(L[0], seen)
 
-        calc_dims(obj)
+        calc_dims(obj, set())
 
         def dump_list(L: list[Any], dim: int) -> None:
             nonlocal hasnull
