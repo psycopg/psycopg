@@ -22,7 +22,7 @@ jobs:
     if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
