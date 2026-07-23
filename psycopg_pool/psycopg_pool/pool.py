@@ -331,6 +331,34 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._putconn(conn, from_getconn=False)
 
+    def dedicated_connection(self) -> CT:
+        """Return a new connection configured like the pool's connections,
+        but not managed by the pool.
+
+        The pool does not track the returned connection: it is not counted in
+        the pool size, not subject to `!max_lifetime` or `!max_idle`, and not
+        returned to the pool on close. The caller is responsible for closing
+        it. The pool's `!conninfo`, `!kwargs`, `!connection_class`, and
+        `!configure` callback are applied as for any pool-managed connection.
+
+        The connection still contributes to the `!connections_num` and
+        `!connections_errors` stats counters.
+        """
+        self._stats[self._CONNECTIONS_NUM] += 1
+        conninfo = self._resolve_conninfo()
+        kwargs = self._resolve_kwargs()
+        try:
+            conn = self.connection_class.connect(conninfo, **kwargs)
+        except CLIENT_EXCEPTIONS:
+            self._stats[self._CONNECTIONS_ERRORS] += 1
+            raise
+        try:
+            self._do_configure(conn)
+        except BaseException:
+            conn.close()
+            raise
+        return conn
+
     def drain(self) -> None:
         """
         Remove all the connections from the pool and create new ones.
@@ -624,17 +652,23 @@ class ConnectionPool(Generic[CT], BasePool):
 
         conn._pool = self
 
-        if self._configure:
-            self._configure(conn)
-            if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
-                sname = TransactionStatus(status).name
-                raise e.ProgrammingError(
-                    f"connection left in status {sname} by configure function {self._configure}: discarded"
-                )
+        self._do_configure(conn)
 
         # Set an expiry date, with some randomness to avoid mass reconnection
         self._set_connection_expiry_date(conn)
         return conn
+
+    def _do_configure(self, conn: CT) -> None:
+        """Run the `!configure` callback on a new connection, if set."""
+        if not self._configure:
+            return
+
+        self._configure(conn)
+        if (status := conn.pgconn.transaction_status) != TransactionStatus.IDLE:
+            sname = TransactionStatus(status).name
+            raise e.ProgrammingError(
+                f"connection left in status {sname} by configure function {self._configure}: discarded"
+            )
 
     def _resolve_conninfo(self) -> str:
         """Resolve conninfo (static string, sync callable, or async callable)."""
