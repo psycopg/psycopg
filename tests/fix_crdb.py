@@ -119,6 +119,7 @@ _crdb_reasons = {
     "severity_nonlocalized": 81794,
     "stored procedure": 1751,
     "to_regtype": None,
+    "pg_current_wal_lsn": None,
 }
 
 _crdb_reason_version = {
