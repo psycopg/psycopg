@@ -56,3 +56,19 @@ def test_pg2py_missing(pgenc):
 )
 def test_conninfo_encoding(conninfo, pyenc):
     assert encodings.conninfo_encoding(conninfo) == pyenc
+
+
+@pytest.mark.parametrize(
+    "s, want",
+    [
+        ("", "f"),
+        ("foo", "foo"),
+        ("1foo", "f1foo"),
+        ("_foo", "f_foo"),
+        ("foo bar", "foo_bar"),
+    ],
+)
+def test_as_python_identifier(s, want):
+    got = encodings._as_python_identifier(s)
+    assert got == want
+    assert got.isidentifier()

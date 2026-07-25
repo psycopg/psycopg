@@ -138,7 +138,9 @@ def _as_python_identifier(s: str, prefix: str = "f") -> str:
     the first letter is an '_'.
     """
     if not s.isidentifier():
-        if s[0] in "1234567890":
+        if not s:
+            s = prefix
+        elif s[0] in "1234567890":
             s = prefix + s
         if not s.isidentifier():
             s = _re_clean.sub("_", s)
