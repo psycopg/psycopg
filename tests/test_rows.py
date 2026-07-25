@@ -68,6 +68,11 @@ def test_namedtuple_row(conn):
     assert r3.f_eur == 5
 
 
+def test_make_nt_duplicate_names():
+    with pytest.raises(psycopg.DataError):
+        rows._make_nt("utf-8", b"id", b"id")
+
+
 def test_class_row(conn):
     cur = conn.cursor(row_factory=rows.class_row(Person))
     cur.execute("select 'John' as first, 'Doe' as last")

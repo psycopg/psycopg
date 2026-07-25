@@ -22,6 +22,8 @@ Psycopg 3.3.5 (unreleased)
 - Fix `!DataError` messages leaking the literal ``{...}`` placeholder instead
   of the offending value when loading a pre-year-1 :sql:`timestamp` or a
   malformed binary :sql:`jsonb` value (:ticket:`#1372`).
+- Raise `!DataError` instead of `!ValueError` when `~psycopg.rows.namedtuple_row`
+  receives duplicate column names (:ticket:`#1348`).
 - Fix building C extension with Cython 3.3.
 
 
