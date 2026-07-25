@@ -105,3 +105,20 @@ def test_timeout(setpgenv, conninfo, want, env):
     params = conninfo_to_dict(conninfo)
     timeout = timeout_from_conninfo(params)
     assert timeout == want
+
+
+@pytest.mark.parametrize(
+    "conninfo",
+    [
+        "connect_timeout=notanumber",
+        "connect_timeout=nan",
+        "connect_timeout=inf",
+        "connect_timeout=-inf",
+        "connect_timeout=Infinity",
+    ],
+)
+def test_timeout_bad_value(setpgenv, conninfo):
+    setpgenv(None)
+    params = conninfo_to_dict(conninfo)
+    with pytest.raises(ProgrammingError, match="bad value for connect_timeout"):
+        timeout_from_conninfo(params)
