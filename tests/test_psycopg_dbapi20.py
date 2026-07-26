@@ -90,6 +90,30 @@ def test_timestamp_from_ticks(ticks, want):
 
 
 @pytest.mark.parametrize(
+    "args, want",
+    [
+        ((2024, 1, 1, 12, 0, 0), "2024-01-01T12:00:00.000000+0000"),
+        ((2001, 9, 9, 1, 46, 40), "2001-09-09T01:46:40.000000+0000"),
+    ],
+)
+def test_timestamp(args, want):
+    s = psycopg.Timestamp(*args)
+    want = dt.datetime.strptime(want, "%Y-%m-%dT%H:%M:%S.%f%z")
+    assert s == want
+
+
+def test_timestamp_tz_consistency():
+    # Timestamp() and TimestampFromTicks() must produce datetime objects with
+    # the same timezone-awareness, otherwise they would be adapted to different
+    # PostgreSQL types (timestamp vs timestamptz).
+    ts1 = psycopg.Timestamp(2024, 1, 1, 12, 0, 0)
+    ts2 = psycopg.TimestampFromTicks(1704110400.0)
+    assert ts1.tzinfo is not None
+    assert ts2.tzinfo is not None
+    assert ts1.utcoffset() == ts2.utcoffset()
+
+
+@pytest.mark.parametrize(
     "ticks, want",
     [
         (0, "1970-01-01"),

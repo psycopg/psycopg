@@ -22,6 +22,9 @@ Psycopg 3.3.5 (unreleased)
 - Fix `!DataError` messages leaking the literal ``{...}`` placeholder instead
   of the offending value when loading a pre-year-1 :sql:`timestamp` or a
   malformed binary :sql:`jsonb` value (:ticket:`#1372`).
+- Fix `Timestamp` to return a timezone-aware datetime (in UTC), consistent with
+  `TimestampFromTicks`, so that both constructors are adapted to the same
+  PostgreSQL type (:ticket:`#1058`).
 
 
 Current release

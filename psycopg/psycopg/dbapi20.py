@@ -112,7 +112,7 @@ def TimeFromTicks(ticks: float) -> dt.time:
 def Timestamp(
     year: int, month: int, day: int, hour: int, minute: int, second: int
 ) -> dt.datetime:
-    return dt.datetime(year, month, day, hour, minute, second)
+    return dt.datetime(year, month, day, hour, minute, second, tzinfo=dt.timezone.utc)
 
 
 def TimestampFromTicks(ticks: float) -> dt.datetime:
