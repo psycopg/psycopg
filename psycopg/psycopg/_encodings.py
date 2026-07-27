@@ -135,15 +135,15 @@ def _as_python_identifier(s: str, prefix: str = "f") -> str:
     Reduce a string to a valid Python identifier.
 
     Replace all non-valid chars with '_' and prefix the value with `!prefix` if
-    the first letter is an '_'.
+    the string is empty or the first letter is an '_'.
     """
     if not s.isidentifier():
-        if s[0] in "1234567890":
+        if s and s[0] in "1234567890":
             s = prefix + s
         if not s.isidentifier():
             s = _re_clean.sub("_", s)
     # namedtuple fields cannot start with underscore. So...
-    if s[0] == "_":
+    if not s or s[0] == "_":
         s = prefix + s
     return s
 
