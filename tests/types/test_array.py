@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import struct
 from math import prod
 from typing import Any
 from decimal import Decimal
@@ -10,10 +11,11 @@ import pytest
 import psycopg
 import psycopg.types.numeric
 from psycopg import pq, sql
+from psycopg._oids import TEXT_OID
 from psycopg.adapt import Dumper, PyFormat, Transformer
 from psycopg.types import TypeInfo
 from psycopg.postgres import types as builtins
-from psycopg.types.array import register_array
+from psycopg.types.array import ListBinaryDumper, _load_binary, register_array
 
 from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
@@ -126,6 +128,19 @@ def test_bad_binary_array(input):
     tx = Transformer()
     with pytest.raises(psycopg.DataError):
         tx.get_dumper(input, PyFormat.BINARY).dump(input)
+
+
+def test_dump_binary_nested_empty_array():
+    got = ListBinaryDumper(list).dump([[], []])
+    want = b"".join(
+        [
+            struct.pack("!III", 2, 0, TEXT_OID),
+            struct.pack("!II", 2, 1),
+            struct.pack("!II", 0, 1),
+        ]
+    )
+    assert got == want
+    assert _load_binary(got, Transformer()) == [[], []]
 
 
 @pytest.mark.crdb_skip("nested array")

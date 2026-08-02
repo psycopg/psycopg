@@ -251,10 +251,9 @@ class ListBinaryDumper(BaseListDumper):
 
         def calc_dims(L: list[Any]) -> None:
             if isinstance(L, self.cls):
-                if not L:
-                    raise e.DataError("lists cannot contain empty lists")
                 dims.append(len(L))
-                calc_dims(L[0])
+                if L:
+                    calc_dims(L[0])
 
         calc_dims(obj)
 
@@ -444,6 +443,15 @@ def _load_binary(data: Buffer, tx: Transformer) -> list[Any]:
     p = 12 + 8 * ndims
     dims = [_unpack_dim(data, i)[0] for i in range(12, p, 8)]
     nelems = prod(dims)
+
+    if not nelems:
+
+        def make_empty(dims: list[int]) -> list[Any]:
+            if len(dims) == 1:
+                return []
+            return [make_empty(dims[1:]) for _ in range(dims[0])]
+
+        return make_empty(dims)
 
     out: list[Any] = [None] * nelems
     for i in range(nelems):
