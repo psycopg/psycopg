@@ -13,6 +13,7 @@ Future releases
 Psycopg 3.3.6 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Add support for Python 3.15 (:ticket:`#1245`).
 - Report `!None` instead of ``65535`` as the `Column.precision` of an
   :sql:`interval` column declared with a fields restriction and no explicit
   precision, such as e.g. :sql:`interval day to second` (:ticket:`#1397`).
