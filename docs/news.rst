@@ -25,6 +25,7 @@ Psycopg 3.3.5 (unreleased)
 - Raise `!DataError` instead of `!ValueError` when `~psycopg.rows.namedtuple_row`
   receives duplicate column names (:ticket:`#1348`).
 - Fix building C extension with Cython 3.3.
+- Add support for Python 3.15 (:ticket:`#1245`).
 
 
 Current release
