@@ -24,6 +24,8 @@ Psycopg 3.3.5 (unreleased)
   malformed binary :sql:`jsonb` value (:ticket:`#1372`).
 - Raise `!DataError` instead of `!ValueError` when `~psycopg.rows.namedtuple_row`
   receives duplicate column names (:ticket:`#1348`).
+- Raise `!DataError` on inconsistent copy data length in pure Python,
+  consistently with the C implementation (:ticket:`#1360`).
 - Fix building C extension with Cython 3.3.
 
 

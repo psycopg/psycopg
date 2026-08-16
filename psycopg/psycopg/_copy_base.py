@@ -366,6 +366,8 @@ def _parse_row_binary(data: Buffer, tx: Transformer) -> tuple[Any, ...]:
         length = _unpack_int4(data, pos)[0]
         pos += 4
         if length >= 0:
+            if pos + length > len(data):
+                raise e.DataError("bad copy data: length exceeding data")
             row.append(data[pos : pos + length])
             pos += length
         else:
