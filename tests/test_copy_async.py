@@ -27,6 +27,28 @@ from .test_adapt import StrNoneBinaryDumper, StrNoneDumper
 pytestmark = pytest.mark.crdb_skip("copy")
 
 
+def test_copy_binary_parse_length_exceeding_data():
+    from psycopg.adapt import Transformer
+    from psycopg._copy_base import _parse_row_binary
+
+    tx = Transformer()
+    # One field declaring length 10, but only two bytes ("ab") present.
+    data = bytes.fromhex("00010000000a6162")
+    with pytest.raises(e.DataError, match="length exceeding data"):
+        _parse_row_binary(data, tx)
+
+
+def test_copy_binary_parse_exact_length():
+    from psycopg.adapt import Transformer
+    from psycopg._copy_base import _parse_row_binary
+
+    tx = Transformer()
+    tx.set_loader_types([25], pq.Format.TEXT)  # oid 25 = text
+    # One field declaring length 2, with exactly two bytes ("ab") present.
+    data = bytes.fromhex("0001000000026162")
+    assert _parse_row_binary(data, tx) == ("ab",)
+
+
 @pytest.mark.parametrize("format", pq.Format)
 async def test_copy_out_read(aconn, format):
     if format == pq.Format.TEXT:
