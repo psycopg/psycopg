@@ -203,18 +203,16 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      - name: Install PostgreSQL (x64, under emulation)
-        # Currently, the arm64 runner image doesn't include PostgreSQL
-        if: ${{ matrix.arch == 'win_arm64' }}
+      - name: Install and start PostgreSQL for test
+        # If the runner image doesn't ship PostgreSQL (currently the case on arm64), install it.
         run: |
-          choco install postgresql17 -y --no-progress --params '/Password:root'
-          "PGUSER=postgres" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "PGPASSWORD=root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        shell: powershell
-
-      - name: Start PostgreSQL service for test
-        run: |
-          $PgSvc = Get-Service "postgresql*"
+          $PgSvc = Get-Service "postgresql*" -ErrorAction SilentlyContinue
+          if (-not $PgSvc) {
+            choco install postgresql17 -y --no-progress --params '/Password:root'
+            "PGUSER=postgres" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "PGPASSWORD=root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            $PgSvc = Get-Service "postgresql*"
+          }
           Set-Service $PgSvc.Name -StartupType manual
           if ($PgSvc.Status -ne 'Running') {
             $PgSvc.Start()
