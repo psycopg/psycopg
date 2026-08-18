@@ -23,8 +23,9 @@ class ScriptError(Exception):
 
 def _main() -> None:
     # only x64/arm64 windows
-    machines = {"AMD64": "x64", "ARM64": "arm64"}
-    if not (sys.platform == "win32" and platform.machine() in machines):
+    # Note: there is no arm64-windows-release triplet in vcpkg.
+    triplets = {"AMD64": "x64-windows-release", "ARM64": "arm64-windows"}
+    if not (sys.platform == "win32" and platform.machine() in triplets):
         raise ScriptError("this script should only be used in x64/arm64 windows")
 
     vcpkg_root = os.environ.get(
@@ -32,10 +33,7 @@ def _main() -> None:
     )
     if not vcpkg_root:
         raise ScriptError("VCPKG_ROOT/VCPKG_INSTALLATION_ROOT env var not specified")
-    triplet = (
-        os.environ.get("VCPKG_TRIPLET")
-        or f"{machines[platform.machine()]}-windows-release"
-    )
+    triplet = os.environ.get("VCPKG_TRIPLET") or triplets[platform.machine()]
     vcpkg_platform_root = (Path(vcpkg_root) / "installed" / triplet).resolve()
 
     args = parse_cmdline()
