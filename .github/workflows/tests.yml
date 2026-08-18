@@ -295,7 +295,8 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
-      VCPKG_TRIPLET: ${{ matrix.runner == 'windows-11-arm' && 'arm64-windows-release' || 'x64-windows-release' }}
+      # Note: there is no arm64-windows-release triplet in vcpkg.
+      VCPKG_TRIPLET: ${{ matrix.runner == 'windows-11-arm' && 'arm64-windows' || 'x64-windows-release' }}
 
     defaults:
       run:

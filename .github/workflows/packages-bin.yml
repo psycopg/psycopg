@@ -190,7 +190,8 @@ jobs:
           - {arch: win_arm64, pyver: cp310}
 
     env:
-      VCPKG_TRIPLET: ${{ matrix.arch == 'win_arm64' && 'arm64-windows-release' || 'x64-windows-release' }}
+      # Note: there is no arm64-windows-release triplet in vcpkg.
+      VCPKG_TRIPLET: ${{ matrix.arch == 'win_arm64' && 'arm64-windows' || 'x64-windows-release' }}
 
     defaults:
       run:
