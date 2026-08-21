@@ -1,5 +1,5 @@
 """
-SQL composition utility module
+SQL composition utility module.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -74,7 +74,7 @@ class Composable(ABC):
 
     def as_string(self, context: AdaptContext | None = None) -> str:
         """
-        Return the value of the object as string.
+        Return the value of the object as a string.
 
         :param context: the context to evaluate the string into.
         :type context: `connection` or `cursor`
