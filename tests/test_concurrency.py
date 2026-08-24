@@ -359,6 +359,68 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     assert t1 - t0 < 1.0
 
 
+
+
+@pytest.mark.subprocess
+def test_systemexit_handler_cancels_query(conn, dsn):
+    """A SystemExit raised while waiting on a query must trigger the same
+    best-effort server-side cancel as Ctrl-C (issue #1384)."""
+    conn.autocommit = True
+
+    APPNAME = "test_systemexit_handler"
+    script = f"""\
+import signal, sys, psycopg
+
+def handler(signum, frame):
+    raise SystemExit(3)
+
+signal.signal(signal.SIGINT, handler)
+with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
+    conn.execute("select pg_sleep(60)")
+"""
+
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_C_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGINT
+
+    proc = None
+
+    def run_process():
+        nonlocal proc
+        proc = sp.Popen(
+            [sys.executable, "-s", "-c", script], creationflags=creationflags
+        )
+        proc.communicate()
+
+    t = threading.Thread(target=run_process)
+    t.start()
+
+    for i in range(20):
+        cur = conn.execute(
+            "select pid from pg_stat_activity where application_name = %s", (APPNAME,)
+        )
+        if rec := cur.fetchone():
+            pid = rec[0]
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "process didn't start?"
+
+    proc.send_signal(sig)
+    proc.wait()
+
+    # without the fix the child exits via SystemExit but skips the server-side
+    # cancel, leaving pg_sleep running for the full 60 s
+    for i in range(20):
+        cur = conn.execute("select 1 from pg_stat_activity where pid = %s", (pid,))
+        if not cur.fetchone():
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "query not cancelled after SystemExit"
 @pytest.mark.slow
 @pytest.mark.subprocess
 @pytest.mark.parametrize("itimername, signame", [("ITIMER_REAL", "SIGALRM")])
