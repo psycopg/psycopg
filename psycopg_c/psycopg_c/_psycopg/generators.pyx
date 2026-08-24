@@ -299,7 +299,7 @@ def pipeline_communicate(
 
             _consume_notifies(pgconn)
 
-            res: list[PGresult] = []
+            res = []
             while True:
                 with nogil:
                     ibres = libpq.PQisBusy(pgconn_ptr)
