@@ -409,6 +409,7 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     else:
         assert False, "process didn't start?"
 
+    assert proc is not None
     proc.send_signal(sig)
     proc.wait()
 
