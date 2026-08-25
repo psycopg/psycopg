@@ -2,20 +2,21 @@
 Tests dealing with concurrency issues.
 """
 
+import multiprocessing
 import os
-import sys
-import time
 import queue
 import signal
-import threading
 import subprocess as sp
-import multiprocessing
+import sys
+import threading
+import time
 
 import pytest
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 import psycopg
 from psycopg import errors as e
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
 
 @pytest.mark.slow
 def test_concurrent_execution(conn_cls, dsn):
@@ -34,6 +35,7 @@ def test_concurrent_execution(conn_cls, dsn):
     t1.join()
     t2.join()
     assert time.time() - t0 < 0.8, "something broken in concurrency"
+
 
 @pytest.mark.slow
 def test_commit_concurrency(conn):
@@ -60,6 +62,7 @@ def test_commit_concurrency(conn):
     t1.join()
 
     assert notices.empty(), "%d notices raised" % notices.qsize()
+
 
 @pytest.mark.slow
 @pytest.mark.subprocess
@@ -102,6 +105,7 @@ t.join()
         [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
     ).decode("utf8", "replace")
     assert out == "", out.strip().splitlines()[-1]
+
 
 @pytest.mark.slow
 @pytest.mark.timing
@@ -148,12 +152,14 @@ def test_notifies(conn_cls, conn, dsn):
 
     t.join()
 
+
 def canceller(conn, errors):
     try:
         time.sleep(0.5)
         conn.cancel()
     except Exception as exc:
         errors.append(exc)
+
 
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
@@ -177,6 +183,7 @@ def test_cancel(conn):
     assert cur.execute("select 1").fetchone()[0] == 1
 
     t.join()
+
 
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
@@ -202,6 +209,7 @@ def test_cancel_stream(conn):
 
     t.join()
 
+
 @pytest.mark.crdb_skip("pg_terminate_backend")
 @pytest.mark.slow
 @pytest.mark.timing
@@ -226,6 +234,7 @@ def test_identify_closure(conn_cls, dsn):
     finally:
         conn.close()
         conn2.close()
+
 
 @pytest.mark.slow
 @pytest.mark.subprocess
@@ -283,6 +292,7 @@ with psycopg.connect({dsn!r}) as conn:
     t = time.time() - t0
     assert proc.returncode == 0
     assert 1 < t < 2
+
 
 @pytest.mark.slow
 @pytest.mark.subprocess
@@ -348,6 +358,7 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     t1 = time.time()
     assert t1 - t0 < 1.0
 
+
 @pytest.mark.subprocess
 def test_systemexit_handler_cancels_query(conn, dsn):
     """A SystemExit raised while waiting on a query must trigger the same
@@ -409,6 +420,8 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
         time.sleep(0.1)
     else:
         assert False, "query not cancelled after SystemExit"
+
+
 @pytest.mark.slow
 @pytest.mark.subprocess
 @pytest.mark.parametrize("itimername, signame", [("ITIMER_REAL", "SIGALRM")])
@@ -449,6 +462,7 @@ with psycopg.connect({dsn!r}) as conn:
     ), f"script terminated with {signal.Signals(abs(cp.returncode)).name}"
     assert cp.stdout.rstrip() == "ok"
 
+
 @pytest.mark.slow
 @pytest.mark.subprocess
 @pytest.mark.skipif(
@@ -481,6 +495,7 @@ if __name__ == '__main__':
     env["PYTHONFAULTHANDLER"] = "1"
     out = sp.check_output([sys.executable, "-s", "-c", script], env=env)
     assert out.decode().rstrip() == "[1, 1]"
+
 
 @pytest.mark.slow
 @pytest.mark.crdb("skip")
@@ -520,6 +535,7 @@ def test_concurrent_close(dsn, conn):
         # assert not cur.fetchone()
         assert t - t0 < 2
 
+
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
 def test_transaction_concurrency(conn, what):
     conn.autocommit = True
@@ -527,18 +543,17 @@ def test_transaction_concurrency(conn, what):
     evs = [threading.Event() for i in range(3)]
 
     def worker(unlock, wait_on):
-        with pytest.raises(e.ProgrammingError) as ex:
-            with conn.transaction():
-                unlock.set()
-                wait_on.wait()
-                conn.execute("select 1")
+        with pytest.raises(e.ProgrammingError) as ex, conn.transaction():
+            unlock.set()
+            wait_on.wait()
+            conn.execute("select 1")
 
-                if what == "error":
-                    1 / 0
-                elif what == "rollback":
-                    raise psycopg.Rollback()
-                else:
-                    assert what == "commit"
+            if what == "error":
+                1 / 0
+            elif what == "rollback":
+                raise psycopg.Rollback()
+            else:
+                assert what == "commit"
 
         if what == "error":
             assert "transaction rollback" in str(ex.value)
@@ -563,6 +578,7 @@ def test_transaction_concurrency(conn, what):
     evs[2].set()
     t2.join()
 
+
 @pytest.mark.slow
 @pytest.mark.subprocess
 @pytest.mark.skipif(
@@ -576,7 +592,7 @@ def test_break_attempts(dsn, proxy):
         dsn1 = conninfo_to_dict(proxy.client_dsn)
         dsn2 = conninfo_to_dict(dsn)
         dsn = dsn1.copy()
-        for k in "host port hostaddr".split():
+        for k in ["host", "port", "hostaddr"]:
             if k in dsn1 or k in dsn2:
                 dsn[k] = f"{dsn1.get(k) or ''},{dsn2.get(k) or ''}"
         dsn["connect_timeout"] = 3
