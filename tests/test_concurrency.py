@@ -2,21 +2,20 @@
 Tests dealing with concurrency issues.
 """
 
-import multiprocessing
 import os
+import sys
+import time
 import queue
 import signal
-import subprocess as sp
-import sys
 import threading
-import time
+import subprocess as sp
+import multiprocessing
 
 import pytest
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 import psycopg
 from psycopg import errors as e
-
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 @pytest.mark.slow
 def test_concurrent_execution(conn_cls, dsn):
