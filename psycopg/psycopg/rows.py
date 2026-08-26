@@ -142,7 +142,10 @@ def namedtuple_row(cursor: BaseCursor[Any, Any]) -> RowMaker[NamedTuple]:
 @functools.lru_cache(512)
 def _make_nt(enc: str, *names: bytes) -> type[NamedTuple]:
     snames = tuple(_as_python_identifier(n.decode(enc)) for n in names)
-    return namedtuple("Row", snames)  # type: ignore[return-value]
+    try:
+        return namedtuple("Row", snames)  # type: ignore[return-value]
+    except ValueError as ex:
+        raise e.DataError(f"can't create a namedtuple row: {ex}") from None
 
 
 def class_row(cls: type[T]) -> BaseRowFactory[T]:
