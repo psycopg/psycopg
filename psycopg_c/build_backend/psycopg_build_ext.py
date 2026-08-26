@@ -54,10 +54,12 @@ class psycopg_build_ext(build_ext):
             from Cython.Build import cythonize
 
             for ext in self.distribution.ext_modules:
-                for i in range(len(ext.sources)):
-                    base, fext = os.path.splitext(ext.sources[i])
+                sources = list(ext.sources)
+                for i in range(len(sources)):
+                    base, fext = os.path.splitext(sources[i])
                     if fext == ".c" and os.path.exists(base + ".pyx"):
-                        ext.sources[i] = base + ".pyx"
+                        sources[i] = base + ".pyx"
+                ext.sources = sources
 
             self.distribution.ext_modules = cythonize(  # type: ignore[no-untyped-call]
                 self.distribution.ext_modules,
