@@ -121,6 +121,9 @@ When a new Python major version is released
 - Add the new version to the relevant test matrices in
   ``.github/workflows/tests.yml`` and ``.github/workflows/packages-bin.yml``.
 
+- Move the upper bounds of the Python version to test in 3rd party tests, in
+  ``.github/workflows/3rd-party-tests.yml``.
+
 - Update ``docs/basic/install.rst`` with the correct range of supported Python
   versions.
 
