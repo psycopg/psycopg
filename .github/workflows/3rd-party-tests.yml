@@ -115,7 +115,8 @@ jobs:
         env:
           URL: postgresql+psycopg://postgres:password@127.0.0.1/test
         working-directory: sa_home/sa
-        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst --color=yes --dbdriver psycopg_async
+        run: pytest -n 8 -q --dburi $URL --dropfirst --color=yes
+          test/dialect/test_suite.py test/dialect/postgresql/ test/ext/asyncio
 
   django:
     # linux should be enough to test if everything works.
