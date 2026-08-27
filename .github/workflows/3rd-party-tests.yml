@@ -29,11 +29,11 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.13"
-          - "3.10"
+          - "3.14"
+          - "3.11"
         sqlalchemy_label:
-          # what version of sqlalchemy to download is defined in the "include" section below,
-          # in the variable pip_sqlalchemy
+          # what version of sqlalchemy to download is defined in the "include"
+          # section below, in the variable pip_sqlalchemy
           - git_main
           - release
         impl:
@@ -51,10 +51,11 @@ jobs:
 
     services:
       postgresql:
-        image: postgres:15
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: test
+          POSTGRES_INITDB_ARGS: "-c max_prepared_transactions=10"
         ports:
           - 5432:5432
         # Wait until postgres has started
@@ -154,13 +155,13 @@ jobs:
             python-version: "3.10"
           - django_label: lts5
             impl: python
-            python-version: "3.13"
+            python-version: "3.14"
           - django_label: git_main
             impl: c
-            python-version: "3.13"
+            python-version: "3.14"
           - django_label: git_main
             impl: python
-            python-version: "3.12"
+            python-version: "3.13"
 
     env:
       DEPS: ./psycopg ./psycopg_pool
