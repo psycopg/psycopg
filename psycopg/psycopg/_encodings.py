@@ -13,13 +13,9 @@ from typing import TYPE_CHECKING, Any
 from functools import cache
 
 from .errors import NotSupportedError
-from .pq._enums import ConnStatus
 
 if TYPE_CHECKING:
     from ._connection_base import BaseConnection
-
-OK = ConnStatus.OK
-
 
 # From: https://www.postgresql.org/docs/current/multibyte.html#CHARSET-TABLE
 
