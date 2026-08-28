@@ -76,4 +76,9 @@ skip = "build,_build,.tox,.mypy_cache,.venv,pq.c,_psycopg.c,*.html"
 profile = "black"
 length_sort = true
 multi_line_output = 9
+# isort >= 9 (unlike earlier versions) explodes multi-line from-imports into
+# one item per line whenever ``include_trailing_comma`` is enabled (as the
+# black profile does), so keep it off to preserve the split-into-multiple-
+# lines style below.
+include_trailing_comma = false
 sort_order = "psycopg"  # requires the isort-psycopg module
