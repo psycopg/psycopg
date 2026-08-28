@@ -136,7 +136,7 @@ def timeout_from_conninfo(params: ConnDict) -> int:
         value = _DEFAULT_CONNECT_TIMEOUT
     try:
         timeout = int(float(value))
-    except ValueError:
+    except Exception:
         raise e.ProgrammingError(f"bad value for connect_timeout: {value!r}") from None
 
     if timeout <= 0:
