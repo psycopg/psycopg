@@ -7,7 +7,7 @@ from psycopg import _encodings as encodings
 
 
 def test_names_normalised():
-    for name in encodings._py_codecs.values():
+    for _, name in encodings._py_codecs:
         assert codecs.lookup(name).name == name
 
 
