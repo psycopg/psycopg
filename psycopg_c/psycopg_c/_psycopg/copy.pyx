@@ -242,7 +242,7 @@ def parse_row_binary(data, tx: Transformer) -> tuple[Any, ...]:
 
     cdef uint16_t benfields
     if ptr + sizeof(benfields) > bufend:
-        raise e.DataError("bad copy data: truncated row header")
+        raise e.DataError("bad copy data: fields number truncated")
     memcpy(&benfields, ptr, sizeof(benfields))
     cdef int nfields = endian.be16toh(benfields)
     ptr += sizeof(benfields)
@@ -254,7 +254,7 @@ def parse_row_binary(data, tx: Transformer) -> tuple[Any, ...]:
 
     for col in range(nfields):
         if ptr + sizeof(belength) > bufend:
-            raise e.DataError("bad copy data: truncated row header")
+            raise e.DataError("bad copy data: field length truncated")
         memcpy(&belength, ptr, sizeof(belength))
         ptr += sizeof(belength)
         if belength == _binary_null:
