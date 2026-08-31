@@ -26,6 +26,7 @@ Psycopg 3.3.5 (unreleased)
   receives duplicate column names (:ticket:`#1348`).
 - Raise `!DataError` on inconsistent copy data length in pure Python,
   consistently with the C implementation (:ticket:`#1360`).
+- Handle client encodings aliases (:ticket:`#1363`).
 - Fix building C extension with Cython 3.3.
 
 
