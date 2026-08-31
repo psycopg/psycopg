@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.5 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.5
+^^^^^^^^^^^^^
 
 - Discard prepared statements upon :sql:`ALTER *` or `DISCARD *`
   (:ticket:`#1307`).
@@ -28,9 +28,6 @@ Psycopg 3.3.5 (unreleased)
 - Handle client encodings aliases (:ticket:`#1363`).
 - Fix building C extension with Cython 3.3.
 
-
-Current release
----------------
 
 Psycopg 3.3.4
 ^^^^^^^^^^^^^
