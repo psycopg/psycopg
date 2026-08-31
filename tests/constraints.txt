@@ -12,7 +12,7 @@ importlib-metadata == 1.4
 anyio == 4.0
 mypy == 2.1.0
 pproxy == 2.7.0
-pytest == 6.2.5
+pytest == 9.0.3
 pytest-cov == 3.0.0
 pytest-randomly == 3.5.0
 
