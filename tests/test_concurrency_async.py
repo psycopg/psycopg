@@ -405,6 +405,7 @@ async def test_transaction_concurrency(aconn, what):
 
 
 @pytest.mark.slow
+@pytest.mark.subprocess
 def test_type_error_shadow(dsn):
     script = f"""\
 import sys

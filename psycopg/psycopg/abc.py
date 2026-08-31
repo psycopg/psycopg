@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from .waiting import Ready, Wait
     from ._adapters_map import AdaptersMap
+    from .types.composite import CompositeInfo
     from ._connection_base import BaseConnection
 
 NoneType: type = type(None)
@@ -197,6 +198,16 @@ class Loader(Protocol):
         :param data: the data to convert.
         """
         ...
+
+
+T = TypeVar("T", covariant=True)
+
+
+class CompositeLoader(Loader, Protocol[T]):
+    def load(self, data: Buffer) -> T: ...
+
+    @staticmethod
+    def make_object(args: Sequence[Any], info: CompositeInfo) -> T: ...
 
 
 class Transformer(Protocol):
