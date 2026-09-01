@@ -37,6 +37,8 @@ jobs:
           - {impl: python, python: "3.13", postgres: "postgres:13"}
           - {impl: python, python: "3.14", postgres: "postgres:14"}
           - {impl: python, python: "3.14t", postgres: "postgres:14"}
+          - {impl: python, python: "3.15", postgres: "postgres:15"}
+          - {impl: python, python: "3.15t", postgres: "postgres:15"}
 
           - {impl: c, python: "3.10", postgres: "postgres:13", libpq: master}
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
@@ -44,6 +46,8 @@ jobs:
           - {impl: c, python: "3.13", postgres: "postgres:17", libpq: newest}
           - {impl: c, python: "3.14", postgres: "postgres:18"}
           - {impl: c, python: "3.14t", postgres: "postgres:18"}
+          - {impl: c, python: "3.15", postgres: "postgres:18"}
+          - {impl: c, python: "3.15t", postgres: "postgres:18"}
 
           - {impl: python, python: "3.10", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.10", ext: dns, postgres: "postgres:14"}
@@ -203,11 +207,13 @@ jobs:
           - {impl: python, python: "3.12"}
           - {impl: python, python: "3.13"}
           - {impl: python, python: "3.14"}
+          - {impl: python, python: "3.15"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
           - {impl: c, python: "3.13"}
           - {impl: c, python: "3.14"}
+          - {impl: c, python: "3.15"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -271,11 +277,13 @@ jobs:
           - {impl: python, python: "3.12"}
           - {impl: python, python: "3.13"}
           - {impl: python, python: "3.14"}
+          - {impl: python, python: "3.15"}
           - {impl: c, python: "3.10"}
           - {impl: c, python: "3.11"}
           - {impl: c, python: "3.12"}
           - {impl: c, python: "3.13"}
           - {impl: c, python: "3.14"}
+          - {impl: c, python: "3.15"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}

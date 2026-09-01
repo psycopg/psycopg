@@ -31,7 +31,7 @@ jobs:
       - name: install packages to tests
         run: pip install ./psycopg[dev,test]
 
-      - name: enable linting Python 3.14-only files
+      - name: enable linting Python 3.14+ files
         run: sed -i '/test_tstring/d' .pre-commit-config.yaml
 
       - name: Lint codebase

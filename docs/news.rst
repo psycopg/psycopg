@@ -27,6 +27,7 @@ Psycopg 3.3.5
 - Raise `!DataError` on inconsistent copy data (:tickets:`#1359, #1360`).
 - Handle client encodings aliases (:ticket:`#1363`).
 - Fix building C extension with Cython 3.3.
+- Add support for Python 3.15 (:ticket:`#1245`).
 
 
 Psycopg 3.3.4
