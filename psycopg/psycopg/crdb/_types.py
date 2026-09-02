@@ -8,8 +8,8 @@ from enum import Enum
 
 from ..abc import AdaptContext, NoneType
 from .._oids import TEXT_OID
-from .._typemod import BitTypeModifier, CharTypeModifier, NumericTypeModifier
-from .._typemod import TimeTypeModifier
+from .._typemod import BitTypeModifier, CharTypeModifier, IntervalTypeModifier
+from .._typemod import NumericTypeModifier, TimeTypeModifier
 from .._typeinfo import TypeInfo, TypesRegistry
 from ..types.enum import EnumBinaryDumper, EnumDumper
 from ..types.none import NoneDumper
@@ -145,7 +145,7 @@ def register_crdb_types(types: TypesRegistry) -> None:
         TypeInfo("int2vector", 22, 1006),
         TypeInfo("int4", 23, 1007),
         TypeInfo("int8", 20, 1016, regtype="bigint"),
-        TypeInfo("interval", 1186, 1187, typemod=TimeTypeModifier),
+        TypeInfo("interval", 1186, 1187, typemod=IntervalTypeModifier),
         TypeInfo("jsonb", 3802, 3807),
         TypeInfo("name", 19, 1003),
         TypeInfo("numeric", 1700, 1231, typemod=NumericTypeModifier),
