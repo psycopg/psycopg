@@ -573,10 +573,10 @@ def test_wait_systemexit_cancels_active(monkeypatch):
 
     pgconn = Mock()
     pgconn.transaction_status = psycopg.pq.TransactionStatus.ACTIVE
+    pgconn.status = psycopg.pq.ConnStatus.BAD
     pgconn.socket = 1
 
     conn = psycopg.Connection(pgconn)
-    conn._closed = True  # avoid ResourceWarning from an unfinished mock connection
     cancelled = []
 
     def fake_wait(*args, **kwargs):
@@ -600,10 +600,10 @@ def test_wait_systemexit_idle_does_not_cancel(monkeypatch):
 
     pgconn = Mock()
     pgconn.transaction_status = psycopg.pq.TransactionStatus.IDLE
+    pgconn.status = psycopg.pq.ConnStatus.BAD
     pgconn.socket = 1
 
     conn = psycopg.Connection(pgconn)
-    conn._closed = True
     cancelled = []
 
     def fake_wait(*args, **kwargs):

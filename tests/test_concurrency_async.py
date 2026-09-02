@@ -481,16 +481,16 @@ if __name__ == "__main__":
     sp.run([sys.executable, "-s"], input=script, text=True, check=True)
 
 
-async def test_wait_systemexit_cancels_active(monkeypatch):
+async def test_wait_systemexit_cancels_active(monkeypatch, anyio_backend):
     # SystemExit (e.g. Celery SIGTERM / sys.exit) must cancel like KeyboardInterrupt.
     from unittest.mock import Mock
 
     pgconn = Mock()
     pgconn.transaction_status = psycopg.pq.TransactionStatus.ACTIVE
+    pgconn.status = psycopg.pq.ConnStatus.BAD
     pgconn.socket = 1
 
     conn = psycopg.AsyncConnection(pgconn)
-    conn._closed = True  # avoid ResourceWarning from an unfinished mock connection
     cancelled = []
 
     async def fake_wait(*args, **kwargs):
@@ -509,15 +509,15 @@ async def test_wait_systemexit_cancels_active(monkeypatch):
     assert cancelled == [5.0]
 
 
-async def test_wait_systemexit_idle_does_not_cancel(monkeypatch):
+async def test_wait_systemexit_idle_does_not_cancel(monkeypatch, anyio_backend):
     from unittest.mock import Mock
 
     pgconn = Mock()
     pgconn.transaction_status = psycopg.pq.TransactionStatus.IDLE
+    pgconn.status = psycopg.pq.ConnStatus.BAD
     pgconn.socket = 1
 
     conn = psycopg.AsyncConnection(pgconn)
-    conn._closed = True
     cancelled = []
 
     async def fake_wait(*args, **kwargs):
