@@ -5,8 +5,8 @@ Types configuration specific to PostgreSQL.
 # Copyright (C) 2020 The Psycopg Team
 
 from .abc import AdaptContext
-from ._typemod import BitTypeModifier, CharTypeModifier, NumericTypeModifier
-from ._typemod import TimeTypeModifier
+from ._typemod import BitTypeModifier, CharTypeModifier, IntervalTypeModifier
+from ._typemod import NumericTypeModifier, TimeTypeModifier
 from ._typeinfo import TypeInfo, TypesRegistry
 from ._adapters_map import AdaptersMap
 
@@ -44,7 +44,7 @@ def register_default_types(types: TypesRegistry) -> None:
         TypeInfo("int2vector", 22, 1006),
         TypeInfo("int4", 23, 1007, regtype="integer"),
         TypeInfo("int8", 20, 1016, regtype="bigint"),
-        TypeInfo("interval", 1186, 1187, typemod=TimeTypeModifier),
+        TypeInfo("interval", 1186, 1187, typemod=IntervalTypeModifier),
         TypeInfo("json", 114, 199),
         TypeInfo("jsonb", 3802, 3807),
         TypeInfo("jsonpath", 4072, 4073),

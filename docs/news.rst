@@ -7,6 +7,17 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Report `!None` instead of ``65535`` as the `~psycopg.Column.precision` of an
+  :sql:`interval` column declared with a fields restriction and no explicit
+  precision (e.g. :sql:`interval day to second`).
+
+
 Current release
 ---------------
 

@@ -129,6 +129,48 @@ def test_details_time(conn, type, precision):
     assert col.precision == precision
 
 
+@pytest.mark.crdb("skip", reason="interval fields restriction")
+@pytest.mark.parametrize(
+    "fields",
+    [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "year to month",
+        "day to hour",
+        "day to minute",
+        "day to second",
+        "hour to minute",
+        "hour to second",
+        "minute to second",
+    ],
+)
+def test_details_interval_fields(conn, fields):
+    # An interval typmod without an explicit precision stores
+    # INTERVAL_FULL_PRECISION (0xFFFF) in its low bits: that means
+    # "unspecified", not a precision of 65535.
+    cur = conn.cursor()
+    cur.execute(f"select null::interval {fields}")
+    col = cur.description[0]
+    assert col.precision is None
+    assert col.type_display == "interval"
+
+
+@pytest.mark.crdb("skip", reason="interval fields restriction")
+@pytest.mark.parametrize("precision", [0, 2, 6])
+def test_details_interval_fields_precision(conn, precision):
+    # A precision spelled out together with the fields restriction is a real
+    # precision and must survive.
+    cur = conn.cursor()
+    cur.execute(f"select null::interval day to second({precision})")
+    col = cur.description[0]
+    assert col.precision == precision
+    assert col.type_display == f"interval({precision})"
+
+
 def test_pickle(conn):
     curs = conn.cursor()
     curs.execute("""select

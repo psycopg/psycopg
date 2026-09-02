@@ -84,3 +84,21 @@ class TimeTypeModifier(TypeModifier):
 
     def get_precision(self, typemod: int) -> int | None:
         return typemod & 0xFFFF if typemod >= 0 else None
+
+
+class IntervalTypeModifier(TimeTypeModifier):
+    """Handle interval type modifier.
+
+    Unlike the other time-related types, the interval typmod is a composite:
+    the fields restriction is packed in the high bits and the precision in the
+    low ones. A typmod written without an explicit precision (e.g. ``interval
+    day to second``) stores ``INTERVAL_FULL_PRECISION`` (0xFFFF) there, which
+    means "unspecified" rather than a precision of 65535.
+    """
+
+    def get_precision(self, typemod: int) -> int | None:
+        if typemod < 0:
+            return None
+
+        precision = typemod & 0xFFFF
+        return precision if precision != 0xFFFF else None
