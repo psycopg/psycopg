@@ -274,6 +274,85 @@ asyncio.run(main())
 
 @pytest.mark.slow
 @pytest.mark.subprocess
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
+)
+@pytest.mark.crdb("skip")
+def test_systemexit_cancels_query(conn, dsn):
+    # SIGINT mapped to SystemExit must still cancel the in-flight query (#1384).
+    conn.autocommit = True
+
+    APPNAME = "test_systemexit_cancels_query_async"
+    script = f"""\
+import signal
+import asyncio
+import psycopg
+
+def handler(signum, frame):
+    raise SystemExit(3)
+
+signal.signal(signal.SIGINT, handler)
+
+async def main():
+    async with await psycopg.AsyncConnection.connect(
+        {dsn!r}, application_name={APPNAME!r}
+    ) as conn:
+        await conn.execute("select pg_sleep(60)")
+
+asyncio.run(main())
+"""
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_C_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGINT
+
+    proc = None
+
+    def run_process():
+        nonlocal proc
+        proc = sp.Popen(
+            [sys.executable, "-s", "-c", script],
+            creationflags=creationflags,
+            stderr=sp.PIPE,
+        )
+        proc.communicate()
+
+    t = threading.Thread(target=run_process)
+    t.start()
+
+    for i in range(20):
+        cur = conn.execute(
+            "select pid from pg_stat_activity where application_name = %s", (APPNAME,)
+        )
+
+        if rec := cur.fetchone():
+            pid = rec[0]
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "process didn't start?"
+
+    t0 = time.time()
+    assert proc
+    proc.send_signal(sig)
+    proc.wait()
+
+    for i in range(20):
+        cur = conn.execute("select 1 from pg_stat_activity where pid = %s", (pid,))
+        if not cur.fetchone():
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "process didn't stop?"
+
+    t1 = time.time()
+    assert t1 - t0 < 1.0
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
 @pytest.mark.parametrize("itimername, signame", [("ITIMER_REAL", "SIGALRM")])
 def test_eintr(dsn, itimername, signame):
     try:

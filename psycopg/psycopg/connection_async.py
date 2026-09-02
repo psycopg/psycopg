@@ -52,9 +52,9 @@ ACTIVE = pq.TransactionStatus.ACTIVE
 INTRANS = pq.TransactionStatus.INTRANS
 
 if True:  # ASYNC
-    _INTERRUPTED = (asyncio.CancelledError, KeyboardInterrupt)
+    _INTERRUPTED = (asyncio.CancelledError, KeyboardInterrupt, SystemExit)
 else:
-    _INTERRUPTED = KeyboardInterrupt
+    _INTERRUPTED = (KeyboardInterrupt, SystemExit)
 
 logger = logging.getLogger("psycopg")
 
