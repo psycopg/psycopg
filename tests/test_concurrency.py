@@ -567,6 +567,11 @@ def test_break_attempts(dsn, proxy):
     assert stdout == ""
 
 
+def _empty_pqgen():
+    yield from ()
+    return
+
+
 def test_wait_systemexit_cancels_active(monkeypatch):
     # SystemExit (e.g. Celery SIGTERM / sys.exit) must cancel like KeyboardInterrupt.
     from unittest.mock import Mock
@@ -589,7 +594,7 @@ def test_wait_systemexit_cancels_active(monkeypatch):
     monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
 
     with pytest.raises(SystemExit) as ex:
-        conn.wait(iter(()))
+        conn.wait(_empty_pqgen())
 
     assert ex.value.code == 15
     assert cancelled == [5.0]
@@ -616,6 +621,6 @@ def test_wait_systemexit_idle_does_not_cancel(monkeypatch):
     monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
 
     with pytest.raises(SystemExit):
-        conn.wait(iter(()))
+        conn.wait(_empty_pqgen())
 
     assert cancelled == []

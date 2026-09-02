@@ -481,6 +481,11 @@ if __name__ == "__main__":
     sp.run([sys.executable, "-s"], input=script, text=True, check=True)
 
 
+def _empty_pqgen():
+    yield from ()
+    return
+
+
 async def test_wait_systemexit_cancels_active(monkeypatch, anyio_backend):
     # SystemExit (e.g. Celery SIGTERM / sys.exit) must cancel like KeyboardInterrupt.
     from unittest.mock import Mock
@@ -503,7 +508,7 @@ async def test_wait_systemexit_cancels_active(monkeypatch, anyio_backend):
     monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
 
     with pytest.raises(SystemExit) as ex:
-        await conn.wait(iter(()))
+        await conn.wait(_empty_pqgen())
 
     assert ex.value.code == 15
     assert cancelled == [5.0]
@@ -530,6 +535,6 @@ async def test_wait_systemexit_idle_does_not_cancel(monkeypatch, anyio_backend):
     monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
 
     with pytest.raises(SystemExit):
-        await conn.wait(iter(()))
+        await conn.wait(_empty_pqgen())
 
     assert cancelled == []
