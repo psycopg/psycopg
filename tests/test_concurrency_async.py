@@ -479,3 +479,57 @@ if __name__ == "__main__":
 """
 
     sp.run([sys.executable, "-s"], input=script, text=True, check=True)
+
+
+async def test_wait_systemexit_cancels_active(monkeypatch):
+    # SystemExit (e.g. Celery SIGTERM / sys.exit) must cancel like KeyboardInterrupt.
+    from unittest.mock import Mock
+
+    pgconn = Mock()
+    pgconn.transaction_status = psycopg.pq.TransactionStatus.ACTIVE
+    pgconn.socket = 1
+
+    conn = psycopg.AsyncConnection(pgconn)
+    conn._closed = True  # avoid ResourceWarning from an unfinished mock connection
+    cancelled = []
+
+    async def fake_wait(*args, **kwargs):
+        raise SystemExit(15)
+
+    async def fake_cancel(*, timeout=None):
+        cancelled.append(timeout)
+
+    monkeypatch.setattr(psycopg.waiting, "wait_async", fake_wait)
+    monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
+
+    with pytest.raises(SystemExit) as ex:
+        await conn.wait(iter(()))
+
+    assert ex.value.code == 15
+    assert cancelled == [5.0]
+
+
+async def test_wait_systemexit_idle_does_not_cancel(monkeypatch):
+    from unittest.mock import Mock
+
+    pgconn = Mock()
+    pgconn.transaction_status = psycopg.pq.TransactionStatus.IDLE
+    pgconn.socket = 1
+
+    conn = psycopg.AsyncConnection(pgconn)
+    conn._closed = True
+    cancelled = []
+
+    async def fake_wait(*args, **kwargs):
+        raise SystemExit(1)
+
+    async def fake_cancel(*, timeout=None):
+        cancelled.append(timeout)
+
+    monkeypatch.setattr(psycopg.waiting, "wait_async", fake_wait)
+    monkeypatch.setattr(conn, "_try_cancel", fake_cancel)
+
+    with pytest.raises(SystemExit):
+        await conn.wait(iter(()))
+
+    assert cancelled == []
