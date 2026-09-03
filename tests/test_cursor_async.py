@@ -9,6 +9,9 @@ from psycopg import errors as e
 from psycopg import pq, rows
 from psycopg.adapt import PyFormat
 
+if True:  # ASYNC
+    from asyncio import sleep
+
 
 async def test_default_cursor(aconn):
     cur = aconn.cursor()
@@ -101,6 +104,9 @@ async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc)
     gc.collect()
     for i in range(3):
         await work()
+        if True:  # ASYNC
+            # loop.remove_reader/writer needs to cancel the callback handle
+            await sleep(0)
         gc.collect()
         n.append(gc.count())
 

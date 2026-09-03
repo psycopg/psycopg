@@ -7,6 +7,9 @@ from psycopg.adapt import PyFormat
 
 from ._test_cursor import ph
 
+if True:  # ASYNC
+    from asyncio import sleep
+
 
 @pytest.fixture
 async def aconn(aconn, anyio_backend):
@@ -105,6 +108,9 @@ async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc)
     gc.collect()
     for i in range(3):
         await work()
+        if True:  # ASYNC
+            # loop.remove_reader/writer needs to cancel the callback handle
+            await sleep(0)
         gc.collect()
         n.append(gc.count())
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
