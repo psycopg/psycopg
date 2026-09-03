@@ -85,7 +85,7 @@ dev = [
     "dnspython >= 2.1",
     "flake8 >= 4.0",
     "isort[colors] >= 6.0",
-    "isort-psycopg",
+    "isort-psycopg >= 0.0.3",
     "mypy >= 2.1.0",
     "pre-commit >= 4.0.1",
     "types-setuptools >= 57.4",
