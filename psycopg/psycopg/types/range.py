@@ -388,16 +388,27 @@ def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
 _re_needs_quotes = re.compile(rb'[",\\\s()\[\]]')
 _re_esc = re.compile(rb"([\\\"])")
 
-
 class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
+    subtype_oid: int | None = None
+    _dump = None
+
+    def __init__(self, cls: type, context: AdaptContext | None = None):
+        super().__init__(cls, context)
+        if self.subtype_oid:
+            # FIXME: this cython lookup helper can be removed,
+            # when Transformer.get_dumper_by_oid gets exported from cython
+            from .._cmodule import _psycopg
+            if _psycopg:
+                self._dump = _psycopg.dumper_by_oid_helper(self._tx, self.subtype_oid).dump
+            else:
+                self._dump = self._tx.get_dumper_by_oid(self.subtype_oid, Format.BINARY).dump
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
         if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
+            dump = self._dump or self._tx.get_dumper(item, self._adapt_format).dump
         else:
             dump = fail_dump
-
         return dump_range_binary(obj, dump)
 
 
@@ -511,12 +522,13 @@ class RangeBinaryLoader(BaseRangeLoader[T]):
         return load_range_binary(data, self._load)
 
 
+# fast lookup bounds from RANGE_LB_INC and RANGE_UB_INC
+_range_bounds = ["()", None, "[)", None, "(]", None, "[]"]
+
+
 def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
     if (head := data[0]) & RANGE_EMPTY:
         return Range(empty=True)
-
-    lb = "[" if head & RANGE_LB_INC else "("
-    ub = "]" if head & RANGE_UB_INC else ")"
 
     pos = 1  # after the head
     if head & RANGE_LB_INF:
@@ -535,7 +547,7 @@ def load_range_binary(data: Buffer, load: LoadFunc) -> Range[Any]:
         max = load(data[pos : pos + length])
         pos += length
 
-    return Range(min, max, lb + ub)
+    return Range(min, max, _range_bounds[head & (RANGE_LB_INC | RANGE_UB_INC)])
 
 
 def register_range(info: RangeInfo, context: AdaptContext | None = None) -> None:
@@ -624,13 +636,13 @@ class TimestamptzRangeDumper(RangeDumper):
 # These are registered on specific subtypes so that the upgrade mechanism
 # doesn't kick in.
 
-
 class Int4RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT4RANGE_OID
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
