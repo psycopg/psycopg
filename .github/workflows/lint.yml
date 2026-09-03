@@ -29,12 +29,7 @@ jobs:
           python-version: "3.14"
 
       - name: install packages to tests
-        run: |
-          pip install ./psycopg[dev,test]
-          # isort-psycopg is developed and released from this repo: install the
-          # plug-in from the working tree so the isort 9 fix is exercised in CI
-          # instead of the last PyPI release (0.0.2 is not isort 9 compatible).
-          pip install ./tools/isort-psycopg
+        run: pip install ./psycopg[dev,test]
 
       - name: enable linting Python 3.14-only files
         run: sed -i '/test_tstring/d' .pre-commit-config.yaml
