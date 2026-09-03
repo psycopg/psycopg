@@ -16,9 +16,7 @@ def psycosort(
 ) -> list[str]:
     # isort feeds the objects of a `from module import a, b, c` list as a
     # list, while the module lists (`import a`, `from a import`) are fed as
-    # dicts.  Relying on the stack to tell the two apart (as this plug-in
-    # used to) breaks with isort >= 9, which is Cython-compiled and hides
-    # the intermediate frames from `inspect.stack()`.
+    # dicts.
     is_from_import = isinstance(to_sort, list)
 
     new_key: Callable[[str], Any] | None
