@@ -200,7 +200,7 @@ def conn(conn_cls, dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.node)
 
-    conn = conn_cls.connect(dsn)
+    conn = conn_cls.connect(dsn, connect_timeout=10)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -223,7 +223,7 @@ async def aconn(dsn, aconn_cls, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.node)
 
-    conn = await aconn_cls.connect(dsn)
+    conn = await aconn_cls.connect(dsn, connect_timeout=10)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
@@ -268,7 +268,7 @@ def svcconn(conn_cls, session_dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
-    conn = conn_cls.connect(session_dsn, autocommit=True)
+    conn = conn_cls.connect(session_dsn, autocommit=True, connect_timeout=10)
     yield conn
     conn.close()
 

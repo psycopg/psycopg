@@ -7,6 +7,9 @@ from psycopg import rows
 
 from .fix_crdb import crdb_encoding
 
+if True:  # ASYNC
+    from asyncio import sleep
+
 
 @pytest.fixture
 async def aconn(aconn, anyio_backend):
@@ -111,6 +114,9 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory, gc):
     gc.collect()
     for i in range(3):
         await work()
+        if True:  # ASYNC
+            # loop.remove_reader/writer needs to cancel the callback handle
+            await sleep(0)
         gc.collect()
         n.append(gc.count())
 
