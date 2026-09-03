@@ -539,6 +539,11 @@ class Faker:
         for g, w in zip(got, want):
             m(spec[1], g, w)
 
+    def make_Lsn(self, spec):
+        from psycopg.types.catalog import Lsn
+
+        return Lsn(randrange(0, 2**64))
+
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
 
