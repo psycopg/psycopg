@@ -341,7 +341,7 @@ def test_wait_large_fd(dsn, waitfn):
             assert pgconn.socket > 1024
             pgconn.send_query(b"select 1")
             gen = generators.execute(pgconn)
-            if waitfn.__name__ == "wait_select":
+            if waitfn.__name__ in ("wait_select", "wait_select_async"):
                 with pytest.raises(ValueError):
                     waitfn(gen, pgconn.socket)
             else:

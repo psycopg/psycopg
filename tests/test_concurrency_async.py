@@ -426,8 +426,8 @@ async def worker(task_index: int, conn: psycopg.AsyncConnection) -> None:
     try:
         async with conn.cursor() as cur:
             await cur.executemany(
-                "INSERT INTO lotsa_rows_table (id, task_index) VALUES (%s, %s)",
-                [(uuid.uuid4(), task_index) for i in range(50000)],
+                "SELECT 1, pg_sleep(%s)",
+                [(0.0001,)] * 50000,
             )
     except BaseException as be:
         excs.append(be)
@@ -439,15 +439,10 @@ async def crashing() -> None:
 
 
 async def main() -> None:
-    async with await connect() as conn:
-        await conn.execute("DROP TABLE IF EXISTS lotsa_rows_table")
-        await conn.execute(
-            "CREATE TABLE lotsa_rows_table (id uuid PRIMARY KEY, task_index INT)"
-        )
-
-    # create three tasks that each insert a large number of rows
+    # create three tasks that each make a large number of SELECTs with pg_sleep
     conns = [await connect() for i in range(3)]
     tasks = [asyncio.create_task(worker(i, conn=conns[i])) for i in range(3)]
+
 
     # create one more task that fails immediately
     tasks.append(asyncio.create_task(crashing()))

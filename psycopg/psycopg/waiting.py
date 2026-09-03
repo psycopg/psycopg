@@ -8,6 +8,8 @@ These functions are designed to consume the generators returned by the
 
 # Copyright (C) 2020 The Psycopg Team
 
+# mypy: disable-error-code=attr-defined
+
 from __future__ import annotations
 
 import os
@@ -15,11 +17,11 @@ import sys
 import select
 import logging
 import selectors
-from asyncio import Event, TimeoutError, get_event_loop, wait_for
+from asyncio import get_running_loop, sleep
 from selectors import DefaultSelector
 
 from . import errors as e
-from .abc import RV, PQGen, PQGenConn, WaitFunc
+from .abc import RV, AsyncWaitFunc, PQGen, PQGenConn, WaitFunc
 from ._enums import Ready as Ready
 from ._enums import Wait as Wait  # re-exported
 from ._cmodule import _psycopg
@@ -58,7 +60,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     Wait for a generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
-        `Ready` values when it would block.
+        `Wait` pairs when it would block.
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
@@ -96,7 +98,7 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     Wait for a connection generator using the best strategy available.
 
     :param gen: a generator performing database operations and yielding
-        (fd, `Ready`) pairs when it would block.
+        (fd, `Wait`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
     :return: whatever `!gen` returns on completion.
@@ -126,7 +128,61 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
         return rv
 
 
-async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+def _ready_gen(state: Wait) -> PQGen[Ready | int]:
+    return (yield state)
+
+
+def make_wait_async(wait: WaitFunc) -> AsyncWaitFunc:
+    async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+        if interval is None:
+            raise ValueError("indefinite wait not supported anymore")
+
+        ready: Ready | int
+        s: Wait
+
+        try:
+            s = next(gen)
+
+            # Do this after calling next the first time for performance
+            loop = get_running_loop()
+            end = loop.time() + interval
+            done = False
+
+            def mark_done() -> None:
+                nonlocal done
+                done = True
+
+            while True:
+                ready = wait(_ready_gen(s), fileno, 0.0)
+                if not ready:
+                    h = loop.call_at(end, mark_done)
+                    while True:
+                        await sleep(0)
+                        ready = wait(_ready_gen(s), fileno, 0.0)
+                        if ready:
+                            h.cancel()
+                            break
+                        if done:
+                            break
+
+                s = gen.send(ready)
+                end = loop.time() + interval
+                done = False
+        except OSError as ex:
+            # Assume the connection was closed
+            raise e.OperationalError("connection socket closed") from ex
+        except StopIteration as ex:
+            rv: RV = ex.value
+            return rv
+
+    wait_async.__name__ = f"wait_{wait.__name__.split('_')[-1]}_async"
+    return wait_async
+
+
+wait_selector_async = make_wait_async(wait_selector)
+
+
+async def wait_loop_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -142,42 +198,52 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
     ready: int
     s: Wait
 
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready |= state
-        ev.set()
-
     try:
         s = next(gen)
+
+        loop = get_running_loop()
+        end = loop.time() + interval
+        done = False
+
+        def set_done() -> None:
+            nonlocal done
+            done = True
+
+        def set_ready(state: Ready) -> None:
+            nonlocal ready
+            ready |= state
+
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
             ready = 0
             if reader:
-                loop.add_reader(fileno, wakeup, READY_R)
+                loop.add_reader(fileno, set_ready, READY_R)
             if writer:
-                loop.add_writer(fileno, wakeup, READY_W)
+                loop.add_writer(fileno, set_ready, READY_W)
+            h = loop.call_at(end, set_done)
             try:
-                try:
-                    await wait_for(ev.wait(), interval)
-                except TimeoutError:
-                    pass
+                while True:
+                    await sleep(0)  # let the loop set ready or done
+                    if ready:
+                        h.cancel()
+                        break
+                    if done:
+                        break
             finally:
                 if reader:
                     loop.remove_reader(fileno)
                 if writer:
                     loop.remove_writer(fileno)
+
             s = gen.send(ready)
+            done = False
+            end = loop.time() + interval
 
     except OSError as ex:
         # Assume the connection was closed
@@ -203,45 +269,53 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
-    ready: Ready
+    ready: Ready | int
     s: Wait
-
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready = state
-        ev.set()
 
     try:
         fileno, s = next(gen)
+
+        loop = get_running_loop()
+        end = loop.time() + interval
+        done = False
+
+        def set_done() -> None:
+            nonlocal done
+            done = True
+
+        def set_ready(state: Ready) -> None:
+            nonlocal ready
+            ready |= state
+
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
-            ready = 0  # type: ignore[assignment]
+
+            ready = 0
             if reader:
-                loop.add_reader(fileno, wakeup, READY_R)
+                loop.add_reader(fileno, set_ready, READY_R)
             if writer:
-                loop.add_writer(fileno, wakeup, READY_W)
+                loop.add_writer(fileno, set_ready, READY_W)
+            h = loop.call_at(end, set_done)
             try:
-                if interval:
-                    try:
-                        await wait_for(ev.wait(), interval)
-                    except TimeoutError:
-                        pass
-                else:
-                    await ev.wait()
+                while True:
+                    await sleep(0)  # let the loop set ready or done
+                    if ready:
+                        h.cancel()
+                        break
+                    if done:
+                        break
             finally:
                 if reader:
                     loop.remove_reader(fileno)
                 if writer:
                     loop.remove_writer(fileno)
+
             fileno, s = gen.send(ready)
+            done = False
+            end = loop.time() + interval
 
     except StopIteration as ex:
         rv: RV = ex.value
@@ -289,6 +363,9 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
+
+
+wait_select_async = make_wait_async(wait_select)
 
 
 if hasattr(selectors, "EpollSelector"):
@@ -348,6 +425,9 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
         return rv
 
 
+wait_epoll_async = make_wait_async(wait_epoll)
+
+
 if hasattr(selectors, "PollSelector"):
     _poll_evmasks = {
         WAIT_R: select.POLLIN,
@@ -405,6 +485,9 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
         return rv
 
 
+wait_poll_async = make_wait_async(wait_poll)
+
+
 def _is_select_patched() -> bool:
     """
     Detect if some greenlet library has patched the select library.
@@ -427,6 +510,7 @@ def _is_select_patched() -> bool:
 
 if _psycopg:
     wait_c = _psycopg.wait_c
+    wait_c_async = make_wait_async(wait_c)
 
 
 # Choose the best wait strategy for the platform.
@@ -435,6 +519,21 @@ if _psycopg:
 # so we also offer more finely tuned implementations.
 
 wait: WaitFunc
+wait_async: AsyncWaitFunc
+
+# Allow the user to choose a specific async function for testing
+if "PSYCOPG_ASYNC_WAIT_FUNC" in os.environ:
+    fname = os.environ["PSYCOPG_ASYNC_WAIT_FUNC"]
+    if (
+        not fname.startswith("wait_")
+        or not fname.endswith("_async")
+        or fname not in globals()
+    ):
+        raise ImportError(
+            "PSYCOPG_ASYNC_WAIT_FUNC should be the name of an available async"
+            f" wait function; got {fname!r}"
+        )
+    wait_async = globals()[fname]
 
 # Allow the user to choose a specific function for testing
 if "PSYCOPG_WAIT_FUNC" in os.environ:
@@ -463,3 +562,7 @@ elif hasattr(selectors, "PollSelector"):
 
 else:
     wait = wait_selector
+
+# default wait_async to the async version of wait
+if "wait_async" not in globals():
+    wait_async = globals()[wait.__name__ + "_async"]
