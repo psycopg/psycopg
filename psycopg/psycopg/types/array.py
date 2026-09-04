@@ -93,7 +93,7 @@ class BaseListDumper(RecursiveDumper):
         seen.add(id(L))
 
         for item in L:
-            if type(item) is list:
+            if isinstance(item, list):
                 yield from self._flatiter(item, seen)
             elif item is not None:
                 yield item
