@@ -421,6 +421,26 @@ class Literal(Composable):
     The string returned by `!as_string()` follows the normal :ref:`adaptation
     rules <types-adaptation>` for Python objects.
 
+    .. warning::
+
+        Python `int` has arbitrary precision, but PostgreSQL doesn't: a
+        literal outside the ``bigint`` range (e.g. ``sql.Literal(2 ** 64)``)
+        is treated as ``numeric``. Comparing an ``integer``/``bigint`` column
+        against a ``numeric`` value casts the *column* to ``numeric``, which
+        makes a plain index on the column unusable: the query degrades to a
+        sequential scan, which can take orders of magnitude longer on a large
+        table, and can be used as a DoS vector if the value comes from user
+        input.
+
+        To avoid it, use a query parameter instead of a literal (parameters
+        keep the declared type), or validate the value against the ``bigint``
+        range before composing the query, or cast the literal explicitly to
+        the column type, e.g. ``sql.SQL("{}::bigint").format(sql.Literal(value))``:
+        with the explicit cast an out-of-range value fails with a clear error
+        instead of silently degrading the query plan. See Jeremy Evans'
+        article *"Forcing sequential scans on PostgreSQL"* (2022) for the
+        details of this behaviour.
+
     Example::
 
         >>> s1 = sql.Literal("fo'o")
