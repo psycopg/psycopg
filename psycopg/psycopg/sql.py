@@ -441,7 +441,8 @@ class Literal(Composable):
         article `Forcing sequential scans on PostgreSQL (2022)`__ for the
         details of this behaviour.
 
-        .. __: https://code.jeremyevans.net/2022-11-01-forcing-sequential-scans-on-postgresql
+        .. __:
+         https://code.jeremyevans.net/2022-11-01-forcing-sequential-scans-on-postgresql
 
     Example::
 
