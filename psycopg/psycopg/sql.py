@@ -424,7 +424,7 @@ class Literal(Composable):
     .. warning::
 
         Python `int` has arbitrary precision, but PostgreSQL doesn't: a
-        literal outside the ``bigint`` range (e.g. ``sql.Literal(2 ** 64)``)
+        literal outside the ``bigint`` range (e.g. larger than 2 ** 63 - 1)
         is treated as ``numeric``. Comparing an ``integer``/``bigint`` column
         against a ``numeric`` value casts the *column* to ``numeric``, which
         makes a plain index on the column unusable: the query degrades to a
@@ -435,11 +435,13 @@ class Literal(Composable):
         To avoid it, use a query parameter instead of a literal (parameters
         keep the declared type), or validate the value against the ``bigint``
         range before composing the query, or cast the literal explicitly to
-        the column type, e.g. ``sql.SQL("{}::bigint").format(sql.Literal(value))``:
+        the column type, e.g. ``sql.SQL("{}::bigint").format(value)``:
         with the explicit cast an out-of-range value fails with a clear error
         instead of silently degrading the query plan. See Jeremy Evans'
-        article *"Forcing sequential scans on PostgreSQL"* (2022) for the
+        article `Forcing sequential scans on PostgreSQL (2022)`__ for the
         details of this behaviour.
+
+        .. __: https://code.jeremyevans.net/2022-11-01-forcing-sequential-scans-on-postgresql
 
     Example::
 
