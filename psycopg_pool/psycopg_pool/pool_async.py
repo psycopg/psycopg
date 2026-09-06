@@ -36,8 +36,10 @@ if True:  # ASYNC
     # The exceptions that we need to capture in order to keep the pool
     # consistent and avoid losing connections on errors in callers code.
     CLIENT_EXCEPTIONS = (Exception, asyncio.CancelledError)
+    CANCELLED_EXCEPTIONS = (asyncio.CancelledError,)
 else:
     CLIENT_EXCEPTIONS = Exception
+    CANCELLED_EXCEPTIONS = ()
 
 
 logger = logging.getLogger("psycopg.pool")
@@ -263,6 +265,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             conn = await self._getconn_unchecked(deadline - monotonic())
             try:
                 await self._check_connection(conn)
+            except CANCELLED_EXCEPTIONS:
+                await self._putconn(conn, from_getconn=True)
+                raise
             except CLIENT_EXCEPTIONS:
                 await self._putconn(conn, from_getconn=True)
             else:
