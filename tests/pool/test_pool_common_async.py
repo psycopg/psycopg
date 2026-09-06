@@ -708,6 +708,7 @@ async def test_cancellation_in_queue(pool_cls, dsn):
 
 @skip_sync
 async def test_cancel_on_check(pool_cls, dsn):
+    # https://github.com/psycopg/psycopg/issues/1401
     from asyncio import CancelledError
 
     do_cancel = True
@@ -723,11 +724,9 @@ async def test_cancel_on_check(pool_cls, dsn):
     async with pool_cls(
         dsn, min_size=min_size(pool_cls, 1), check=check, timeout=1.0
     ) as p:
-        try:
+        with pytest.raises(CancelledError):
             async with p.connection() as conn:
                 await conn.execute("select 1")
-        except CancelledError:
-            pass
 
         async with p.connection() as conn:
             await conn.execute("select 1")
