@@ -33,6 +33,7 @@ from ._acompat import Condition, Event, Lock, Queue, Worker, current_thread_name
 from ._acompat import gather, sleep, spawn
 
 CLIENT_EXCEPTIONS = Exception
+CANCELLED_EXCEPTIONS = ()
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -226,6 +227,9 @@ class ConnectionPool(Generic[CT], BasePool):
             conn = self._getconn_unchecked(deadline - monotonic())
             try:
                 self._check_connection(conn)
+            except CANCELLED_EXCEPTIONS:
+                self._putconn(conn, from_getconn=True)
+                raise
             except CLIENT_EXCEPTIONS:
                 self._putconn(conn, from_getconn=True)
             else:
