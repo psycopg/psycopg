@@ -66,6 +66,27 @@ Numbers adaptation
 
 - Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
 
+.. warning::
+
+    The Python `int` type has arbitrary precision, but PostgreSQL integers
+    don't: a value outside the type range (e.g. larger than 2 ** 63 - 1 for a
+    :sql:`bigint`) passed to a query will be treated as :sql:`numeric`.
+    Comparing an :sql:`integer`/:sql:`bigint` column against a :sql:`numeric`
+    value casts the *column* to :sql:`numeric`, which makes an index on the
+    column unusable: the query degrades to a sequential scan, which can take
+    orders of magnitude longer on a large table, and can be used as a DoS
+    vector if the value comes from user input.
+
+    To avoid it, you can validate the value against the type range before
+    passing it to the query, or cast the value explicitly to the column type
+    (e.g. ``%s::bigint``): with the explicit cast an out-of-range value fails
+    with a clear error instead of silently degrading the query plan.
+
+    See the article `Forcing sequential scans on PostgreSQL (2022)`__ for the
+    details of this behaviour.
+
+    .. __: https://code.jeremyevans.net/2022-11-01-forcing-sequential-scans-on-postgresql
+
 On the way back, smaller types (:sql:`int2`, :sql:`int4`, :sql:`float4`) are
 promoted to the larger Python counterpart.
 
