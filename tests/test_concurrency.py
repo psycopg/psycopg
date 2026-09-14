@@ -296,16 +296,19 @@ with psycopg.connect({dsn!r}) as conn:
 
 @pytest.mark.slow
 @pytest.mark.subprocess
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
-)
 @pytest.mark.crdb("skip")
 def test_ctrl_c(conn, dsn):
     conn.autocommit = True
 
     APPNAME = "test_ctrl_c"
     script = f"""\
+import sys
+import signal
 import psycopg
+
+if sys.platform == "win32":
+    # Ctrl-C cannot be sent to a single process group: use Ctrl-Break instead.
+    signal.signal(signal.SIGBREAK, signal.default_int_handler)
 
 with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     conn.execute("select pg_sleep(60)")
@@ -313,7 +316,7 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
 
     if sys.platform == "win32":
         creationflags = sp.CREATE_NEW_PROCESS_GROUP
-        sig = signal.CTRL_C_EVENT
+        sig = signal.CTRL_BREAK_EVENT
     else:
         creationflags = 0
         sig = signal.SIGINT
@@ -361,7 +364,6 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
 
 @pytest.mark.slow
 @pytest.mark.subprocess
-@pytest.mark.skipif(sys.platform == "win32", reason="no SIGTERM handler on Windows")
 @pytest.mark.crdb("skip")
 def test_systemexit_cancels_query(conn, dsn):
     # https://github.com/psycopg/psycopg/issues/1384
@@ -374,13 +376,22 @@ import sys
 import signal
 import psycopg
 
-signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit({EXIT_CODE}))
+# On Windows SIGTERM cannot be handled: use Ctrl-Break instead.
+sig = signal.SIGBREAK if sys.platform == "win32" else signal.SIGTERM
+signal.signal(sig, lambda signum, frame: sys.exit({EXIT_CODE}))
 
 with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
     conn.execute("select pg_sleep(60)")
 """
 
-    proc = sp.Popen([sys.executable, "-s", "-c", script])
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_BREAK_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGTERM
+
+    proc = sp.Popen([sys.executable, "-s", "-c", script], creationflags=creationflags)
     try:
         # Wait for the query to be running, otherwise the signal might be
         # received before the query is sent and there is nothing to cancel.
@@ -400,7 +411,7 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
             assert False, "query didn't start?"
 
         t0 = time.time()
-        proc.send_signal(signal.SIGTERM)
+        proc.send_signal(sig)
         # Make sure the script exited via SystemExit, not by the signal.
         assert proc.wait(timeout=10) == EXIT_CODE
 

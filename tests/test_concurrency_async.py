@@ -201,22 +201,27 @@ asyncio.run(main())
 
 @pytest.mark.slow
 @pytest.mark.subprocess
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
-)
 @pytest.mark.crdb("skip")
 def test_ctrl_c(conn, dsn):
     # https://github.com/psycopg/psycopg/issues/543
     # The coroutine doesn't receive KeyboardInterrupt but CancelledError: on
     # Python >= 3.11 asyncio.run() handles SIGINT by cancelling the main task;
-    # on previous versions KeyboardInterrupt is raised in the event loop and
-    # asyncio.run() cancels the pending tasks.
+    # on previous versions (and on Windows, where the script handles SIGBREAK)
+    # KeyboardInterrupt is raised in the event loop and asyncio.run() cancels
+    # the pending tasks.
     conn.autocommit = True
 
     APPNAME = "test_ctrl_c"
     script = f"""\
+import sys
+import signal
 import asyncio
+import selectors
 import psycopg
+
+if sys.platform == "win32":
+    # Ctrl-C cannot be sent to a single process group: use Ctrl-Break instead.
+    signal.signal(signal.SIGBREAK, signal.default_int_handler)
 
 async def main():
     async with await psycopg.AsyncConnection.connect(
@@ -224,11 +229,20 @@ async def main():
     ) as conn:
         await conn.execute("select pg_sleep(5)")
 
-asyncio.run(main())
+kwargs = {{}}
+if sys.platform == "win32":
+    if sys.version_info >= (3, 12):
+        kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+            selectors.SelectSelector()
+        )
+    else:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+asyncio.run(main(), **kwargs)
 """
     if sys.platform == "win32":
         creationflags = sp.CREATE_NEW_PROCESS_GROUP
-        sig = signal.CTRL_C_EVENT
+        sig = signal.CTRL_BREAK_EVENT
     else:
         creationflags = 0
         sig = signal.SIGINT
@@ -278,7 +292,6 @@ asyncio.run(main())
 
 @pytest.mark.slow
 @pytest.mark.subprocess
-@pytest.mark.skipif(sys.platform == "win32", reason="no SIGTERM handler on Windows")
 @pytest.mark.crdb("skip")
 def test_systemexit_cancels_query(conn, dsn):
     # https://github.com/psycopg/psycopg/issues/1384
@@ -293,9 +306,12 @@ def test_systemexit_cancels_query(conn, dsn):
 import sys
 import signal
 import asyncio
+import selectors
 import psycopg
 
-signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit({EXIT_CODE}))
+# On Windows SIGTERM cannot be handled: use Ctrl-Break instead.
+sig = signal.SIGBREAK if sys.platform == "win32" else signal.SIGTERM
+signal.signal(sig, lambda signum, frame: sys.exit({EXIT_CODE}))
 
 async def main():
     async with await psycopg.AsyncConnection.connect(
@@ -303,10 +319,26 @@ async def main():
     ) as conn:
         await conn.execute("select pg_sleep(60)")
 
-asyncio.run(main())
+kwargs = {{}}
+if sys.platform == "win32":
+    if sys.version_info >= (3, 12):
+        kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+            selectors.SelectSelector()
+        )
+    else:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+asyncio.run(main(), **kwargs)
 """
 
-    proc = sp.Popen([sys.executable, "-s", "-c", script])
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_BREAK_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGTERM
+
+    proc = sp.Popen([sys.executable, "-s", "-c", script], creationflags=creationflags)
     try:
         # Wait for the query to be running, otherwise the signal might be
         # received before the query is sent and there is nothing to cancel.
@@ -326,7 +358,7 @@ asyncio.run(main())
             assert False, "query didn't start?"
 
         t0 = time.time()
-        proc.send_signal(signal.SIGTERM)
+        proc.send_signal(sig)
         # Make sure the script exited via SystemExit, not by the signal.
         assert proc.wait(timeout=10) == EXIT_CODE
 
