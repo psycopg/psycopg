@@ -317,7 +317,7 @@ def test_alter_table_clears_state(conn):
     assert list(map(itemgetter(1), cur.fetchall())) == ["foo", "bar"]
 
 
-@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL", "DISCARD PLANS"])
+@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL"])
 def test_discarding_statements(conn, stmt):
     conn.set_autocommit(True)
     conn.prepare_threshold = 0

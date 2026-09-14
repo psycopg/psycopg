@@ -320,7 +320,7 @@ async def test_alter_table_clears_state(aconn):
     assert list(map(itemgetter(1), await cur.fetchall())) == ["foo", "bar"]
 
 
-@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL", "DISCARD PLANS"])
+@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL"])
 async def test_discarding_statements(aconn, stmt):
     await aconn.set_autocommit(True)
     aconn.prepare_threshold = 0

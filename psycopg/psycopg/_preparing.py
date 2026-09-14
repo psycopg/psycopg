@@ -84,7 +84,7 @@ class PrepareManager:
         prep: Prepare,
         results: Sequence[PGresult],
         __should_clear: Any = re.compile(
-            rb"^(?:DROP|ALTER|ROLLBACK|DISCARD ALL|DISCARD PLANS|DEALLOCATE ALL)\b"
+            rb"^(?:DROP|ALTER|ROLLBACK|DISCARD ALL|DEALLOCATE ALL)\b"
         ).match,
     ) -> bool:
         """Check if we need to discard our entire state: it should happen on
