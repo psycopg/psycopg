@@ -964,6 +964,8 @@ async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
 
 @pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_right_exception_on_server_disconnect(aconn):
+    # `wait` implementations that are not responsive enough will cause this to fail.
+    # See comment in `test_right_exception_on_session_timeout`.
     with pytest.raises(e.AdminShutdown):
         await aconn.execute(
             "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
@@ -975,9 +977,11 @@ async def test_right_exception_on_server_disconnect(aconn):
 async def test_right_exception_on_session_timeout(aconn):
     want_ex: type[psycopg.Error] = e.IdleInTransactionSessionTimeout
     if sys.platform == "win32":
-        # No idea why this is needed and `test_right_exception_on_server_disconnect`
-        # works instead. Maybe the difference lies in the server we are testing
-        # with, not in the client.
+        # winsock delivers a TCP RST flag and throws away the buffer.
+        # `test_right_exception_on_server_disconnect` works because
+        # we get the correct error message immediately in the execute
+        # generator before the buffer is discarded.
+        # See https://www.postgresql.org/message-id/flat/90b34057-4176-7bb0-0dbb-9822a5f6425b%40greiz-reinsdorf.de  # noqa: E501
         want_ex = psycopg.OperationalError
 
     await aconn.execute("SET SESSION idle_in_transaction_session_timeout = 100")

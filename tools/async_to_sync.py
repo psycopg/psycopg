@@ -394,6 +394,10 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         return node
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        for deco in node.decorator_list:
+            match deco:
+                case ast.Name(id="skip_sync"):
+                    return None
         self._fix_docstring(node.body)
         node.name = self.names_map.get(node.name, node.name)
         if node.decorator_list:
