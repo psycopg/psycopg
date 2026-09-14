@@ -50,7 +50,7 @@ IDLE = pq.TransactionStatus.IDLE
 ACTIVE = pq.TransactionStatus.ACTIVE
 INTRANS = pq.TransactionStatus.INTRANS
 
-_INTERRUPTED = KeyboardInterrupt
+_INTERRUPTED = (KeyboardInterrupt, SystemExit)
 
 logger = logging.getLogger("psycopg")
 

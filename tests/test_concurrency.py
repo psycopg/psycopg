@@ -361,6 +361,71 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
 
 @pytest.mark.slow
 @pytest.mark.subprocess
+@pytest.mark.skipif(sys.platform == "win32", reason="no SIGTERM handler on Windows")
+@pytest.mark.crdb("skip")
+def test_systemexit_cancels_query(conn, dsn):
+    # https://github.com/psycopg/psycopg/issues/1384
+    conn.autocommit = True
+
+    APPNAME = "test_systemexit_cancels_query"
+    EXIT_CODE = 42
+    script = f"""\
+import sys
+import signal
+import psycopg
+
+signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit({EXIT_CODE}))
+
+with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
+    conn.execute("select pg_sleep(60)")
+"""
+
+    proc = sp.Popen([sys.executable, "-s", "-c", script])
+    try:
+        # Wait for the query to be running, otherwise the signal might be
+        # received before the query is sent and there is nothing to cancel.
+        for i in range(50):
+            cur = conn.execute(
+                """
+                select pid from pg_stat_activity
+                where application_name = %s and state = 'active'
+                """,
+                (APPNAME,),
+            )
+            if rec := cur.fetchone():
+                pid = rec[0]
+                break
+            time.sleep(0.1)
+        else:
+            assert False, "query didn't start?"
+
+        t0 = time.time()
+        proc.send_signal(signal.SIGTERM)
+        # Make sure the script exited via SystemExit, not by the signal.
+        assert proc.wait(timeout=10) == EXIT_CODE
+
+        # Closing the connection is not enough to stop the backend: the query
+        # would keep running until pg_sleep() returns, unless canceled.
+        for i in range(20):
+            cur = conn.execute("select 1 from pg_stat_activity where pid = %s", (pid,))
+            if not cur.fetchone():
+                break
+            time.sleep(0.1)
+        else:
+            conn.execute("select pg_cancel_backend(%s)", (pid,))
+            assert False, "query not canceled on SystemExit"
+
+        t1 = time.time()
+        assert t1 - t0 < 1.0
+
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
 @pytest.mark.parametrize("itimername, signame", [("ITIMER_REAL", "SIGALRM")])
 def test_eintr(dsn, itimername, signame):
     try:
