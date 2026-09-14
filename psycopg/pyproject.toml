@@ -84,9 +84,8 @@ dev = [
     "cython-lint >= 0.21",
     "dnspython >= 2.1",
     "flake8 >= 4.0",
-    # TODO: check why isort-psycopg doesn't work with isort 9
-    "isort[colors] >= 6.0, < 9.0",
-    "isort-psycopg",
+    "isort[colors] >= 6.0",
+    "isort-psycopg >= 0.0.3",
     "mypy >= 2.1.0",
     "pre-commit >= 4.0.1",
     "types-setuptools >= 57.4",

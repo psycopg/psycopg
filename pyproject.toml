@@ -76,4 +76,5 @@ skip = "build,_build,.tox,.mypy_cache,.venv,pq.c,_psycopg.c,*.html"
 profile = "black"
 length_sort = true
 multi_line_output = 9
+include_trailing_comma = false
 sort_order = "psycopg"  # requires the isort-psycopg module
