@@ -317,13 +317,30 @@ def test_alter_table_clears_state(conn):
     assert list(map(itemgetter(1), cur.fetchall())) == ["foo", "bar"]
 
 
-def test_discard_clears_state(conn):
+@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL", "DISCARD PLANS"])
+def test_discarding_statements(conn, stmt):
     conn.set_autocommit(True)
     conn.prepare_threshold = 0
     conn.execute("DROP TABLE IF EXISTS testdisc")
     conn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
     conn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
-    conn.execute("DISCARD ALL")
+    assert conn._prepared._names
+    conn.execute(stmt)
+    assert not conn._prepared._names
+    conn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
+
+
+@pytest.mark.parametrize("stmt", ["DISCARD SEQUENCES", "DEALLOCATE foo"])
+def test_non_discarding_statements(conn, stmt):
+    conn.set_autocommit(True)
+    conn.prepare_threshold = 0
+    conn.execute("DROP TABLE IF EXISTS testdisc")
+    conn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
+    conn.execute("PREPARE foo AS select 1")
+    conn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
+    assert conn._prepared._names
+    conn.execute(stmt)
+    assert conn._prepared._names
     conn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
 
 
