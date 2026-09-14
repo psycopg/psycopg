@@ -226,8 +226,13 @@ class ConnectionPool(Generic[CT], BasePool):
             conn = self._getconn_unchecked(deadline - monotonic())
             try:
                 self._check_connection(conn)
-            except CLIENT_EXCEPTIONS:
+            except Exception:
                 self._putconn(conn, from_getconn=True)
+            except BaseException:
+                # Cancellation, KeyboardInterrupt etc.: don't lose the
+                # connection, but don't try again either.
+                self._putconn(conn, from_getconn=True)
+                raise
             else:
                 logger.info("connection given by %r", self.name)
                 return conn

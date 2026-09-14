@@ -723,14 +723,64 @@ async def test_cancel_on_check(pool_cls, dsn):
     async with pool_cls(
         dsn, min_size=min_size(pool_cls, 1), check=check, timeout=1.0
     ) as p:
-        try:
+        with pytest.raises(CancelledError):
             async with p.connection() as conn:
                 await conn.execute("select 1")
-        except CancelledError:
-            pass
 
         async with p.connection() as conn:
             await conn.execute("select 1")
+
+
+async def test_interrupt_on_check(pool_cls, dsn):
+    do_raise = True
+
+    async def check(conn):
+        nonlocal do_raise
+        if do_raise:
+            do_raise = False
+            raise KeyboardInterrupt()
+
+        await pool_cls.check_connection(conn)
+
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls, 1), max_size=1, check=check, timeout=1.0
+    ) as p:
+        with pytest.raises(KeyboardInterrupt):
+            async with p.connection():
+                pass
+
+        # The interrupted connection was returned to the pool
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
+@skip_sync
+@pytest.mark.slow
+async def test_wait_for_getconn(pool_cls, dsn):
+    # https://github.com/psycopg/psycopg/issues/1401
+    # asyncio.wait_for() must be able to interrupt getconn() while the check
+    # callback is running, not only while the client is waiting in the queue.
+    import asyncio
+
+    async def check(conn):
+        await asleep(0.5)
+        await pool_cls.check_connection(conn)
+
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls, 1), max_size=1, check=check, timeout=5.0
+    ) as p:
+        await p.wait()
+
+        t0 = time()
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(p.getconn(), timeout=0.2)
+        assert time() - t0 < 0.4
+
+        # The connection being checked was returned to the pool
+        async with p.connection(timeout=2.0) as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
 
 
 @skip_sync
