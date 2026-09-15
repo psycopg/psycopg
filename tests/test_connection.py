@@ -929,6 +929,40 @@ def test_cancel_safe_timeout(conn_cls, proxy):
     assert elapsed == pytest.approx(1.0, 0.1)
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+def test_interrupt_unresponsive_server(conn_cls, proxy, caplog):
+    # https://github.com/psycopg/psycopg/issues/1371
+    # If the server stops responding on an established connection, an
+    # interrupted query must not wait forever for the cancellation outcome.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        with proxy.frozen():
+            t0 = time.time()
+            import signal
+
+            # Raise KeyboardInterrupt during the query, as Ctrl-C would.
+            handler = signal.signal(signal.SIGALRM, signal.default_int_handler)
+            signal.setitimer(signal.ITIMER_REAL, 0.5)
+            try:
+                with pytest.raises(KeyboardInterrupt):
+                    conn.execute("select 1")
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, handler)
+            elapsed = time.time() - t0
+
+        assert conn.broken
+
+    # 0.5s before the interruption, 5s of cancel timeout, 5s of query timeout.
+    assert elapsed == pytest.approx(10.5, abs=1.0)
+    messages = [r.message for r in caplog.records]
+    assert any(("cancellation timeout expired" in m for m in messages))
+    assert any(("not terminated after cancellation" in m for m in messages))
+
+
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
     got = ""
 
