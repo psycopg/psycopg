@@ -233,8 +233,8 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 16"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 18"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 18"
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - uses: actions/upload-artifact@v7
