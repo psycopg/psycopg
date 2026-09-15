@@ -63,7 +63,10 @@ def pipeline_communicate(
     pgconn: PGconn, commands: deque[abc.PipelineCommand]
 ) -> abc.PQGen[list[list[PGresult]]]: ...
 def wait_c(
-    gen: abc.PQGen[abc.RV], fileno: int, interval: float | None = None
+    gen: abc.PQGen[abc.RV],
+    fileno: int,
+    interval: float | None = None,
+    timeout: float | None = None,
 ) -> abc.RV: ...
 
 # Copy support

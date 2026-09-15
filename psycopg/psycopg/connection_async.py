@@ -508,15 +508,25 @@ class AsyncConnection(BaseConnection[Row]):
             assert pipeline is self._pipeline
             self._pipeline = None
 
-    async def wait(self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL) -> RV:
+    async def wait(
+        self,
+        gen: PQGen[RV],
+        interval: float = _WAIT_INTERVAL,
+        timeout: float | None = None,
+    ) -> RV:
         """
         Consume a generator operating on the connection.
 
         The function must be used on generators that don't change connection
         fd (i.e. not on connect and reset).
+
+        Raise `~errors._WaitTimeout` if `!gen` doesn't complete within
+        `!timeout` seconds.
         """
         try:
-            return await waiting.wait_async(gen, self.pgconn.socket, interval=interval)
+            return await waiting.wait_async(
+                gen, self.pgconn.socket, interval=interval, timeout=timeout
+            )
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise

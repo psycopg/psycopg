@@ -7,6 +7,7 @@ C implementation of waiting functions
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
 from os import fstat
+from time import monotonic
 from typing import TypeVar
 
 from psycopg import errors as e
@@ -198,11 +199,13 @@ finally:
     cdef int CWAIT_SOCKET_ERROR
 
 
-def wait_c(gen: PQGen[RV], int fileno, interval = 0.0) -> RV:
+def wait_c(gen: PQGen[RV], int fileno, interval = 0.0, timeout = None) -> RV:
     """
     Wait for a generator using poll or select.
     """
-    cdef float cinterval
+    cdef float cinterval, ctimeout
+    cdef double deadline = 0.0, remaining
+    cdef bint has_deadline = False
     cdef int wait, ready
     cdef PyObject *pyready
 
@@ -213,13 +216,24 @@ def wait_c(gen: PQGen[RV], int fileno, interval = 0.0) -> RV:
     if cinterval < 0.0:
         cinterval = 0.0
 
+    if timeout is not None:
+        # Note: use a double: a float would lose precision on large values.
+        has_deadline = True
+        deadline = monotonic() + float(timeout)
+
     send = gen.send
 
     try:
         wait = next(gen)
 
         while True:
-            ready = wait_c_impl(fileno, wait, cinterval)
+            ctimeout = cinterval
+            if has_deadline:
+                remaining = deadline - monotonic()
+                if remaining < ctimeout:
+                    ctimeout = <float>remaining if remaining > 0.0 else 0.0
+
+            ready = wait_c_impl(fileno, wait, ctimeout)
             if ready == READY_NONE:
                 pyready = <PyObject *>PY_READY_NONE
             elif ready == READY_R:
@@ -239,6 +253,11 @@ def wait_c(gen: PQGen[RV], int fileno, interval = 0.0) -> RV:
                 raise AssertionError(f"unexpected ready value: {ready}")
 
             wait = PyObject_CallFunctionObjArgs(send, pyready, NULL)
+
+            # Check the deadline after resuming the generator, so that the data
+            # already available is processed and a timeout of 0 polls once.
+            if has_deadline and monotonic() >= deadline:
+                raise e._WaitTimeout("wait timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.value

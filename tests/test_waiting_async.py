@@ -67,6 +67,19 @@ async def test_wait_conn_bad(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.parametrize("interval", [0, 0.1])
+async def test_wait_conn_with_timeout_expired(proxy, interval):
+    with proxy.deaf_listen():
+        gen = generators.connect(proxy.client_dsn)
+        t0 = time.time()
+        with pytest.raises(psycopg.errors._WaitTimeout):
+            await waiting.wait_conn_async(gen, interval, timeout=0.25)
+        dt = time.time() - t0
+    assert dt == pytest.approx(0.25, abs=0.03)
+
+
+@pytest.mark.slow
 @pytest.mark.skipif("sys.platform != 'linux'")
 @pytest.mark.parametrize("interval", [i for i in intervals if i > 0])
 @pytest.mark.parametrize("ready", ["R", "NONE"])
@@ -302,6 +315,31 @@ async def test_wait_timeout(pgconn, waitfn):
     assert len(ds) >= 5
     for d in ds[:5]:
         assert d == pytest.approx(0.1, 0.05)
+
+
+@pytest.mark.parametrize("waitfn", waitfns)
+async def test_wait_with_timeout(pgconn, waitfn):
+    waitfn = getattr(waiting, waitfn)
+
+    pgconn.send_query(b"select 1")
+    gen = generators.execute(pgconn)
+    (res,) = await waitfn(gen, pgconn.socket, 0.1, timeout=2.0)
+    assert res.status == ExecStatus.TUPLES_OK
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.parametrize("waitfn", waitfns)
+async def test_wait_with_timeout_expired(pgconn, waitfn):
+    waitfn = getattr(waiting, waitfn)
+
+    pgconn.send_query(b"select pg_sleep(2)")
+    gen = generators.execute(pgconn)
+    t0 = time.time()
+    with pytest.raises(psycopg.errors._WaitTimeout):
+        await waitfn(gen, pgconn.socket, 0.1, timeout=0.25)
+    dt = time.time() - t0
+    assert dt == pytest.approx(0.25, abs=0.03)
 
 
 @pytest.mark.slow
