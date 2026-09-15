@@ -498,9 +498,18 @@ class Connection(BaseConnection[Row]):
                 # the connection will remain stuck in ACTIVE state.
                 self._try_cancel(timeout=5.0)
                 try:
-                    waiting.wait(gen, self.pgconn.socket, interval=interval)
+                    waiting.wait(
+                        gen, self.pgconn.socket, interval=interval, timeout=5.0
+                    )
                 except e.QueryCanceled:
                     pass  # as expected
+                except e._WaitTimeout:
+                    # The server didn't terminate the query: the connection
+                    # is in an unknown state, so don't wait forever (#1371).
+                    logger.warning(
+                        "query not terminated after cancellation: closing connection"
+                    )
+                    self.pgconn.finish()
             raise
 
     def _set_autocommit(self, value: bool) -> None:
