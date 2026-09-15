@@ -314,10 +314,10 @@ class BaseConnection(Generic[Row]):
             )
         return True
 
-    def _cancel_gen(self, *, timeout: float) -> PQGenConn[None]:
+    def _cancel_gen(self) -> PQGenConn[None]:
         cancel_conn = self.pgconn.cancel_conn()
         cancel_conn.start()
-        yield from generators.cancel(cancel_conn, timeout=timeout)
+        yield from generators.cancel(cancel_conn)
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """
@@ -434,11 +434,9 @@ class BaseConnection(Generic[Row]):
     # should have a lock and hold it before calling and consuming them.
 
     @classmethod
-    def _connect_gen(
-        cls, conninfo: str = "", *, timeout: float = 0.0
-    ) -> PQGenConn[Self]:
+    def _connect_gen(cls, conninfo: str = "") -> PQGenConn[Self]:
         """Generator to connect to the database and create a new instance."""
-        pgconn = yield from generators.connect(conninfo, timeout=timeout)
+        pgconn = yield from generators.connect(conninfo)
         conn = cls(pgconn)
         return conn
 

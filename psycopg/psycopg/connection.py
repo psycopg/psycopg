@@ -105,8 +105,12 @@ class Connection(BaseConnection[Row]):
             logger.debug("connection attempt: %s", descr)
             try:
                 conninfo = make_conninfo("", **attempt)
-                gen = cls._connect_gen(conninfo, timeout=timeout)
-                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
             except e.Error as ex:
                 logger.debug("connection failed: %s: %s", descr, str(ex))
                 conn_errors.append((ex, descr))
@@ -329,9 +333,12 @@ class Connection(BaseConnection[Row]):
             return
 
         if capabilities.has_cancel_safe():
-            waiting.wait_conn(
-                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
-            )
+            try:
+                waiting.wait_conn(
+                    self._cancel_gen(), interval=_WAIT_INTERVAL, timeout=timeout or None
+                )
+            except e._WaitTimeout:
+                raise e.CancellationTimeout("cancellation timeout expired") from None
         else:
             self.cancel()
 
@@ -374,15 +381,7 @@ class Connection(BaseConnection[Row]):
             You might actually receive more than this number if more than one
             notifications arrives in the same packet.
         """
-        # Allow interrupting the wait with a signal by reducing a long timeout
-        # into shorter intervals.
-        if timeout is not None:
-            deadline = monotonic() + timeout
-            interval = min(timeout, _WAIT_INTERVAL)
-        else:
-            deadline = None
-            interval = _WAIT_INTERVAL
-
+        deadline = monotonic() + timeout if timeout is not None else None
         nreceived = 0
 
         if self._notify_handlers:
@@ -407,8 +406,14 @@ class Connection(BaseConnection[Row]):
                             yield d.popleft()
                             nreceived += 1
                     else:
+                        if deadline is not None:
+                            remaining = max(0.0, deadline - monotonic())
+                        else:
+                            remaining = None
                         try:
-                            pgns = self.wait(notifies(self.pgconn), interval=interval)
+                            pgns = self.wait(notifies(self.pgconn), timeout=remaining)
+                        except e._WaitTimeout:
+                            break
                         except e._NO_TRACEBACK as ex:
                             raise ex.with_traceback(None)
                         # Emit the notifications received.
@@ -426,10 +431,8 @@ class Connection(BaseConnection[Row]):
 
                     # Check the deadline after the loop to ensure that timeout=0
                     # polls at least once.
-                    if deadline:
-                        interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                        if interval < 0.0:
-                            break
+                    if deadline is not None and monotonic() > deadline:
+                        break
             finally:
                 self._notifies_backlog = d
 
