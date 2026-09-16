@@ -800,8 +800,19 @@ cdef Py_ssize_t dump_int_to_numeric_binary(
     obj, bytearray rv, Py_ssize_t offset
 ) except -1:
     # Calculate the number of PG digits required to store the number
-    cdef uint16_t ndigits
-    ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1
+    cdef Py_ssize_t nbits = obj.bit_length()
+    cdef Py_ssize_t ndigits = <Py_ssize_t>(nbits * BIT_PER_PGDIGIT) + 1
+    # ndigits is uint16 in the wire format, but the weight below is int16.
+    # Since an integer's weight is ndigits - 1, INT16_MAX + 1 is valid.
+    if ndigits > INT16_MAX + 1:
+        # The bit-length estimate may include one leading zero PG digit.
+        # Resolve the boundary exactly before rejecting the value.
+        if abs(obj) >= pow(10_000, INT16_MAX + 1):
+            raise e.DataError(
+                "integer too large for PostgreSQL numeric binary format"
+                " (maximum 32768 base-10000 digits)"
+            )
+        ndigits = INT16_MAX + 1
 
     cdef uint16_t sign = NUMERIC_POS
     if obj < 0:
@@ -813,8 +824,8 @@ cdef Py_ssize_t dump_int_to_numeric_binary(
     buf = <uint16_t *><void *>CDumper.ensure_size(rv, offset, length)
 
     cdef uint16_t behead[4]
-    behead[0] = endian.htobe16(ndigits)
-    behead[1] = endian.htobe16(ndigits - 1)  # weight
+    behead[0] = endian.htobe16(<uint16_t>ndigits)
+    behead[1] = endian.htobe16(<uint16_t>(ndigits - 1))  # weight
     behead[2] = endian.htobe16(sign)
     behead[3] = 0  # dscale
     memcpy(buf, behead, sizeof(behead))

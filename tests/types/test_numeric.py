@@ -75,6 +75,18 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
     assert ok
 
 
+def test_dump_int_numeric_binary_limits():
+    limit = 10_000**32_768
+
+    data = Transformer().dump_sequence([limit - 1], [PyFormat.AUTO])[0]
+    assert data is not None
+    assert int.from_bytes(data[:2], "big") == 0x8000  # ndigits
+    assert int.from_bytes(data[2:4], "big", signed=True) == 0x7FFF  # weight
+
+    with pytest.raises(psycopg.DataError, match="maximum 32768 base-10000 digits"):
+        Transformer().dump_sequence([limit], [PyFormat.AUTO])
+
+
 @pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
 def test_int_none(conn, fmt_in):
     Base: type = Int8Dumper if fmt_in == PyFormat.TEXT else Int8BinaryDumper

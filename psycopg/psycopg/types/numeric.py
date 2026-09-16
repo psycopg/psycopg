@@ -478,6 +478,18 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
 
 def dump_int_to_numeric_binary(obj: int) -> bytearray:
     ndigits = int(obj.bit_length() * BIT_PER_PGDIGIT) + 1
+    # ndigits is uint16 in the wire format, but the weight below is int16.
+    # Since an integer's weight is ndigits - 1, 0x8000 is the last valid count.
+    if ndigits > 0x8000:
+        # The bit-length estimate may include one leading zero PG digit.
+        # Resolve the boundary exactly before rejecting the value.
+        if abs(obj) >= pow(10_000, 0x8000):
+            raise e.DataError(
+                "integer too large for PostgreSQL numeric binary format"
+                " (maximum 32768 base-10000 digits)"
+            )
+        ndigits = 0x8000
+
     out = bytearray(b"\x00\x00" * (ndigits + 4))
     if obj < 0:
         sign = NUMERIC_NEG
