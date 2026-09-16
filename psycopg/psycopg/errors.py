@@ -421,6 +421,14 @@ class CancellationTimeout(OperationalError):
     """
 
 
+class _WaitTimeout(OperationalError):
+    """
+    Exception raised by the wait functions when their timeout expires.
+
+    Internal exception: callers should handle it or convert it to a public one.
+    """
+
+
 class PipelineAborted(OperationalError):
     """
     Raised when a operation fails because the current pipeline is in aborted state.

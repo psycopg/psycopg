@@ -22,10 +22,10 @@ def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
 
     got_conninfo: str
 
-    def mock_connect(conninfo, *, timeout):
+    def mock_connect(conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
-        return orig_connect(dsn_env, timeout=timeout)
+        return orig_connect(dsn_env)
 
     setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", mock_connect)

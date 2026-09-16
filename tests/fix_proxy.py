@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import signal
 import socket
 import logging
 import subprocess as sp
@@ -45,7 +46,8 @@ class Proxy:
     """
     Proxy a Postgres service for testing purpose.
 
-    Allow to lose connectivity and restart it using stop/start.
+    Allow to lose connectivity and restart it using stop/start, or to make the
+    server unresponsive using frozen.
     """
 
     def __init__(self, server_dsn):
@@ -98,9 +100,34 @@ class Proxy:
 
         logging.info("stopping proxy")
         self.proc.terminate()
+        if sys.platform != "win32":
+            # Make sure a frozen process can receive the termination signal
+            self.proc.send_signal(signal.SIGCONT)
         self.proc.wait()
         logging.info("proxy stopped")
         self.proc = None
+
+    @contextmanager
+    def frozen(self):
+        """Freeze the proxy process, without closing its connections.
+
+        The connections through the proxy stay established, but the server
+        doesn't respond anymore, as it happens on a half-open connection.
+        New connection attempts, such as cancel requests, will also hang.
+        """
+        if sys.platform == "win32":
+            pytest.skip("can't freeze the proxy on Windows")
+        if not self.proc:
+            raise Exception("the proxy is not running")
+
+        logging.info("freezing proxy")
+        self.proc.send_signal(signal.SIGSTOP)
+        try:
+            yield
+        finally:
+            if self.proc:
+                self.proc.send_signal(signal.SIGCONT)
+                logging.info("proxy resumed")
 
     @contextmanager
     def deaf_listen(self):

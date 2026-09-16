@@ -14,6 +14,9 @@ Psycopg 3.3.6 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add support for Python 3.15 (:ticket:`#1245`).
+- Don't wait forever for a query to terminate after interrupting it, for
+  instance if the server is unresponsive. The fix requires libpq 17 or newer
+  (:ticket:`#1371`).
 - Cancel a running query upon receiving `!SystemExit` (:ticket:`#1384`).
 - Report `!None` instead of ``65535`` as the `Column.precision` of an
   :sql:`interval` column declared with a fields restriction and no explicit

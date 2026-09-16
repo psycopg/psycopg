@@ -57,7 +57,13 @@ class WaitFunc(Protocol):
     Wait on the connection which generated `PQgen` and return its final result.
     """
 
-    def __call__(self, gen: PQGen[RV], fileno: int, interval: float = ...) -> RV: ...
+    def __call__(
+        self,
+        gen: PQGen[RV],
+        fileno: int,
+        interval: float = ...,
+        timeout: float | None = ...,
+    ) -> RV: ...
 
 
 # Adaptation types
