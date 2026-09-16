@@ -707,25 +707,35 @@ async def test_cancellation_in_queue(pool_cls, dsn):
 
 
 @skip_sync
-async def test_cancel_on_check(pool_cls, dsn):
+async def test_cancel_on_check(pool_cls, dsn, monkeypatch):
     from asyncio import CancelledError
 
     do_cancel = True
+    orig_execute = psycopg.AsyncConnection.execute
 
-    async def check(conn):
+    async def execute(self, *args, **kwargs):
+        # Simulate a cancellation interrupting the query run by the check,
+        # leaving the connection unusable, as it happens if the client
+        # interrupts getconn() (e.g. using asyncio.wait_for()).
         nonlocal do_cancel
         if do_cancel:
             do_cancel = False
+            await self.close()
             raise CancelledError()
 
-        await pool_cls.check_connection(conn)
+        return await orig_execute(self, *args, **kwargs)
+
+    monkeypatch.setattr(psycopg.AsyncConnection, "execute", execute)
 
     async with pool_cls(
-        dsn, min_size=min_size(pool_cls, 1), check=check, timeout=1.0
+        dsn,
+        min_size=min_size(pool_cls, 1),
+        check=pool_cls.check_connection,
+        timeout=1.0,
     ) as p:
         with pytest.raises(CancelledError):
             async with p.connection() as conn:
-                await conn.execute("select 1")
+                pass
 
         async with p.connection() as conn:
             await conn.execute("select 1")

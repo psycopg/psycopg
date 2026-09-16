@@ -16,7 +16,7 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, Generic, cast
 from weakref import ref
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from collections import deque
 from collections.abc import Iterator
 
@@ -568,7 +568,9 @@ class ConnectionPool(Generic[CT], BasePool):
             try:
                 conn.execute("")
             finally:
-                conn.autocommit = False
+                # Avoid clobbering an exception if the connection is closed
+                with suppress(Exception):
+                    conn.autocommit = False
 
     def reconnect_failed(self) -> None:
         """
