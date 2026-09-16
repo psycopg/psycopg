@@ -19,6 +19,7 @@ Psycopg 3.3.6 (unreleased)
   :sql:`interval` column declared with a fields restriction and no explicit
   precision, such as e.g. :sql:`interval day to second` (:ticket:`#1397`).
 - Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
+- Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
 
 
 Current release

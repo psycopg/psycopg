@@ -83,7 +83,9 @@ class PrepareManager:
         self,
         prep: Prepare,
         results: Sequence[PGresult],
-        __should_clear: Any = re.compile(rb"^(?:DROP|ALTER|ROLLBACK|DISCARD)\b").match,
+        __should_clear: Any = re.compile(
+            rb"^(?:DROP|ALTER|ROLLBACK|DISCARD ALL|DEALLOCATE ALL)\b"
+        ).match,
     ) -> bool:
         """Check if we need to discard our entire state: it should happen on
         rollback or on dropping objects, because the same object may get
