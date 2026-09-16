@@ -23,6 +23,7 @@ Psycopg 3.3.6 (unreleased)
   precision, such as e.g. :sql:`interval day to second` (:ticket:`#1397`).
 - Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
 - Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
+- Better guards dumping large Python `!int` to binary numeric (:ticket:`#1414`).
 
 
 Current release

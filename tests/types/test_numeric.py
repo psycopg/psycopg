@@ -78,13 +78,70 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
 def test_dump_int_numeric_binary_limits():
     limit = 10_000**32_768
 
-    data = Transformer().dump_sequence([limit - 1], [PyFormat.AUTO])[0]
-    assert data is not None
-    assert int.from_bytes(data[:2], "big") == 0x8000  # ndigits
-    assert int.from_bytes(data[2:4], "big", signed=True) == 0x7FFF  # weight
+    for val, sign in [(limit - 1, 0x0000), (-(limit - 1), 0x4000)]:
+        data = Transformer().dump_sequence([val], [PyFormat.AUTO])[0]
+        assert data is not None
+        assert int.from_bytes(data[:2], "big") == 0x8000  # ndigits
+        assert int.from_bytes(data[2:4], "big", signed=True) == 0x7FFF  # weight
+        assert int.from_bytes(data[4:6], "big") == sign
 
-    with pytest.raises(psycopg.DataError, match="maximum 32768 base-10000 digits"):
-        Transformer().dump_sequence([limit], [PyFormat.AUTO])
+    for val in (limit, -limit):
+        with pytest.raises(psycopg.DataError, match="maximum 32768 base-10000 digits"):
+            Transformer().dump_sequence([val], [PyFormat.AUTO])
+
+
+def test_dump_decimal_numeric_binary_limits():
+    # Largest number of digits before the decimal point (131072 = 32768 * 4)
+    for val, sign in [("1E+131071", 0x0000), ("-1E+131071", 0x4000)]:
+        data = Transformer().dump_sequence([Decimal(val)], [PyFormat.BINARY])[0]
+        assert data is not None
+        assert int.from_bytes(data[2:4], "big", signed=True) == 0x7FFF  # weight
+        assert int.from_bytes(data[4:6], "big") == sign
+
+    # Largest number of digits after the decimal point
+    for val, sign in [("1E-16383", 0x0000), ("-1E-16383", 0x4000)]:
+        data = Transformer().dump_sequence([Decimal(val)], [PyFormat.BINARY])[0]
+        assert data is not None
+        assert int.from_bytes(data[6:8], "big") == 0x3FFF  # dscale
+        assert int.from_bytes(data[4:6], "big") == sign
+
+
+@pytest.mark.parametrize(
+    "val, msg",
+    [
+        ("1E+131072", "maximum 32768 base-10000 digits"),
+        ("-1E+131072", "maximum 32768 base-10000 digits"),
+        ("1E+999999999999999999", "maximum 32768 base-10000 digits"),
+        ("1E-16384", "maximum 16383 digits after the decimal point"),
+        ("-1E-16384", "maximum 16383 digits after the decimal point"),
+        ("0E-16384", "maximum 16383 digits after the decimal point"),
+    ],
+)
+def test_dump_decimal_numeric_binary_too_big(val, msg):
+    with pytest.raises(psycopg.DataError, match=msg):
+        Transformer().dump_sequence([Decimal(val)], [PyFormat.BINARY])
+
+
+@pytest.mark.slow
+@pytest.mark.crdb_skip("binary decimal")
+def test_roundtrip_numeric_binary_limits(conn):
+    cur = conn.cursor()
+
+    # The largest integer fitting in a numeric is a number of 131072 nines.
+    # Compare with a string built by the server: converting such an int to
+    # string in Python would exceed the limit of sys.set_int_max_str_digits().
+    val = 10_000**32_768 - 1
+    nines = "repeat('9', 131072)"
+    for i, expr in ((val, nines), (-val, f"'-' || {nines}")):
+        cur.execute(f"select %b::numeric::text = {expr}", (i,))
+        assert cur.fetchone()[0] is True
+
+    # The largest and the smallest exponents allowed by the binary format.
+    for expr in ("1E+131071", "-1E+131071", "1E-16383", "-1E-16383"):
+        cur.execute(
+            "select %b::numeric::text = %s::decimal::text", (Decimal(expr), expr)
+        )
+        assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])

@@ -163,6 +163,17 @@ cdef extern from *:
 #define NUMERIC_NAN 0xC000
 #define NUMERIC_PINF 0xD000
 #define NUMERIC_NINF 0xF000
+
+/* Limits of the numeric binary format: the weight is an int16 and the dscale
+ * is stored in the lower 14 bits of the sign/dscale word.
+ */
+#define MAX_WEIGHT 0x7FFF
+#define MAX_DSCALE 0x3FFF
+
+/* Max number of pg digits in the integral part of a numeric: the weight of an
+ * integer is ndigits - 1, so this is the largest valid ndigits for an integer.
+ */
+#define MAX_PGDIGITS (MAX_WEIGHT + 1)
 """
     const double BIT_PER_PGDIGIT
     const int DEC_DIGITS
@@ -171,6 +182,15 @@ cdef extern from *:
     const int NUMERIC_NAN
     const int NUMERIC_PINF
     const int NUMERIC_NINF
+    const int MAX_WEIGHT
+    const int MAX_DSCALE
+    const int MAX_PGDIGITS
+
+
+# The smallest integer that doesn't fit in a numeric (10_000 ** MAX_PGDIGITS).
+# It is a 131073 digits number, taking about 57KB, and it is only needed to
+# check values of that size: calculate it on first use and cache it.
+cdef object MAX_NUMERIC_INT = None
 
 
 @cython.final
@@ -655,15 +675,30 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
         memcpy(buf, behead, sizeof(behead))
         return sizeof(behead)
 
-    cdef int exp = pyexp
-    cdef uint16_t ndigits = <uint16_t>len(digits)
+    # Check the exponent before converting it to a C integer, in order to fail
+    # with a DataError, not an OverflowError, on absurd values. The dscale
+    # check is exact; the weight is checked exactly further down.
+    if pyexp <= 0:
+        if -pyexp > MAX_DSCALE:
+            raise e.DataError(
+                "decimal too precise for PostgreSQL numeric binary format"
+                f" (maximum {MAX_DSCALE} digits after the decimal point)"
+            )
+    elif pyexp > MAX_PGDIGITS * DEC_DIGITS:
+        raise e.DataError(
+            "decimal too large for PostgreSQL numeric binary format"
+            f" (maximum {MAX_PGDIGITS} base-10000 digits)"
+        )
+
+    cdef Py_ssize_t exp = pyexp
+    cdef Py_ssize_t ndigits = len(digits)
 
     # Find the last nonzero digit
-    cdef int nzdigits = ndigits
+    cdef Py_ssize_t nzdigits = ndigits
     while nzdigits > 0 and digits[nzdigits - 1] == 0:
         nzdigits -= 1
 
-    cdef uint16_t dscale
+    cdef Py_ssize_t dscale
     if exp <= 0:
         dscale = -exp
     else:
@@ -676,14 +711,14 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
         behead[0] = 0  # ndigits
         behead[1] = 0  # weight
         behead[2] = endian.htobe16(NUMERIC_POS)  # sign
-        behead[3] = endian.htobe16(dscale)
+        behead[3] = endian.htobe16(<uint16_t>dscale)
         memcpy(buf, behead, sizeof(behead))
         return sizeof(behead)
 
     # Equivalent of 0-padding left to align the py digits to the pg digits
     # but without changing the digits tuple.
-    cdef int wi = 0
-    cdef int mod = (ndigits - dscale) % DEC_DIGITS
+    cdef Py_ssize_t wi = 0
+    cdef Py_ssize_t mod = (ndigits - dscale) % DEC_DIGITS
     if mod < 0:
         # the difference between C and Py % operator
         mod += 4
@@ -691,14 +726,25 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
         wi = DEC_DIGITS - mod
         ndigits += wi
 
-    cdef int tmp = nzdigits + wi
-    cdef int pgdigits = tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1)
+    # The weight is an int16: the digits before the decimal point are limited
+    # even if the number of pg digits would fit in its uint16 field.
+    # Note: ndigits + exp is a multiple of DEC_DIGITS, so C and Py division
+    # agree on the result even if the value is negative.
+    cdef Py_ssize_t weight = (ndigits + exp) // DEC_DIGITS - 1
+    if weight > MAX_WEIGHT:
+        raise e.DataError(
+            "decimal too large for PostgreSQL numeric binary format"
+            f" (maximum {MAX_PGDIGITS} base-10000 digits)"
+        )
+
+    cdef Py_ssize_t tmp = nzdigits + wi
+    cdef Py_ssize_t pgdigits = tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1)
     length = sizeof(behead) + pgdigits * sizeof(uint16_t)
     buf = <uint16_t*>CDumper.ensure_size(rv, offset, length)
-    behead[0] = endian.htobe16(pgdigits)
-    behead[1] = endian.htobe16(<int16_t>((ndigits + exp) // DEC_DIGITS - 1))
+    behead[0] = endian.htobe16(<uint16_t>pgdigits)
+    behead[1] = endian.htobe16(<uint16_t><int16_t>weight)
     behead[2] = endian.htobe16(NUMERIC_NEG) if sign else endian.htobe16(NUMERIC_POS)
-    behead[3] = endian.htobe16(dscale)
+    behead[3] = endian.htobe16(<uint16_t>dscale)
     memcpy(buf, behead, sizeof(behead))
     buf += 4
 
@@ -803,16 +849,23 @@ cdef Py_ssize_t dump_int_to_numeric_binary(
     cdef Py_ssize_t nbits = obj.bit_length()
     cdef Py_ssize_t ndigits = <Py_ssize_t>(nbits * BIT_PER_PGDIGIT) + 1
     # ndigits is uint16 in the wire format, but the weight below is int16.
-    # Since an integer's weight is ndigits - 1, INT16_MAX + 1 is valid.
-    if ndigits > INT16_MAX + 1:
+    # Since an integer's weight is ndigits - 1, MAX_PGDIGITS is the last
+    # valid count.
+    if ndigits > MAX_PGDIGITS:
+        global MAX_NUMERIC_INT
+        if MAX_NUMERIC_INT is None:
+            # Note: use pow(), not '**', which Cython would compile into a
+            # C double pow(), returning inf instead of an exact integer.
+            MAX_NUMERIC_INT = pow(10_000, MAX_PGDIGITS)
+
         # The bit-length estimate may include one leading zero PG digit.
         # Resolve the boundary exactly before rejecting the value.
-        if abs(obj) >= pow(10_000, INT16_MAX + 1):
+        if abs(obj) >= MAX_NUMERIC_INT:
             raise e.DataError(
                 "integer too large for PostgreSQL numeric binary format"
-                " (maximum 32768 base-10000 digits)"
+                f" (maximum {MAX_PGDIGITS} base-10000 digits)"
             )
-        ndigits = INT16_MAX + 1
+        ndigits = MAX_PGDIGITS
 
     cdef uint16_t sign = NUMERIC_POS
     if obj < 0:

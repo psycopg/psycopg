@@ -277,6 +277,20 @@ NUMERIC_NAN = 0xC000
 NUMERIC_PINF = 0xD000
 NUMERIC_NINF = 0xF000
 
+# Limits of the numeric binary format: the weight is an int16 and the dscale
+# is stored in the lower 14 bits of the sign/dscale word.
+MAX_WEIGHT = 0x7FFF
+MAX_DSCALE = 0x3FFF
+
+# Max number of pg digits in the integral part of a numeric: the weight of an
+# integer is ndigits - 1, so this is the largest valid ndigits for an integer.
+MAX_PGDIGITS = MAX_WEIGHT + 1
+
+# The smallest integer that doesn't fit in a numeric (10_000 ** MAX_PGDIGITS).
+# It is a 131073 digits number, taking about 57KB, and it is only needed to
+# check values of that size: calculate it on first use and cache it.
+MAX_NUMERIC_INT: int | None = None
+
 _decimal_special = {
     NUMERIC_NAN: Decimal("NaN"),
     NUMERIC_PINF: Decimal("Infinity"),
@@ -443,6 +457,12 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
         # align the py digits to the pg digits if there's some py exponent
         ndigits += exp % DEC_DIGITS
 
+    if dscale > MAX_DSCALE:
+        raise e.DataError(
+            "decimal too precise for PostgreSQL numeric binary format"
+            f" (maximum {MAX_DSCALE} digits after the decimal point)"
+        )
+
     if not nzdigits:
         return _pack_numeric_head(0, 0, NUMERIC_POS, dscale)
 
@@ -452,11 +472,20 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
         wi = DEC_DIGITS - mod
         ndigits += wi
 
+    # The weight is an int16: the digits before the decimal point are limited
+    # even if the number of pg digits would fit in its uint16 field.
+    weight = (ndigits + exp) // DEC_DIGITS - 1
+    if weight > MAX_WEIGHT:
+        raise e.DataError(
+            "decimal too large for PostgreSQL numeric binary format"
+            f" (maximum {MAX_PGDIGITS} base-10000 digits)"
+        )
+
     tmp = nzdigits + wi
     out = bytearray(
         _pack_numeric_head(
             tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1),  # ndigits
-            (ndigits + exp) // DEC_DIGITS - 1,  # weight
+            weight,
             NUMERIC_NEG if sign else NUMERIC_POS,  # sign
             dscale,
         )
@@ -479,16 +508,21 @@ def dump_decimal_to_numeric_binary(obj: Decimal) -> bytearray | bytes:
 def dump_int_to_numeric_binary(obj: int) -> bytearray:
     ndigits = int(obj.bit_length() * BIT_PER_PGDIGIT) + 1
     # ndigits is uint16 in the wire format, but the weight below is int16.
-    # Since an integer's weight is ndigits - 1, 0x8000 is the last valid count.
-    if ndigits > 0x8000:
+    # Since an integer's weight is ndigits - 1, MAX_PGDIGITS is the last
+    # valid count.
+    if ndigits > MAX_PGDIGITS:
+        global MAX_NUMERIC_INT
+        if MAX_NUMERIC_INT is None:
+            MAX_NUMERIC_INT = pow(10_000, MAX_PGDIGITS)
+
         # The bit-length estimate may include one leading zero PG digit.
         # Resolve the boundary exactly before rejecting the value.
-        if abs(obj) >= pow(10_000, 0x8000):
+        if abs(obj) >= MAX_NUMERIC_INT:
             raise e.DataError(
                 "integer too large for PostgreSQL numeric binary format"
-                " (maximum 32768 base-10000 digits)"
+                f" (maximum {MAX_PGDIGITS} base-10000 digits)"
             )
-        ndigits = 0x8000
+        ndigits = MAX_PGDIGITS
 
     out = bytearray(b"\x00\x00" * (ndigits + 4))
     if obj < 0:
