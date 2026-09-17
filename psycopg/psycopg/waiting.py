@@ -15,7 +15,6 @@ import sys
 import select
 import logging
 import selectors
-from math import inf
 from time import monotonic
 from asyncio import Event, TimeoutError, get_event_loop, wait_for
 from selectors import DefaultSelector
@@ -236,7 +235,7 @@ async def wait_conn_async(
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C. 0 means no check.
+        to allow Ctrl-C.
     :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
         Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
         timeout.
@@ -275,18 +274,11 @@ async def wait_conn_async(
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                t: float | None
-                if deadline is not None:
-                    t = _wait_time(interval or inf, deadline)
-                else:
-                    t = interval or None
-                if t is not None:
-                    try:
-                        await wait_for(ev.wait(), t)
-                    except TimeoutError:
-                        pass
-                else:
-                    await ev.wait()
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                try:
+                    await wait_for(ev.wait(), t)
+                except TimeoutError:
+                    pass
             finally:
                 if reader:
                     loop.remove_reader(fileno)
