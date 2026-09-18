@@ -16,7 +16,7 @@ import select
 import logging
 import selectors
 from time import monotonic
-from asyncio import Event, TimeoutError, get_event_loop, wait_for
+from asyncio import Future, get_running_loop
 from selectors import DefaultSelector
 
 from . import errors as e
@@ -175,28 +175,40 @@ async def wait_async(
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+
+    # Don't touch the event loop before we know that we will have to wait: a
+    # generator completing without blocking (e.g. every copy() round) pays
+    # nothing more than this.
+    try:
+        s = next(gen)
+    except StopIteration as ex:
+        rv: RV = ex.value
+        return rv
+
     deadline = monotonic() + timeout if timeout is not None else None
+    loop = get_running_loop()
+    ready: int = 0
+    fut: Future[None] | None = None
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
-    ready: int
-    s: Wait
-
+    # Block on a future and resolve it from the fd callbacks, or from a timer
+    # if the interval expires first. A future is cheaper than an Event plus
+    # wait_for(), which would wrap every single wait in a Task.
     def wakeup(state: Ready) -> None:
         nonlocal ready
         ready |= state
-        ev.set()
+        if fut is not None and not fut.done():
+            fut.set_result(None)
+
+    def timedout() -> None:
+        if fut is not None and not fut.done():
+            fut.set_result(None)
 
     try:
-        s = next(gen)
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
             ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
@@ -204,10 +216,13 @@ async def wait_async(
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
                 t = interval if deadline is None else _wait_time(interval, deadline)
+                fut = loop.create_future()
+                timer = loop.call_later(t, timedout)
                 try:
-                    await wait_for(ev.wait(), t)
-                except TimeoutError:
-                    pass
+                    await fut
+                finally:
+                    timer.cancel()
+                    fut = None
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -222,7 +237,7 @@ async def wait_async(
         # Assume the connection was closed
         raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
-        rv: RV = ex.value
+        rv = ex.value
         return rv
 
 
@@ -246,39 +261,50 @@ async def wait_conn_async(
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
-    deadline = monotonic() + timeout if timeout is not None else None
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
-    ready: Ready
-    s: Wait
+    # Don't touch the event loop before we know that we will have to wait.
+    # See `wait_async()` for the rationale of this function's structure.
+    try:
+        fileno, s = next(gen)
+    except StopIteration as ex:
+        rv: RV = ex.value
+        return rv
+
+    deadline = monotonic() + timeout if timeout is not None else None
+    loop = get_running_loop()
+    ready: int = 0
+    fut: Future[None] | None = None
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
-        ready = state
-        ev.set()
+        ready |= state
+        if fut is not None and not fut.done():
+            fut.set_result(None)
+
+    def timedout() -> None:
+        if fut is not None and not fut.done():
+            fut.set_result(None)
 
     try:
-        fileno, s = next(gen)
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
-            ready = 0  # type: ignore[assignment]
+            ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
                 t = interval if deadline is None else _wait_time(interval, deadline)
+                fut = loop.create_future()
+                timer = loop.call_later(t, timedout)
                 try:
-                    await wait_for(ev.wait(), t)
-                except TimeoutError:
-                    pass
+                    await fut
+                finally:
+                    timer.cancel()
+                    fut = None
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -289,8 +315,11 @@ async def wait_conn_async(
             if deadline is not None and monotonic() >= deadline:
                 raise e._WaitTimeout("wait timeout expired")
 
+    except OSError as ex:
+        # Assume the connection was closed
+        raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
-        rv: RV = ex.value
+        rv = ex.value
         return rv
 
 
