@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.3.2 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.3.2
+^^^^^^^^^^^^^^^^^^
 
 - Propagate cancellation and other base exceptions raised in connection check
   (:ticket:`#1401`).
 
-
-Current release
----------------
 
 psycopg_pool 3.3.1
 ^^^^^^^^^^^^^^^^^^
