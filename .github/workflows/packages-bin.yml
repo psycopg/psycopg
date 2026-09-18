@@ -267,6 +267,7 @@ jobs:
           package-dir: psycopg_binary
         env:
           CIBW_PLATFORM: pyodide
+          CIBW_BUILD: cp314-pyodide_wasm32
           CIBW_BEFORE_BUILD_PYODIDE: >-
             ./tools/ci/wheel_pyodide_before_build.sh
           CIBW_ENVIRONMENT_PYODIDE: >-
