@@ -24,6 +24,8 @@ Psycopg 3.3.6 (unreleased)
 - Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
 - Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
 - Better guards dumping large Python `!int` to binary numeric (:ticket:`#1414`).
+- Improve performance of async queries by reducing the overhead of the
+  `!wait_async()` function (:ticket:`#1331`).
 
 
 Current release
