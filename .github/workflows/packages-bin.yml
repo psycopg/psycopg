@@ -9,6 +9,12 @@ name: Build binary packages
 
 on:
   push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
     paths:
       - '.github/workflows/packages-bin.yml'
   workflow_dispatch:
@@ -43,7 +49,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
@@ -124,7 +130,7 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
@@ -178,7 +184,7 @@ jobs:
   windows:  # {{{
     # TODO: move it back to windows-latest when the default runner switches.
     runs-on: windows-2025
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
