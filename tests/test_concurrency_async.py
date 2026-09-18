@@ -159,7 +159,7 @@ import psycopg
 
 async def main():
     ctrl_c = False
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     async with await psycopg.AsyncConnection.connect({dsn!r}) as conn:
         loop.add_signal_handler(signal.SIGINT, conn.cancel)
         cur = conn.cursor()

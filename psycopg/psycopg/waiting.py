@@ -16,7 +16,7 @@ import select
 import logging
 import selectors
 from time import monotonic
-from asyncio import Event, TimeoutError, get_event_loop, wait_for
+from asyncio import Event, TimeoutError, get_running_loop, wait_for
 from selectors import DefaultSelector
 
 from . import errors as e
@@ -180,7 +180,7 @@ async def wait_async(
     # Use an event to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
     ev = Event()
-    loop = get_event_loop()
+    loop = get_running_loop()
     ready: int
     s: Wait
 
@@ -251,7 +251,7 @@ async def wait_conn_async(
     # Use an event to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
     ev = Event()
-    loop = get_event_loop()
+    loop = get_running_loop()
     ready: Ready
     s: Wait
 

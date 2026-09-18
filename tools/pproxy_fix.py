@@ -12,8 +12,9 @@ from pproxy.server import main as main_  # type: ignore[import-untyped]
 
 
 def main() -> Any:
-    # Before Python 3.14 `get_event_loop()` used to create a new loop.
-    # From Python 3.14 it raises a `RuntimeError`.
+    # Before Python 3.14 `get_event_loop()` used to create a new loop. From
+    # Python 3.14 it raises a `RuntimeError`. There is no running loop here, so
+    # `get_running_loop()` would always raise.
     try:
         asyncio.get_event_loop()
     except RuntimeError:
