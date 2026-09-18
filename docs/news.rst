@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.6 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.6
+^^^^^^^^^^^^^
 
 - Add support for Python 3.15 (:ticket:`#1245`).
 - Don't wait forever for a query to terminate after interrupting it, for
@@ -27,9 +27,6 @@ Psycopg 3.3.6 (unreleased)
 - Improve performance of async queries by reducing the overhead of the
   `!wait_async()` function (:ticket:`#1331`).
 
-
-Current release
----------------
 
 Psycopg 3.3.5
 ^^^^^^^^^^^^^
