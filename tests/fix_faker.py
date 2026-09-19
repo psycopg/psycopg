@@ -549,24 +549,44 @@ class Faker:
         if length is None:
             length = randrange(0, self.list_max_length)
 
+        unit = discrete_unit(spec[1])
+
+        def canonic(r):
+            """Return the range as the server would store it.
+
+            Ranges of a discrete type are canonicalised to '[)' bounds.
+            """
+            if unit is None or r.isempty:
+                return r
+
+            lower, upper = r.lower, r.upper
+            if lower is not None and not r.lower_inc:
+                lower += unit
+            if upper is not None and r.upper_inc:
+                upper += unit
+
+            return type(r)(lower, upper, "[)")
+
         def overlap(r1, r2):
-            l1, u1 = r1.lower, r1.upper
-            l2, u2 = r2.lower, r2.upper
-            if l1 is None and l2 is None:
-                return True
-            elif l1 is None:
-                l1 = l2
-            elif l2 is None:
-                l2 = l1
+            """True if the server would return the two ranges as a single one.
 
-            if u1 is None and u2 is None:
-                return True
-            elif u1 is None:
-                u1 = u2
-            elif u2 is None:
-                u2 = u1
+            Ranges are merged not only if they overlap, but also if they are
+            contiguous: '{[1,5],[6,9]}' comes back as '{[1,10)}'.
+            """
+            r1, r2 = canonic(r1), canonic(r2)
 
-            return l1 <= u2 and l2 <= u1
+            # Sort them so that r1 is the one starting first (None is -inf)
+            if r1.lower is not None and (r2.lower is None or r2.lower < r1.lower):
+                r1, r2 = r2, r1
+
+            # r1 reaches +inf, or they both start at -inf
+            if r1.upper is None or r2.lower is None:
+                return True
+
+            if r1.upper > r2.lower:
+                return True
+
+            return r1.upper == r2.lower and (r1.upper_inc or r2.lower_inc)
 
         out: list[Range[Any]] = []
         for i in range(length):
@@ -658,6 +678,8 @@ class Faker:
         ):
             return spec[0](empty=True)
 
+        unit = discrete_unit(spec[1])
+
         while True:
             bounds: list[Any] = []
             while len(bounds) < 2:
@@ -686,9 +708,20 @@ class Faker:
                 if bounds[0] is bounds[1] is None:
                     continue
 
+            r = spec[0](bounds[0], bounds[1], choice("[(") + choice("])"))
+
+            # A discrete range may become empty once canonicalised, e.g.
+            # '(5,6)' is returned as 'empty'. Don't generate such a range:
+            # in a multirange it would be dropped altogether.
+            if unit is not None:
+                if r.lower is not None and r.upper is not None:
+                    lower = r.lower if r.lower_inc else r.lower + unit
+                    upper = r.upper + unit if r.upper_inc else r.upper
+                    if lower >= upper:
+                        continue
+
             break
 
-        r = spec[0](bounds[0], bounds[1], choice("[(") + choice("])"))
         return r
 
     def example_Range(self, spec):
@@ -720,14 +753,7 @@ class Faker:
             want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
 
         # Normalise discrete ranges
-        unit: dt.timedelta | int | None
-        if spec[1] is dt.date:
-            unit = dt.timedelta(days=1)
-        elif type(spec[1]) is type and issubclass(spec[1], int):
-            unit = 1
-        else:
-            unit = None
-
+        unit = discrete_unit(spec[1])
         if unit is not None:
             if want.lower is not None and not want.lower_inc:
                 want = type(want)(want.lower + unit, want.upper, "[" + want.bounds[1])
@@ -934,3 +960,17 @@ def deep_import(name):
             thing = importlib.import_module(".".join(seen))
 
     return thing
+
+
+def discrete_unit(spec: Any) -> Any:
+    """Return the unit of a discrete range subtype, None if it is continuous.
+
+    The server canonicalises the bounds of discrete ranges to '[)', adding a
+    unit to the exclusive lower bound and to the inclusive upper bound.
+    """
+    if spec is dt.date:
+        return dt.timedelta(days=1)
+    elif type(spec) is type and issubclass(spec, int):
+        return 1
+    else:
+        return None
