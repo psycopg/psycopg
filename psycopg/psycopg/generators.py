@@ -23,7 +23,6 @@ generator should probably yield the same value again in order to wait more.
 from __future__ import annotations
 
 import logging
-from time import monotonic
 from collections import deque
 
 from . import errors as e
@@ -59,12 +58,10 @@ READY_RW = Ready.RW
 logger = logging.getLogger("psycopg")
 
 
-def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
+def _connect(conninfo: str) -> PQGenConn[PGconn]:
     """
     Generator to create a database connection without blocking.
     """
-    deadline = monotonic() + timeout if timeout else 0.0
-
     # To debug slowdown during connection:
     #
     #   $ PSYCOPG_IMPL=python python
@@ -88,8 +85,6 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
             wait = WAIT_R if status == POLL_READING else WAIT_W
             while True:
                 ready = yield conn.socket, wait
-                if deadline and monotonic() > deadline:
-                    raise e.ConnectionTimeout("connection timeout expired")
                 if ready:
                     break
 
@@ -110,12 +105,8 @@ def _connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[PGconn]:
     return conn
 
 
-def _cancel(cancel_conn: PGcancelConn, *, timeout: float = 0.0) -> PQGenConn[None]:
-    deadline = monotonic() + timeout if timeout else 0.0
+def _cancel(cancel_conn: PGcancelConn) -> PQGenConn[None]:
     while True:
-        if deadline and monotonic() > deadline:
-            raise e.CancellationTimeout("cancellation timeout expired")
-
         if (status := cancel_conn.poll()) == POLL_OK:
             break
         elif status == POLL_READING:
@@ -292,7 +283,13 @@ def _consume_notifies(pgconn: PGconn) -> None:
 
 
 def notifies(pgconn: PGconn) -> PQGen[list[pq.PGnotify]]:
-    yield WAIT_R
+    """
+    Generator waiting for data from the server and returning the notifications.
+
+    The generator waits indefinitely: use the wait function `!timeout` to stop.
+    """
+    while not (yield WAIT_R):
+        continue
     pgconn.consume_input()
 
     ns = []

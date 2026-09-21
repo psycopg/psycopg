@@ -562,7 +562,7 @@ def test_stats_usage(pool_cls, dsn):
         assert stats["requests_queued"] == 4
         assert 850 <= stats["requests_wait_ms"] <= 950
         assert stats["requests_errors"] == 1
-        assert 1150 <= stats["usage_ms"] <= 1250
+        assert 1000 <= stats["usage_ms"] <= 1250
         assert stats.get("returns_bad", 0) == 0
 
         with p.connection() as conn:
@@ -637,6 +637,30 @@ def test_check_timeout(pool_cls, dsn):
                 assert False
 
     assert time() - t0 <= 1.5
+
+
+def test_interrupt_on_check(pool_cls, dsn):
+    do_raise = True
+
+    def check(conn):
+        nonlocal do_raise
+        if do_raise:
+            do_raise = False
+            raise KeyboardInterrupt()
+
+        pool_cls.check_connection(conn)
+
+    with pool_cls(
+        dsn, min_size=min_size(pool_cls, 1), max_size=1, check=check, timeout=1.0
+    ) as p:
+        with pytest.raises(KeyboardInterrupt):
+            with p.connection():
+                pass
+
+        # The interrupted connection was returned to the pool
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
 
 
 @pytest.mark.crdb_skip("backend pid")

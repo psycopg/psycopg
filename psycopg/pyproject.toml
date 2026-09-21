@@ -7,7 +7,7 @@ name = "psycopg"
 description = "PostgreSQL database adapter for Python"
 
 # STOP AND READ! if you change:
-version = "3.3.6.dev1"
+version = "3.3.7.dev1"
 # also change:
 # - `docs/news.rst` to declare this as the current version or an unreleased one;
 # - `psycopg_c/pyproject.toml` to the same version;
@@ -29,6 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Database",
@@ -60,10 +61,10 @@ content-type = "text/x-rst"
 
 [project.optional-dependencies]
 c = [
-    "psycopg-c == 3.3.6.dev1; implementation_name != \"pypy\"",
+    "psycopg-c == 3.3.7.dev1; implementation_name != \"pypy\"",
 ]
 binary = [
-    "psycopg-binary == 3.3.6.dev1; implementation_name != \"pypy\"",
+    "psycopg-binary == 3.3.7.dev1; implementation_name != \"pypy\"",
 ]
 pool = [
     "psycopg-pool",
@@ -84,9 +85,8 @@ dev = [
     "cython-lint >= 0.21",
     "dnspython >= 2.1",
     "flake8 >= 4.0",
-    # TODO: check why isort-psycopg doesn't work with isort 9
-    "isort[colors] >= 6.0, < 9.0",
-    "isort-psycopg",
+    "isort[colors] >= 6.0",
+    "isort-psycopg >= 0.0.3",
     "mypy >= 2.1.0",
     "pre-commit >= 4.0.1",
     "types-setuptools >= 57.4",

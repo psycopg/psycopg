@@ -2,6 +2,12 @@ name: Build pool packages
 
 on:
   push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
     paths:
       - '.github/workflows/packages-pool.yml'
   workflow_dispatch:
@@ -12,7 +18,7 @@ jobs:
 
   sdist:
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false

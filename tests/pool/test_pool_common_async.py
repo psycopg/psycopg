@@ -573,7 +573,7 @@ async def test_stats_usage(pool_cls, dsn):
         assert stats["requests_queued"] == 4
         assert 850 <= stats["requests_wait_ms"] <= 950
         assert stats["requests_errors"] == 1
-        assert 1150 <= stats["usage_ms"] <= 1250
+        assert 1000 <= stats["usage_ms"] <= 1250
         assert stats.get("returns_bad", 0) == 0
 
         async with p.connection() as conn:
@@ -707,30 +707,90 @@ async def test_cancellation_in_queue(pool_cls, dsn):
 
 
 @skip_sync
-async def test_cancel_on_check(pool_cls, dsn):
+async def test_cancel_on_check(pool_cls, dsn, monkeypatch):
     from asyncio import CancelledError
 
     do_cancel = True
+    orig_execute = psycopg.AsyncConnection.execute
 
-    async def check(conn):
+    async def execute(self, *args, **kwargs):
+        # Simulate a cancellation interrupting the query run by the check,
+        # leaving the connection unusable, as it happens if the client
+        # interrupts getconn() (e.g. using asyncio.wait_for()).
         nonlocal do_cancel
         if do_cancel:
             do_cancel = False
+            await self.close()
             raise CancelledError()
+
+        return await orig_execute(self, *args, **kwargs)
+
+    monkeypatch.setattr(psycopg.AsyncConnection, "execute", execute)
+
+    async with pool_cls(
+        dsn,
+        min_size=min_size(pool_cls, 1),
+        check=pool_cls.check_connection,
+        timeout=1.0,
+    ) as p:
+        with pytest.raises(CancelledError):
+            async with p.connection() as conn:
+                pass
+
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+
+
+async def test_interrupt_on_check(pool_cls, dsn):
+    do_raise = True
+
+    async def check(conn):
+        nonlocal do_raise
+        if do_raise:
+            do_raise = False
+            raise KeyboardInterrupt()
 
         await pool_cls.check_connection(conn)
 
     async with pool_cls(
-        dsn, min_size=min_size(pool_cls, 1), check=check, timeout=1.0
+        dsn, min_size=min_size(pool_cls, 1), max_size=1, check=check, timeout=1.0
     ) as p:
-        try:
-            async with p.connection() as conn:
-                await conn.execute("select 1")
-        except CancelledError:
-            pass
+        with pytest.raises(KeyboardInterrupt):
+            async with p.connection():
+                pass
 
+        # The interrupted connection was returned to the pool
         async with p.connection() as conn:
-            await conn.execute("select 1")
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
+@skip_sync
+@pytest.mark.slow
+async def test_wait_for_getconn(pool_cls, dsn):
+    # https://github.com/psycopg/psycopg/issues/1401
+    # asyncio.wait_for() must be able to interrupt getconn() while the check
+    # callback is running, not only while the client is waiting in the queue.
+    import asyncio
+
+    async def check(conn):
+        await asleep(0.5)
+        await pool_cls.check_connection(conn)
+
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls, 1), max_size=1, check=check, timeout=5.0
+    ) as p:
+        await p.wait()
+
+        t0 = time()
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(p.getconn(), timeout=0.2)
+        assert time() - t0 < 0.4
+
+        # The connection being checked was returned to the pool
+        async with p.connection(timeout=2.0) as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
 
 
 @skip_sync

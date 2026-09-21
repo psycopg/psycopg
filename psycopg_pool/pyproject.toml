@@ -7,7 +7,7 @@ name = "psycopg-pool"
 description = "Connection Pool for Psycopg"
 
 # STOP AND READ! if you change:
-version = "3.3.2.dev1"
+version = "3.3.3.dev1"
 # also change:
 # - `docs/news_pool.rst` to declare this version current or unreleased
 
@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Database",

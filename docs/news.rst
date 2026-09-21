@@ -10,6 +10,24 @@
 Current release
 ---------------
 
+Psycopg 3.3.6
+^^^^^^^^^^^^^
+
+- Add support for Python 3.15 (:ticket:`#1245`).
+- Don't wait forever for a query to terminate after interrupting it, for
+  instance if the server is unresponsive. The fix requires libpq 17 or newer
+  (:ticket:`#1371`).
+- Cancel a running query upon receiving `!SystemExit` (:ticket:`#1384`).
+- Report `!None` instead of ``65535`` as the `Column.precision` of an
+  :sql:`interval` column declared with a fields restriction and no explicit
+  precision, such as e.g. :sql:`interval day to second` (:ticket:`#1397`).
+- Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
+- Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
+- Better guards dumping large Python `!int` to binary numeric (:ticket:`#1414`).
+- Improve performance of async queries by reducing the overhead of the
+  `!wait_async()` function (:ticket:`#1331`).
+
+
 Psycopg 3.3.5
 ^^^^^^^^^^^^^
 

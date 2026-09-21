@@ -159,7 +159,7 @@ import psycopg
 
 async def main():
     ctrl_c = False
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     async with await psycopg.AsyncConnection.connect({dsn!r}) as conn:
         loop.add_signal_handler(signal.SIGINT, conn.cancel)
         cur = conn.cursor()
@@ -201,18 +201,27 @@ asyncio.run(main())
 
 @pytest.mark.slow
 @pytest.mark.subprocess
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
-)
 @pytest.mark.crdb("skip")
 def test_ctrl_c(conn, dsn):
     # https://github.com/psycopg/psycopg/issues/543
+    # The coroutine doesn't receive KeyboardInterrupt but CancelledError: on
+    # Python >= 3.11 asyncio.run() handles SIGINT by cancelling the main task;
+    # on previous versions (and on Windows, where the script handles SIGBREAK)
+    # KeyboardInterrupt is raised in the event loop and asyncio.run() cancels
+    # the pending tasks.
     conn.autocommit = True
 
     APPNAME = "test_ctrl_c"
     script = f"""\
+import sys
+import signal
 import asyncio
+import selectors
 import psycopg
+
+if sys.platform == "win32":
+    # Ctrl-C cannot be sent to a single process group: use Ctrl-Break instead.
+    signal.signal(signal.SIGBREAK, signal.default_int_handler)
 
 async def main():
     async with await psycopg.AsyncConnection.connect(
@@ -220,11 +229,20 @@ async def main():
     ) as conn:
         await conn.execute("select pg_sleep(5)")
 
-asyncio.run(main())
+kwargs = {{}}
+if sys.platform == "win32":
+    if sys.version_info >= (3, 12):
+        kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+            selectors.SelectSelector()
+        )
+    else:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+asyncio.run(main(), **kwargs)
 """
     if sys.platform == "win32":
         creationflags = sp.CREATE_NEW_PROCESS_GROUP
-        sig = signal.CTRL_C_EVENT
+        sig = signal.CTRL_BREAK_EVENT
     else:
         creationflags = 0
         sig = signal.SIGINT
@@ -270,6 +288,98 @@ asyncio.run(main())
 
     t1 = time.time()
     assert t1 - t0 < 1.0
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
+@pytest.mark.crdb("skip")
+def test_systemexit_cancels_query(conn, dsn):
+    # https://github.com/psycopg/psycopg/issues/1384
+    # SystemExit raised by the signal handler is usually raised in the event
+    # loop, not in the coroutine, which receives a CancelledError instead
+    # when asyncio.run() cancels the pending tasks.
+    conn.autocommit = True
+
+    APPNAME = "test_systemexit_cancels_query"
+    EXIT_CODE = 42
+    script = f"""\
+import sys
+import signal
+import asyncio
+import selectors
+import psycopg
+
+# On Windows SIGTERM cannot be handled: use Ctrl-Break instead.
+sig = signal.SIGBREAK if sys.platform == "win32" else signal.SIGTERM
+signal.signal(sig, lambda signum, frame: sys.exit({EXIT_CODE}))
+
+async def main():
+    async with await psycopg.AsyncConnection.connect(
+        {dsn!r}, application_name={APPNAME!r}
+    ) as conn:
+        await conn.execute("select pg_sleep(60)")
+
+kwargs = {{}}
+if sys.platform == "win32":
+    if sys.version_info >= (3, 12):
+        kwargs["loop_factory"] = lambda: asyncio.SelectorEventLoop(
+            selectors.SelectSelector()
+        )
+    else:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+asyncio.run(main(), **kwargs)
+"""
+
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_BREAK_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGTERM
+
+    proc = sp.Popen([sys.executable, "-s", "-c", script], creationflags=creationflags)
+    try:
+        # Wait for the query to be running, otherwise the signal might be
+        # received before the query is sent and there is nothing to cancel.
+        for i in range(50):
+            cur = conn.execute(
+                """
+                select pid from pg_stat_activity
+                where application_name = %s and state = 'active'
+                """,
+                (APPNAME,),
+            )
+            if rec := cur.fetchone():
+                pid = rec[0]
+                break
+            time.sleep(0.1)
+        else:
+            assert False, "query didn't start?"
+
+        t0 = time.time()
+        proc.send_signal(sig)
+        # Make sure the script exited via SystemExit, not by the signal.
+        assert proc.wait(timeout=10) == EXIT_CODE
+
+        # Closing the connection is not enough to stop the backend: the query
+        # would keep running until pg_sleep() returns, unless canceled.
+        for i in range(20):
+            cur = conn.execute("select 1 from pg_stat_activity where pid = %s", (pid,))
+            if not cur.fetchone():
+                break
+            time.sleep(0.1)
+        else:
+            conn.execute("select pg_cancel_backend(%s)", (pid,))
+            assert False, "query not canceled on SystemExit"
+
+        t1 = time.time()
+        assert t1 - t0 < 1.0
+
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
 
 
 @pytest.mark.slow

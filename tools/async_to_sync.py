@@ -194,10 +194,25 @@ ENTRYPOINT ["tools/async_to_sync.py"]
 
     cmdline = sys.argv[1:]
     cmdline.remove(f"--{engine}")
-    cmdline = [engine, "run", "--rm", "-v", f"{PROJECT_DIR}:/src", tag] + cmdline
+    runopts = ["--rm", "-v", f"{PROJECT_DIR}:/src"]
+    if engine == "docker" and hasattr(os, "getuid") and not _is_docker_rootless():
+        # Run as the caller, otherwise rootful docker creates files owned by
+        # root in the host. HOME is needed as a writable cache dir for black.
+        runopts += ["--user", f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp"]
+    cmdline = [engine, "run", *runopts, tag] + cmdline
     logger.info("running in container image %s (%s)", tag, engine)
     sp.check_call(cmdline)
     return 0
+
+
+def _is_docker_rootless() -> bool:
+    """
+    Return True if docker runs in rootless mode.
+
+    In rootless mode the container root is mapped to the caller in the host.
+    """
+    cmdline = ["docker", "info", "--format", "{{.SecurityOptions}}"]
+    return "rootless" in sp.check_output(cmdline, text=True)
 
 
 def async_to_sync(tree: ast.AST, filepath: Path | None = None) -> ast.AST:

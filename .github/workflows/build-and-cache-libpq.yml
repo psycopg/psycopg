@@ -34,6 +34,12 @@ name: Build and cache libpq
 on:
   workflow_dispatch:
   push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
     paths:
       - .github/workflows/build-and-cache-libpq.yml
 
@@ -68,7 +74,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: true
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
@@ -119,7 +125,7 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: true
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false

@@ -6,7 +6,6 @@ C implementation of generators for the communication protocols with the libpq
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
-from time import monotonic
 from collections import deque
 
 from psycopg import errors as e
@@ -28,7 +27,7 @@ cdef int READY_W = Ready.W
 cdef int READY_RW = Ready.RW
 
 
-def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
+def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     """
     Generator to create a database connection without blocking.
     """
@@ -37,10 +36,6 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
     cdef object wait, ready
-    cdef double deadline = 0.0
-
-    if timeout:
-        deadline = monotonic() + timeout
 
     logger.debug("connection started: %s", conn)
     while True:
@@ -62,8 +57,6 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
             wait = WAIT_R if poll_status == libpq.PGRES_POLLING_READING else WAIT_W
             while True:
                 ready = yield (libpq.PQsocket(pgconn_ptr), wait)
-                if deadline and monotonic() > deadline:
-                    raise e.ConnectionTimeout("connection timeout expired")
                 if ready:
                     break
 
@@ -85,17 +78,11 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     return conn
 
 
-def cancel(pq.PGcancelConn cancel_conn, *, timeout: float = 0.0) -> PQGenConn[None]:
+def cancel(pq.PGcancelConn cancel_conn) -> PQGenConn[None]:
     cdef libpq.PGcancelConn *pgcancelconn_ptr = cancel_conn.pgcancelconn_ptr
     cdef int status
-    cdef double deadline = 0.0
-
-    if timeout:
-        deadline = monotonic() + timeout
 
     while True:
-        if deadline and monotonic() > deadline:
-            raise e.CancellationTimeout("cancellation timeout expired")
         with nogil:
             status = libpq.PQcancelPoll(pgcancelconn_ptr)
         if status == libpq.PGRES_POLLING_OK:

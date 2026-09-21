@@ -15,7 +15,8 @@ import sys
 import select
 import logging
 import selectors
-from asyncio import Event, TimeoutError, get_event_loop, wait_for
+from time import monotonic
+from asyncio import Future, get_running_loop
 from selectors import DefaultSelector
 
 from . import errors as e
@@ -53,7 +54,16 @@ else:
         return
 
 
-def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+def _wait_time(interval: float, deadline: float) -> float:
+    """
+    Return the time to wait before the next wake-up, not going past the deadline.
+    """
+    return max(0.0, min(interval, deadline - monotonic()))
+
+
+def wait_selector(
+    gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Wait for a generator using the best strategy available.
 
@@ -62,6 +72,9 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
+    :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
+        Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
+        timeout.
     :return: whatever `!gen` returns on completion.
 
     Consume `!gen`, scheduling `fileno` for completion when it is reported to
@@ -69,29 +82,38 @@ def wait_selector(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+    deadline = monotonic() + timeout if timeout is not None else None
     try:
         s = next(gen)
         with DefaultSelector() as sel:
             sel.register(fileno, (last_s := s))
             while True:
-                if not (rlist := sel.select(timeout=interval)):
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                if not (rlist := sel.select(timeout=t)):
                     # Check if it was a timeout or we were disconnected
                     _check_fd_closed(fileno)
                     gen.send(READY_NONE)
-                    continue
+                else:
+                    ready = rlist[0][1]
+                    s = gen.send(ready)
+                    if last_s != s:
+                        sel.unregister(fileno)
+                        sel.register(fileno, (last_s := s))
 
-                ready = rlist[0][1]
-                s = gen.send(ready)
-                if last_s != s:
-                    sel.unregister(fileno)
-                    sel.register(fileno, (last_s := s))
+                # Check the deadline after resuming the generator, so that the
+                # data already available is processed and a timeout of 0 polls
+                # once.
+                if deadline is not None and monotonic() >= deadline:
+                    raise e._WaitTimeout("wait timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
 
 
-def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
+def wait_conn(
+    gen: PQGenConn[RV], interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Wait for a connection generator using the best strategy available.
 
@@ -99,6 +121,9 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
         (fd, `Ready`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
+    :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
+        Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
+        timeout.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
@@ -106,27 +131,33 @@ def wait_conn(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+    deadline = monotonic() + timeout if timeout is not None else None
     try:
         fileno, s = next(gen)
         with DefaultSelector() as sel:
             sel.register((last_fileno := fileno), (last_s := s))
             while True:
-                if not (rlist := sel.select(timeout=interval)):
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                if not (rlist := sel.select(timeout=t)):
                     gen.send(READY_NONE)
-                    continue
+                else:
+                    ready = rlist[0][1]
+                    fileno, s = gen.send(ready)
+                    if fileno != last_fileno or last_s != s:
+                        sel.unregister(last_fileno)
+                        sel.register((last_fileno := fileno), (last_s := s))
 
-                ready = rlist[0][1]
-                fileno, s = gen.send(ready)
-                if fileno != last_fileno or last_s != s:
-                    sel.unregister(last_fileno)
-                    sel.register((last_fileno := fileno), (last_s := s))
+                if deadline is not None and monotonic() >= deadline:
+                    raise e._WaitTimeout("wait timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
 
 
-async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+async def wait_async(
+    gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -135,6 +166,9 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     :param fileno: the file descriptor to wait on.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
+    :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
+        Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
+        timeout.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
@@ -142,36 +176,53 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
-    ready: int
-    s: Wait
+    # Don't touch the event loop before we know that we will have to wait: a
+    # generator completing without blocking (e.g. every copy() round) pays
+    # nothing more than this.
+    try:
+        s = next(gen)
+    except StopIteration as ex:
+        rv: RV = ex.value
+        return rv
 
+    deadline = monotonic() + timeout if timeout is not None else None
+    loop = get_running_loop()
+    ready: int = 0
+    fut: Future[None] | None = None
+
+    # Block on a future and resolve it from the fd callbacks, or from a timer
+    # if the interval expires first. A future is cheaper than an Event plus
+    # wait_for(), which would wrap every single wait in a Task.
     def wakeup(state: Ready) -> None:
         nonlocal ready
         ready |= state
-        ev.set()
+        if fut is not None and not fut.done():
+            fut.set_result(None)
+
+    def timedout() -> None:
+        if fut is not None and not fut.done():
+            fut.set_result(None)
 
     try:
-        s = next(gen)
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
             ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                fut = loop.create_future()
+                timer = loop.call_later(t, timedout)
                 try:
-                    await wait_for(ev.wait(), interval)
-                except TimeoutError:
-                    pass
+                    await fut
+                finally:
+                    timer.cancel()
+                    fut = None
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -179,15 +230,20 @@ async def wait_async(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                     loop.remove_writer(fileno)
             s = gen.send(ready)
 
+            if deadline is not None and monotonic() >= deadline:
+                raise e._WaitTimeout("wait timeout expired")
+
     except OSError as ex:
         # Assume the connection was closed
         raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
-        rv: RV = ex.value
+        rv = ex.value
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
+async def wait_conn_async(
+    gen: PQGenConn[RV], interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
@@ -195,6 +251,9 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
         (fd, `Ready`) pairs when it would block.
     :param interval: interval (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
+    :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
+        Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
+        timeout.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
@@ -203,39 +262,49 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
 
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
-    loop = get_event_loop()
-    ready: Ready
-    s: Wait
+    # Don't touch the event loop before we know that we will have to wait.
+    # See `wait_async()` for the rationale of this function's structure.
+    try:
+        fileno, s = next(gen)
+    except StopIteration as ex:
+        rv: RV = ex.value
+        return rv
+
+    deadline = monotonic() + timeout if timeout is not None else None
+    loop = get_running_loop()
+    ready: int = 0
+    fut: Future[None] | None = None
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
-        ready = state
-        ev.set()
+        ready |= state
+        if fut is not None and not fut.done():
+            fut.set_result(None)
+
+    def timedout() -> None:
+        if fut is not None and not fut.done():
+            fut.set_result(None)
 
     try:
-        fileno, s = next(gen)
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
-            ev.clear()
-            ready = 0  # type: ignore[assignment]
+            ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                if interval:
-                    try:
-                        await wait_for(ev.wait(), interval)
-                    except TimeoutError:
-                        pass
-                else:
-                    await ev.wait()
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                fut = loop.create_future()
+                timer = loop.call_later(t, timedout)
+                try:
+                    await fut
+                finally:
+                    timer.cancel()
+                    fut = None
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -243,15 +312,23 @@ async def wait_conn_async(gen: PQGenConn[RV], interval: float = 0.0) -> RV:
                     loop.remove_writer(fileno)
             fileno, s = gen.send(ready)
 
+            if deadline is not None and monotonic() >= deadline:
+                raise e._WaitTimeout("wait timeout expired")
+
+    except OSError as ex:
+        # Assume the connection was closed
+        raise e.OperationalError("connection socket closed") from ex
     except StopIteration as ex:
-        rv: RV = ex.value
+        rv = ex.value
         return rv
 
 
 # Specialised implementation of wait functions.
 
 
-def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+def wait_select(
+    gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Wait for a generator using select where supported.
 
@@ -259,17 +336,19 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+    deadline = monotonic() + timeout if timeout is not None else None
     try:
         s = next(gen)
 
         empty = ()
         fnlist = (fileno,)
         while True:
+            t = interval if deadline is None else _wait_time(interval, deadline)
             rl, wl, xl = select.select(
                 fnlist if s & WAIT_R else empty,
                 fnlist if s & WAIT_W else empty,
                 fnlist,
-                interval,
+                t,
             )
             if xl:
                 _check_fd_closed(fileno)
@@ -282,6 +361,9 @@ def wait_select(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
                 ready |= READY_W
 
             s = gen.send(ready)
+
+            if deadline is not None and monotonic() >= deadline:
+                raise e._WaitTimeout("wait timeout expired")
 
     except OSError as ex:
         # This happens on macOS but not on Linux (the xl list is set)
@@ -301,7 +383,9 @@ else:
     _epoll_evmasks = {}
 
 
-def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+def wait_epoll(
+    gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Wait for a generator using epoll where supported.
 
@@ -319,6 +403,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+    deadline = monotonic() + timeout if timeout is not None else None
     try:
         s = next(gen)
 
@@ -329,19 +414,23 @@ def wait_epoll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
             evmask = _epoll_evmasks[s]
             epoll.register(fileno, evmask)
             while True:
-                if not (fileevs := epoll.poll(interval)):
+                t = interval if deadline is None else _wait_time(interval, deadline)
+                if not (fileevs := epoll.poll(t)):
                     _check_fd_closed(fileno)
                     gen.send(READY_NONE)
-                    continue
-                ev = fileevs[0][1]
-                ready = 0
-                if ev & select.EPOLLIN:
-                    ready = READY_R
-                if ev & select.EPOLLOUT:
-                    ready |= READY_W
-                s = gen.send(ready)
-                evmask = _epoll_evmasks[s]
-                epoll.modify(fileno, evmask)
+                else:
+                    ev = fileevs[0][1]
+                    ready = 0
+                    if ev & select.EPOLLIN:
+                        ready = READY_R
+                    if ev & select.EPOLLOUT:
+                        ready |= READY_W
+                    s = gen.send(ready)
+                    evmask = _epoll_evmasks[s]
+                    epoll.modify(fileno, evmask)
+
+                if deadline is not None and monotonic() >= deadline:
+                    raise e._WaitTimeout("wait timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.value
@@ -359,7 +448,9 @@ else:
     _poll_evmasks = {}
 
 
-def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
+def wait_poll(
+    gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
+) -> RV:
     """
     Wait for a generator using poll where supported.
 
@@ -367,38 +458,44 @@ def wait_poll(gen: PQGen[RV], fileno: int, interval: float = 0.0) -> RV:
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
+    deadline = monotonic() + timeout if timeout is not None else None
     try:
         s = next(gen)
 
         if interval < 0:
-            interval = 0
-        else:
-            interval = int(interval * 1000.0)
+            interval = 0.0
+        interval_ms = int(interval * 1000.0)
 
         poll = select.poll()
         evmask = _poll_evmasks[s]
         poll.register(fileno, evmask)
         while True:
-            if not (fileevs := poll.poll(interval)):
+            if deadline is None:
+                t = interval_ms
+            else:
+                t = int(_wait_time(interval, deadline) * 1000.0)
+            if not (fileevs := poll.poll(t)):
                 gen.send(READY_NONE)
-                continue
+            else:
+                ev = fileevs[0][1]
 
-            ev = fileevs[0][1]
+                ready = 0
+                if ev & select.POLLIN:
+                    ready = READY_R
+                if ev & select.POLLOUT:
+                    ready |= READY_W
 
-            ready = 0
-            if ev & select.POLLIN:
-                ready = READY_R
-            if ev & select.POLLOUT:
-                ready |= READY_W
+                if not ready and ev & POLL_BAD:
+                    _check_fd_closed(fileno)
+                    # Unlikely: the exception should have been raised above
+                    raise e.OperationalError("connection socket closed")
 
-            if not ready and ev & POLL_BAD:
-                _check_fd_closed(fileno)
-                # Unlikely: the exception should have been raised above
-                raise e.OperationalError("connection socket closed")
+                s = gen.send(ready)
+                evmask = _poll_evmasks[s]
+                poll.modify(fileno, evmask)
 
-            s = gen.send(ready)
-            evmask = _poll_evmasks[s]
-            poll.modify(fileno, evmask)
+            if deadline is not None and monotonic() >= deadline:
+                raise e._WaitTimeout("wait timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.value

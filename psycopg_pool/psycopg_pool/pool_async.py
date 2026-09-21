@@ -13,7 +13,7 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, Generic, cast
 from weakref import ref
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from collections import deque
 from collections.abc import AsyncIterator
 
@@ -263,8 +263,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             conn = await self._getconn_unchecked(deadline - monotonic())
             try:
                 await self._check_connection(conn)
-            except CLIENT_EXCEPTIONS:
+            except Exception:
                 await self._putconn(conn, from_getconn=True)
+            except BaseException:
+                # Cancellation, KeyboardInterrupt etc.: don't lose the
+                # connection, but don't try again either.
+                await self._putconn(conn, from_getconn=True)
+                raise
             else:
                 logger.info("connection given by %r", self.name)
                 return conn
@@ -632,13 +637,17 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 try:
                     await conn.execute("")
                 finally:
-                    await conn.set_autocommit(False)
+                    # Avoid clobbering an exception if the connection is closed
+                    with suppress(Exception):
+                        await conn.set_autocommit(False)
             else:
                 conn.autocommit = True
                 try:
                     conn.execute("")
                 finally:
-                    conn.autocommit = False
+                    # Avoid clobbering an exception if the connection is closed
+                    with suppress(Exception):
+                        conn.autocommit = False
 
     async def reconnect_failed(self) -> None:
         """

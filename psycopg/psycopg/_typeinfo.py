@@ -303,7 +303,7 @@ class TypesRegistry:
         """
         Return the oid of a PostgreSQL type by name.
 
-        :param key: the name of the type to look for.
+        :param name: the name of the type to look for.
 
         Return the array oid if the type ends with "``[]``"
 

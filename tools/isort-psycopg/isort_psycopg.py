@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import inspect
 from typing import Any
 from collections.abc import Callable, Iterable
 
@@ -15,12 +14,10 @@ def psycosort(
     key: Callable[[str], Any] | None = None,
     reverse: bool = False,
 ) -> list[str]:
-    # Sniff whether we are sorting an import list (from module import a, b, c)
-    # or a list of modules.
-    # Tested with isort 6.0. It might break in the future!
-    is_from_import = any(
-        f for f in inspect.stack() if f.function == "_with_from_imports"
-    )
+    # isort feeds the objects of a `from module import a, b, c` list as a
+    # list, while the module lists (`import a`, `from a import`) are fed as
+    # dicts.
+    is_from_import = isinstance(to_sort, list)
 
     new_key: Callable[[str], Any] | None
     if is_from_import:

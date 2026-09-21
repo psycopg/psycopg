@@ -50,7 +50,7 @@ IDLE = pq.TransactionStatus.IDLE
 ACTIVE = pq.TransactionStatus.ACTIVE
 INTRANS = pq.TransactionStatus.INTRANS
 
-_INTERRUPTED = KeyboardInterrupt
+_INTERRUPTED = (KeyboardInterrupt, SystemExit)
 
 logger = logging.getLogger("psycopg")
 
@@ -105,8 +105,12 @@ class Connection(BaseConnection[Row]):
             logger.debug("connection attempt: %s", descr)
             try:
                 conninfo = make_conninfo("", **attempt)
-                gen = cls._connect_gen(conninfo, timeout=timeout)
-                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
             except e.Error as ex:
                 logger.debug("connection failed: %s: %s", descr, str(ex))
                 conn_errors.append((ex, descr))
@@ -329,9 +333,12 @@ class Connection(BaseConnection[Row]):
             return
 
         if capabilities.has_cancel_safe():
-            waiting.wait_conn(
-                self._cancel_gen(timeout=timeout), interval=_WAIT_INTERVAL
-            )
+            try:
+                waiting.wait_conn(
+                    self._cancel_gen(), interval=_WAIT_INTERVAL, timeout=timeout or None
+                )
+            except e._WaitTimeout:
+                raise e.CancellationTimeout("cancellation timeout expired") from None
         else:
             self.cancel()
 
@@ -374,15 +381,7 @@ class Connection(BaseConnection[Row]):
             You might actually receive more than this number if more than one
             notifications arrives in the same packet.
         """
-        # Allow interrupting the wait with a signal by reducing a long timeout
-        # into shorter intervals.
-        if timeout is not None:
-            deadline = monotonic() + timeout
-            interval = min(timeout, _WAIT_INTERVAL)
-        else:
-            deadline = None
-            interval = _WAIT_INTERVAL
-
+        deadline = monotonic() + timeout if timeout is not None else None
         nreceived = 0
 
         if self._notify_handlers:
@@ -407,8 +406,14 @@ class Connection(BaseConnection[Row]):
                             yield d.popleft()
                             nreceived += 1
                     else:
+                        if deadline is not None:
+                            remaining = max(0.0, deadline - monotonic())
+                        else:
+                            remaining = None
                         try:
-                            pgns = self.wait(notifies(self.pgconn), interval=interval)
+                            pgns = self.wait(notifies(self.pgconn), timeout=remaining)
+                        except e._WaitTimeout:
+                            break
                         except e._NO_TRACEBACK as ex:
                             raise ex.with_traceback(None)
                         # Emit the notifications received.
@@ -426,10 +431,8 @@ class Connection(BaseConnection[Row]):
 
                     # Check the deadline after the loop to ensure that timeout=0
                     # polls at least once.
-                    if deadline:
-                        interval = min(_WAIT_INTERVAL, deadline - monotonic())
-                        if interval < 0.0:
-                            break
+                    if deadline is not None and monotonic() > deadline:
+                        break
             finally:
                 self._notifies_backlog = d
 
@@ -473,24 +476,43 @@ class Connection(BaseConnection[Row]):
             assert pipeline is self._pipeline
             self._pipeline = None
 
-    def wait(self, gen: PQGen[RV], interval: float = _WAIT_INTERVAL) -> RV:
+    def wait(
+        self,
+        gen: PQGen[RV],
+        interval: float = _WAIT_INTERVAL,
+        timeout: float | None = None,
+    ) -> RV:
         """
         Consume a generator operating on the connection.
 
         The function must be used on generators that don't change connection
         fd (i.e. not on connect and reset).
+
+        Raise `~errors._WaitTimeout` if `!gen` doesn't complete within
+        `!timeout` seconds.
         """
         try:
-            return waiting.wait(gen, self.pgconn.socket, interval=interval)
+            return waiting.wait(
+                gen, self.pgconn.socket, interval=interval, timeout=timeout
+            )
         except _INTERRUPTED:
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
                 self._try_cancel(timeout=5.0)
                 try:
-                    waiting.wait(gen, self.pgconn.socket, interval=interval)
+                    waiting.wait(
+                        gen, self.pgconn.socket, interval=interval, timeout=5.0
+                    )
                 except e.QueryCanceled:
                     pass  # as expected
+                except e._WaitTimeout:
+                    # The server didn't terminate the query: the connection
+                    # is in an unknown state, so don't wait forever (#1371).
+                    logger.warning(
+                        "query not terminated after cancellation: closing connection"
+                    )
+                    self.pgconn.finish()
             raise
 
     def _set_autocommit(self, value: bool) -> None:

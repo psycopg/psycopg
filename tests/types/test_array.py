@@ -128,6 +128,22 @@ def test_bad_binary_array(input):
         tx.get_dumper(input, PyFormat.BINARY).dump(input)
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_list_subclass(fmt_in):
+    # See #1398: a list subclass (e.g. traits.api.List's TraitListObject)
+    # nested inside another list wasn't flattened when sniffing the element
+    # type, so the wrong sub-dumper was picked.
+    class MyList(list[Any]):
+        pass
+
+    obj = MyList([MyList([1.0, 2.0]), MyList([3.0, 4.0])])
+    plain = [[1.0, 2.0], [3.0, 4.0]]
+
+    tx = Transformer()
+    want = tx.get_dumper(plain, fmt_in).dump(plain)
+    assert tx.get_dumper(obj, fmt_in).dump(obj) == want
+
+
 @pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_int)

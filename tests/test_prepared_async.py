@@ -320,13 +320,30 @@ async def test_alter_table_clears_state(aconn):
     assert list(map(itemgetter(1), await cur.fetchall())) == ["foo", "bar"]
 
 
-async def test_discard_clears_state(aconn):
+@pytest.mark.parametrize("stmt", ["DEALLOCATE ALL", "DISCARD ALL"])
+async def test_discarding_statements(aconn, stmt):
     await aconn.set_autocommit(True)
     aconn.prepare_threshold = 0
     await aconn.execute("DROP TABLE IF EXISTS testdisc")
     await aconn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
     await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
-    await aconn.execute("DISCARD ALL")
+    assert aconn._prepared._names
+    await aconn.execute(stmt)
+    assert not aconn._prepared._names
+    await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
+
+
+@pytest.mark.parametrize("stmt", ["DISCARD SEQUENCES", "DEALLOCATE foo"])
+async def test_non_discarding_statements(aconn, stmt):
+    await aconn.set_autocommit(True)
+    aconn.prepare_threshold = 0
+    await aconn.execute("DROP TABLE IF EXISTS testdisc")
+    await aconn.execute("CREATE TABLE testdisc (id serial primary key, data text)")
+    await aconn.execute("PREPARE foo AS select 1")
+    await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["foo"])
+    assert aconn._prepared._names
+    await aconn.execute(stmt)
+    assert aconn._prepared._names
     await aconn.execute("INSERT INTO testdisc (data) values (%s)", ["bar"])
 
 

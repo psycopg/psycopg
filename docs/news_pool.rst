@@ -10,6 +10,13 @@
 Current release
 ---------------
 
+psycopg_pool 3.3.2
+^^^^^^^^^^^^^^^^^^
+
+- Propagate cancellation and other base exceptions raised in connection check
+  (:ticket:`#1401`).
+
+
 psycopg_pool 3.3.1
 ^^^^^^^^^^^^^^^^^^
 

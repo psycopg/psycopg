@@ -9,6 +9,12 @@ name: Build binary packages
 
 on:
   push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
     paths:
       - '.github/workflows/packages-bin.yml'
   workflow_dispatch:
@@ -43,13 +49,13 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
         arch: [x86_64, ppc64le, aarch64, riscv64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp315]
         platform: [manylinux, musllinux]
 
     steps:
@@ -124,13 +130,13 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp315]
 
     steps:
       - name: Checkout repos
@@ -178,13 +184,13 @@ jobs:
   windows:  # {{{
     # TODO: move it back to windows-latest when the default runner switches.
     runs-on: windows-2025
-    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
         arch: [win_amd64]
-        pyver: [cp310, cp311, cp312, cp313, cp314]
+        pyver: [cp310, cp311, cp312, cp313, cp314, cp315]
 
     defaults:
       run:
@@ -233,8 +239,8 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 16"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 16"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 18"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 18"
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"
 
       - uses: actions/upload-artifact@v7
