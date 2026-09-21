@@ -10,6 +10,7 @@ Psycopg connection pool module (sync version).
 from __future__ import annotations
 
 import logging
+import queue
 import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
@@ -599,7 +600,11 @@ class ConnectionPool(Generic[CT], BasePool):
         StopWorker is received.
         """
         while True:
-            if isinstance((task := q.get()), StopWorker):
+            try:
+                task = q.get()
+            except queue.Empty:
+                continue
+            if isinstance(task, StopWorker):
                 logger.debug("terminating working task %s", current_thread_name())
                 return
 

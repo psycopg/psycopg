@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import queue
 import weakref
 from time import time
 from typing import Any
@@ -12,12 +13,13 @@ from collections import Counter
 import pytest
 
 import psycopg
+from psycopg_pool.pool import StopWorker
 from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
 from .. import acompat
 from ..utils import assert_type, set_autocommit, skip_free_threaded
-from ..acompat import Event, gather, sleep, spawn
+from ..acompat import Event, Queue, gather, sleep, spawn
 from .test_pool_common import delay_connection
 
 try:
@@ -28,6 +30,25 @@ except ImportError:
 
 
 PSYCOPG_VERSION = tuple(map(int, psycopg.__version__.split(".", 2)[:2]))
+
+
+def test_worker_survives_empty_queue():
+
+    class QueueWithTimeout(Queue):
+
+        def __init__(self):
+            super().__init__()
+            self.empty = True
+
+        def get(self):
+            if self.empty:
+                self.empty = False
+                raise queue.Empty
+            return StopWorker(self)
+
+    queue_with_timeout = QueueWithTimeout()
+    pool.ConnectionPool.worker(queue_with_timeout)
+    assert not queue_with_timeout.empty
 
 
 def test_default_sizes(dsn):

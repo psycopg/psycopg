@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import queue
 import weakref
 from time import time
 from typing import Any
@@ -9,12 +10,13 @@ from collections import Counter
 import pytest
 
 import psycopg
+from psycopg_pool.pool_async import StopWorker
 from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
 from .. import acompat
 from ..utils import assert_type, set_autocommit, skip_free_threaded
-from ..acompat import AEvent, asleep, gather, skip_sync, spawn
+from ..acompat import AEvent, AQueue, asleep, gather, skip_sync, spawn
 from .test_pool_common_async import delay_connection
 
 try:
@@ -27,6 +29,23 @@ if True:  # ASYNC
     pytestmark = [pytest.mark.anyio]
 
 PSYCOPG_VERSION = tuple(map(int, psycopg.__version__.split(".", 2)[:2]))
+
+
+async def test_worker_survives_empty_queue():
+    class QueueWithTimeout(AQueue):
+        def __init__(self):
+            super().__init__()
+            self.empty = True
+
+        async def get(self):
+            if self.empty:
+                self.empty = False
+                raise queue.Empty
+            return StopWorker(self)
+
+    queue_with_timeout = QueueWithTimeout()
+    await pool.AsyncConnectionPool.worker(queue_with_timeout)
+    assert not queue_with_timeout.empty
 
 
 async def test_default_sizes(dsn):
