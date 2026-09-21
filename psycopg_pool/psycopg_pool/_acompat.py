@@ -50,11 +50,19 @@ class Queue(queue.Queue[T]):
     A Queue subclass with an interruptible get() method.
     """
 
+    # Time to spend in a single wait. Expposed for testing purpose,
+    # in order to inject a timeout.
+    _WAIT_INTERVAL = 10.0 * 60.0
+
     def get(self, block: bool = True, timeout: float | None = None) -> T:
-        # Always specify a timeout to make the wait interruptible.
-        if timeout is None:
-            timeout = 24.0 * 60.0 * 60.0
-        return super().get(block, timeout)
+        if not block or timeout is not None:
+            return super().get(block, timeout)
+
+        while True:
+            try:
+                return super().get(True, self._WAIT_INTERVAL)
+            except queue.Empty:
+                pass
 
 
 class AEvent(asyncio.Event):

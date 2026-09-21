@@ -350,6 +350,24 @@ async def test_close_no_tasks(pool_cls, dsn):
         assert not is_alive(t)
 
 
+@skip_async
+@pytest.mark.slow
+async def test_workers_survive_wait_timeout(pool_cls, dsn, monkeypatch):
+    # Inject a timeout in the queue waiting (see #1419).
+    monkeypatch.setattr(pool._acompat.Queue, "_WAIT_INTERVAL", 0.1)
+
+    async with pool_cls(dsn) as p:
+        workers = p._workers[:]
+        assert workers
+        await asleep(0.5)
+        for t in workers:
+            assert is_alive(t)
+
+        # The pool is still usable after the workers waited in vain.
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+
+
 async def test_putconn_no_pool(pool_cls, aconn_cls, dsn):
     async with pool_cls(dsn, min_size=min_size(pool_cls)) as p:
         conn = await aconn_cls.connect(dsn)
