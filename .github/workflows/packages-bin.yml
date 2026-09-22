@@ -251,12 +251,113 @@ jobs:
 
   # }}}
 
+  pyodide:  # {{{
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Pyodide libpq build
+        uses: actions/cache@v6
+        with:
+          path: /tmp/psycopg-pyodide-libs
+          key: libpq-pyodide-libpq-18.4-openssl-3.6.4-${{ hashFiles('tools/ci/wheel_pyodide_before_build.sh') }}
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/ci/copy_to_binary.py
+
+      - name: Build wheel
+        uses: pypa/cibuildwheel@v4.2.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_PLATFORM: pyodide
+          CIBW_BUILD: cp314-pyodide_wasm32
+          CIBW_BEFORE_BUILD_PYODIDE: >-
+            ./tools/ci/wheel_pyodide_before_build.sh
+          CIBW_ENVIRONMENT_PYODIDE: >-
+            PATH="/tmp/psycopg-pyodide-libs/bin:$PATH"
+            PSYCOPG_IMPL=binary
+            PYODIDE_LIBPQ_VERSION=18.4
+            PYODIDE_OPENSSL_VERSION=3.6.4
+            WASM_LIBRARY_DIR=/tmp/psycopg-pyodide-libs
+          CIBW_TEST_REQUIRES_PYODIDE: ./psycopg
+          CIBW_TEST_COMMAND_PYODIDE: >-
+            python -c "import psycopg;
+            assert psycopg.pq.__impl__ == 'binary';
+            assert psycopg.pq.version() >= 180000"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pyodide-cp314-wasm32
+          path: ./wheelhouse/psycopg_binary-*.whl
+          if-no-files-found: error
+
+  # }}}
+
+  pyodide-test:  # {{{
+    runs-on: ubuntu-latest
+    needs: pyodide
+
+    services:
+      postgresql:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_HOST_AUTH_METHOD: md5
+          POSTGRES_INITDB_ARGS: "--auth-host=md5"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: pyodide-cp314-wasm32
+          path: wheelhouse
+
+      - name: Build pure Python wheels
+        run: >-
+          python -m pip wheel --no-deps --wheel-dir wheelhouse
+          ./psycopg ./psycopg_pool
+
+      - name: Install Pyodide
+        run: >-
+          npm install --no-save --ignore-scripts --package-lock=false
+          pyodide@314.0.6
+
+      - name: Test against PostgreSQL (smoke test)
+        env:
+          WHEEL_DIR: wheelhouse
+          PSYCOPG_IMPL: binary
+          PSYCOPG_TEST_DSN: >-
+            postgresql://postgres:password@127.0.0.1:5432/postgres?sslmode=disable
+        run: >-
+          node --experimental-wasm-stack-switching
+          tools/ci/run_pyodide_tests.mjs
+          -q
+          tests/test_pyodide.py
+
+  # }}}
+
   merge:  # {{{
     runs-on: ubuntu-latest
     needs:
       - linux
       - macos
       - windows
+      - pyodide-test
     steps:
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v7
