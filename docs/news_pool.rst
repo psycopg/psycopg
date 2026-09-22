@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.3.3 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.3.3
+^^^^^^^^^^^^^^^^^^
 
 - Fix sync pool workers terminating after 24 hours with no task to run
   (:ticket:`#1419`).
 
-
-Current release
----------------
 
 psycopg_pool 3.3.2
 ^^^^^^^^^^^^^^^^^^
