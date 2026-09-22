@@ -137,12 +137,15 @@ jobs:
         include:
           - django_label: git_main
             pip_django: git+https://github.com/django/django.git#egg=Django
+            postgres-version: "18"
           - django_label: lts4
             pip_django: "'Django >= 4.2, < 4.3'"
             default_auto_fields: 'DEFAULT_AUTO_FIELD = "django.db.models.AutoField"'
+            postgres-version: "15"
           - django_label: lts5
             pip_django: "'Django >= 5.2, < 5.3'"
             default_auto_fields: 'DEFAULT_AUTO_FIELD = "django.db.models.AutoField"'
+            postgres-version: "15"
 
           # Test with min and max Python supported versions
           - django_label: lts4
@@ -169,7 +172,7 @@ jobs:
 
     services:
       postgresql:
-        image: postgres:15
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_DB: postgres
