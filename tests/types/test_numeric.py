@@ -12,7 +12,7 @@ from psycopg.abc import Buffer
 from psycopg.adapt import PyFormat, Transformer
 from psycopg.types.numeric import FloatLoader, Int8, Int8BinaryDumper, Int8Dumper
 
-from ..fix_crdb import is_crdb
+from ..fix_crdb import is_crdb, skip_crdb
 
 #
 # Tests with int
@@ -143,6 +143,11 @@ def test_roundtrip_numeric_binary_limits(conn):
             "select %b::numeric::text = %s::decimal::text", (Decimal(expr), expr)
         )
         assert cur.fetchone()[0] is True
+
+    # A zero is dumped as 0 whatever the exponent: the server wouldn't even
+    # parse a literal with an exponent this large.
+    cur.execute("select %b::numeric::text", (Decimal("0E+999999999999999999"),))
+    assert cur.fetchone()[0] == "0"
 
 
 @pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
@@ -414,6 +419,13 @@ def test_load_float_copy(conn):
         "0.0",
         "0.000000000000000000001",
         "-0.000000000000000000001",
+        # A zero has no weight, so exponents out of the range of a nonzero
+        # number are not an error.
+        skip_crdb("0E+131071", reason="decimal exponent"),
+        skip_crdb("0E+131072", reason="decimal exponent"),
+        skip_crdb("0E+131073", reason="decimal exponent"),
+        skip_crdb("-0E+131073", reason="decimal exponent"),
+        skip_crdb("0E-16383", reason="decimal exponent"),
         "nan",
         "snan",
     ],
@@ -423,6 +435,16 @@ def test_load_float_copy(conn):
 def test_roundtrip_numeric(conn, val, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     val = Decimal(val)
+    if fmt_out == pq.Format.TEXT and val.as_tuple().exponent == -16383:
+        # The server returns '0.000...' with 16383 zeros. If the decimal
+        # module falls back on _pydecimal (e.g. Python 3.15 built without
+        # libmpdec), Decimal() parses it using int(), which fails over
+        # sys.get_int_max_str_digits() digits.
+        try:
+            Decimal("0." + "0" * 16383)
+        except ValueError:
+            pytest.skip("this decimal module can't parse long strings")
+
     cur.execute(f"select %{fmt_in.value}", (val,))
     result = cur.fetchone()[0]
     assert isinstance(result, Decimal)
@@ -479,6 +501,11 @@ def test_quote_numeric(conn, val, expr):
         "1000000000000000000000000.001",
         "1000000000000000000000000000.001",
         "9999999999999999999999999999.9",
+        "0E+131071",
+        "0E+131072",
+        "0E+131073",
+        "-0E+131073",
+        "0E-16383",
     ],
 )
 def test_dump_numeric_binary(conn, expr):

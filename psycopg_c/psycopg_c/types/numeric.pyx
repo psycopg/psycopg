@@ -679,22 +679,6 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
         memcpy(buf, behead, sizeof(behead))
         return sizeof(behead)
 
-    # Check the exponent before converting it to a C integer, in order to fail
-    # with a DataError, not an OverflowError, on absurd values. The dscale
-    # check is exact; the weight is checked exactly further down.
-    if pyexp <= 0:
-        if -pyexp > MAX_DSCALE:
-            raise e.DataError(
-                "decimal too precise for PostgreSQL numeric binary format"
-                f" (maximum {MAX_DSCALE} digits after the decimal point)"
-            )
-    elif pyexp > MAX_PGDIGITS * DEC_DIGITS:
-        raise e.DataError(
-            "decimal too large for PostgreSQL numeric binary format"
-            f" (maximum {MAX_PGDIGITS} base-10000 digits)"
-        )
-
-    cdef Py_ssize_t exp = pyexp
     cdef Py_ssize_t ndigits = len(digits)
 
     # Find the last nonzero digit
@@ -702,13 +686,25 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
     while nzdigits > 0 and digits[nzdigits - 1] == 0:
         nzdigits -= 1
 
+    # Check the exponent before converting it to a C integer, in order to fail
+    # with a DataError, not an OverflowError, on absurd values. The dscale
+    # check is exact; the weight is checked exactly further down.
     cdef Py_ssize_t dscale
-    if exp <= 0:
-        dscale = -exp
+    if pyexp <= 0:
+        if -pyexp > MAX_DSCALE:
+            raise e.DataError(
+                "decimal too precise for PostgreSQL numeric binary format"
+                f" (maximum {MAX_DSCALE} digits after the decimal point)"
+            )
+        dscale = -pyexp
     else:
         dscale = 0
-        # align the py digits to the pg digits if there's some py exponent
-        ndigits += exp % DEC_DIGITS
+        # A zero has no weight, so any exponent is acceptable for it.
+        if nzdigits and pyexp > MAX_PGDIGITS * DEC_DIGITS:
+            raise e.DataError(
+                "decimal too large for PostgreSQL numeric binary format"
+                f" (maximum {MAX_PGDIGITS} base-10000 digits)"
+            )
 
     if nzdigits == 0:
         buf = <uint16_t *>CDumper.ensure_size(rv, offset, sizeof(behead))
@@ -719,13 +715,20 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
         memcpy(buf, behead, sizeof(behead))
         return sizeof(behead)
 
+    # Converting the exponent is safe now: an exponent too large has been
+    # either rejected above or returned as a zero.
+    cdef Py_ssize_t exp = pyexp
+    if exp > 0:
+        # align the py digits to the pg digits if there's some py exponent
+        ndigits += exp % DEC_DIGITS
+
     # Equivalent of 0-padding left to align the py digits to the pg digits
     # but without changing the digits tuple.
     cdef Py_ssize_t wi = 0
     cdef Py_ssize_t mod = (ndigits - dscale) % DEC_DIGITS
     if mod < 0:
         # the difference between C and Py % operator
-        mod += 4
+        mod += DEC_DIGITS
     if mod:
         wi = DEC_DIGITS - mod
         ndigits += wi
