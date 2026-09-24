@@ -1,8 +1,12 @@
+import socket
+import struct
 import datetime as dt
+import threading
 from zoneinfo import ZoneInfo
 
 import pytest
 
+import psycopg
 from psycopg import DataError, pq, sql
 from psycopg.adapt import PyFormat
 
@@ -290,6 +294,121 @@ class TestDatetime:
             assert cur.fetchone()[0] == d
 
 
+class _NoTimeZoneStatusServer:
+    """A fake Postgres backend that never reports the "TimeZone"
+    ParameterStatus, the way DoltgreSQL 1.0 does not (see #1422).
+
+    Speaks just enough of the wire protocol, over a real local socket, to
+    complete a startup handshake and answer one simple-query "select ..."
+    with a single timestamptz column.
+    """
+
+    # A realistic set of startup parameters, "TimeZone" deliberately absent.
+    params = {
+        b"server_version": b"16.0",
+        b"server_encoding": b"UTF8",
+        b"client_encoding": b"UTF8",
+        b"DateStyle": b"ISO, MDY",
+        b"IntervalStyle": b"postgres",
+        b"integer_datetimes": b"on",
+        b"standard_conforming_strings": b"on",
+    }
+
+    def __init__(self):
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.bind(("127.0.0.1", 0))
+        self._sock.listen(1)
+        self.port = self._sock.getsockname()[1]
+        self._thread = threading.Thread(target=self._serve_one, daemon=True)
+        self._error = None
+
+    @property
+    def dsn(self):
+        return f"host=127.0.0.1 port={self.port} user=fake dbname=fake sslmode=disable"
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._thread.join(timeout=5)
+        self._sock.close()
+        if self._error is not None:
+            raise self._error
+
+    @staticmethod
+    def _msg(msg_type, payload):
+        return msg_type + struct.pack("!i", len(payload) + 4) + payload
+
+    @staticmethod
+    def _recv_exact(sock, n):
+        buf = b""
+        while len(buf) < n:
+            chunk = sock.recv(n - len(buf))
+            if not chunk:
+                raise ConnectionError("client closed connection early")
+            buf += chunk
+        return buf
+
+    def _serve_one(self):
+        try:
+            conn, _ = self._sock.accept()
+            with conn:
+                self._handle(conn)
+        except BaseException as ex:  # noqa: BLE001 - re-raised in __exit__
+            self._error = ex
+
+    def _handle(self, conn):
+        # StartupMessage (preceded by an optional SSLRequest, which we
+        # decline; the dsn uses sslmode=disable so this is mostly defensive).
+        length = struct.unpack("!i", self._recv_exact(conn, 4))[0]
+        body = self._recv_exact(conn, length - 4)
+        if struct.unpack("!i", body[0:4])[0] == 80877103:  # SSLRequest
+            conn.sendall(b"N")
+            length = struct.unpack("!i", self._recv_exact(conn, 4))[0]
+            self._recv_exact(conn, length - 4)
+
+        conn.sendall(self._msg(b"R", struct.pack("!i", 0)))  # AuthenticationOk
+        for name, value in self.params.items():
+            conn.sendall(self._msg(b"S", name + b"\x00" + value + b"\x00"))
+        conn.sendall(self._msg(b"K", struct.pack("!ii", 1234, 5678)))
+        conn.sendall(self._msg(b"Z", b"I"))  # ReadyForQuery
+
+        while True:
+            header = conn.recv(5)
+            if not header:
+                return
+            msg_type = header[0:1]
+            length = struct.unpack("!i", header[1:5])[0]
+            payload = self._recv_exact(conn, length - 4) if length > 4 else b""
+
+            if msg_type == b"X":  # Terminate
+                return
+            assert msg_type == b"Q", f"unexpected message type {msg_type!r}"
+            self._answer_query(conn, payload.rstrip(b"\x00").decode())
+
+    def _answer_query(self, conn, query):
+        if "select" in query.lower():
+            field = (
+                b"now\x00"
+                + struct.pack("!i", 0)  # table oid
+                + struct.pack("!h", 0)  # column attnum
+                + struct.pack("!i", 1184)  # type oid: timestamptz
+                + struct.pack("!h", 8)  # type size
+                + struct.pack("!i", -1)  # type modifier
+                + struct.pack("!h", 0)  # format code: text
+            )
+            conn.sendall(self._msg(b"T", struct.pack("!h", 1) + field))
+            value = b"2000-01-02 03:04:05+00"
+            data_row = struct.pack("!h", 1) + struct.pack("!i", len(value)) + value
+            conn.sendall(self._msg(b"D", data_row))
+            conn.sendall(self._msg(b"C", b"SELECT 1\x00"))
+        else:
+            conn.sendall(self._msg(b"C", b"OK\x00"))
+        conn.sendall(self._msg(b"Z", b"I"))
+
+
 class TestDateTimeTz:
     @pytest.mark.parametrize(
         "val, expr",
@@ -401,6 +520,20 @@ class TestDateTimeTz:
         cur = conn.cursor(binary=fmt_out)
         ts = cur.execute("select %s::timestamptz", [expr]).fetchone()[0]
         assert ts.utcoffset().total_seconds() == tzoff
+
+    @pytest.mark.skipif(pq.__impl__ == "python", reason="only affects C extension")
+    def test_load_datetimetz_no_timezone_status(self):
+        # Regression test for #1422: a backend that never reports the
+        # "TimeZone" ParameterStatus (e.g. DoltgreSQL) used to crash the
+        # process reading the first timestamptz value, because the C loader
+        # passed PQparameterStatus()'s NULL straight to PyBytes_FromString().
+        # It must fall back to UTC instead, like the Python implementation.
+        with _NoTimeZoneStatusServer() as fake:
+            with psycopg.connect(fake.dsn, autocommit=True) as conn:
+                row = conn.execute("select now()").fetchone()
+                assert row is not None
+                got = row[0]
+        assert got.utcoffset() == dt.timedelta(0)
 
     @pytest.mark.parametrize(
         "val, type",

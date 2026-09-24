@@ -7,6 +7,18 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix a segfault reading a :sql:`timestamptz` value with the C implementation
+  on a connection whose server never reports the ``TimeZone`` parameter
+  status, such as DoltgreSQL; fall back to UTC instead, like the Python
+  implementation already does (:ticket:`#1422`).
+
+
 Current release
 ---------------
 
