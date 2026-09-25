@@ -110,15 +110,32 @@ def test_wait_closed(pool_cls, dsn):
         p.wait()
 
 
-def test_reconnect_failed_cb(pool_cls, dsn):
-    calls = []
+@pytest.mark.slow
+@pytest.mark.timing
+def test_reconnect_failed_cb(pool_cls, proxy):
+    # The callback must be invoked when a reconnection attempt actually gives
+    # up, which for a null pool happens on the wait() connection too.
+    t1 = None
 
     def failed(p):
-        calls.append(p)
+        assert p.name == "this-one"
+        nonlocal t1
+        t1 = time()
 
-    p = pool_cls(dsn, open=False, reconnect_failed=failed)
-    p.reconnect_failed()
-    assert calls == [p]
+    t0 = time()
+    with pytest.raises(pool.PoolTimeout):
+        with pool_cls(
+            proxy.client_dsn,
+            name="this-one",
+            min_size=min_size(pool_cls),
+            reconnect_timeout=1.0,
+            reconnect_failed=failed,
+            num_workers=1,
+        ) as p:
+            p.wait(2.0)
+
+    assert t1
+    assert t1 - t0 == pytest.approx(1.0, 0.2)
 
 
 @pytest.mark.slow
