@@ -64,6 +64,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
+            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 

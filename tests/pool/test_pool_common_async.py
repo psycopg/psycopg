@@ -119,6 +119,17 @@ async def test_wait_closed(pool_cls, dsn):
         await p.wait()
 
 
+async def test_reconnect_failed_cb(pool_cls, dsn):
+    calls = []
+
+    async def failed(p):
+        calls.append(p)
+
+    p = pool_cls(dsn, open=False, reconnect_failed=failed)
+    await p.reconnect_failed()
+    assert calls == [p]
+
+
 @pytest.mark.slow
 async def test_setup_no_timeout(pool_cls, dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
