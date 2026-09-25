@@ -15,6 +15,8 @@ psycopg_pool 3.3.3
 
 - Fix sync pool workers terminating after 24 hours with no task to run
   (:ticket:`#1419`).
+- Fix the `!reconnect_failed` callback being dropped by `NullConnectionPool`
+  and `AsyncNullConnectionPool` (:ticket:`#1424`).
 
 
 psycopg_pool 3.3.2
