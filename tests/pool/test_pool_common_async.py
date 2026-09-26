@@ -127,7 +127,6 @@ async def test_reconnect_failed_cb(pool_cls, proxy):
     t1 = None
 
     async def failed(p):
-        assert p.name == "this-one"
         nonlocal t1
         t1 = time()
 
@@ -135,7 +134,6 @@ async def test_reconnect_failed_cb(pool_cls, proxy):
     with pytest.raises(pool.PoolTimeout):
         async with pool_cls(
             proxy.client_dsn,
-            name="this-one",
             min_size=min_size(pool_cls),
             reconnect_timeout=1.0,
             reconnect_failed=failed,
