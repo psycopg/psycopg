@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from time import time
 from typing import Any
 
 import pytest
@@ -10,6 +11,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import Row, TupleRow, class_row
 
+from .. import acompat
 from ..utils import assert_type, set_autocommit
 from ..acompat import asleep, gather, skip_sync, spawn
 from .test_pool_common_async import delay_connection, ensure_waiting
@@ -123,6 +125,41 @@ async def test_wait_ready(dsn, monkeypatch):
 
     async with pool.AsyncNullConnectionPool(dsn, num_workers=1) as p:
         await p.wait(0.4)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.parametrize(
+    "async_cb", [pytest.param(True, marks=acompat.skip_sync), False]
+)
+async def test_reconnect_failure(proxy, async_cb):
+    # Note: unlike in a normal pool, the callback is only invoked for the
+    # connections created in the background, such as the one created by
+    # wait(). The connections requested by the clients are created by the
+    # clients themselves, so a failure is raised to the requesting client.
+    proxy.stop()
+
+    t1 = None
+
+    def failed(pool):
+        nonlocal t1
+        t1 = time()
+
+    async def afailed(pool):
+        failed(pool)
+
+    async with pool.AsyncNullConnectionPool(
+        proxy.client_dsn,
+        reconnect_timeout=1.0,
+        reconnect_failed=afailed if async_cb else failed,
+    ) as p:
+        t0 = time()
+        with pytest.raises(pool.PoolTimeout):
+            await p.wait(2.0)
+
+        assert t1
+        assert t1 - t0 == pytest.approx(1.0, 0.1)
+        assert p._nconns == 0
 
 
 async def test_configure(dsn):
