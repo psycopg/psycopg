@@ -70,10 +70,14 @@ logger = logging.getLogger()
 
 
 def main() -> int:
-    if (opt := parse_cmdline()).container:
-        return run_in_container(opt.container)
+    opt = parse_cmdline()
 
-    logging.basicConfig(level=opt.log_level, format="%(levelname)s %(message)s")
+    # Configure logging before running in a container, otherwise the messages
+    # emitted while building and starting the image are dropped.
+    _setup_logging(opt.log_level)
+
+    if opt.container:
+        return run_in_container(opt.container)
 
     if (current_ver := ".".join(map(str, sys.version_info[:2]))) != PYVER:
         logger.warning(
@@ -112,13 +116,27 @@ def main() -> int:
         for fpin, fpout in zip(inputs, outputs):
             convert(fpin, fpout)
     else:
-        with ProcessPoolExecutor(max_workers=opt.jobs) as executor:
-            executor.map(convert, inputs, outputs)
+        with ProcessPoolExecutor(
+            max_workers=opt.jobs, initializer=_setup_logging, initargs=(opt.log_level,)
+        ) as executor:
+            # Consume the results: exceptions raised in the workers are
+            # otherwise discarded and the conversion fails silently.
+            list(executor.map(convert, inputs, outputs))
 
     if opt.check:
         return check([str(o) for o in outputs])
 
     return 0
+
+
+def _setup_logging(log_level: str) -> None:
+    """
+    Configure logging in the main process and in the conversion workers.
+
+    Workers don't inherit the configuration of the process starting them, so
+    they must call this function too, or their messages would be dropped.
+    """
+    logging.basicConfig(level=log_level, format="%(levelname)s %(message)s")
 
 
 def convert(fpin: Path, fpout: Path) -> None:
