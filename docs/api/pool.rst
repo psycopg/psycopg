@@ -425,6 +425,11 @@ behaviour is similar, with the following differences:
    :param max_idle: Ignored, as null pools don't leave idle connections
                     sitting around.
 
+   :param reconnect_failed: Only invoked for the connection attempts performed
+                            in the background. Not invoked when a failure to
+                            connect is raised to the requesting client instead,
+                            and `!reconnect_timeout` doesn't apply to them.
+
    .. automethod:: wait
    .. automethod:: resize
    .. automethod:: check
