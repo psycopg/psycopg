@@ -68,6 +68,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
+            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 
@@ -87,6 +88,10 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         with self._lock:
             assert not self._pool_full_event
             self._pool_full_event = Event()
+            # Account for the connection created to run the test. It will be
+            # discounted when the connection is closed, or by
+            # `_add_connection()` if every connection attempt fails.
+            self._nconns += 1
 
         logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))
@@ -170,11 +175,10 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
             else:
                 # No client waiting for a connection: close the connection
                 self._close_connection(conn)
+                # Discount the connection, accounted for either by
+                # `_get_ready_connection()` or by `wait()`.
+                self._nconns -= 1
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is ready.
                 if self._pool_full_event:
                     self._pool_full_event.set()
-                else:
-                    # The connection created by wait shouldn't decrease the
-                    # count of the number of connection used.
-                    self._nconns -= 1
