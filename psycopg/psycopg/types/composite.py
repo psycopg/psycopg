@@ -7,10 +7,12 @@ Support for composite types adaptation.
 from __future__ import annotations
 
 import re
+import types
 import struct
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Iterator, NamedTuple, TypeAlias
+from typing import TypeVar, cast
 from functools import cache
 from collections import namedtuple
 from collections.abc import Callable, Sequence
@@ -20,6 +22,7 @@ from .._oids import TEXT_OID
 from ..adapt import Buffer, Dumper, Loader, PyFormat, RecursiveDumper, RecursiveLoader
 from ..adapt import Transformer
 from .._struct import pack_len, unpack_len
+from .._cmodule import _psycopg
 from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier
 
@@ -165,17 +168,19 @@ class RecordLoader(RecursiveLoader):
     oids instead.
     """
 
+    _cast = None
+
     def load(self, data: abc.Buffer) -> tuple[Any, ...]:
         if data == b"()":
             return ()
 
-        cast = self._tx.get_loader(TEXT_OID, self.format).load
-        record = _parse_text_record(data[1:-1])
-        for i in range(len(record)):
-            if (f := record[i]) is not None:
-                record[i] = cast(f)
+        if self._cast is None:
+            cast = self._cast = self._tx.get_loader(TEXT_OID, self.format).load
+        else:
+            cast = self._cast
+        record_iter = _parse_text_record(data[1:-1], cast=cast)
 
-        return tuple(record)
+        return tuple(record_iter)
 
 
 class RecordBinaryLoader(Loader):
@@ -331,7 +336,7 @@ def register_composite(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: type[Loader] = _make_loader(info, make_object)
+    loader: type[abc.CompositeLoader[T]] = _make_loader(info, make_object)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
@@ -448,28 +453,29 @@ def _dump_binary_sequence(
     return out
 
 
-def _parse_text_record(data: abc.Buffer) -> list[bytes | None]:
+def _parse_text_record(
+    data: abc.Buffer, cast: abc.LoadFunc | None = None
+) -> Iterator[Any | None]:
     """
     Split a non-empty representation of a composite type into components.
 
     Terminators shouldn't be used in `!data` (so that both record and range
     representations can be parsed).
     """
-    record: list[bytes | None] = []
     for m in _re_tokenize.finditer(data):
-        if m.group(1):
-            record.append(None)
-        elif m.group(2) is not None:
-            record.append(_re_undouble.sub(rb"\1", m.group(2)))
+        if m.group(1) is not None:
+            field = None
+        elif (g2 := m.group(2)) is not None:
+            unesc = _re_undouble.sub(rb"\1", g2)
+            field = unesc if cast is None else cast(unesc)
         else:
-            record.append(m.group(3))
-
+            g3 = m.group(3)
+            field = g3 if cast is None else cast(g3)
+        yield field
     # If the final group ended in `,` there is a final NULL in the record
     # that the regexp couldn't parse.
-    if m and m.group().endswith(b","):
-        record.append(None)
-
-    return record
+    if m.group().endswith(b","):
+        yield None
 
 
 _re_tokenize = re.compile(rb"""(?x)
@@ -517,19 +523,32 @@ def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
 @cache
 def _make_loader(
     info: CompositeInfo, make_object: ObjectMaker[T]
-) -> type[_CompositeLoader[T]]:
+) -> type[abc.CompositeLoader[T]]:
     doc = f"Text loader for the '{info.name}' composite."
     d = {"__doc__": doc, "info": info, "make_object": make_object}
-    return type(f"{info.name.title()}Loader", (_CompositeLoader,), d)
+    name = f"{info.name.title()}Loader"
+    if _psycopg:
+        return type(name, (_psycopg._CompositeLoader,), d)
+    else:
+        return types.new_class(
+            name, (_CompositeLoader[T],), {}, lambda ns: ns.update(d)
+        )
 
 
 @cache
 def _make_binary_loader(
     info: CompositeInfo, make_object: ObjectMaker[T]
-) -> type[_CompositeBinaryLoader[T]]:
+) -> type[abc.CompositeLoader[T]]:
     doc = f"Binary loader for the '{info.name}' composite."
     d = {"__doc__": doc, "info": info, "make_object": make_object}
-    return type(f"{info.name.title()}BinaryLoader", (_CompositeBinaryLoader,), d)
+    name = f"{info.name.title()}BinaryLoader"
+    if _psycopg:
+        return type(name, (_psycopg._CompositeBinaryLoader,), d)
+
+    else:
+        return types.new_class(
+            name, (_CompositeBinaryLoader[T],), {}, lambda ns: ns.update(d)
+        )
 
 
 @cache
