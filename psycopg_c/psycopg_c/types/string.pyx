@@ -150,7 +150,7 @@ cdef class _TextLoader(CLoader):
             else:
                 self._bytes_encoding = pg2pyenc(pgenc).encode()
 
-            if pgenc == b"SQL_ASCII":
+            if pgenc != NULL and pgenc == b"SQL_ASCII":
                 self.encoding = NULL
             else:
                 self.encoding = PyBytes_AsString(self._bytes_encoding)

@@ -291,13 +291,25 @@ class ArrayLoader(RecursiveLoader):
     delimiter = b","
     base_oid: int
 
+    def __init__(self, oid: int, context: AdaptContext | None = None):
+        super().__init__(oid, context)
+        # Create the element loader now: the connection might be closed
+        # by the time data is loaded (#1428).
+        self._loader = self._tx.get_loader(self.base_oid, self.format)
+
     def load(self, data: Buffer) -> list[Any]:
-        loader = self._tx.get_loader(self.base_oid, self.format)
-        return _load_text(data, loader, self.delimiter)
+        return _load_text(data, self._loader, self.delimiter)
 
 
 class ArrayBinaryLoader(RecursiveLoader):
     format = pq.Format.BINARY
+
+    def __init__(self, oid: int, context: AdaptContext | None = None):
+        super().__init__(oid, context)
+        # The element oid is in the data, but if the array type is known,
+        # create the element loader now, while the connection is still open.
+        if (info := self._tx.adapters.types.get(oid)) and info.array_oid == oid:
+            self._tx.get_loader(info.oid, self.format)
 
     def load(self, data: Buffer) -> list[Any]:
         return _load_binary(data, self._tx)
