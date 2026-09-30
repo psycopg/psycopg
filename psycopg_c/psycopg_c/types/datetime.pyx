@@ -1141,7 +1141,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
     if pgconn is None:
         return timezone_utc
 
-    cdef bytes tzname = libpq.PQparameterStatus(pgconn._pgconn_ptr, b"TimeZone")
+    tzname = pgconn.parameter_status(b"TimeZone")
     cdef PyObject *ptr = PyDict_GetItem(_timezones, tzname)
     if ptr != NULL:
         return <object>ptr

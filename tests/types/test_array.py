@@ -78,6 +78,26 @@ def test_load_list_str(conn, obj, want, fmt_out):
     assert cur.fetchone()[0] == want
 
 
+@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize("type", ["text", "varchar", "name"])
+def test_load_after_close(conn, type, fmt_out):
+    # Array element loaders are created at fetch time: make sure they
+    # don't crash if the connection is closed (#1428)
+    cur = conn.cursor(binary=fmt_out)
+    cur.execute(f"select array['hello'::{type}]")
+    conn.close()
+    assert cur.fetchone()[0] == ["hello"]
+
+
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_after_close_tz(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
+    cur.execute("select array[now()]")
+    conn.close()
+    with pytest.raises(psycopg.OperationalError):
+        cur.fetchone()
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_all_chars(conn, fmt_in, fmt_out):

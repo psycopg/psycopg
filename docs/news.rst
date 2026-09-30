@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix segfault fetching arrays of strings or timestamps after closing the
+  connection (:ticket:`#1428`).
+
+
 Current release
 ---------------
 
@@ -14,6 +24,8 @@ Psycopg 3.3.6
 ^^^^^^^^^^^^^
 
 - Add support for Python 3.15 (:ticket:`#1245`).
+- Improve performance of async queries by reducing the overhead of the
+  `!wait_async()` function (:ticket:`#1331`).
 - Don't wait forever for a query to terminate after interrupting it, for
   instance if the server is unresponsive. The fix requires libpq 17 or newer
   (:ticket:`#1371`).
@@ -24,8 +36,6 @@ Psycopg 3.3.6
 - Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
 - Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
 - Better guards dumping large Python `!int` to binary numeric (:ticket:`#1414`).
-- Improve performance of async queries by reducing the overhead of the
-  `!wait_async()` function (:ticket:`#1331`).
 
 
 Psycopg 3.3.5
