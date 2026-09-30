@@ -7,7 +7,8 @@ from psycopg import pq, sql
 from psycopg.adapt import PyFormat
 
 from ..utils import eur
-from ..fix_crdb import crdb_encoding, crdb_scs_off
+from ..fix_db import mark_scs
+from ..fix_crdb import crdb_encoding
 
 #
 # tests with text
@@ -26,12 +27,13 @@ def test_dump_1char(conn, fmt_in):
         assert cur.fetchone()[0] is True, chr(i)
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 def test_quote_1char(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
     conn.execute(f"set standard_conforming_strings to {scs}")
-    conn.execute("set escape_string_warning to on")
+    if conn.info.server_version < 190000:
+        conn.execute("set escape_string_warning to on")
 
     cur = conn.cursor()
     query = sql.SQL("select {ch} = chr(%s)")
@@ -266,13 +268,14 @@ def test_dump_1byte(conn, fmt_in, pytype):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 @pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
 def test_quote_1byte(conn, scs, pytype):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
     conn.execute(f"set standard_conforming_strings to {scs}")
-    conn.execute("set escape_string_warning to on")
+    if conn.info.server_version < 190000:
+        conn.execute("set escape_string_warning to on")
 
     cur = conn.cursor()
     query = sql.SQL("select {ch} = set_byte('x', 0, %s)")

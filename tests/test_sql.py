@@ -14,7 +14,8 @@ from psycopg._encodings import py2pgenc
 from psycopg.types.string import StrDumper
 
 from .utils import eur
-from .fix_crdb import crdb_encoding, crdb_scs_off
+from .fix_db import mark_scs
+from .fix_crdb import crdb_encoding
 from .test_adapt import make_dumper
 
 
@@ -32,7 +33,7 @@ def test_quote(obj, quoted):
     assert sql.quote(obj) == quoted
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 def test_quote_roundtrip(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
@@ -48,7 +49,7 @@ def test_quote_roundtrip(conn, scs):
         assert not messages, f"error with {want!r}"
 
 
-@pytest.mark.parametrize("dummy", [crdb_scs_off("off")])
+@pytest.mark.parametrize("dummy", [mark_scs("off")])
 def test_quote_stable_despite_deranged_libpq(conn, dummy):
     # Verify the libpq behaviour of PQescapeString using the last setting seen.
     # Check that we are not affected by it.

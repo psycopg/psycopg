@@ -3,7 +3,7 @@ import pytest
 import psycopg
 from psycopg import pq
 
-from ..fix_crdb import crdb_scs_off
+from ..fix_db import mark_scs
 
 
 @pytest.mark.parametrize(
@@ -21,7 +21,7 @@ def test_escape_literal(pgconn, data, want):
     assert out == want
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 def test_escape_literal_1char(pgconn, scs):
     res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))
     assert res.status == pq.ExecStatus.COMMAND_OK
@@ -60,7 +60,7 @@ def test_escape_identifier(pgconn, data, want):
     assert out == want
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 def test_escape_identifier_1char(pgconn, scs):
     res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))
     assert res.status == pq.ExecStatus.COMMAND_OK
@@ -99,7 +99,7 @@ def test_escape_string(pgconn, data, want):
     assert out == want
 
 
-@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
+@pytest.mark.parametrize("scs", ["on", mark_scs("off")])
 def test_escape_string_1char(pgconn, scs):
     esc = pq.Escaping(pgconn)
     res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))

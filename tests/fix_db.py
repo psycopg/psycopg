@@ -331,6 +331,18 @@ def check_connection_version(node):
                 pytest.skip(msg)
 
 
+def mark_scs(*args):
+    # Mark the argument (usually the literal 'off') to avoid it on databases
+    # that don't support setting the standard_conforming_strings to off.
+    return pytest.param(
+        *args,
+        marks=[
+            pytest.mark.pg("< 19"),
+            pytest.mark.crdb("skip", reason="standard_conforming_strings=off"),
+        ],
+    )
+
+
 @pytest.fixture
 def hstore(svcconn):
     try:
