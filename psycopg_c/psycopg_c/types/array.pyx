@@ -43,12 +43,14 @@ cdef class ArrayLoader(_CRecursiveLoader):
     cdef char *scratch
     cdef size_t sclen
 
-    cdef object cload(self, const char *data, size_t length):
-        if self.cdelim == b"\x00":
-            self.row_loader = self._tx._c_get_loader(
-                <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
-            self.cdelim = self.delimiter[0]
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        # Create the element loader now: the connection might be closed
+        # by the time data is loaded (#1428).
+        self.row_loader = self._tx._c_get_loader(
+            <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
+        self.cdelim = self.delimiter[0]
 
+    cdef object cload(self, const char *data, size_t length):
         return _array_load_text(
             data, length, self.row_loader, self.cdelim,
             &(self.scratch), &(self.sclen))
@@ -63,6 +65,13 @@ cdef class ArrayBinaryLoader(_CRecursiveLoader):
     format = PQ_BINARY
 
     cdef PyObject *row_loader
+
+    def __cinit__(self, oid: int, context: AdaptContext | None = None):
+        # The element oid is in the data, but if the array type is known,
+        # create the element loader now, while the connection is still open.
+        info = self._tx.adapters.types.get(oid)
+        if info is not None and info.array_oid == oid:
+            self._tx._c_get_loader(<PyObject *>info.oid, <PyObject *>PQ_BINARY)
 
     cdef object cload(self, const char *data, size_t length):
         rv = _array_load_binary(data, length, self._tx, &(self.row_loader))

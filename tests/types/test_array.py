@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import datetime as dt
 from math import prod
 from typing import Any
 from decimal import Decimal
@@ -79,23 +80,34 @@ def test_load_list_str(conn, obj, want, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_out", pq.Format)
-@pytest.mark.parametrize("type", ["text", "varchar", "name"])
-def test_load_after_close(conn, type, fmt_out):
-    # Array element loaders are created at fetch time: make sure they
-    # don't crash if the connection is closed (#1428)
+@pytest.mark.parametrize(
+    "literal, want",
+    [
+        ("'hello'::text", "hello"),
+        ("'hello'::varchar", "hello"),
+        ("'hello'::name", "hello"),
+        (
+            "'2020-01-01 00:00Z'::timestamptz",
+            dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc),
+        ),
+    ],
+)
+def test_load_after_close(conn, literal, want, fmt_out):
+    # Array element loaders must not need the connection at fetch time (#1428)
     cur = conn.cursor(binary=fmt_out)
-    cur.execute(f"select array['hello'::{type}]")
+    cur.execute(f"select array[{literal}]")
     conn.close()
-    assert cur.fetchone()[0] == ["hello"]
+    assert cur.fetchone()[0] == [want]
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_out", pq.Format)
-def test_load_after_close_tz(conn, fmt_out):
+def test_load_after_close_encoding(conn, fmt_out):
+    conn.execute("set client_encoding to latin1")
     cur = conn.cursor(binary=fmt_out)
-    cur.execute("select array[now()]")
+    cur.execute("select array['\u00e0\u00e8\u00e9'::text]")
     conn.close()
-    with pytest.raises(psycopg.OperationalError):
-        cur.fetchone()
+    assert cur.fetchone()[0] == ["\u00e0\u00e8\u00e9"]
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
