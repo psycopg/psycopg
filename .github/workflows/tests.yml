@@ -31,23 +31,23 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.10", postgres: "postgres:18", libpq: oldest}
-          - {impl: python, python: "3.11", postgres: "postgres:17", libpq: master}
-          - {impl: python, python: "3.12", postgres: "postgres:16", libpq: newest}
-          - {impl: python, python: "3.13", postgres: "postgres:13"}
-          - {impl: python, python: "3.14", postgres: "postgres:14"}
-          - {impl: python, python: "3.14t", postgres: "postgres:14"}
+          - {impl: python, python: "3.10", postgres: "postgres:19beta4", libpq: oldest}
+          - {impl: python, python: "3.11", postgres: "postgres:19beta4", libpq: master}
+          - {impl: python, python: "3.12", postgres: "postgres:18", libpq: newest}
+          - {impl: python, python: "3.13", postgres: "postgres:18"}
+          - {impl: python, python: "3.14", postgres: "postgres:17"}
+          - {impl: python, python: "3.14t", postgres: "postgres:16"}
           - {impl: python, python: "3.15", postgres: "postgres:15"}
-          - {impl: python, python: "3.15t", postgres: "postgres:15"}
+          - {impl: python, python: "3.15t", postgres: "postgres:14"}
 
-          - {impl: c, python: "3.10", postgres: "postgres:13", libpq: master}
+          - {impl: c, python: "3.10", postgres: "postgres:14", libpq: master}
           - {impl: c, python: "3.11", postgres: "postgres:15", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:16"}
           - {impl: c, python: "3.13", postgres: "postgres:17", libpq: newest}
           - {impl: c, python: "3.14", postgres: "postgres:18"}
           - {impl: c, python: "3.14t", postgres: "postgres:18"}
-          - {impl: c, python: "3.15", postgres: "postgres:18"}
-          - {impl: c, python: "3.15t", postgres: "postgres:18"}
+          - {impl: c, python: "3.15", postgres: "postgres:19beta4"}
+          - {impl: c, python: "3.15t", postgres: "postgres:19beta4"}
 
           - {impl: python, python: "3.10", ext: gevent, postgres: "postgres:17"}
           - {impl: python, python: "3.10", ext: dns, postgres: "postgres:14"}
@@ -60,14 +60,14 @@ jobs:
           # WARNING: when bumping min version, make sure that the dependencies
           # in tests/constraints.txt are updated and that binary packages
           # are available for such version.
-          - {impl: c, python: "3.10", ext: min, postgres: "postgres:15"}
+          - {impl: c, python: "3.10", ext: min, postgres: "postgres:18"}
 
           # Test memory alignment
           - {impl: c, python: "3.12", ext: align, postgres: "postgres:17"}
 
           # Test with PyPy.
-          - {impl: python, python: "pypy3.10", postgres: "postgres:14"}
-          - {impl: python, python: "pypy3.11", postgres: "postgres:15"}
+          - {impl: python, python: "pypy3.10", postgres: "postgres:18"}
+          - {impl: python, python: "pypy3.11", postgres: "postgres:17"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
