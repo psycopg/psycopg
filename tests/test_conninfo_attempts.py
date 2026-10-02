@@ -184,7 +184,7 @@ def test_conninfo_random_multi_host():
 
 
 def test_conninfo_random_multi_ips(fake_resolve):
-    args = {"host": "alot.com"}
+    args = {"host": "alots.com"}
     hostaddrs = [str(att["hostaddr"]) for att in conninfo_attempts(args)]
     assert len(hostaddrs) == 20
     assert hostaddrs == sorted(hostaddrs)

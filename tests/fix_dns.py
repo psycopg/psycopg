@@ -14,7 +14,7 @@ def fake_resolve(monkeypatch):
         "foo.com": ["1.1.1.1"],
         "qux.com": ["2.2.2.2"],
         "dup.com": ["3.3.3.3", "3.3.3.4"],
-        "alot.com": [f"4.4.4.{n}" for n in range(10, 30)],
+        "alots.com": [f"4.4.4.{n}" for n in range(10, 30)],
     }
 
     def family(host):
