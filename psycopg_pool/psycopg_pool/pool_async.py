@@ -593,7 +593,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             # Give a chance to the pool to grow if it has no connection.
             # In case there are enough connection, or the pool is already
             # growing, this is a no-op.
-            self._maybe_grow_pool()
+            if not conns:
+                self._maybe_grow_pool()
 
         while conns:
             conn = conns.pop()

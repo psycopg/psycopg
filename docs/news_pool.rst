@@ -10,6 +10,9 @@
 Current release
 ---------------
 
+- Prevent `~ConnectionPool.check()` and `~AsyncConnectionPool.check()` from
+  growing the pool when healthy connections are available (:ticket:`#1434`).
+
 psycopg_pool 3.3.3
 ^^^^^^^^^^^^^^^^^^
 
