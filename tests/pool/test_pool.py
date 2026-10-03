@@ -628,6 +628,14 @@ def test_refill_on_check(proxy):
         assert len(p._pool) == 4
 
 
+def test_check_does_not_grow_pool(dsn):
+    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
+        p.wait()
+        assert p._nconns == 2
+        p.check()
+        assert p._nconns == 2
+
+
 @pytest.mark.slow
 def test_uniform_use(dsn):
     with pool.ConnectionPool(dsn, min_size=4) as p:

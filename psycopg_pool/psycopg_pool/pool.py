@@ -525,10 +525,12 @@ class ConnectionPool(Generic[CT], BasePool):
             conns = list(self._pool)
             self._pool.clear()
 
-            # Give a chance to the pool to grow if it has no connection.
-            # In case there are enough connection, or the pool is already
-            # growing, this is a no-op.
-            self._maybe_grow_pool()
+            # Give a chance to the pool to grow if too low on connections
+            # (because the client got disconnected and all reconnection
+            # attempts failed, therefore _nconns went below min, see #438).
+            # If the pool is already growing this will be no-op.
+            if self._nconns < self._min_size:
+                self._maybe_grow_pool()
 
         while conns:
             conn = conns.pop()

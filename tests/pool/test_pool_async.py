@@ -630,6 +630,14 @@ async def test_refill_on_check(proxy):
         assert len(p._pool) == 4
 
 
+async def test_check_does_not_grow_pool(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=2, max_size=4) as p:
+        await p.wait()
+        assert p._nconns == 2
+        await p.check()
+        assert p._nconns == 2
+
+
 @pytest.mark.slow
 async def test_uniform_use(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
