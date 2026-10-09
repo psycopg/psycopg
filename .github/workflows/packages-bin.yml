@@ -182,22 +182,29 @@ jobs:
   # }}}
 
   windows:  # {{{
-    # TODO: move it back to windows-latest when the default runner switches.
-    runs-on: ${{ matrix.arch == 'win_arm64' && 'windows-11-arm' || 'windows-2025' }}
+    runs-on: ${{ matrix.platform.runner }}
     if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
-        arch: [win_amd64, win_arm64]
+        platform:
+          - arch: win_amd64
+            runner: windows-latest
+            vcpkg_triplet: x64-windows-release
+          - &win_arm64
+            arch: win_arm64
+            runner: windows-11-arm
+            # Note: there is no arm64-windows-release triplet in vcpkg.
+            vcpkg_triplet: arm64-windows
         pyver: [cp310, cp311, cp312, cp313, cp314, cp315]
         exclude:
           # Python 3.10 does not have an arm64 release
-          - {arch: win_arm64, pyver: cp310}
+          - platform: *win_arm64
+            pyver: cp310
 
     env:
-      # Note: there is no arm64-windows-release triplet in vcpkg.
-      VCPKG_TRIPLET: ${{ matrix.arch == 'win_arm64' && 'arm64-windows' || 'x64-windows-release' }}
+      VCPKG_TRIPLET: ${{ matrix.platform.vcpkg_triplet }}
 
     defaults:
       run:
@@ -245,8 +252,7 @@ jobs:
           package-dir: psycopg_binary
         env:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite" # cache vcpkg
-          CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
-          CIBW_ARCHS_WINDOWS: ${{ matrix.arch == 'win_arm64' && 'ARM64' || 'AMD64 x86' }}
+          CIBW_BUILD: ${{matrix.pyver}}-${{matrix.platform.arch}}
           CIBW_BEFORE_BUILD_WINDOWS: '.\tools\ci\wheel_win32_before_build.bat'
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir}
@@ -262,7 +268,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: windows-${{matrix.pyver}}-${{matrix.arch}}
+          name: windows-${{matrix.pyver}}-${{matrix.platform.arch}}
           path: ./wheelhouse/*.whl
 
 

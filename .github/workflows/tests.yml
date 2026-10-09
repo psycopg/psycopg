@@ -264,9 +264,7 @@ jobs:
   # }}}
 
   windows:  # {{{
-    # TODO: move the default back to windows-latest when the default runner
-    # switches.
-    runs-on: ${{ matrix.runner || 'windows-2025' }}
+    runs-on: ${{ matrix.runner || 'windows-latest' }}
     if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
