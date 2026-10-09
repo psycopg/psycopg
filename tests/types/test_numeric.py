@@ -75,6 +75,7 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
     assert ok
 
 
+@pytest.mark.slow
 def test_dump_int_numeric_binary_limits():
     limit = 10_000**32_768
 
