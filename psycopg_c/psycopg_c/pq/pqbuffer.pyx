@@ -8,6 +8,7 @@ cimport cython
 from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.buffer cimport PyBUF_SIMPLE, PyBuffer_Release, PyObject_CheckBuffer
 from cpython.buffer cimport PyObject_GetBuffer
+from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 
 
 @cython.freelist(32)
@@ -95,13 +96,16 @@ cdef class ViewBuffer:
         pass
 
 
-cdef int _buffer_as_string_and_size(
+cdef inline int _buffer_as_string_and_size(
     data: "Buffer", char **ptr, Py_ssize_t *length
 ) except -1:
     cdef Py_buffer buf
 
     if isinstance(data, bytes):
         PyBytes_AsStringAndSize(data, ptr, length)
+    elif isinstance(data, bytearray):
+        ptr[0] = PyByteArray_AS_STRING(data)
+        length[0] = PyByteArray_GET_SIZE(data)
     elif PyObject_CheckBuffer(data):
         PyObject_GetBuffer(data, &buf, PyBUF_SIMPLE)
         ptr[0] = <char *>buf.buf
