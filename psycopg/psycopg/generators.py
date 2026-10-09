@@ -83,10 +83,8 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
 
         if status == POLL_READING or status == POLL_WRITING:
             wait = WAIT_R if status == POLL_READING else WAIT_W
-            while True:
-                ready = yield conn.socket, wait
-                if ready:
-                    break
+            while not (yield conn.socket, wait):
+                pass
 
         elif status == POLL_OK:
             break

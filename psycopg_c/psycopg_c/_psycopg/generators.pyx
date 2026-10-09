@@ -35,7 +35,7 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
-    cdef object wait, ready
+    cdef object wait
 
     logger.debug("connection started: %s", conn)
     while True:
@@ -55,10 +55,8 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
             or poll_status == libpq.PGRES_POLLING_WRITING
         ):
             wait = WAIT_R if poll_status == libpq.PGRES_POLLING_READING else WAIT_W
-            while True:
-                ready = yield (libpq.PQsocket(pgconn_ptr), wait)
-                if ready:
-                    break
+            while not (yield (libpq.PQsocket(pgconn_ptr), wait)):
+                pass
 
         elif poll_status == libpq.PGRES_POLLING_OK:
             break
