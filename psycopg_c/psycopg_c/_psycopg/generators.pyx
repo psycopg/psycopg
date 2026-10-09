@@ -79,16 +79,20 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
 def cancel(pq.PGcancelConn cancel_conn) -> PQGenConn[None]:
     cdef libpq.PGcancelConn *pgcancelconn_ptr = cancel_conn.pgcancelconn_ptr
     cdef int status
+    cdef object wait
 
     while True:
         with nogil:
             status = libpq.PQcancelPoll(pgcancelconn_ptr)
         if status == libpq.PGRES_POLLING_OK:
             break
-        elif status == libpq.PGRES_POLLING_READING:
-            yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_R
-        elif status == libpq.PGRES_POLLING_WRITING:
-            yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_W
+        elif (
+            status == libpq.PGRES_POLLING_READING
+            or status == libpq.PGRES_POLLING_WRITING
+        ):
+            wait = WAIT_R if status == libpq.PGRES_POLLING_READING else WAIT_W
+            while not (yield (libpq.PQcancelSocket(pgcancelconn_ptr), wait)):
+                pass
         elif status == libpq.PGRES_POLLING_FAILED:
             raise e.OperationalError(
                 f"cancellation failed: {cancel_conn.get_error_message()}"
