@@ -639,6 +639,7 @@ def test_check_does_not_grow_pool(dsn):
 @pytest.mark.slow
 def test_uniform_use(dsn):
     with pool.ConnectionPool(dsn, min_size=4) as p:
+        p.wait()
         counts = Counter[int]()
         for i in range(8):
             with p.connection() as conn:

@@ -641,6 +641,7 @@ async def test_check_does_not_grow_pool(dsn):
 @pytest.mark.slow
 async def test_uniform_use(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
+        await p.wait()
         counts = Counter[int]()
         for i in range(8):
             async with p.connection() as conn:
