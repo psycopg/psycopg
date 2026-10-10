@@ -15,6 +15,8 @@ Psycopg 3.3.7 (unreleased)
 
 - Fix segfault fetching arrays of strings or timestamps after closing the
   connection (:ticket:`#1428`).
+- Fix `~Connection.cancel_safe()` failing if the cancel connection is not
+  ready immediately, for instance on a slow network (:ticket:`#1440`).
 
 
 Current release

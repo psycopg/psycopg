@@ -43,15 +43,13 @@ def test_connect_operationalerror_pgconn(generators, dsn, monkeypatch):
         pgconn.exec_(b"select 1")
 
 
+@pytest.mark.slow
 @pytest.mark.libpq(">= 17")
-def test_cancel(pgconn, conn, generators):
+def test_cancel(pgconn, generators):
     pgconn.send_query_params(b"SELECT pg_sleep($1)", [b"180"])
-    while not conn.execute(
-        "SELECT count(*) FROM pg_stat_activity"
-        " WHERE query = 'SELECT pg_sleep($1)'"
-        " AND state = 'active'"
-    ).fetchone():
-        time.sleep(0.01)
+    # make sure the query is running before cancelling
+    # polling pg_stat_activity is overkilling and cannot work on CRDB
+    time.sleep(0.5)
     cancel_conn = pgconn.cancel_conn()
     assert cancel_conn.status != pq.ConnStatus.BAD
     cancel_conn.start()
