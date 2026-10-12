@@ -329,3 +329,30 @@ cursor):
     # ('2020-12-31', 'infinity')
     cur.execute("SELECT '2020-12-31'::date, 'infinity'::date").fetchone()
     # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
+
+
+.. _adapt-example-inf-adapters:
+
+Example: automatic infinity handling
+------------------------------------
+
+If you don't need to distinguish infinite dates from finite ones at all,
+for instance when migrating a codebase from asyncpg, you can register a set
+of adapters mapping `!date.max`, `!date.min`, `!datetime.max`, and
+`!datetime.min` to PostgreSQL `"infinity"` and `"-infinity"` (and back),
+instead of writing the subclasses yourself:
+
+.. code:: python
+
+    from psycopg.types.datetime import register_infinity_adapters
+
+    # Map max/min to infinity on this connection (or cursor, or globally
+    # if no argument is passed).
+    register_infinity_adapters(conn)
+
+    cur.execute("SELECT 'infinity'::date").fetchone()
+    # (datetime.date(9999, 12, 31),)
+
+The registration only affects the context it is applied to: the default
+adapters keep raising `!DataError` on infinite values. Timestamps with
+timezone load as UTC datetimes, as an infinite timestamp has no timezone.

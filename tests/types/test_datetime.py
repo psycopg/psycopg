@@ -11,6 +11,7 @@ crdb_skip_negative_interval = pytest.mark.crdb("skip", reason="negative interval
 crdb_skip_invalid_tz = pytest.mark.crdb(
     "skip", reason="crdb doesn't allow invalid timezones"
 )
+crdb_skip_infinity = pytest.mark.crdb("skip", reason="no infinity dates")
 
 datestyles_in = [
     pytest.param(datestyle, marks=crdb_skip_datestyle)
@@ -157,6 +158,165 @@ class TestDate:
         assert rec == ("2020-12-31", "infinity")
         rec = cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
         assert rec == (date(2020, 12, 31), date(9999, 12, 31))
+
+
+@crdb_skip_infinity
+class TestInfinityAdapters:
+    @pytest.mark.parametrize("fmt_in", PyFormat)
+    def test_dump_date_infinity(self, conn, fmt_in):
+        from datetime import date
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor()
+        register_infinity_adapters(cur)
+        rec = cur.execute(
+            f"select %{fmt_in.value}::text, %{fmt_in.value}::text",
+            (date.max, date.min),
+        ).fetchone()
+        assert rec == ("infinity", "-infinity")
+
+    @pytest.mark.parametrize("fmt_out", pq.Format)
+    def test_load_date_infinity(self, conn, fmt_out):
+        from datetime import date
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor(binary=fmt_out)
+        register_infinity_adapters(cur)
+        rec = cur.execute("select 'infinity'::date, '-infinity'::date").fetchone()
+        assert rec == (date.max, date.min)
+
+    @pytest.mark.parametrize("fmt_in", PyFormat)
+    def test_dump_timestamp_infinity(self, conn, fmt_in):
+        from datetime import datetime
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor()
+        register_infinity_adapters(cur)
+        rec = cur.execute(
+            f"select %{fmt_in.value}::text, %{fmt_in.value}::text",
+            (datetime.max, datetime.min),
+        ).fetchone()
+        assert rec == ("infinity", "-infinity")
+
+    @pytest.mark.parametrize("fmt_out", pq.Format)
+    def test_load_timestamp_infinity(self, conn, fmt_out):
+        from datetime import datetime
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor(binary=fmt_out)
+        register_infinity_adapters(cur)
+        rec = cur.execute(
+            "select 'infinity'::timestamp, '-infinity'::timestamp"
+        ).fetchone()
+        assert rec == (datetime.max, datetime.min)
+
+    @pytest.mark.parametrize("fmt_in", PyFormat)
+    def test_dump_timestamptz_infinity(self, conn, fmt_in):
+        from datetime import datetime, timezone
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor()
+        register_infinity_adapters(cur)
+        rec = cur.execute(
+            f"select %{fmt_in.value}::text, %{fmt_in.value}::text",
+            (
+                datetime.max.replace(tzinfo=timezone.utc),
+                datetime.min.replace(tzinfo=timezone.utc),
+            ),
+        ).fetchone()
+        assert rec == ("infinity", "-infinity")
+
+    @pytest.mark.parametrize("fmt_out", pq.Format)
+    def test_load_timestamptz_infinity(self, conn, fmt_out):
+        from datetime import datetime, timezone
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        cur = conn.cursor(binary=fmt_out)
+        register_infinity_adapters(cur)
+        rec = cur.execute(
+            "select 'infinity'::timestamptz, '-infinity'::timestamptz"
+        ).fetchone()
+        assert rec == (
+            datetime.max.replace(tzinfo=timezone.utc),
+            datetime.min.replace(tzinfo=timezone.utc),
+        )
+
+    def test_register_infinity_adapters_global(self, monkeypatch):
+        # Registering without a context targets the global adapters map.
+        # Swap it for an isolated copy so the test cannot leak state.
+        from datetime import date, datetime
+
+        from psycopg import postgres
+        from psycopg.pq import Format
+        from psycopg._oids import DATE_OID, TIMESTAMP_OID, TIMESTAMPTZ_OID
+        from psycopg.adapt import PyFormat
+        from psycopg._adapters_map import AdaptersMap
+        from psycopg.types.datetime import (
+            DateBinaryInfinityDumper,
+            DateBinaryInfinityLoader,
+            DateInfinityDumper,
+            DateInfinityLoader,
+            DatetimeBinaryInfinityDumper,
+            DatetimeInfinityDumper,
+            TimestampBinaryInfinityLoader,
+            TimestampInfinityLoader,
+            TimestamptzBinaryInfinityLoader,
+            TimestamptzInfinityLoader,
+            register_infinity_adapters,
+        )
+
+        monkeypatch.setattr(
+            postgres, "adapters", AdaptersMap(template=postgres.adapters)
+        )
+        register_infinity_adapters()
+        assert postgres.adapters.get_dumper(date, PyFormat.TEXT) is DateInfinityDumper
+        assert (
+            postgres.adapters.get_dumper(date, PyFormat.BINARY)
+            is DateBinaryInfinityDumper
+        )
+        assert (
+            postgres.adapters.get_dumper(datetime, PyFormat.TEXT)
+            is DatetimeInfinityDumper
+        )
+        assert (
+            postgres.adapters.get_dumper(datetime, PyFormat.BINARY)
+            is DatetimeBinaryInfinityDumper
+        )
+        assert postgres.adapters.get_loader(DATE_OID, Format.TEXT) is DateInfinityLoader
+        assert (
+            postgres.adapters.get_loader(DATE_OID, Format.BINARY)
+            is DateBinaryInfinityLoader
+        )
+        assert (
+            postgres.adapters.get_loader(TIMESTAMP_OID, Format.TEXT)
+            is TimestampInfinityLoader
+        )
+        assert (
+            postgres.adapters.get_loader(TIMESTAMP_OID, Format.BINARY)
+            is TimestampBinaryInfinityLoader
+        )
+        assert (
+            postgres.adapters.get_loader(TIMESTAMPTZ_OID, Format.TEXT)
+            is TimestamptzInfinityLoader
+        )
+        assert (
+            postgres.adapters.get_loader(TIMESTAMPTZ_OID, Format.BINARY)
+            is TimestamptzBinaryInfinityLoader
+        )
+        assert (
+            postgres.adapters.get_dumper(datetime, PyFormat.TEXT)
+            is DatetimeInfinityDumper
+        )
+        assert (
+            postgres.adapters.get_dumper(datetime, PyFormat.BINARY)
+            is DatetimeBinaryInfinityDumper
+        )
 
 
 class TestDatetime:

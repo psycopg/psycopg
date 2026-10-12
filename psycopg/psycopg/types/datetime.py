@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 from datetime import date, datetime, time, timedelta, timezone
 from collections.abc import Callable
 
-from .. import _oids
+from .. import _oids, postgres
 from ..pq import Format
 from .._tz import get_tzinfo
 from ..abc import AdaptContext, DumperKey
@@ -738,3 +738,244 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_loader("timestamptz", TimestamptzBinaryLoader)
     adapters.register_loader("interval", IntervalLoader)
     adapters.register_loader("interval", IntervalBinaryLoader)
+
+
+# The reserved values PostgreSQL uses for infinite dates and timestamps.
+# Text format uses the "infinity" and "-infinity" strings, binary format
+# uses the extreme int4 (days, for dates) and int8 (microseconds, for
+# timestamps) values. See
+# https://www.postgresql.org/docs/current/datatype-datetime.html
+
+_pg_date_inf_days = 2**31 - 1
+_pg_date_neg_inf_days = -(2**31)
+_pg_ts_inf_micros = 2**63 - 1
+_pg_ts_neg_inf_micros = -(2**63)
+
+
+def _wallclock(obj: datetime) -> datetime:
+    # Compare aware datetimes by their wall time: there is no aware
+    # `datetime.max` (attaching a tzinfo to it may overflow), so a timestamp
+    # reading 9999-12-31 23:59:59.999999 in any timezone maps to infinity.
+    return obj.replace(tzinfo=None) if obj.tzinfo is not None else obj
+
+
+class DateInfinityDumper(DateDumper):
+    """Dump `date.max` / `date.min` as `infinity` / `-infinity`."""
+
+    def dump(self, obj: date) -> Buffer | None:
+        if obj == date.max:
+            return b"infinity"
+        elif obj == date.min:
+            return b"-infinity"
+        else:
+            return super().dump(obj)
+
+
+class DateBinaryInfinityDumper(DateBinaryDumper):
+    """Dump `date.max` / `date.min` as binary `infinity` / `-infinity`."""
+
+    def dump(self, obj: date) -> Buffer | None:
+        if obj == date.max:
+            return pack_int4(_pg_date_inf_days)
+        elif obj == date.min:
+            return pack_int4(_pg_date_neg_inf_days)
+        else:
+            return super().dump(obj)
+
+
+class DatetimeInfinityDumper(DatetimeDumper):
+    """Dump a max / min aware datetime as `infinity` / `-infinity`."""
+
+    def dump(self, obj: datetime) -> Buffer | None:
+        wall = _wallclock(obj)
+        if wall == datetime.max:
+            return b"infinity"
+        elif wall == datetime.min:
+            return b"-infinity"
+        else:
+            return super().dump(obj)
+
+    def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
+        if obj.tzinfo:
+            return self
+        else:
+            return DatetimeNoTzInfinityDumper(self.cls)
+
+
+class DatetimeBinaryInfinityDumper(DatetimeBinaryDumper):
+    """Dump a max / min aware datetime as binary `infinity` / `-infinity`."""
+
+    def dump(self, obj: datetime) -> Buffer | None:
+        wall = _wallclock(obj)
+        if wall == datetime.max:
+            return pack_int8(_pg_ts_inf_micros)
+        elif wall == datetime.min:
+            return pack_int8(_pg_ts_neg_inf_micros)
+        else:
+            return super().dump(obj)
+
+    def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
+        if obj.tzinfo:
+            return self
+        else:
+            return DatetimeNoTzBinaryInfinityDumper(self.cls)
+
+
+class DatetimeNoTzInfinityDumper(DatetimeNoTzDumper):
+    """Dump a max / min naive datetime as `infinity` / `-infinity`."""
+
+    def dump(self, obj: datetime) -> Buffer | None:
+        if obj == datetime.max:
+            return b"infinity"
+        elif obj == datetime.min:
+            return b"-infinity"
+        else:
+            return super().dump(obj)
+
+
+class DatetimeNoTzBinaryInfinityDumper(DatetimeNoTzBinaryDumper):
+    """Dump a max / min naive datetime as binary `infinity` / `-infinity`."""
+
+    def dump(self, obj: datetime) -> Buffer | None:
+        if obj == datetime.max:
+            return pack_int8(_pg_ts_inf_micros)
+        elif obj == datetime.min:
+            return pack_int8(_pg_ts_neg_inf_micros)
+        else:
+            return super().dump(obj)
+
+
+class DateInfinityLoader(DateLoader):
+    """Load `infinity` / `-infinity` dates as `date.max` / `date.min`."""
+
+    def load(self, data: Buffer) -> date:
+        raw = bytes(data)
+        if raw == b"infinity":
+            return date.max
+        elif raw == b"-infinity":
+            return date.min
+        else:
+            return super().load(data)
+
+
+class DateBinaryInfinityLoader(DateBinaryLoader):
+    """Load binary `infinity` / `-infinity` dates as `date.max` / `date.min`."""
+
+    def load(self, data: Buffer) -> date:
+        (days,) = unpack_int4(data)
+        if days == _pg_date_inf_days:
+            return date.max
+        elif days == _pg_date_neg_inf_days:
+            return date.min
+        else:
+            return super().load(data)
+
+
+class TimestampInfinityLoader(TimestampLoader):
+    """Load `infinity` / `-infinity` timestamps as `datetime.max` / `min`."""
+
+    def load(self, data: Buffer) -> datetime:
+        raw = bytes(data)
+        if raw == b"infinity":
+            return datetime.max
+        elif raw == b"-infinity":
+            return datetime.min
+        else:
+            return super().load(data)
+
+
+class TimestampBinaryInfinityLoader(TimestampBinaryLoader):
+    """Load binary `infinity` / `-infinity` as `datetime.max` / `min`."""
+
+    def load(self, data: Buffer) -> datetime:
+        (micros,) = unpack_int8(data)
+        if micros == _pg_ts_inf_micros:
+            return datetime.max
+        elif micros == _pg_ts_neg_inf_micros:
+            return datetime.min
+        else:
+            return super().load(data)
+
+
+class TimestamptzInfinityLoader(TimestamptzLoader):
+    """
+    Load `infinity` / `-infinity` with timezone as `datetime.max` / `min` in UTC.
+
+    An infinite timestamp has no timezone, so it is returned with a fixed UTC
+    offset instead of the connection timezone.
+    """
+
+    def load(self, data: Buffer) -> datetime:
+        raw = bytes(data)
+        if raw == b"infinity":
+            return datetime.max.replace(tzinfo=utc)
+        elif raw == b"-infinity":
+            return datetime.min.replace(tzinfo=utc)
+        else:
+            return super().load(data)
+
+
+class TimestamptzBinaryInfinityLoader(TimestamptzBinaryLoader):
+    """
+    Load binary `infinity` / `-infinity` with timezone as `datetime.max` / `min`.
+
+    See `TimestamptzInfinityLoader` for the choice of timezone.
+    """
+
+    def load(self, data: Buffer) -> datetime:
+        (micros,) = unpack_int8(data)
+        if micros == _pg_ts_inf_micros:
+            return datetime.max.replace(tzinfo=utc)
+        elif micros == _pg_ts_neg_inf_micros:
+            return datetime.min.replace(tzinfo=utc)
+        else:
+            return super().load(data)
+
+
+def register_infinity_adapters(context: AdaptContext | None = None) -> None:
+    """
+    Map Python's `date/datetime.min/max` to PostgreSQL infinite dates.
+
+    Register adapters converting `infinity` and `-infinity` dates and
+    timestamps to `date.max`, `date.min`, `datetime.max`, and `datetime.min`
+    (the same convention used by asyncpg), and back. Timestamps with timezone
+    load as UTC datetimes, as an infinite timestamp has no timezone.
+
+    The registration is opt-in only: the default adapters keep raising
+    `DataError` on infinite values. Call it on a connection, a cursor, or
+    without arguments to affect the whole program::
+
+        from psycopg.types.datetime import register_infinity_adapters
+
+        register_infinity_adapters(conn)
+
+    :type context: `~psycopg.abc.AdaptContext` | `!None`
+    """
+    adapters = context.adapters if context else postgres.adapters
+
+    # Register both the type objects and their names: `get_dumper()` memoizes
+    # exact-type lookups, so registering the classes too makes sure the new
+    # adapters take effect even if values of these types were already dumped
+    # through this context (e.g. when registering on an open connection).
+    adapters.register_dumper(date, DateInfinityDumper)
+    adapters.register_dumper(date, DateBinaryInfinityDumper)
+    adapters.register_dumper("datetime.date", DateInfinityDumper)
+    adapters.register_dumper("datetime.date", DateBinaryInfinityDumper)
+
+    # Mirror `register_default_adapters` order: naive timestamp dumpers first,
+    # then the aware ones, so the tzinfo-based upgrade keeps working.
+    adapters.register_dumper(datetime, DatetimeNoTzInfinityDumper)
+    adapters.register_dumper(datetime, DatetimeNoTzBinaryInfinityDumper)
+    adapters.register_dumper(datetime, DatetimeInfinityDumper)
+    adapters.register_dumper(datetime, DatetimeBinaryInfinityDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzInfinityDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzBinaryInfinityDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeInfinityDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeBinaryInfinityDumper)
+
+    adapters.register_loader("date", DateInfinityLoader)
+    adapters.register_loader("date", DateBinaryInfinityLoader)
+    adapters.register_loader("timestamp", TimestampInfinityLoader)
+    adapters.register_loader("timestamp", TimestampBinaryInfinityLoader)
+    adapters.register_loader("timestamptz", TimestamptzInfinityLoader)
+    adapters.register_loader("timestamptz", TimestamptzBinaryInfinityLoader)
