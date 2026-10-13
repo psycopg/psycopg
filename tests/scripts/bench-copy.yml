@@ -1,0 +1,180 @@
+name: Benchmark COPY
+
+# Compare the performance of COPY FROM with different flush thresholds on
+# different platforms. See tests/scripts/bench_copy.py for details. Results are
+# reported in the jobs summaries.
+#
+# This workflow is not active: copy it to .github/workflows/ to run it.
+
+on:
+  push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
+    paths:
+      - .github/workflows/bench-copy.yml
+      - tests/scripts/bench_copy.py
+      - tests/scripts/copytest.py
+  workflow_dispatch:
+    inputs:
+      repeat:
+        description: "Number of runs for each threshold"
+        default: "3"
+
+concurrency:
+  # Cancel older requests of the same workflow in the same branch.
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  REPEAT: ${{ inputs.repeat || '3' }}
+
+jobs:
+
+  linux:  # {{{
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        impl: [python, c]
+
+    env:
+      PSYCOPG_IMPL: ${{ matrix.impl }}
+      DEPS: ./psycopg
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres password=password"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Start PostgreSQL service
+        run: |
+          docker pull postgres:18
+          docker run --rm -d --name postgres -p 5432:5432 \
+            -e POSTGRES_PASSWORD=password postgres:18
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
+        run: |
+          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+
+      - name: Install Python packages
+        run: pip install $DEPS
+
+      - name: Run benchmark
+        run: python tests/scripts/bench_copy.py --repeat $REPEAT
+
+
+  # }}}
+
+  macos:  # {{{
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        impl: [python, c]
+
+    env:
+      PSYCOPG_IMPL: ${{ matrix.impl }}
+      DEPS: ./psycopg
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
+      PG_VERSION: "18"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install PostgreSQL on the runner
+        run: brew install postgresql@${PG_VERSION}
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql@${PG_VERSION}
+
+      - name: Find the libpq
+        if: ${{ matrix.impl == 'python' }}
+        run: |
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/lib/postgresql:/opt/homebrew/opt/postgresql@${PG_VERSION}/lib:$DYLD_LIBRARY_PATH" \
+              >> $GITHUB_ENV
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
+        run: |
+          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+          echo "PATH=/opt/homebrew/opt/postgresql@${PG_VERSION}/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Python packages
+        run: pip install $DEPS
+
+      - name: Run benchmark
+        run: python tests/scripts/bench_copy.py --repeat $REPEAT
+
+
+  # }}}
+
+  windows:  # {{{
+    runs-on: windows-2025
+
+    env:
+      PSYCOPG_IMPL: python
+      # psutil is used to measure memory usage, as resource is not available.
+      DEPS: ./psycopg psutil
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # there are some extra libpq.dll in PATH
+      - run: rm -rf c:/tools/php C:/Strawberry/c/bin
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Start PostgreSQL service
+        run: |
+          $PgSvc = Get-Service "postgresql*"
+          Set-Service $PgSvc.Name -StartupType manual
+          $PgSvc.Start()
+        shell: powershell
+
+      - name: Export GitHub Actions cache environment variables
+      # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const path = require('path')
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
+
+      - name: Install libpq from vcpkg and install pg_config.exe stub
+        run: .\tools\ci\wheel_win32_before_build.bat
+        shell: powershell
+        env:
+          # cache vcpkg
+          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+      - name: Install Python packages
+        run: pip install $DEPS
+
+      - name: Run benchmark
+        run: python tests/scripts/bench_copy.py --repeat $REPEAT
+
+
+  # }}}

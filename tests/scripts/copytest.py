@@ -36,7 +36,8 @@ def main_sync(args: Namespace) -> None:
     with psycopg.Connection.connect(args.dsn) as conn:
         with conn.cursor() as cur:
             writer = make_writer(args, cur, psycopg.copy.LibpqWriter)
-            cur.execute(test.get_table_stmt())
+            for stmt in test.get_setup_stmts():
+                cur.execute(stmt)
             t0 = time()
             with cur.copy(test.get_copy_stmt(), writer=writer) as copy:
                 for i in range(args.nrecs):
@@ -51,7 +52,8 @@ async def main_async(args: Namespace) -> None:
     test = CopyPutTest(args)
     async with await psycopg.AsyncConnection.connect(args.dsn) as conn:
         async with conn.cursor() as cur:
-            await cur.execute(test.get_table_stmt())
+            for stmt in test.get_setup_stmts():
+                await cur.execute(stmt)
             writer = make_writer(args, cur, psycopg.copy.AsyncLibpqWriter)
             t0 = time()
             async with cur.copy(test.get_copy_stmt(), writer=writer) as copy:
@@ -75,17 +77,42 @@ def log_maxrss() -> None:
     try:
         import resource
     except ImportError:  # Windows
-        return
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    # Reported in KB on Linux, bytes on macOS
-    if sys.platform == "darwin":
-        rss //= 1024
+        try:
+            import psutil  # type: ignore[import-untyped,unused-ignore]
+        except ImportError:
+            return
+        rss = psutil.Process().memory_info().peak_wset // 1024
+    else:
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # Reported in KB on Linux, bytes on macOS
+        if sys.platform == "darwin":
+            rss //= 1024
     logger.info("max rss: %.1f MB", rss / 1024)
 
 
 class CopyPutTest:
     def __init__(self, args: Namespace):
         self.args = args
+
+    def get_setup_stmts(self) -> list[Query]:
+        rv = [self.get_table_stmt()]
+        if self.args.server_delay:
+            # Make the server slower than the client
+            rv.append(sql.SQL("""\
+create function pg_temp.copytest_delay() returns trigger language plpgsql as $$
+begin
+    if new.id % 100 = 0 then
+        perform pg_sleep({});
+    end if;
+    return new;
+end
+$$
+""").format(self.args.server_delay))
+            rv.append(sql.SQL("""\
+create trigger copytest_delay before insert on testcopy
+for each row execute function pg_temp.copytest_delay()
+"""))
+        return rv
 
     def get_table_stmt(self) -> Query:
         fields = sql.SQL(", ").join(
@@ -134,6 +161,12 @@ def parse_cmdline() -> Namespace:
         help="width of each column to write [default: %(default)s]",
     )
     parser.add_argument("--writer", help="test alternative writer")
+    parser.add_argument(
+        "--server-delay",
+        type=float,
+        default=0.0,
+        help="seconds the server sleeps every 100 records [default: %(default)s]",
+    )
     parser.add_argument(
         "--flush-threshold",
         type=int,
