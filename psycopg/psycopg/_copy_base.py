@@ -7,7 +7,6 @@ psycopg copy support
 from __future__ import annotations
 
 import re
-import sys
 import struct
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic
@@ -51,9 +50,11 @@ MAX_BUFFER_SIZE = 4 * BUFFER_SIZE
 # Each buffer should be around BUFFER_SIZE size.
 QUEUE_SIZE = 1024
 
-# On certain systems, memmove seems particularly slow and flushing often is
-# more performing than accumulating a larger buffer. See #746 for details.
-PREFER_FLUSH = sys.platform == "darwin"
+# Max data to pass to the libpq before waiting for it to be flushed to the
+# server. The libpq output buffer grows unbounded if we produce data faster
+# than the server can consume it (#1437). Flushing every block may be slower
+# on some platforms (#746). See tests/scripts/bench_copy.py for measurements.
+FLUSH_THRESHOLD = 1024 * 1024
 
 
 class BaseCopy(Generic[ConnectionType]):
