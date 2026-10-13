@@ -18,7 +18,7 @@ from . import errors as e
 from . import pq
 from ._compat import Self
 from ._acompat import Queue, Worker, gather, spawn
-from ._copy_base import MAX_BUFFER_SIZE, PREFER_FLUSH, QUEUE_SIZE, BaseCopy
+from ._copy_base import FLUSH_THRESHOLD, MAX_BUFFER_SIZE, QUEUE_SIZE, BaseCopy
 from .generators import copy_end, copy_to
 
 if TYPE_CHECKING:
@@ -178,29 +178,41 @@ class Writer(ABC):
 class LibpqWriter(Writer):
     """
     An `Writer` to write copy data to a Postgres database.
+
+    :param cursor: the cursor where the copy operation is performed.
+    :param flush_threshold: number of bytes to send to the libpq before waiting
+        for them to be flushed to the server. A lower value limits the memory
+        used if the server consumes data slower than it is produced. If 0,
+        wait for every block of data to be flushed.
     """
 
     __module__ = "psycopg.copy"
 
-    def __init__(self, cursor: Cursor[Any]):
+    def __init__(self, cursor: Cursor[Any], *, flush_threshold: int = FLUSH_THRESHOLD):
         self.cursor = cursor
         self.connection = cursor.connection
+        self.flush_threshold = flush_threshold
         self._pgconn = self.connection.pgconn
+        self._unflushed = 0
 
     def write(self, data: Buffer) -> None:
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller
             # bits, so don't make a copy.
-            self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
+            self._put(data)
         else:
             # Copy a buffer too large in chunks to avoid causing a memory
             # error in the libpq, which may cause an infinite loop (#255).
             for i in range(0, len(data), MAX_BUFFER_SIZE):
-                self.connection.wait(
-                    copy_to(
-                        self._pgconn, data[i : i + MAX_BUFFER_SIZE], flush=PREFER_FLUSH
-                    )
-                )
+                self._put(data[i : i + MAX_BUFFER_SIZE])
+
+    def _put(self, data: Buffer) -> None:
+        # Wait for the data to be flushed if we have sent enough of it, in
+        # order to avoid growing the libpq output buffer indefinitely.
+        self._unflushed += len(data)
+        if flush := (self._unflushed >= self.flush_threshold):
+            self._unflushed = 0
+        self.connection.wait(copy_to(self._pgconn, data, flush=flush))
 
     def finish(self, exc: BaseException | None = None) -> None:
         bmsg: bytes | None
@@ -233,8 +245,8 @@ class QueuedLibpqWriter(LibpqWriter):
 
     __module__ = "psycopg.copy"
 
-    def __init__(self, cursor: Cursor[Any]):
-        super().__init__(cursor)
+    def __init__(self, cursor: Cursor[Any], *, flush_threshold: int = FLUSH_THRESHOLD):
+        super().__init__(cursor, flush_threshold=flush_threshold)
 
         self._queue: Queue[Buffer] = Queue(maxsize=QUEUE_SIZE)
         self._worker: Worker | None = None
@@ -250,7 +262,7 @@ class QueuedLibpqWriter(LibpqWriter):
         """
         try:
             while data := self._queue.get():
-                self.connection.wait(copy_to(self._pgconn, data, flush=PREFER_FLUSH))
+                self._put(data)
         except BaseException as ex:
             # Propagate the error to the main thread.
             self._worker_error = ex

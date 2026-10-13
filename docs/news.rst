@@ -17,6 +17,9 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Limit the memory used by :sql:`COPY FROM` if the server consumes data
+  slower than it is produced. Add a `!flush_threshold` parameter to
+  `~copy.LibpqWriter` to tune it (:ticket:`#1437`).
 
 
 Current release
