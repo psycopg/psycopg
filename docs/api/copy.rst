@@ -90,6 +90,9 @@ Writers instances can be used passing them to the cursor
 
     This is the writer used by default if none is specified.
 
+    .. versionchanged:: 3.3.7
+        added the `!flush_threshold` parameter.
+
 
 .. autoclass:: FileWriter
 
