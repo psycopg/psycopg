@@ -157,33 +157,39 @@ class ListDumper(BaseListDumper):
     def dump(self, obj: list[Any]) -> Buffer | None:
         tokens: list[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
-
-        def dump_list(obj: list[Any]) -> None:
-            if not obj:
-                tokens.append(b"{}")
-                return
-
-            tokens.append(b"{")
-            for item in obj:
-                if isinstance(item, list):
-                    dump_list(item)
-                elif item is not None:
-                    if (ad := self._dump_item(item)) is None:
-                        tokens.append(b"NULL")
-                    else:
-                        if needs_quotes(ad):
-                            ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
-                        tokens.append(ad)
-                else:
-                    tokens.append(b"NULL")
-
-                tokens.append(self.delimiter)
-
-            tokens[-1] = b"}"
-
-        dump_list(obj)
-
+        self._dump_list(obj, tokens, needs_quotes)
         return b"".join(tokens)
+
+    def _dump_list(
+        self,
+        obj: list[Any],
+        tokens: list[Buffer],
+        needs_quotes: Callable[[Buffer], object],
+    ) -> None:
+        """
+        Append the tokens of the text representation of a list to *tokens*.
+        """
+        if not obj:
+            tokens.append(b"{}")
+            return
+
+        tokens.append(b"{")
+        for item in obj:
+            if isinstance(item, list):
+                self._dump_list(item, tokens, needs_quotes)
+            elif item is not None:
+                if (ad := self._dump_item(item)) is None:
+                    tokens.append(b"NULL")
+                else:
+                    if needs_quotes(ad):
+                        ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
+                    tokens.append(ad)
+            else:
+                tokens.append(b"NULL")
+
+            tokens.append(self.delimiter)
+
+        tokens[-1] = b"}"
 
     def _dump_item(self, item: Any) -> Buffer | None:
         if self.sub_dumper:
@@ -255,44 +261,50 @@ class ListBinaryDumper(BaseListDumper):
 
         data: list[Buffer] = [b"", b""]  # placeholders to avoid a resize
         dims: list[int] = []
-        hasnull = 0
-
-        def calc_dims(L: list[Any]) -> None:
-            if isinstance(L, self.cls):
-                if not L:
-                    raise e.DataError("lists cannot contain empty lists")
-                dims.append(len(L))
-                calc_dims(L[0])
-
-        calc_dims(obj)
-
-        def dump_list(L: list[Any], dim: int) -> None:
-            nonlocal hasnull
-            if len(L) != dims[dim]:
-                raise e.DataError("nested lists have inconsistent lengths")
-
-            if dim == len(dims) - 1:
-                for item in L:
-                    if item is not None:
-                        # If we get here, the sub_dumper must have been set
-                        item = self.sub_dumper.dump(item)  # type: ignore[union-attr]
-                    if item is not None:
-                        data.append(pack_len(len(item)))
-                        data.append(item)
-                    else:
-                        hasnull = 1
-                        data.append(ARRAY_NULL)
-            else:
-                for item in L:
-                    if not isinstance(item, self.cls):
-                        raise e.DataError("nested lists have inconsistent depths")
-                    dump_list(item, dim + 1)  # type: ignore
-
-        dump_list(obj, 0)
+        self._calc_dims(obj, dims)
+        hasnull = self._dump_list(obj, 0, dims, data)
 
         data[0] = _pack_head(len(dims), hasnull, sub_oid)
         data[1] = b"".join(_pack_dim(dim, 1) for dim in dims)
         return b"".join(data)
+
+    def _calc_dims(self, L: list[Any], dims: list[int]) -> None:
+        if isinstance(L, self.cls):
+            if not L:
+                raise e.DataError("lists cannot contain empty lists")
+            dims.append(len(L))
+            self._calc_dims(L[0], dims)
+
+    def _dump_list(
+        self, L: list[Any], dim: int, dims: list[int], data: list[Buffer]
+    ) -> int:
+        """
+        Append the dumped items of a list to *data*.
+
+        Return 1 if any item is null, else 0.
+        """
+        if len(L) != dims[dim]:
+            raise e.DataError("nested lists have inconsistent lengths")
+
+        hasnull = 0
+        if dim == len(dims) - 1:
+            for item in L:
+                if item is not None:
+                    # If we get here, the sub_dumper must have been set
+                    item = self.sub_dumper.dump(item)  # type: ignore[union-attr]
+                if item is not None:
+                    data.append(pack_len(len(item)))
+                    data.append(item)
+                else:
+                    hasnull = 1
+                    data.append(ARRAY_NULL)
+        else:
+            for item in L:
+                if not isinstance(item, self.cls):
+                    raise e.DataError("nested lists have inconsistent depths")
+                hasnull |= self._dump_list(item, dim + 1, dims, data)  # type: ignore
+
+        return hasnull
 
 
 class ArrayLoader(RecursiveLoader):
