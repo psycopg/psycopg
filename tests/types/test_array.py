@@ -176,6 +176,20 @@ def test_dump_list_subclass(fmt_in):
     assert tx.get_dumper(obj, fmt_in).dump(obj) == want
 
 
+@pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
+def test_dump_list_no_cycles(fmt_in, gc):
+    # Dumping a list must not create reference cycles: if it does, the dumped
+    # items are only released at the next garbage collection.
+    obj = [[1, None, 3], [4, 5, 6]]
+    dumper = Transformer().get_dumper(obj, fmt_in)
+    dumper.dump(obj)
+
+    gc.collect()
+    n = gc.count()
+    dumper.dump(obj)
+    assert gc.count() == n
+
+
 @pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_int)
