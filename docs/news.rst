@@ -17,6 +17,9 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Fix reference cycles created every time a list is dumped as an array, which
+  kept the dumped items in memory until the next garbage collection
+  (:ticket:`#1443`).
 
 
 Current release
