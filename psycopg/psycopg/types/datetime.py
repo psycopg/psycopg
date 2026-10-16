@@ -613,7 +613,8 @@ class IntervalLoader(Loader):
 
         ye, mo, da, sgn, ho, mi, se = m.groups()
         days = 0
-        seconds = 0.0
+        seconds = 0
+        micros = 0
 
         if ye:
             days += 365 * int(ye)
@@ -623,12 +624,14 @@ class IntervalLoader(Loader):
             days += int(da)
 
         if ho:
-            seconds = 3600 * int(ho) + 60 * int(mi) + float(se)
+            seconds = 3600 * int(ho) + 60 * int(mi)
+            micros = round(float(se) * 1_000_000)
             if sgn == b"-":
                 seconds = -seconds
+                micros = -micros
 
         try:
-            return timedelta(days=days, seconds=seconds)
+            return timedelta(days=days, seconds=seconds, microseconds=micros)
         except OverflowError as e:
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse interval {s!r}: {e}") from None
