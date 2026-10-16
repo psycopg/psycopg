@@ -11,12 +11,18 @@ pytestmark = pytest.mark.crdb_skip("server-side cursor")
 
 
 @pytest.mark.parametrize("raw", [False, True])
-@pytest.mark.parametrize("autocommit", [False, True])
-@pytest.mark.parametrize("scenario", ["row", "notice"])
+@pytest.mark.parametrize(
+    "autocommit",
+    [False, pytest.param(True, marks=pytest.mark.crdb_skip("cursor with hold"))],
+)
+@pytest.mark.parametrize(
+    "scenario", ["row", pytest.param("notice", marks=pytest.mark.crdb_skip("do"))]
+)
 def test_close_from_gc(dsn, scenario, autocommit, raw):
     run_case(dsn, scenario, autocommit, raw)
 
 
+@pytest.mark.crdb_skip("cursor with hold")
 @pytest.mark.parametrize("raw", [False, True])
 @pytest.mark.parametrize(
     "scenario",
@@ -27,6 +33,7 @@ def test_deferred_close_lifecycle(dsn, scenario, raw):
 
 
 @pytest.mark.pipeline
+@pytest.mark.crdb_skip("cursor with hold")
 @pytest.mark.skipif(
     not psycopg.Pipeline.is_supported(), reason="pipeline mode not supported"
 )
