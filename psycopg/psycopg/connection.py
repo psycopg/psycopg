@@ -27,7 +27,6 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._compat import Self, Template
-from ._acompat import Lock
 from .conninfo import conninfo_attempts, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
 from ._pipeline import Pipeline
@@ -37,6 +36,7 @@ from ._capabilities import capabilities
 from ._server_cursor import ServerCursor
 from ._conninfo_utils import gssapi_requested
 from ._connection_base import BaseConnection, CursorRow, Notify
+from ._connection_lock import ConnectionLock
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -74,7 +74,7 @@ class Connection(BaseConnection[Row]):
     ):
         super().__init__(pgconn)
         self.row_factory = row_factory
-        self.lock = Lock()
+        self.lock = ConnectionLock(self)
         self.cursor_factory = Cursor
         self.server_cursor_factory = ServerCursor
 

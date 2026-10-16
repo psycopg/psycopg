@@ -17,6 +17,8 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Avoid a deadlock when garbage collection closes a server cursor during
+  another operation on the same connection (:ticket:`#1427`).
 
 
 Current release
