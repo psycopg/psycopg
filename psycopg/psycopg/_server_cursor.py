@@ -66,6 +66,11 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         """
         Close the current cursor and free associated resources.
         """
+        # A generator finalizer may close a different cursor while this
+        # thread is executing a query or converting rows under the lock.
+        if self._conn.lock.defer_close(self):
+            super().close()
+            return
         with self._conn.lock:
             if self.closed:
                 return

@@ -23,7 +23,6 @@ from .rows import AsyncRowFactory, Row, args_row, tuple_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self, Template
-from ._acompat import ALock
 from .conninfo import conninfo_attempts_async, conninfo_to_dict, make_conninfo
 from .conninfo import timeout_from_conninfo
 from .generators import notifies
@@ -38,6 +37,10 @@ from ._server_cursor_async import AsyncServerCursor
 if True:  # ASYNC
     import sys
     import asyncio
+
+    from ._acompat import ALock
+else:
+    from ._connection_lock import ConnectionLock
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -78,7 +81,10 @@ class AsyncConnection(BaseConnection[Row]):
     ):
         super().__init__(pgconn)
         self.row_factory = row_factory
-        self.lock = ALock()
+        if True:  # ASYNC
+            self.lock = ALock()
+        else:
+            self.lock = ConnectionLock(self)
         self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
 
