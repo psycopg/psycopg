@@ -7,7 +7,7 @@ import pytest
 
 import psycopg.types
 from psycopg import pq, sql
-from psycopg.adapt import PyFormat
+from psycopg.adapt import AdaptersMap, PyFormat, Transformer
 from psycopg.types.json import set_json_dumps, set_json_loads
 
 samples = [
@@ -170,6 +170,26 @@ def test_dump_customise_context(conn, wrapper, fmt_in):
     assert cur1.fetchone()[0] is None
     cur2.execute(f"select %{fmt_in.value}->>'baz'", (wrapper(obj),))
     assert cur2.fetchone()[0] == "qux"
+
+
+@pytest.mark.parametrize("empty", [True, False])
+@pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_customise_adapters_map(empty, wrapper, fmt_in):
+    adapters = AdaptersMap() if empty else AdaptersMap(psycopg.adapters)
+    set_json_dumps(my_dumps, adapters)
+    pgtype = wrapper.lower()
+    wrapper = getattr(psycopg.types.json, wrapper)
+    obj = {"foo": "bar"}
+    tx = Transformer(adapters)
+
+    data = tx.dump_sequence([wrapper(obj)], [fmt_in])
+
+    assert tx.types == (psycopg.adapters.types[pgtype].oid,)
+    expected = my_dumps(obj).encode()
+    if pgtype == "jsonb" and fmt_in == PyFormat.BINARY:
+        expected = b"\x01" + expected
+    assert data == [expected]
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
