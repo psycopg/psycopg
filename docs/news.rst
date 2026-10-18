@@ -17,6 +17,8 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Close the connection if it is interrupted again while cancelling a query
+  (:ticket:`#1444`).
 
 
 Current release

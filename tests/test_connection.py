@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 import weakref
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -961,6 +961,67 @@ def test_interrupt_unresponsive_server(conn_cls, proxy, caplog):
     messages = [r.message for r in caplog.records]
     assert any(("cancellation timeout expired" in m for m in messages))
     assert any(("not terminated after cancellation" in m for m in messages))
+
+
+class FakePGconn:
+
+    def __init__(self):
+        self.status = pq.ConnStatus.OK
+        self.transaction_status = pq.TransactionStatus.ACTIVE
+        self.socket = 123
+        self.finished = False
+
+    def finish(self):
+        self.finished = True
+        self.status = pq.ConnStatus.BAD
+
+
+@pytest.mark.parametrize("interrupted_stage", ["try_cancel", "wait"])
+def test_interrupt_during_cancellation(
+    monkeypatch, caplog, anyio_backend, interrupted_stage
+):
+    # https://github.com/psycopg/psycopg/issues/1444
+    # If the connection is interrupted a second time while waiting for
+    # cancellation to complete, it must be closed instead of left in ACTIVE state.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    conn = psycopg.Connection.__new__(psycopg.Connection)
+    conn._closed = False
+    fake_pgconn = FakePGconn()
+    conn.pgconn = cast(Any, fake_pgconn)
+
+    def dummy_gen():
+        yield None
+
+    if interrupted_stage == "try_cancel":
+
+        def fake_wait(gen, *args, **kwargs):
+            raise KeyboardInterrupt("initial interrupt")
+
+        def fake_try_cancel(*args, **kwargs):
+            raise KeyboardInterrupt("second interrupt")
+
+        monkeypatch.setattr("psycopg.waiting.wait", fake_wait)
+        monkeypatch.setattr(conn, "_try_cancel", fake_try_cancel)
+    else:
+        calls = 0
+
+        def fake_wait(gen, *args, **kwargs):
+            nonlocal calls
+            calls += 1
+            raise KeyboardInterrupt(f"interrupt {calls}")
+
+        def fake_try_cancel(*args, **kwargs):
+            pass
+
+        monkeypatch.setattr("psycopg.waiting.wait", fake_wait)
+        monkeypatch.setattr(conn, "_try_cancel", fake_try_cancel)
+    with pytest.raises(KeyboardInterrupt):
+        conn.wait(dummy_gen())
+
+    assert fake_pgconn.finished
+    assert conn.closed
+    messages = [r.message for r in caplog.records]
+    assert any(("interrupted during query cancellation" in m for m in messages))
 
 
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
