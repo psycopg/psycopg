@@ -499,18 +499,26 @@ class Connection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                self._try_cancel(timeout=5.0)
                 try:
-                    waiting.wait(
-                        gen, self.pgconn.socket, interval=interval, timeout=5.0
-                    )
-                except e.QueryCanceled:
-                    pass  # as expected
-                except e._WaitTimeout:
-                    # The server didn't terminate the query: the connection
-                    # is in an unknown state, so don't wait forever (#1371).
+                    self._try_cancel(timeout=5.0)
+                    try:
+                        waiting.wait(
+                            gen, self.pgconn.socket, interval=interval, timeout=5.0
+                        )
+                    except e.QueryCanceled:
+                        pass  # as expected
+                    except e._WaitTimeout:
+                        # The server didn't terminate the query: the connection
+                        # is in an unknown state, so don't wait forever (#1371).
+                        logger.warning(
+                            "query not terminated after cancellation: closing connection"
+                        )
+                        self.pgconn.finish()
+                except _INTERRUPTED:
+                    # Interrupted again while cleaning up: the connection state
+                    # is unknown, so close it rather than leave it busy (#1444).
                     logger.warning(
-                        "query not terminated after cancellation: closing connection"
+                        "interrupted during query cancellation: closing connection"
                     )
                     self.pgconn.finish()
             raise
