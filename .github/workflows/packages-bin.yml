@@ -38,7 +38,7 @@ env:
   # make sure that libpq packages built for Psycopg 3.2 and 3.3 don't mix (in
   # order to change the gssencmode default only on 3.3). We may use it for
   # different reasons in the future.
-  PQ_FLAGS: "-gssencmode-disable"
+  PQ_FLAGS: "-gssencmode-disable-openssldir"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.

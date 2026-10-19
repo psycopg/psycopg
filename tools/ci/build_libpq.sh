@@ -112,7 +112,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
 
         pushd "${openssl_dir}"
 
-        options=(--prefix=${LIBPQ_BUILD_PREFIX} --openssldir=${LIBPQ_BUILD_PREFIX} \
+        options=(--prefix=${LIBPQ_BUILD_PREFIX} --openssldir=/etc/ssl \
             zlib -fPIC shared)
         if [ -z "${MACOSX_ARCHITECTURE:-}" ]; then
             ./config ${options[*]}
@@ -121,7 +121,12 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
         fi
 
         make -s depend
-        make -s
+        # Don't look up engines and modules under the build prefix at
+        # runtime, as it is in /tmp. This only affects the compiled-in
+        # paths: `make install_sw` still installs under the prefix.
+        make -s \
+            ENGINESDIR=/usr/lib/psycopg-openssl/engines-3 \
+            MODULESDIR=/usr/lib/psycopg-openssl/ossl-modules
     else
         pushd "${openssl_dir}"
     fi
