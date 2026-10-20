@@ -324,9 +324,7 @@ def register_composite(
         factory = cast("Callable[..., T]", _nt_from_info(info))
 
     if not make_object:
-
-        def make_object(values: Sequence[Any], info: CompositeInfo) -> T:
-            return factory(*values)
+        make_object = _make_object_from_factory(factory)
 
     adapters = context.adapters if context else postgres.adapters
 
@@ -353,17 +351,10 @@ def register_composite(
                     " argument in the `register_composite()` call",
                     factory.__name__,
                 )
-
-                def make_sequence(obj: T, into: CompositeInfo) -> Sequence[Any]:
-                    raise TypeError(
-                        f"{type(obj).__name__!r} objects cannot be dumped without"
-                        " specifying 'make_sequence' in 'register_composite()'"
-                    )
+                make_sequence = _make_sequence_unsupported
 
             else:
-
-                def make_sequence(obj: T, info: CompositeInfo) -> Sequence[Any]:
-                    return obj  # type: ignore[return-value]  # it's a sequence
+                make_sequence = _make_sequence_from_sequence
 
         type_name = factory.__name__
         dumper: type[Dumper] = _make_binary_dumper(type_name, info, make_sequence)
@@ -512,6 +503,25 @@ def _parse_binary_record(data: abc.Buffer) -> tuple[list[Buffer | None], list[in
 @cache
 def _make_nt(name: str, fields: tuple[str, ...]) -> type[NamedTuple]:
     return namedtuple(name, fields)  # type: ignore[return-value]
+
+
+@cache
+def _make_object_from_factory(factory: Callable[..., T]) -> ObjectMaker[T]:
+    def make_object(values: Sequence[Any], info: CompositeInfo) -> T:
+        return factory(*values)
+
+    return make_object
+
+
+def _make_sequence_from_sequence(obj: Any, info: CompositeInfo) -> Sequence[Any]:
+    return obj  # type: ignore[no-any-return]  # it's a sequence
+
+
+def _make_sequence_unsupported(obj: Any, info: CompositeInfo) -> Sequence[Any]:
+    raise TypeError(
+        f"{type(obj).__name__!r} objects cannot be dumped without"
+        " specifying 'make_sequence' in 'register_composite()'"
+    )
 
 
 @cache
