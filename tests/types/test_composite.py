@@ -1,3 +1,4 @@
+import gc
 import logging
 
 import pytest
@@ -388,6 +389,27 @@ def test_register_scope(conn, testcomp):
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid in conn.adapters._loaders[fmt]
+
+
+@pytest.mark.slow
+def test_register_leak(conn, testcomp, gc_collect):
+    info = CompositeInfo.fetch(conn, "testcomp")
+    ntypes = []
+    for i in range(2):
+        cur = conn.cursor()
+        register_composite(info, cur)
+        cur.close()
+        del cur
+        gc_collect()
+
+        objs = gc.get_objects()
+        n = 0
+        for obj in objs:
+            if isinstance(obj, type):
+                n += 1
+        ntypes.append(n)
+
+    assert ntypes[0] == ntypes[1]
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
