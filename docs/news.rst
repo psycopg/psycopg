@@ -17,6 +17,8 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Fix async transaction block left open on the server if the task is cancelled
+  while entering the block (:ticket:`#1451`).
 
 
 Current release

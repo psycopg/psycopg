@@ -291,8 +291,82 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     async def __aenter__(self) -> Self:
         async with self._conn.lock:
-            await self._conn.wait(self._enter_gen())
+            try:
+                await self._conn.wait(self._enter_gen())
+            except BaseException:
+                try:
+                    await self._recover_entry_failure()
+                except BaseException:
+                    # If the recovery is interrupted or fails, we cannot tell
+                    # which transaction state the server is in: close the
+                    # connection so that it cannot be reused with a stale
+                    # transaction stack.
+                    self._conn.pgconn.finish()
+                    self.status = self.Status.FAILED
+                raise
         return self
+
+    async def _recover_entry_failure(self) -> None:
+        """
+        Restore the transaction state after a failed transaction entry.
+
+        Must be called with the connection lock held and after ``_enter_gen()``
+        has failed, e.g. because the task has been cancelled while waiting for
+        the BEGIN or SAVEPOINT reply.  The transaction object is not handed to
+        the caller in this case, so the local stack must not be left with a
+        frame that will never be popped.
+        """
+        if self.status is not self.Status.ACTIVE:
+            # _enter_gen() failed before starting the transaction (for example
+            # because the connection was already closed).
+            return
+
+        self.status = self.Status.FAILED
+
+        if self._stack_index < 0:
+            # _push_savepoint() didn't complete: the local stack is unchanged.
+            return
+
+        if self._conn._num_transactions != self._stack_index + 1:
+            # The local stack is not what we pushed: don't try to guess.
+            self._conn.pgconn.finish()
+            return
+
+        if self.pgconn.status != OK:
+            # The connection is closed: only the local stack needs fixing.
+            self._pop_savepoint("rollback")
+            return
+
+        status = self.pgconn.transaction_status
+        if (
+            status == pq.TransactionStatus.UNKNOWN
+            or status == pq.TransactionStatus.ACTIVE
+        ):
+            # The connection is broken, or a command is still in progress: the
+            # wire is not aligned, so a ROLLBACK couldn't be matched safely.
+            self._pop_savepoint("rollback")
+            self._conn.pgconn.finish()
+            return
+
+        if status == pq.TransactionStatus.IDLE:
+            # The entry command didn't start a server transaction: it either
+            # wasn't sent, or the server rejected/cancelled it.
+            self._pop_savepoint("rollback")
+            return
+
+        if status == pq.TransactionStatus.INERROR and not self._outer_transaction:
+            # The SAVEPOINT failed, so it doesn't exist.  The outer transaction
+            # belongs to the caller and is already in error state: leave it
+            # alone, just drop the local frame.
+            self._pop_savepoint("rollback")
+            return
+
+        # The server transaction belongs to us (INTRANS for an outer BEGIN, or
+        # a SAVEPOINT we created): roll it back using the regular path.
+        try:
+            await self._conn.wait(self._rollback_gen(None))
+        finally:
+            self.status = self.Status.FAILED
 
     async def __aexit__(
         self,
@@ -300,6 +374,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> bool:
+        if self.status is self.Status.FAILED:
+            # Entry failed and the transaction was already rolled back: don't
+            # pop the connection transaction stack a second time.
+            return False
         if self.pgconn.status == OK:
             async with self._conn.lock:
                 return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
