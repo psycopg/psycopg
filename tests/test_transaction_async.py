@@ -1,53 +1,14 @@
-import asyncio
 import logging
 
 import pytest
 
 from psycopg import Rollback
 from psycopg import errors as e
-from psycopg import pq, waiting
+from psycopg import pq
 
 from ._test_transaction import create_test_table  # noqa  # autouse fixture
 from ._test_transaction import ExpectedException, crdb_skip_external_observer
 from ._test_transaction import get_exc_info, in_transaction, insert_row, inserted
-
-
-async def wait_backend_idle(svcconn, pid, query):
-    """Wait until the backend has executed *query* and is idle in transaction."""
-    row = None
-    for _ in range(500):
-        row = svcconn.execute(
-            "SELECT state, query FROM pg_stat_activity WHERE pid = %s", (pid,)
-        ).fetchone()
-        if row and row[0] == "idle in transaction" and row[1].startswith(query):
-            return
-        await asyncio.sleep(0.01)
-    raise AssertionError(f"backend {pid} didn't run {query!r}: {row!r}")
-
-
-def cancel_current_task_soon():
-    task = asyncio.current_task()
-    assert task is not None
-    asyncio.get_running_loop().call_soon(task.cancel)
-
-
-def pause_after_first_command(monkeypatch):
-    """Send the first command and suspend without reading its reply."""
-    sent = asyncio.Event()
-    orig_wait_async = waiting.wait_async
-    calls = 0
-
-    async def wait_async_spy(gen, fileno, interval=0.0, timeout=None):
-        nonlocal calls
-        calls += 1
-        if calls == 1:
-            next(gen)
-            sent.set()
-            await asyncio.Event().wait()
-        return await orig_wait_async(gen, fileno, interval=interval, timeout=timeout)
-
-    monkeypatch.setattr(waiting, "wait_async", wait_async_spy)
-    return sent
 
 
 @pytest.fixture
@@ -856,90 +817,170 @@ async def test_out_of_order_exit_same_name(aconn, exit_error):
         await t2.__aexit__(*get_exc_info(exit_error))
 
 
-@crdb_skip_external_observer
-async def test_cancelled_entry_leaves_clean_connection(aconn, apipeline, svcconn):
-    """Cancelling transaction entry must not leave a transaction behind."""
-    if apipeline:
-        pytest.skip("not applicable")
+if True:  # ASYNC
+    import asyncio
 
-    await aconn.set_autocommit(True)
+    from psycopg import waiting
 
-    async def enter_and_cancel():
-        cancel_current_task_soon()
-        async with aconn.transaction():
-            raise AssertionError("transaction body must not be entered")
+    async def wait_backend_idle(svcconn, pid, query):
+        """Wait until the backend has executed *query* and is idle in transaction."""
+        row = None
+        for _ in range(500):
+            row = svcconn.execute(
+                "SELECT state, query FROM pg_stat_activity WHERE pid = %s", (pid,)
+            ).fetchone()
+            if row and row[0] == "idle in transaction" and row[1].startswith(query):
+                return
+            await asyncio.sleep(0.01)
+        raise AssertionError(f"backend {pid} didn't run {query!r}: {row!r}")
 
-    task = asyncio.create_task(enter_and_cancel())
-    with pytest.raises(asyncio.CancelledError):
-        await task
+    def cancel_current_task_soon():
+        task = asyncio.current_task()
+        assert task is not None
+        asyncio.get_running_loop().call_soon(task.cancel)
 
-    assert not in_transaction(aconn)
-    assert aconn._num_transactions == 0
+    def pause_after_first_command(monkeypatch):
+        """Send the first command and suspend without reading its reply."""
+        sent = asyncio.Event()
+        orig_wait_async = waiting.wait_async
+        calls = 0
 
-    # The stale transaction stack used to make this raise ProgrammingError.
-    await aconn.rollback()
+        async def wait_async_spy(gen, fileno, interval=0.0, timeout=None):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                next(gen)
+                sent.set()
+                await asyncio.Event().wait()
+            return await orig_wait_async(
+                gen, fileno, interval=interval, timeout=timeout
+            )
 
-    async with aconn.transaction():
-        await insert_row(aconn, "after-cancel")
+        monkeypatch.setattr(waiting, "wait_async", wait_async_spy)
+        return sent
 
-    assert inserted(svcconn) == {"after-cancel"}
+    @crdb_skip_external_observer
+    async def test_cancelled_entry_leaves_clean_connection(aconn, apipeline, svcconn):
+        """Cancelling transaction entry must not leave a transaction behind."""
+        if apipeline:
+            pytest.skip("not applicable")
 
+        await aconn.set_autocommit(True)
 
-@crdb_skip_external_observer
-async def test_cancelled_entry_unread_begin_reply(
-    aconn, apipeline, monkeypatch, svcconn
-):
-    """Cancelling after BEGIN was sent must roll back the server transaction."""
-    if apipeline:
-        pytest.skip("not applicable")
+        async def enter_and_cancel():
+            cancel_current_task_soon()
+            async with aconn.transaction():
+                raise AssertionError("transaction body must not be entered")
 
-    await aconn.set_autocommit(True)
-
-    begin_sent = pause_after_first_command(monkeypatch)
-
-    async def enter_and_cancel():
-        async with aconn.transaction():
-            raise AssertionError("transaction body must not be entered")
-
-    task = asyncio.create_task(enter_and_cancel())
-    try:
-        await begin_sent.wait()
-        # Make sure the server has executed BEGIN: its reply is still unread.
-        await wait_backend_idle(svcconn, aconn.pgconn.backend_pid, "BEGIN")
-
-        task.cancel()
+        task = asyncio.create_task(enter_and_cancel())
         with pytest.raises(asyncio.CancelledError):
             await task
-    finally:
-        if not task.done():
+
+        assert not in_transaction(aconn)
+        assert aconn._num_transactions == 0
+
+        # The stale transaction stack used to make this raise ProgrammingError.
+        await aconn.rollback()
+
+        async with aconn.transaction():
+            await insert_row(aconn, "after-cancel")
+
+        assert inserted(svcconn) == {"after-cancel"}
+
+    @crdb_skip_external_observer
+    async def test_cancelled_entry_unread_begin_reply(
+        aconn, apipeline, monkeypatch, svcconn
+    ):
+        """Cancelling after BEGIN was sent must roll back the server transaction."""
+        if apipeline:
+            pytest.skip("not applicable")
+
+        await aconn.set_autocommit(True)
+
+        begin_sent = pause_after_first_command(monkeypatch)
+
+        async def enter_and_cancel():
+            async with aconn.transaction():
+                raise AssertionError("transaction body must not be entered")
+
+        task = asyncio.create_task(enter_and_cancel())
+        try:
+            await begin_sent.wait()
+            # Make sure the server has executed BEGIN: its reply is still unread.
+            await wait_backend_idle(svcconn, aconn.pgconn.backend_pid, "BEGIN")
+
             task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        finally:
+            if not task.done():
+                task.cancel()
 
-    assert not in_transaction(aconn)
-    assert aconn._num_transactions == 0
+        assert not in_transaction(aconn)
+        assert aconn._num_transactions == 0
 
-    async with aconn.transaction():
-        await insert_row(aconn, "after-cancel")
-    assert inserted(svcconn) == {"after-cancel"}
+        async with aconn.transaction():
+            await insert_row(aconn, "after-cancel")
+        assert inserted(svcconn) == {"after-cancel"}
 
+    @crdb_skip_external_observer
+    async def test_cancelled_nested_entry_keeps_outer_transaction(
+        aconn, apipeline, monkeypatch, svcconn
+    ):
+        """Cancelling a nested entry must not roll back the caller's transaction."""
+        if apipeline:
+            pytest.skip("not applicable")
 
-@crdb_skip_external_observer
-async def test_cancelled_nested_entry_keeps_outer_transaction(
-    aconn, apipeline, monkeypatch, svcconn
-):
-    """Cancelling a nested entry must not roll back the caller's transaction."""
-    if apipeline:
-        pytest.skip("not applicable")
+        async with aconn.transaction():
+            await insert_row(aconn, "outer-before")
 
-    async with aconn.transaction():
-        await insert_row(aconn, "outer-before")
+            savepoint_sent = pause_after_first_command(monkeypatch)
+
+            async def enter_nested_and_cancel():
+                async with aconn.transaction():
+                    raise AssertionError("nested transaction body must not be entered")
+
+            task = asyncio.create_task(enter_nested_and_cancel())
+            try:
+                await savepoint_sent.wait()
+                await wait_backend_idle(svcconn, aconn.pgconn.backend_pid, "SAVEPOINT")
+
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+            finally:
+                if not task.done():
+                    task.cancel()
+
+            assert in_transaction(aconn)
+            assert aconn._num_transactions == 1
+            await insert_row(aconn, "outer-after")
+
+        assert not in_transaction(aconn)
+        assert aconn._num_transactions == 0
+        assert await inserted(aconn) == {"outer-before", "outer-after"}
+        assert inserted(svcconn) == {"outer-before", "outer-after"}
+
+    @crdb_skip_external_observer
+    async def test_cancelled_entry_keeps_implicit_transaction(
+        aconn, apipeline, monkeypatch, svcconn
+    ):
+        """Cancelling a savepoint entry must not roll back implicit work."""
+        if apipeline:
+            pytest.skip("not applicable")
+
+        await aconn.set_autocommit(False)
+        await insert_row(aconn, "prior")
+        assert in_transaction(aconn)
+        assert aconn._num_transactions == 0
 
         savepoint_sent = pause_after_first_command(monkeypatch)
 
-        async def enter_nested_and_cancel():
+        async def enter_and_cancel():
             async with aconn.transaction():
-                raise AssertionError("nested transaction body must not be entered")
+                raise AssertionError("transaction body must not be entered")
 
-        task = asyncio.create_task(enter_nested_and_cancel())
+        task = asyncio.create_task(enter_and_cancel())
         try:
             await savepoint_sent.wait()
             await wait_backend_idle(svcconn, aconn.pgconn.backend_pid, "SAVEPOINT")
@@ -951,138 +992,57 @@ async def test_cancelled_nested_entry_keeps_outer_transaction(
             if not task.done():
                 task.cancel()
 
+        # The implicit transaction started before transaction() is still alive,
+        # but the entry's savepoint has been rolled back.
         assert in_transaction(aconn)
-        assert aconn._num_transactions == 1
-        await insert_row(aconn, "outer-after")
+        assert aconn._num_transactions == 0
+        assert not inserted(svcconn)
 
-    assert not in_transaction(aconn)
-    assert aconn._num_transactions == 0
-    assert await inserted(aconn) == {"outer-before", "outer-after"}
-    assert inserted(svcconn) == {"outer-before", "outer-after"}
+        await aconn.commit()
+        assert inserted(svcconn) == {"prior"}
 
+    async def test_failed_nested_entry_keeps_outer_stack(aconn, apipeline, svcconn):
+        """A savepoint which can't be created must not corrupt the local stack."""
+        if apipeline:
+            pytest.skip("not applicable")
 
-@crdb_skip_external_observer
-async def test_cancelled_entry_keeps_implicit_transaction(
-    aconn, apipeline, monkeypatch, svcconn
-):
-    """Cancelling a savepoint entry must not roll back implicit work."""
-    if apipeline:
-        pytest.skip("not applicable")
-
-    await aconn.set_autocommit(False)
-    await insert_row(aconn, "prior")
-    assert in_transaction(aconn)
-    assert aconn._num_transactions == 0
-
-    savepoint_sent = pause_after_first_command(monkeypatch)
-
-    async def enter_and_cancel():
-        async with aconn.transaction():
-            raise AssertionError("transaction body must not be entered")
-
-    task = asyncio.create_task(enter_and_cancel())
-    try:
-        await savepoint_sent.wait()
-        await wait_backend_idle(svcconn, aconn.pgconn.backend_pid, "SAVEPOINT")
-
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-    finally:
-        if not task.done():
-            task.cancel()
-
-    # The implicit transaction started before transaction() is still alive,
-    # but the entry's savepoint has been rolled back.
-    assert in_transaction(aconn)
-    assert aconn._num_transactions == 0
-    assert not inserted(svcconn)
-
-    await aconn.commit()
-    assert inserted(svcconn) == {"prior"}
-
-
-async def test_failed_nested_entry_keeps_outer_stack(aconn, apipeline, svcconn):
-    """A savepoint which can't be created must not corrupt the local stack."""
-    if apipeline:
-        pytest.skip("not applicable")
-
-    with pytest.raises(e.InFailedSqlTransaction):
-        async with aconn.transaction():
-            with pytest.raises(e.DivisionByZero):
-                await aconn.execute("select 1 / 0")
-
-            # The server refuses to create a savepoint in an aborted
-            # transaction. The nested entry fails, the outer one is rolled back
-            # by the exception, and the local stack must be balanced.
+        with pytest.raises(e.InFailedSqlTransaction):
             async with aconn.transaction():
-                pass
+                with pytest.raises(e.DivisionByZero):
+                    await aconn.execute("select 1 / 0")
 
-    assert not in_transaction(aconn)
-    assert aconn._num_transactions == 0
+                # The server refuses to create a savepoint in an aborted
+                # transaction. The nested entry fails, the outer one is rolled back
+                # by the exception, and the local stack must be balanced.
+                async with aconn.transaction():
+                    pass
 
-    async with aconn.transaction():
-        await insert_row(aconn, "after-failure")
-    assert inserted(svcconn) == {"after-failure"}
+        assert not in_transaction(aconn)
+        assert aconn._num_transactions == 0
 
-
-async def test_cancelled_entry_recovery_cancelled(aconn, apipeline, monkeypatch):
-    """If the entry recovery is cancelled the connection is invalidated."""
-    if apipeline:
-        pytest.skip("not applicable")
-
-    cleanup_started = asyncio.Event()
-    orig_wait = aconn.wait
-    calls = 0
-
-    async def wait_spy(gen, *args, **kwargs):
-        nonlocal calls
-        calls += 1
-        if calls == 2:
-            # The second wait is the ROLLBACK run by the entry recovery.
-            cleanup_started.set()
-            await asyncio.Event().wait()
-        return await orig_wait(gen, *args, **kwargs)
-
-    monkeypatch.setattr(aconn, "wait", wait_spy)
-
-    async def enter_and_cancel():
-        cancel_current_task_soon()
         async with aconn.transaction():
-            raise AssertionError("transaction body must not be entered")
+            await insert_row(aconn, "after-failure")
+        assert inserted(svcconn) == {"after-failure"}
 
-    task = asyncio.create_task(enter_and_cancel())
-    try:
-        await asyncio.wait_for(cleanup_started.wait(), 2.0)
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-    finally:
-        if not task.done():
-            task.cancel()
+    async def test_cancelled_entry_recovery_cancelled(aconn, apipeline, monkeypatch):
+        """If the entry recovery is cancelled the connection is invalidated."""
+        if apipeline:
+            pytest.skip("not applicable")
 
-    # The recovery couldn't complete, so the connection must not be reused.
-    assert aconn.closed
-    with pytest.raises(e.OperationalError):
-        await aconn.execute("select 1")
+        cleanup_started = asyncio.Event()
+        orig_wait = aconn.wait
+        calls = 0
 
+        async def wait_spy(gen, *args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                # The second wait is the ROLLBACK run by the entry recovery.
+                cleanup_started.set()
+                await asyncio.Event().wait()
+            return await orig_wait(gen, *args, **kwargs)
 
-async def test_cancelled_entry_before_begin(aconn, apipeline, svcconn):
-    """Cancelling while waiting for the connection lock leaves no state."""
-    if apipeline:
-        pytest.skip("not applicable")
-
-    lock_held = asyncio.Event()
-    release_lock = asyncio.Event()
-
-    async def hold_lock():
-        async with aconn.lock:
-            lock_held.set()
-            await release_lock.wait()
-
-    holder = asyncio.create_task(hold_lock())
-    try:
-        await lock_held.wait()
+        monkeypatch.setattr(aconn, "wait", wait_spy)
 
         async def enter_and_cancel():
             cancel_current_task_soon()
@@ -1090,26 +1050,62 @@ async def test_cancelled_entry_before_begin(aconn, apipeline, svcconn):
                 raise AssertionError("transaction body must not be entered")
 
         task = asyncio.create_task(enter_and_cancel())
-        with pytest.raises(asyncio.CancelledError):
-            await task
-    finally:
-        release_lock.set()
-        await holder
+        try:
+            await asyncio.wait_for(cleanup_started.wait(), 2.0)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        finally:
+            if not task.done():
+                task.cancel()
 
-    assert aconn._num_transactions == 0
+        # The recovery couldn't complete, so the connection must not be reused.
+        assert aconn.closed
+        with pytest.raises(e.OperationalError):
+            await aconn.execute("select 1")
 
-    async with aconn.transaction():
-        await insert_row(aconn, "after-lock-cancel")
-    assert inserted(svcconn) == {"after-lock-cancel"}
+    async def test_cancelled_entry_before_begin(aconn, apipeline, svcconn):
+        """Cancelling while waiting for the connection lock leaves no state."""
+        if apipeline:
+            pytest.skip("not applicable")
 
+        lock_held = asyncio.Event()
+        release_lock = asyncio.Event()
 
-async def test_reenter_active_transaction_preserves_original(aconn, svcconn):
-    """Reject reuse without recovering the still-live original entry."""
-    async with aconn.transaction() as tx:
-        await insert_row(aconn, "before-reentry")
-        with pytest.raises(TypeError, match="only once"):
-            await tx.__aenter__()
-        assert tx.status is tx.Status.ACTIVE
-        assert aconn._num_transactions == 1
-        await insert_row(aconn, "after-reentry")
-    assert inserted(svcconn) == {"before-reentry", "after-reentry"}
+        async def hold_lock():
+            async with aconn.lock:
+                lock_held.set()
+                await release_lock.wait()
+
+        holder = asyncio.create_task(hold_lock())
+        try:
+            await lock_held.wait()
+
+            async def enter_and_cancel():
+                cancel_current_task_soon()
+                async with aconn.transaction():
+                    raise AssertionError("transaction body must not be entered")
+
+            task = asyncio.create_task(enter_and_cancel())
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        finally:
+            release_lock.set()
+            await holder
+
+        assert aconn._num_transactions == 0
+
+        async with aconn.transaction():
+            await insert_row(aconn, "after-lock-cancel")
+        assert inserted(svcconn) == {"after-lock-cancel"}
+
+    async def test_reenter_active_transaction_preserves_original(aconn, svcconn):
+        """Reject reuse without recovering the still-live original entry."""
+        async with aconn.transaction() as tx:
+            await insert_row(aconn, "before-reentry")
+            with pytest.raises(TypeError, match="only once"):
+                await tx.__aenter__()
+            assert tx.status is tx.Status.ACTIVE
+            assert aconn._num_transactions == 1
+            await insert_row(aconn, "after-reentry")
+        assert inserted(svcconn) == {"before-reentry", "after-reentry"}
