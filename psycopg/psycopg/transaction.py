@@ -291,6 +291,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     async def __aenter__(self) -> Self:
         async with self._conn.lock:
+            # Reject reuse before installing recovery for a new entry. The
+            # existing active frame still belongs to its original caller.
+            if self.status is not self.Status.NOT_STARTED:
+                raise TypeError("transaction blocks can be used only once")
             try:
                 await self._conn.wait(self._enter_gen())
             except BaseException:

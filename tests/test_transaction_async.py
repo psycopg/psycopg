@@ -1101,3 +1101,15 @@ async def test_cancelled_entry_before_begin(aconn, apipeline, svcconn):
     async with aconn.transaction():
         await insert_row(aconn, "after-lock-cancel")
     assert inserted(svcconn) == {"after-lock-cancel"}
+
+
+async def test_reenter_active_transaction_preserves_original(aconn, svcconn):
+    """Reject reuse without recovering the still-live original entry."""
+    async with aconn.transaction() as tx:
+        await insert_row(aconn, "before-reentry")
+        with pytest.raises(TypeError, match="only once"):
+            await tx.__aenter__()
+        assert tx.status is tx.Status.ACTIVE
+        assert aconn._num_transactions == 1
+        await insert_row(aconn, "after-reentry")
+    assert inserted(svcconn) == {"before-reentry", "after-reentry"}
