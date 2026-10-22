@@ -108,7 +108,7 @@ The `!ConnectionPool` class
 
    :type close_returns: `!bool`, default: `!False`
 
-   :param reset: A callback to reset a function after it has been returned to
+   :param reset: A callback to reset a connection after it has been returned to
                  the pool. The connection is guaranteed to be passed to the
                  `!reset()` function in "idle" state (no transaction). When
                  leaving the `!reset()` function the connection must be left in
