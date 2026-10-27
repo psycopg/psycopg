@@ -96,9 +96,11 @@ class BaseTransaction(Generic[ConnectionType]):
         sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
         return f"<{cls} {sp}({self.status.value}) {info} at 0x{id(self):x}>"
 
-    def _enter_gen(self) -> PQGen[None]:
+    def _check_enter(self) -> None:
         if self.status != self.Status.NOT_STARTED:
             raise TypeError("transaction blocks can be used only once")
+
+    def _enter_gen(self) -> PQGen[None]:
         self.status = self.Status.ACTIVE
 
         self._push_savepoint()
@@ -257,7 +259,17 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     def __enter__(self) -> Self:
         with self._conn.lock:
-            self._conn.wait(self._enter_gen())
+            self._check_enter()
+            try:
+                self._conn.wait(self._enter_gen())
+            except BaseException as ex:
+                # Undo the enter if it was interrupted (e.g. by Ctrl-C)
+                # as __exit__ won't be called.
+                if self.pgconn.status == OK:
+                    self._conn.wait(self._exit_gen(type(ex), ex, None))
+                else:
+                    self.status = self.Status.FAILED
+                raise
         return self
 
     def __exit__(
@@ -291,7 +303,17 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     async def __aenter__(self) -> Self:
         async with self._conn.lock:
-            await self._conn.wait(self._enter_gen())
+            self._check_enter()
+            try:
+                await self._conn.wait(self._enter_gen())
+            except BaseException as ex:
+                # Undo the enter if it was interrupted (e.g. by a cancellation)
+                # as __aexit__ won't be called.
+                if self.pgconn.status == OK:
+                    await self._conn.wait(self._exit_gen(type(ex), ex, None))
+                else:
+                    self.status = self.Status.FAILED
+                raise
         return self
 
     async def __aexit__(
