@@ -296,7 +296,7 @@ _default_dumpers: dict[tuple[type[_JsonWrapper], PyFormat], type[Dumper]] = {
     (Json, PyFormat.BINARY): JsonBinaryDumper,
     (Json, PyFormat.TEXT): JsonDumper,
     (Jsonb, PyFormat.BINARY): JsonbBinaryDumper,
-    (Jsonb, PyFormat.TEXT): JsonDumper,
+    (Jsonb, PyFormat.TEXT): JsonbDumper,
 }
 
 
