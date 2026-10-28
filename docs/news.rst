@@ -19,6 +19,10 @@ Psycopg 3.3.7 (unreleased)
   ready immediately, for instance on a slow network (:ticket:`#1440`).
 - Fix loading intervals with a very large number of hours in text format,
   which could lose microseconds (:ticket:`#1446`).
+- Roll back the transaction if entering a `~Connection.transaction()` block is
+  interrupted, for instance by a task cancellation (:ticket:`#1451`).
+- Set the system SSL root certificate directory to ``/etc/ssl`` in the binary
+  packages on Linux and macOS.
 
 
 Current release
