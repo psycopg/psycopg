@@ -78,15 +78,15 @@ class AdaptersMap:
         if template:
             self._dumpers = template._dumpers.copy()
             self._own_dumpers = _dumpers_shared.copy()
-            template._own_dumpers = _dumpers_shared.copy()
+            template._own_dumpers.update(_dumpers_shared)
 
             self._dumpers_by_oid = template._dumpers_by_oid[:]
             self._own_dumpers_by_oid = [False, False]
-            template._own_dumpers_by_oid = [False, False]
+            template._own_dumpers_by_oid[:] = (False, False)
 
             self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
-            template._own_loaders = [False, False]
+            template._own_loaders[:] = (False, False)
 
             self.types = TypesRegistry(template.types)
 

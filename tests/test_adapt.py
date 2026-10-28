@@ -290,6 +290,23 @@ def test_cow_loaders(conn):
     assert cur2.execute("select 'hello2'::text").fetchone() == ("hello2c2",)
 
 
+def test_cow_template_flags_kept():
+    tmpl = psycopg.adapt.AdaptersMap(postgres.adapters)
+    loader_t = make_loader("t")
+    tmpl.register_loader("text", loader_t)
+    flags = (tmpl._own_dumpers, tmpl._own_dumpers_by_oid, tmpl._own_loaders)
+
+    child = psycopg.adapt.AdaptersMap(tmpl)
+    assert tmpl._own_dumpers is flags[0]
+    assert tmpl._own_dumpers_by_oid is flags[1]
+    assert tmpl._own_loaders is flags[2]
+
+    loader_t1 = make_loader("t1")
+    tmpl.register_loader("text", loader_t1)
+    assert tmpl.get_loader(builtins["text"].oid, pq.Format.TEXT) is loader_t1
+    assert child.get_loader(builtins["text"].oid, pq.Format.TEXT) is loader_t
+
+
 @pytest.mark.parametrize(
     "sql, obj",
     [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],

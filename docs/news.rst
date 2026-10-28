@@ -17,6 +17,8 @@ Psycopg 3.3.7 (unreleased)
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
+- Don't replace the copy-on-write flags of the template adapters map each
+  time a cursor is created (:ticket:`#1460`).
 - Set the system SSL root certificate directory to ``/etc/ssl`` in the binary
   packages on Linux and macOS.
 
