@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from psycopg import Rollback
+from psycopg import AsyncTransaction, Rollback
 from psycopg import errors as e
 from psycopg import pq
 
@@ -49,6 +49,62 @@ async def test_cant_reenter(aconn):
     with pytest.raises(TypeError):
         async with tx:
             pass
+
+
+@crdb_skip_external_observer
+async def test_cant_reenter_active(aconn, svcconn):
+    async with aconn.transaction() as tx:
+        await insert_row(aconn, "foo")
+        with pytest.raises(TypeError):
+            async with tx:
+                pass
+        assert tx.status == tx.Status.ACTIVE
+
+    assert tx.status == tx.Status.COMMITTED
+    assert inserted(svcconn) == {"foo"}
+
+
+@crdb_skip_external_observer
+async def test_interrupted_enter(aconn, svcconn, monkeypatch):
+    """If entering is interrupted (e.g. cancelled) the transaction is undone."""
+    wait = aconn.wait
+
+    async def wait_interrupted(*args, **kwargs):
+        monkeypatch.undo()
+        await wait(*args, **kwargs)
+        raise ExpectedException("interrupted")
+
+    monkeypatch.setattr(aconn, "wait", wait_interrupted)
+    tx = AsyncTransaction(aconn)
+    with pytest.raises(ExpectedException):
+        async with tx:
+            assert False, "block should not be entered"
+
+    assert tx.status == tx.Status.ROLLED_BACK_WITH_ERROR
+    assert not in_transaction(aconn)
+    async with aconn.transaction():
+        await insert_row(aconn, "foo")
+    assert inserted(svcconn) == {"foo"}
+
+
+async def test_interrupted_enter_broken(aconn_cls, dsn, monkeypatch):
+    """If entering fails on a broken connection the transaction is failed."""
+    aconn = await aconn_cls.connect(dsn)
+    wait = aconn.wait
+
+    async def wait_broken(*args, **kwargs):
+        monkeypatch.undo()
+        await wait(*args, **kwargs)
+        await aconn.close()
+        raise ExpectedException("broken")
+
+    monkeypatch.setattr(aconn, "wait", wait_broken)
+    tx = AsyncTransaction(aconn)
+    with pytest.raises(ExpectedException):
+        async with tx:
+            assert False, "block should not be entered"
+
+    assert tx.status == tx.Status.FAILED
 
 
 async def test_begins_on_enter(aconn, apipeline):

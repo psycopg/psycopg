@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from psycopg import Rollback
+from psycopg import Rollback, Transaction
 from psycopg import errors as e
 from psycopg import pq
 
@@ -52,6 +52,62 @@ def test_cant_reenter(conn):
     with pytest.raises(TypeError):
         with tx:
             pass
+
+
+@crdb_skip_external_observer
+def test_cant_reenter_active(conn, svcconn):
+    with conn.transaction() as tx:
+        insert_row(conn, "foo")
+        with pytest.raises(TypeError):
+            with tx:
+                pass
+        assert tx.status == tx.Status.ACTIVE
+
+    assert tx.status == tx.Status.COMMITTED
+    assert inserted(svcconn) == {"foo"}
+
+
+@crdb_skip_external_observer
+def test_interrupted_enter(conn, svcconn, monkeypatch):
+    """If entering is interrupted (e.g. cancelled) the transaction is undone."""
+    wait = conn.wait
+
+    def wait_interrupted(*args, **kwargs):
+        monkeypatch.undo()
+        wait(*args, **kwargs)
+        raise ExpectedException("interrupted")
+
+    monkeypatch.setattr(conn, "wait", wait_interrupted)
+    tx = Transaction(conn)
+    with pytest.raises(ExpectedException):
+        with tx:
+            assert False, "block should not be entered"
+
+    assert tx.status == tx.Status.ROLLED_BACK_WITH_ERROR
+    assert not in_transaction(conn)
+    with conn.transaction():
+        insert_row(conn, "foo")
+    assert inserted(svcconn) == {"foo"}
+
+
+def test_interrupted_enter_broken(conn_cls, dsn, monkeypatch):
+    """If entering fails on a broken connection the transaction is failed."""
+    conn = conn_cls.connect(dsn)
+    wait = conn.wait
+
+    def wait_broken(*args, **kwargs):
+        monkeypatch.undo()
+        wait(*args, **kwargs)
+        conn.close()
+        raise ExpectedException("broken")
+
+    monkeypatch.setattr(conn, "wait", wait_broken)
+    tx = Transaction(conn)
+    with pytest.raises(ExpectedException):
+        with tx:
+            assert False, "block should not be entered"
+
+    assert tx.status == tx.Status.FAILED
 
 
 def test_begins_on_enter(conn, pipeline):
