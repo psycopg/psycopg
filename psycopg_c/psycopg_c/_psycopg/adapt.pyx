@@ -166,4 +166,4 @@ cdef class _CRecursiveLoader(CLoader):
     cdef Transformer _tx
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        self._tx = Transformer.from_context(context)
+        self._tx = Transformer(context)

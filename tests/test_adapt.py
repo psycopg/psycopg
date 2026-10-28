@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import datetime as dt
 from types import ModuleType
 from typing import Any
@@ -14,6 +15,7 @@ from psycopg.adapt import Dumper, Loader, PyFormat, Transformer
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins
 from psycopg.types.array import ListBinaryDumper, ListDumper
+from psycopg.types.range import Range
 from psycopg.types.string import StrBinaryDumper, StrDumper
 
 
@@ -305,6 +307,37 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur.execute(f"select {sql}")
     res = cur.fetchone()[0]
     assert res == obj
+
+
+@pytest.mark.usefixtures("gc")
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_recursive_loader_no_cycle(fmt_out):
+    dumper = Transformer().get_dumper([1], PyFormat.from_pq(fmt_out))
+    data = dumper.dump([1, 2, 3])
+    gc.collect()
+    gc.disable()
+    try:
+        tx = Transformer()
+        tx.set_loader_types([dumper.oid], fmt_out)
+        assert tx.load_sequence([data]) == ([1, 2, 3],)
+        del tx
+        assert gc.collect() == 0
+    finally:
+        gc.enable()
+
+
+@pytest.mark.usefixtures("gc")
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_recursive_dumper_no_cycle(fmt_in):
+    gc.collect()
+    gc.disable()
+    try:
+        tx = Transformer()
+        tx.dump_sequence([Range(1, 4)], [fmt_in])
+        del tx
+        assert gc.collect() == 0
+    finally:
+        gc.enable()
 
 
 @pytest.mark.parametrize("fmt_out", pq.Format)
