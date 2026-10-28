@@ -18,7 +18,7 @@ Psycopg 3.3.7 (unreleased)
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
 - Fix loading intervals with a very large number of hours in text format,
-  which could lose microseconds.
+  which could lose microseconds (:ticket:`#1446`).
 
 
 Current release
