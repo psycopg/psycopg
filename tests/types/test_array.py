@@ -129,6 +129,20 @@ def test_all_chars(conn, fmt_in, fmt_out):
     assert cur.fetchone()[0] == [s]
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_whitespaces(conn, fmt_in, fmt_out):
+    # CockroachDB strips unquoted leading/trailing Unicode spaces too
+    # https://github.com/cockroachdb/cockroach/issues/176211
+    cur = conn.cursor(binary=fmt_out)
+    spaces = [chr(i) for i in range(1, 0x110000) if chr(i).isspace()]
+    spaces.extend(["\u180e", "\u200b", "\ufeff"])
+    for c in spaces:
+        a = [c, f"{c}a", f"a{c}", f"{c}a{c}"]
+        cur.execute(f"select %{fmt_in.value}::text[]", (a,))
+        assert cur.fetchone()[0] == a, f"failed with U+{ord(c):04X}"
+
+
 tests_int = [
     ([10, 20, -30], "{10,20,-30}"),
     ([10, None, 30], "{10,null,30}"),

@@ -201,11 +201,19 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> re.Pattern[bytes]:
     The array output routine will put double quotes around element values if
     they are empty strings, contain curly braces, delimiter characters,
     double quotes, backslashes, or white space, or match the word NULL.
+
+    Also quote values containing Unicode white space: Postgres doesn't strip
+    it from unquoted elements, but CockroachDB does (see
+    https://github.com/cockroachdb/cockroach/issues/176211).
     """
     return re.compile(rb"""(?xi)
           ^$              # the empty string
         | ["{}%s\\\s]      # or a char to escape
         | ^null$          # or the word NULL
+        | \xe1\x9a\x80    # or UTF-8 Unicode spaces stripped by CockroachDB:
+        | \xe2\x80[\x80-\x8a\xa8\xa9\xaf]   # U+1680, U+2000-U+200A,
+        | \xe2\x81\x9f    # U+2028, U+2029, U+202F, U+205F, U+3000
+        | \xe3\x80\x80
         """ % delimiter)
 
 

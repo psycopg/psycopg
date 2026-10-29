@@ -21,8 +21,12 @@ Psycopg 3.3.7 (unreleased)
   which could lose microseconds (:ticket:`#1446`).
 - Roll back the transaction if entering a `~Connection.transaction()` block is
   interrupted, for instance by a task cancellation (:ticket:`#1451`).
+- Quote array elements with Unicode white space, which CockroachDB would
+  otherwise strip from strings (`cockroach#176211`__, :ticket:`#1465`).
 - Set the system SSL root certificate directory to ``/etc/ssl`` in the binary
   packages on Linux and macOS.
+
+.. __: https://github.com/cockroachdb/cockroach/issues/176211
 
 
 Current release
