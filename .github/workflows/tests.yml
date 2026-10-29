@@ -377,9 +377,9 @@ jobs:
           #   https://us-docker.pkg.dev/v2/cockroach-cloud-images/cockroachdb/cockroach/tags/list \
           #   | jq .tags | egrep 'latest-[^-]+-build' | sort
           - {impl: c, crdb: "master", python: "3.13"}
-          - {impl: c, crdb: "v25.3", python: "3.13", libpq: newest}
-          - {impl: c, crdb: "v24.3", python: "3.10"}
-          - {impl: python, crdb: "v23.2", python: "3.12"}
+          - {impl: c, crdb: "v26.3", python: "3.13", libpq: newest}
+          - {impl: c, crdb: "v25.4", python: "3.10"}
+          - {impl: python, crdb: "v24.3", python: "3.12"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
