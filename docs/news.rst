@@ -22,6 +22,9 @@ Psycopg 3.3.7 (unreleased)
   (:ticket:`#1443`).
 - Fix loading intervals with a very large number of hours in text format,
   which could lose microseconds (:ticket:`#1446`).
+- Fix leak of adapters calling `~psycopg.types.composite.register_composite()`
+  repeatedly without custom `!make_object` or `!make_sequence` functions
+  (:ticket:`#1449`).
 - Roll back the transaction if entering a `~Connection.transaction()` block is
   interrupted, for instance by a task cancellation (:ticket:`#1451`).
 - Quote array elements with Unicode white space, which CockroachDB would
