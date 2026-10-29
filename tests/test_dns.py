@@ -10,9 +10,7 @@ async def test_resolve_hostaddr_async_warning(recwarn):
     import_dnspython()
     conninfo = "dbname=foo"
     params = conninfo_to_dict(conninfo)
-    params = await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
-        params
-    )
+    params = await psycopg._dns.resolve_hostaddr_async(params)
     assert "resolve_hostaddr_async" in str(recwarn.pop(DeprecationWarning).message)
 
 

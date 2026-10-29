@@ -1,4 +1,3 @@
-# type: ignore  # dnspython is currently optional and mypy fails if missing
 """
 DNS query support
 """
@@ -13,12 +12,13 @@ import warnings
 from random import randint
 from typing import TYPE_CHECKING, Any, DefaultDict, NamedTuple
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 try:
     from dns.resolver import Cache, Resolver
     from dns.exception import DNSException
     from dns.asyncresolver import Resolver as AsyncResolver
+    from dns.rdtypes.IN.SRV import SRV
 except ImportError:
     raise ImportError(
         "the module psycopg._dns requires the package 'dnspython' installed"
@@ -28,7 +28,7 @@ from . import conninfo
 from . import errors as e
 
 if TYPE_CHECKING:
-    from dns.rdtypes.IN.SRV import SRV
+    from dns.rdata import Rdata
 
 resolver = Resolver()
 resolver.cache = Cache()
@@ -56,9 +56,9 @@ async def resolve_hostaddr_async(params: dict[str, Any]) -> dict[str, Any]:
 
     for attempt in await conninfo.conninfo_attempts_async(params):
         if attempt.get("host") is not None:
-            hosts.append(attempt["host"])
+            hosts.append(str(attempt["host"]))
         if attempt.get("hostaddr") is not None:
-            hostaddrs.append(attempt["hostaddr"])
+            hostaddrs.append(str(attempt["hostaddr"]))
         if attempt.get("port") is not None:
             ports.append(str(attempt["port"]))
 
@@ -165,6 +165,7 @@ class Rfc2782Resolver:
         return out if srv_found else []
 
     def _resolve_srv(self, hp: HostPort) -> list[HostPort]:
+        ans: Iterable[Rdata]
         try:
             ans = resolver.resolve(hp.host, "SRV")
         except DNSException:
@@ -172,15 +173,16 @@ class Rfc2782Resolver:
         return self._get_solved_entries(hp, ans)
 
     async def _resolve_srv_async(self, hp: HostPort) -> list[HostPort]:
+        ans: Iterable[Rdata]
         try:
             ans = await async_resolver.resolve(hp.host, "SRV")
         except DNSException:
             ans = ()
         return self._get_solved_entries(hp, ans)
 
-    def _get_solved_entries(
-        self, hp: HostPort, entries: Sequence[SRV]
-    ) -> list[HostPort]:
+    def _get_solved_entries(self, hp: HostPort, ans: Iterable[Rdata]) -> list[HostPort]:
+        # A SRV query only returns SRV records: this only narrows the type.
+        entries = [rr for rr in ans if isinstance(rr, SRV)]
         if not entries:
             # No SRV entry found. Delegate the libpq a QNAME=target lookup
             if hp.target and hp.port.lower() != "srv":

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
 from .test_dns import import_dnspython
+
+if TYPE_CHECKING:
+    import psycopg._dns
 
 pytestmark = [pytest.mark.dns]
 
@@ -48,7 +53,7 @@ samples_ok = [
 def test_srv(conninfo, want, env, fake_srv, setpgenv):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    params = psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
+    params = psycopg._dns.resolve_srv(params)
     assert conninfo_to_dict(want) == params
 
 
@@ -57,7 +62,7 @@ def test_srv(conninfo, want, env, fake_srv, setpgenv):
 async def test_srv_async(conninfo, want, env, afake_srv, setpgenv):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    params = await psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
+    params = await psycopg._dns.resolve_srv_async(params)
     assert conninfo_to_dict(want) == params
 
 
@@ -72,7 +77,7 @@ def test_srv_bad(conninfo, env, fake_srv, setpgenv):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
-        psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
+        psycopg._dns.resolve_srv(params)
 
 
 @pytest.mark.anyio
@@ -81,14 +86,14 @@ async def test_srv_bad_async(conninfo, env, afake_srv, setpgenv):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
-        await psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
+        await psycopg._dns.resolve_srv_async(params)
 
 
 @pytest.fixture
 def fake_srv(monkeypatch):
     f = get_fake_srv_function(monkeypatch)
     monkeypatch.setattr(
-        psycopg._dns.resolver,  # type: ignore[attr-defined]
+        psycopg._dns.resolver,
         "resolve",
         f,
     )
@@ -102,7 +107,7 @@ def afake_srv(monkeypatch):
         return f(qname, rdtype)
 
     monkeypatch.setattr(
-        psycopg._dns.async_resolver,  # type: ignore[attr-defined]
+        psycopg._dns.async_resolver,
         "resolve",
         af,
     )

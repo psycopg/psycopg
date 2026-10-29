@@ -53,6 +53,7 @@ sqlite_cache = false
 
 [[tool.mypy.overrides]]
 module = [
+    "dns.*",
     "numpy.*",
     "polib",
     "shapely.*",
