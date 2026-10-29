@@ -166,4 +166,6 @@ cdef class _CRecursiveLoader(CLoader):
     cdef Transformer _tx
 
     def __cinit__(self, oid: int, context: AdaptContext | None = None):
-        self._tx = Transformer.from_context(context)
+        # Don't use from_context(): if the context is a transformer, it will
+        # cache this adapter, creating a reference loop.
+        self._tx = Transformer(context)
