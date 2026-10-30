@@ -45,6 +45,27 @@ def test_dump_empty_list(conn, fmt_in, type):
 
 
 @pytest.mark.crdb_skip("nested array")
+@pytest.mark.parametrize("fmt", pq.Format)
+@pytest.mark.parametrize("type", ["text", "int4"])
+def test_copy_empty_nested_list(conn, fmt, type):
+    cur = conn.cursor()
+    cur.execute(f"create table copyarray (id serial primary key, arr {type}[])")
+    objs: list[list[Any]] = [[], [[]], [[], []], [[[], []], [[], []]]]
+    with cur.copy(f"copy copyarray (arr) from stdin (format {fmt.name})") as copy:
+        copy.set_types([f"{type}[]"])
+        for obj in objs:
+            copy.write_row([obj])
+
+    got = cur.execute("select arr from copyarray order by id").fetchall()
+    assert got == [([],)] * len(objs)
+
+    with pytest.raises(psycopg.DataError):
+        with cur.copy(f"copy copyarray (arr) from stdin (format {fmt.name})") as copy:
+            copy.set_types([f"{type}[]"])
+            copy.write_row([[[[], []], [[]]]])
+
+
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
@@ -163,6 +184,7 @@ def test_dump_list_int(conn, obj, want):
     [
         [["a"], ["b", "c"]],
         [["a"], []],
+        [[], ["a"]],
         [[["a"]], ["b"]],
         # [["a"], [["b"]]],  # todo, but expensive (an isinstance per item)
         # [True, b"a"], # TODO expensive too
