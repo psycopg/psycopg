@@ -743,6 +743,37 @@ def test_check_idle(dsn):
             assert conn.info.transaction_status == TransactionStatus.IDLE
 
 
+def test_check_interrupted(dsn, monkeypatch):
+    # KeyboardInterrupt (or any BaseException) escaping `check()` must leave
+    # the pool with all its connections: `check()` empties the pool before
+    # testing the connections, so the ones not tested yet would be lost.
+    orig_check = pool.ConnectionPool.check_connection
+    do_raise = True
+
+    def check(conn):
+        nonlocal do_raise
+        if do_raise:
+            do_raise = False
+            raise KeyboardInterrupt()
+        orig_check(conn)
+
+    monkeypatch.setattr(pool.ConnectionPool, "check_connection", staticmethod(check))
+
+    with pool.ConnectionPool(dsn, min_size=3) as p:
+        p.wait(1.0)
+        conns = list(p._pool)
+
+        with pytest.raises(KeyboardInterrupt):
+            p.check()
+
+        assert p.get_stats()["pool_available"] == 3
+        assert not any((conn.closed for conn in conns))
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+
 @pytest.mark.crdb_skip("pg_terminate_backend")
 def test_connect_no_check(dsn):
     with pool.ConnectionPool(dsn, min_size=2) as p:
