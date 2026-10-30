@@ -182,15 +182,30 @@ jobs:
   # }}}
 
   windows:  # {{{
-    # TODO: move it back to windows-latest when the default runner switches.
-    runs-on: windows-2025
+    runs-on: ${{ matrix.runner }}
     if: github.event_name == 'workflow_dispatch' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
-        arch: [win_amd64]
+        arch: [win_amd64, win_arm64]
         pyver: [cp310, cp311, cp312, cp313, cp314, cp315]
+        include:
+          - arch: win_amd64
+            # TODO: move it back to windows-latest when the default runner switches.
+            runner: windows-2025
+            cibw_archs: AMD64 x86
+            vcpkg_triplet: x64-windows-release
+            test_dsn: host=127.0.0.1 user=postgres
+          - arch: win_arm64
+            runner: windows-11-arm
+            cibw_archs: ARM64
+            vcpkg_triplet: arm64-windows-release
+            test_dsn: host=127.0.0.1 user=postgres password=postgres
+        exclude:
+          # CPython has no Windows on Arm build before 3.11.
+          - arch: win_arm64
+            pyver: cp310
 
     defaults:
       run:
@@ -202,11 +217,17 @@ jobs:
 
       - uses: actions/checkout@v7
 
+      - name: Install PostgreSQL for test
+        # The windows-11-arm image has no PostgreSQL.
+        if: matrix.arch == 'win_arm64'
+        run: choco install postgresql17 --no-progress --yes --params "/Password:postgres"
+        shell: powershell
+
       - name: Start PostgreSQL service for test
         run: |
           $PgSvc = Get-Service "postgresql*"
           Set-Service $PgSvc.Name -StartupType manual
-          $PgSvc.Start()
+          if ($PgSvc.Status -ne 'Running') { $PgSvc.Start() }
         shell: powershell
 
       - name: Export GitHub Actions cache environment variables
@@ -216,8 +237,8 @@ jobs:
             const path = require('path')
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/lib'));
-            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/x64-windows-release/bin'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/${{ matrix.vcpkg_triplet }}/lib'));
+            core.addPath(path.join(process.env.VCPKG_INSTALLATION_ROOT, 'installed/${{ matrix.vcpkg_triplet }}/bin'));
 
       - name: Create the binary package source tree
         run: python3 ./tools/ci/copy_to_binary.py
@@ -228,8 +249,9 @@ jobs:
           package-dir: psycopg_binary
         env:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite" # cache vcpkg
+          VCPKG_TRIPLET: ${{ matrix.vcpkg_triplet }}
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
-          CIBW_ARCHS_WINDOWS: AMD64 x86
+          CIBW_ARCHS_WINDOWS: ${{ matrix.cibw_archs }}
           CIBW_BEFORE_BUILD_WINDOWS: '.\tools\ci\wheel_win32_before_build.bat'
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir}
@@ -238,7 +260,7 @@ jobs:
           CIBW_TEST_COMMAND: pytest {project}/tests
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
+            PSYCOPG_TEST_DSN="${{ matrix.test_dsn }}"
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 18"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 18"
             PYTEST_ADDOPTS="-m 'not slow and not flakey and not proxy' --color yes"

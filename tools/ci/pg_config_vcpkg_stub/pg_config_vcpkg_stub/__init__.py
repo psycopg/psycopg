@@ -6,7 +6,8 @@ This is a stub to work as `pg_config --libdir` or `pg_config --includedir` to
 make it work with vcpkg.
 
 You will need install `vcpkg`, set `VCPKG_ROOT` env, and run `vcpkg install
-libpq:x64-windows-release` before using this script.
+libpq:x64-windows-release` (`libpq:arm64-windows-release` on Windows on Arm)
+before using this script.
 """
 
 import os
@@ -15,22 +16,27 @@ import platform
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
 
+# vcpkg triplet of the libpq built for each Windows machine type
+TRIPLETS = {"AMD64": "x64-windows-release", "ARM64": "arm64-windows-release"}
+
 
 class ScriptError(Exception):
     """Controlled exception raised by the script."""
 
 
 def _main() -> None:
-    # only x64-windows
-    if not (sys.platform == "win32" and platform.machine() == "AMD64"):
-        raise ScriptError("this script should only be used in x64-windows")
+    # only x64 and arm64 Windows
+    if sys.platform != "win32" or platform.machine() not in TRIPLETS:
+        raise ScriptError("this script should only be used in x64 or arm64 Windows")
+    # the workflow matrix names the triplet; the machine type is the fallback
+    triplet = os.environ.get("VCPKG_TRIPLET") or TRIPLETS[platform.machine()]
 
     vcpkg_root = os.environ.get(
         "VCPKG_ROOT", os.environ.get("VCPKG_INSTALLATION_ROOT", "")
     )
     if not vcpkg_root:
         raise ScriptError("VCPKG_ROOT/VCPKG_INSTALLATION_ROOT env var not specified")
-    vcpkg_platform_root = (Path(vcpkg_root) / "installed/x64-windows-release").resolve()
+    vcpkg_platform_root = (Path(vcpkg_root) / "installed" / triplet).resolve()
 
     args = parse_cmdline()
 
