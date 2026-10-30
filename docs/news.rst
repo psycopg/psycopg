@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.3.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix dumping nested empty lists in binary :sql:`COPY` after
+  `~Copy.set_types()`, or wherever the array type is known (:ticket:`#1349`).
 - Fix `!json` and `!jsonb` loading and dumping when the connection encoding
   is not UTF-8 (:ticket:`#1504`).
 
