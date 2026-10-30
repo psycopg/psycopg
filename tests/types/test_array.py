@@ -45,6 +45,29 @@ def test_dump_empty_list(conn, fmt_in, type):
 
 
 @pytest.mark.crdb_skip("nested array")
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_empty_nested_list(conn, fmt_in):
+    cur = conn.cursor(binary=True)
+    fmt = pq.Format.BINARY if fmt_in == PyFormat.BINARY else pq.Format.TEXT
+    # Use a known-OID dumper so empty lists cannot fall back to text
+    dumper = cur.adapters.get_dumper_by_oid(builtins["text"].array_oid, fmt)
+    cur.adapters.register_dumper(list, dumper)
+
+    query = f"select %{fmt_in.value}::text[]"
+    objs: list[list[Any]] = [[[]], [[], []], [[[]]]]
+    for obj in objs:
+        if fmt == pq.Format.TEXT and conn.info.server_version < 170000:
+            # PostgreSQL < 17 rejects nested empty arrays in text format
+            with pytest.raises(psycopg.errors.InvalidTextRepresentation):
+                with conn.transaction():
+                    cur.execute(query, (obj,))
+        else:
+            cur.execute(query, (obj,))
+            assert cur.fetchone()[0] == []
+            assert cur._query.formats == [fmt]
+
+
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("type", ["text", "int4"])
 def test_copy_empty_nested_list(conn, type):
     cur = conn.cursor()
