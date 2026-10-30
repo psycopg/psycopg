@@ -638,6 +638,33 @@ async def test_check_does_not_grow_pool(dsn):
         assert p._nconns == 2
 
 
+@skip_sync
+async def test_check_cancelled(dsn):
+    from asyncio import CancelledError
+
+    async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
+        await p.wait()
+
+        orig_check = p.check_connection
+
+        async def slow_check(conn):
+            await asleep(0.5)
+            await orig_check(conn)
+
+        p.check_connection = slow_check
+
+        task = spawn(p.check)
+        await asleep(0.05)
+        task.cancel()
+
+        with pytest.raises(CancelledError):
+            await task
+
+        assert p._stats[p._CONNECTIONS_LOST] == 0
+        assert p._nconns == 3
+        assert len(p._pool) == 3
+
+
 @pytest.mark.slow
 async def test_uniform_use(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
