@@ -273,6 +273,12 @@ class ConnectionPool(Generic[CT], BasePool):
                 if pos.conn:
                     self.run_task(ReturnConnection(self, pos.conn, from_getconn=True))
                 self._stats[self._REQUESTS_ERRORS] += 1
+                with self._lock:
+                    try:
+                        self._waiting.remove(pos)
+                    except ValueError:
+                        # A returning connection or pool close already removed it.
+                        pass
                 raise
             finally:
                 t1 = monotonic()
