@@ -155,6 +155,41 @@ def wait_conn(
         return rv
 
 
+if hasattr(select, "poll"):
+
+    def _ready_now(fileno: int, s: int) -> int:
+        """
+        Return the `Ready` states already true for `!fileno`, without waiting.
+
+        `!s` is the `Wait` state asked by the generator. One fd, zero timeout:
+        a few microseconds, against a full event loop round trip.
+        """
+        p = select.poll()
+        p.register(
+            fileno,
+            (select.POLLIN if s & WAIT_R else 0)
+            | (select.POLLOUT if s & WAIT_W else 0),
+        )
+        ready: int = READY_NONE
+        # A closed or invalid fd reports POLLNVAL and no readiness: the caller
+        # then registers with the loop, which raises as it did before.
+        for _, ev in p.poll(0):
+            if ev & select.POLLIN:
+                ready |= READY_R
+            if ev & select.POLLOUT:
+                ready |= READY_W
+        return ready
+
+else:
+
+    def _ready_now(fileno: int, s: int) -> int:
+        # No poll() on Windows: select() is fine for the single fd checked here.
+        rl = [fileno] if s & WAIT_R else []
+        wl = [fileno] if s & WAIT_W else []
+        r, w, _ = select.select(rl, wl, [], 0)
+        return (READY_R if r else READY_NONE) | (READY_W if w else READY_NONE)
+
+
 async def wait_async(
     gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
 ) -> RV:
@@ -209,6 +244,26 @@ async def wait_async(
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
+
+            # A generator asking to write nearly always finds the socket
+            # writable (the output buffer is seldom full), so check that
+            # first: a zero-timeout poll costs a few microseconds, a loop
+            # round trip (register, future, timer, await, unregister) a few
+            # tens, and pipeline mode pays it at every command, therefore
+            # executemany() does too, and copy() at every flush. Measured
+            # on localhost: executemany() 4x faster, in line with the sync
+            # connection. A generator asking only to read is not checked:
+            # the server's answer is hardly ever there already, so the poll
+            # would only add to the round trip.
+            # As a consequence a generator finding the socket always ready
+            # completes without yielding to the loop, as one that never
+            # blocks already does.
+            if writer and (ready := _ready_now(fileno, s)):
+                s = gen.send(ready)
+                if deadline is not None and monotonic() >= deadline:
+                    raise e._WaitTimeout("wait timeout expired")
+                continue
+
             ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
