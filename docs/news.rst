@@ -28,6 +28,10 @@ Psycopg 3.3.7 (unreleased)
   otherwise strip from strings (`cockroach#176211`__, :ticket:`#1465`).
 - Set the system SSL root certificate directory to ``/etc/ssl`` in the binary
   packages on Linux and macOS.
+- Don't wait on the event loop when the socket is already writable, which
+  made pipeline mode, `~AsyncCursor.executemany()` and `~AsyncCopy.write()`
+  on async connections several times slower than on sync ones
+  (:ticket:`#1468`).
 
 .. __: https://github.com/cockroachdb/cockroach/issues/176211
 

@@ -10,7 +10,7 @@ from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
 from psycopg.conninfo import make_conninfo
 
-from .acompat import AEvent, asleep, gather, spawn
+from .acompat import AEvent, asleep, gather, skip_sync, spawn
 
 skip_if_not_linux = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="non-Linux platform"
@@ -268,6 +268,35 @@ async def test_wait_w(waitfn, event, nevents, request):
         assert r == waiting.Ready.W
         if check_timing(request):
             assert dt < 0.1
+
+
+@skip_sync
+@pytest.mark.parametrize("event", ["W", "RW"])
+@pytest.mark.parametrize("ready", ["W", "RW"])
+async def test_wait_w_no_loop(event, ready, monkeypatch):
+    # A generator asking to write on a socket already writable is served
+    # without touching the event loop: pipeline mode, hence executemany(), and
+    # copy() go through that path at every command or buffer.
+    import asyncio
+
+    wait = getattr(waiting.Wait, event)
+    loop = asyncio.get_running_loop()
+
+    def no_loop(*args):
+        pytest.fail("the event loop should not be used")
+
+    monkeypatch.setattr(loop, "add_reader", no_loop)
+    monkeypatch.setattr(loop, "add_writer", no_loop)
+
+    rs, ws = socket.socketpair()  # the w socket is already ready for writing
+    rs.setblocking(False)
+    ws.setblocking(False)
+    with rs, ws:
+        if ready == "RW":
+            rs.send(b"x")  # make the w socket ready for reading too
+        r = await waiting.wait_async(tgen(wait, times=3), ws.fileno(), 0.5)
+        # Only what the generator asked for is reported.
+        assert r == getattr(waiting.Ready, ready) & wait
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
