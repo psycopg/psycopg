@@ -648,7 +648,9 @@ async def test_check_cancelled(dsn, monkeypatch):
         await asleep(0.5)
         await orig_check(conn)
 
-    monkeypatch.setattr(pool.AsyncConnectionPool, "check_connection", slow_check)
+    monkeypatch.setattr(
+        pool.AsyncConnectionPool, "check_connection", staticmethod(slow_check)
+    )
 
     async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
         await p.wait()
