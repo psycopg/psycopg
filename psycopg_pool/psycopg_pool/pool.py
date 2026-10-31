@@ -532,25 +532,33 @@ class ConnectionPool(Generic[CT], BasePool):
             if self._nconns < self._min_size:
                 self._maybe_grow_pool()
 
-        while conns:
-            conn = conns.pop()
+        try:
+            while conns:
+                conn = conns.pop()
 
-            # Check for expired connections
-            if conn._expire_at <= monotonic():
-                logger.info("discarding expired connection %s", conn)
-                self._close_connection(conn)
-                self.run_task(AddConnection(self))
-                continue
+                # Check for expired connections
+                if conn._expire_at <= monotonic():
+                    logger.info("discarding expired connection %s", conn)
+                    self._close_connection(conn)
+                    self.run_task(AddConnection(self))
+                    continue
 
-            # Check for broken connections
-            try:
-                self.check_connection(conn)
-            except CLIENT_EXCEPTIONS:
-                self._stats[self._CONNECTIONS_LOST] += 1
-                logger.warning("discarding broken connection: %s", conn)
-                self.run_task(AddConnection(self))
-            else:
-                self._add_to_pool(conn)
+                # Check for broken connections
+                try:
+                    self.check_connection(conn)
+                except Exception:
+                    self._stats[self._CONNECTIONS_LOST] += 1
+                    logger.warning("discarding broken connection: %s", conn)
+                    self._close_connection(conn)
+                    self.run_task(AddConnection(self))
+                except BaseException:
+                    self._add_to_pool(conn)
+                    raise
+                else:
+                    self._add_to_pool(conn)
+        finally:
+            while conns:
+                self._add_to_pool(conns.pop())
 
     @staticmethod
     def check_connection(conn: CT) -> None:
