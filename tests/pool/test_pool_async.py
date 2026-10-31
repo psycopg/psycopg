@@ -639,19 +639,19 @@ async def test_check_does_not_grow_pool(dsn):
 
 
 @skip_sync
-async def test_check_cancelled(dsn):
+async def test_check_cancelled(dsn, monkeypatch):
     from asyncio import CancelledError
+
+    orig_check = pool.AsyncConnectionPool.check_connection
+
+    async def slow_check(conn):
+        await asleep(0.5)
+        await orig_check(conn)
+
+    monkeypatch.setattr(pool.AsyncConnectionPool, "check_connection", slow_check)
 
     async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
         await p.wait()
-
-        orig_check = p.check_connection
-
-        async def slow_check(conn):
-            await asleep(0.5)
-            await orig_check(conn)
-
-        p.check_connection = slow_check
 
         task = spawn(p.check)
         await asleep(0.05)
