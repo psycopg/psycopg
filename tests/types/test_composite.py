@@ -1,4 +1,3 @@
-import gc
 import logging
 
 import pytest
@@ -392,7 +391,7 @@ def test_register_scope(conn, testcomp):
 
 
 @pytest.mark.slow
-def test_register_leak(conn, testcomp, gc_collect):
+def test_register_leak(conn, testcomp, gc):
     info = CompositeInfo.fetch(conn, "testcomp")
     ntypes = []
     for i in range(2):
@@ -400,7 +399,7 @@ def test_register_leak(conn, testcomp, gc_collect):
         register_composite(info, cur)
         cur.close()
         del cur
-        gc_collect()
+        gc.collect()
 
         objs = gc.get_objects()
         n = 0
