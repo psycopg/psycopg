@@ -492,7 +492,7 @@ def test_scroll(conn):
 
     with pytest.raises(ValueError):
         cur.scroll(9, mode="wat")
-        assert cur.rownumber == 10
+    assert cur.rownumber == 10
     cur.close()
 
 

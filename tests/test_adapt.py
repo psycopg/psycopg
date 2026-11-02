@@ -497,7 +497,6 @@ def test_loader_init_error(conn):
     cur.adapters.register_loader("text", BadLoader)
     with pytest.raises(ZeroDivisionError):
         cur.execute("select 'hi'::text")
-        assert cur.fetchone() == ("hi",)
 
 
 @pytest.mark.slow
