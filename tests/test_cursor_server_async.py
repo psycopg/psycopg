@@ -498,7 +498,7 @@ async def test_scroll(aconn):
 
     with pytest.raises(ValueError):
         await cur.scroll(9, mode="wat")
-        assert cur.rownumber == 10
+    assert cur.rownumber == 10
     await cur.close()
 
 

@@ -45,4 +45,4 @@ def test_conninfo_parse_96():
 def test_conninfo_parse_bad():
     with pytest.raises(psycopg.OperationalError) as e:
         pq.Conninfo.parse(b"bad_conninfo=")
-        assert "bad_conninfo" in str(e.value)
+    assert "bad_conninfo" in str(e.value)
