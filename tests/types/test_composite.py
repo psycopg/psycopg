@@ -390,6 +390,27 @@ def test_register_scope(conn, testcomp):
             assert oid in conn.adapters._loaders[fmt]
 
 
+@pytest.mark.slow
+def test_register_leak(conn, testcomp, gc):
+    info = CompositeInfo.fetch(conn, "testcomp")
+    ntypes = []
+    for i in range(2):
+        cur = conn.cursor()
+        register_composite(info, cur)
+        cur.close()
+        del cur
+        gc.collect()
+
+        objs = gc.get_objects()
+        n = 0
+        for obj in objs:
+            if isinstance(obj, type):
+                n += 1
+        ntypes.append(n)
+
+    assert ntypes[0] == ntypes[1]
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_type_dumper_registered(conn, testcomp, fmt_in):
     info = CompositeInfo.fetch(conn, "testcomp")

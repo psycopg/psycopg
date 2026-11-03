@@ -3,6 +3,7 @@ from __future__ import annotations
 import gc
 import sys
 import sysconfig
+from typing import Any
 
 import pytest
 
@@ -63,6 +64,9 @@ class GCFixture:
             rv += 1
 
         return rv
+
+    def get_objects(self, generation: int | None = None) -> list[Any]:
+        return gc.get_objects(generation)
 
 
 @pytest.fixture(name="gc")
