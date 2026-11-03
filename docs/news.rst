@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.7
+^^^^^^^^^^^^^
 
 - Fix segfault fetching arrays of strings or timestamps after closing the
   connection (:ticket:`#1428`).
@@ -33,9 +33,6 @@ Psycopg 3.3.7 (unreleased)
 
 .. __: https://github.com/cockroachdb/cockroach/issues/176211
 
-
-Current release
----------------
 
 Psycopg 3.3.6
 ^^^^^^^^^^^^^
