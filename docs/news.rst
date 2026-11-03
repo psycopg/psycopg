@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix the size of the binary packages on Linux x86_64, increased in 3.3.7 by
+  padding of the bundled libraries (:ticket:`#1477`).
+
+
 Current release
 ---------------
 
