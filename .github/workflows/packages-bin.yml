@@ -1,8 +1,8 @@
 name: Build binary packages
 
-# Note: these jobs also build and cache the libpq, but, because every Python
-# version will try to build and cache the same libpq instance, there is a race
-# condition and most likely the artifacts manager will refuse to cache.
+# Note: these jobs only restore the libpq from the cache, and fail if it is
+# missing: if they built it, every Python version would try to build and cache
+# the same libpq instance concurrently.
 #
 # Please run the `build-and-cache-libpq.yml` workflow when the libpq/openssl
 # version change in order to update the cache.
@@ -68,10 +68,12 @@ jobs:
           # https://github.com/pypa/cibuildwheel/discussions/2256
           image: tonistiigi/binfmt:qemu-v8.1.5
 
-      - name: Cache libpq build
-        uses: actions/cache@v6
+      - name: Restore libpq build from cache
+        # Don't build the libpq here if missing: run build-and-cache-libpq.yml
+        uses: actions/cache/restore@v6
         with:
           path: /tmp/libpq.build
+          fail-on-cache-miss: true
           key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Create the binary package source tree
@@ -142,10 +144,12 @@ jobs:
       - name: Checkout repos
         uses: actions/checkout@v7
 
-      - name: Cache libpq build
-        uses: actions/cache@v6
+      - name: Restore libpq build from cache
+        # Don't build the libpq here if missing: run build-and-cache-libpq.yml
+        uses: actions/cache/restore@v6
         with:
           path: /tmp/libpq.build
+          fail-on-cache-miss: true
           key: libpq-macos-${{ env.LIBPQ_VERSION }}-${{ matrix.arch }}-${{ env.OPENSSL_VERSION }}${{ env.PQ_FLAGS }}
 
       - name: Create the binary package source tree
