@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.8 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.8
+^^^^^^^^^^^^^
 
 - Revert the use of ``/etc/ssl`` as SSL directory in the binary packages on
   Linux and macOS: it caused the system ``openssl.cnf`` to be loaded, which
@@ -20,9 +20,6 @@ Psycopg 3.3.8 (unreleased)
 - Fix the size of the binary packages on Linux x86_64, increased in 3.3.7 by
   padding of the bundled libraries (:ticket:`#1477`).
 
-
-Current release
----------------
 
 Psycopg 3.3.7
 ^^^^^^^^^^^^^
