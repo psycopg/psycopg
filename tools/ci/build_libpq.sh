@@ -100,7 +100,9 @@ else
 fi
 
 if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
-  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/openssl.cnf" ]]; then
+  # OpenSSL installs into lib64 on some 64 bits Linux platforms.
+  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libssl.${library_suffix}" \
+        && ! -f "${LIBPQ_BUILD_PREFIX}/lib64/libssl.${library_suffix}" ]]; then
 
     # Build openssl if needed
     openssl_tag="openssl-${openssl_version}"
@@ -145,6 +147,7 @@ fi
 
 
 if [ "$ID" == "macos" ]; then
+  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libkrb5.${library_suffix}" ]]; then
 
     # Build kerberos if needed
     krb5_dir="krb5-${krb5_version}/src"
@@ -162,6 +165,7 @@ if [ "$ID" == "macos" ]; then
     make install
     popd
 
+  fi
 fi
 
 
