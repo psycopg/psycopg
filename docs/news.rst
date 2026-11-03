@@ -13,6 +13,10 @@ Future releases
 Psycopg 3.3.8 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Revert the use of ``/etc/ssl`` as SSL directory in the binary packages on
+  Linux and macOS: it caused the system ``openssl.cnf`` to be loaded, which
+  could break connections, for instance on FIPS-enabled systems
+  (:ticket:`#1476`).
 - Fix the size of the binary packages on Linux x86_64, increased in 3.3.7 by
   padding of the bundled libraries (:ticket:`#1477`).
 

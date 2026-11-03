@@ -112,7 +112,12 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
 
         pushd "${openssl_dir}"
 
-        options=(--prefix=${LIBPQ_BUILD_PREFIX} --openssldir=/etc/ssl \
+        # Use a non-existing directory, not writable by unprivileged users, as
+        # OPENSSLDIR, so that no openssl.cnf or certificate is loaded from
+        # there. Don't use /etc/ssl either: the system openssl.cnf may be
+        # meant for a different OpenSSL build (see #1476).
+        options=(--prefix=${LIBPQ_BUILD_PREFIX} \
+            --openssldir=/usr/lib/psycopg-openssl \
             zlib -fPIC shared)
         if [ -z "${MACOSX_ARCHITECTURE:-}" ]; then
             ./config ${options[*]}
