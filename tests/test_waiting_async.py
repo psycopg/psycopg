@@ -299,6 +299,36 @@ async def test_wait_w_no_loop(event, ready, monkeypatch):
         assert r == getattr(waiting.Ready, ready) & wait
 
 
+@skip_sync
+async def test_wait_w_yields():
+    # A generator finding the socket always ready must still let other tasks
+    # run now and then (see MAX_SKIPPED_WAITS).
+    import asyncio
+
+    ticks = 0
+
+    async def ticker():
+        nonlocal ticks
+        while True:
+            ticks += 1
+            await asyncio.sleep(0)
+
+    rs, ws = socket.socketpair()
+    rs.setblocking(False)
+    ws.setblocking(False)
+    with rs, ws:
+        t = asyncio.ensure_future(ticker())
+        try:
+            n = waiting.MAX_SKIPPED_WAITS * 3
+            r = await waiting.wait_async(
+                tgen(waiting.Wait.W, times=n), ws.fileno(), 0.5
+            )
+        finally:
+            t.cancel()
+        assert r == waiting.Ready.W
+        assert ticks >= 2
+
+
 @pytest.mark.parametrize("waitfn", waitfns)
 @pytest.mark.parametrize("interval", intervals)
 async def test_wait(pgconn, waitfn, interval):
