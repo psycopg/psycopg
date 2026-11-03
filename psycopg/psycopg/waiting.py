@@ -16,8 +16,9 @@ import select
 import logging
 import selectors
 from time import monotonic
-from asyncio import Future, get_running_loop
+from asyncio import Future, get_running_loop, sleep
 from selectors import DefaultSelector
+from collections.abc import Callable
 
 from . import errors as e
 from .abc import RV, PQGen, PQGenConn, WaitFunc
@@ -34,6 +35,11 @@ READY_W = Ready.W
 READY_RW = Ready.RW
 
 logger = logging.getLogger(__name__)
+
+# How many times wait_async() may serve a ready socket in a row without
+# yielding to the event loop, so that a long executemany() or copy() doesn't
+# starve other tasks. Measured as basically free at 100.
+MAX_SKIPPED_WAITS = 100
 
 
 if sys.platform != "win32":
@@ -155,39 +161,28 @@ def wait_conn(
         return rv
 
 
-if hasattr(select, "poll"):
+def _ready_poll(fileno: int, s: int) -> int:
+    """Return the `Ready` state of `!fileno` right now, using poll()."""
+    p = select.poll()
+    p.register(
+        fileno,
+        (select.POLLIN if s & WAIT_R else 0) | (select.POLLOUT if s & WAIT_W else 0),
+    )
+    ready: int = READY_NONE
+    for _, ev in p.poll(0):
+        if ev & select.POLLIN:
+            ready |= READY_R
+        if ev & select.POLLOUT:
+            ready |= READY_W
+    return ready
 
-    def _ready_now(fileno: int, s: int) -> int:
-        """
-        Return the `Ready` states already true for `!fileno`, without waiting.
 
-        `!s` is the `Wait` state asked by the generator. One fd, zero timeout:
-        a few microseconds, against a full event loop round trip.
-        """
-        p = select.poll()
-        p.register(
-            fileno,
-            (select.POLLIN if s & WAIT_R else 0)
-            | (select.POLLOUT if s & WAIT_W else 0),
-        )
-        ready: int = READY_NONE
-        # A closed or invalid fd reports POLLNVAL and no readiness: the caller
-        # then registers with the loop, which raises as it did before.
-        for _, ev in p.poll(0):
-            if ev & select.POLLIN:
-                ready |= READY_R
-            if ev & select.POLLOUT:
-                ready |= READY_W
-        return ready
-
-else:
-
-    def _ready_now(fileno: int, s: int) -> int:
-        # No poll() on Windows: select() is fine for the single fd checked here.
-        rl = [fileno] if s & WAIT_R else []
-        wl = [fileno] if s & WAIT_W else []
-        r, w, _ = select.select(rl, wl, [], 0)
-        return (READY_R if r else READY_NONE) | (READY_W if w else READY_NONE)
+def _ready_select(fileno: int, s: int) -> int:
+    """Return the `Ready` state of `!fileno` right now, using select()."""
+    rl = [fileno] if s & WAIT_R else []
+    wl = [fileno] if s & WAIT_W else []
+    r, w, _ = select.select(rl, wl, [], 0)
+    return (READY_R if r else READY_NONE) | (READY_W if w else READY_NONE)
 
 
 async def wait_async(
@@ -223,6 +218,7 @@ async def wait_async(
     deadline = monotonic() + timeout if timeout is not None else None
     loop = get_running_loop()
     ready: int = 0
+    nskip = 0
     fut: Future[None] | None = None
 
     # Block on a future and resolve it from the fd callbacks, or from a timer
@@ -245,23 +241,18 @@ async def wait_async(
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
 
-            # A generator asking to write nearly always finds the socket
-            # writable (the output buffer is seldom full), so check that
-            # first: a zero-timeout poll costs a few microseconds, a loop
-            # round trip (register, future, timer, await, unregister) a few
-            # tens, and pipeline mode pays it at every command, therefore
-            # executemany() does too, and copy() at every flush. Measured
-            # on localhost: executemany() 4x faster, in line with the sync
-            # connection. A generator asking only to read is not checked:
-            # the server's answer is hardly ever there already, so the poll
-            # would only add to the round trip.
-            # As a consequence a generator finding the socket always ready
-            # completes without yielding to the loop, as one that never
-            # blocks already does.
-            if writer and (ready := _ready_now(fileno, s)):
+            # A socket asked for writing is nearly always writable, and a
+            # zero-timeout poll is much cheaper than a loop round trip, which
+            # pipeline mode and copy() would pay at every command or flush.
+            if writer and (ready := _ready(fileno, s)):
                 s = gen.send(ready)
                 if deadline is not None and monotonic() >= deadline:
                     raise e._WaitTimeout("wait timeout expired")
+                # Don't starve the loop if the socket is always ready.
+                nskip += 1
+                if nskip >= MAX_SKIPPED_WAITS:
+                    nskip = 0
+                    await sleep(0)
                 continue
 
             ready = 0
@@ -615,3 +606,15 @@ elif hasattr(selectors, "PollSelector"):
 
 else:
     wait = wait_selector
+
+
+# Choose the function checking a fd readiness without waiting, used by
+# wait_async() before registering with the event loop.
+
+_ready: Callable[[int, int], int]
+
+if hasattr(select, "poll"):
+    _ready = _ready_poll
+else:
+    # On Windows there is no poll(); select() is fine for a single fd.
+    _ready = _ready_select
