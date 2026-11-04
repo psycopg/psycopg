@@ -50,8 +50,8 @@ fi
 case "$ID" in
     centos | almalinux | rocky)
         yum update -y
-        yum install -y flex cyrus-sasl-devel krb5-devel pam-devel \
-            perl perl-IPC-Cmd perl-Time-Piece zlib-devel
+        yum install -y bison flex cyrus-sasl-devel keyutils-libs-devel \
+            pam-devel perl perl-IPC-Cmd perl-Time-Piece zlib-devel
         ;;
 
     alpine)
@@ -163,6 +163,43 @@ if [ "$ID" == "macos" ]; then
     fi
 
     make install
+    popd
+
+  fi
+fi
+
+
+if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]; then
+  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libkrb5.${library_suffix}" ]]; then
+
+    # Build kerberos if needed. Don't use the system one: on some images it
+    # links to the system OpenSSL, which would be bundled in the wheel too.
+    krb5_dir="krb5-${krb5_version}/src"
+    krb5_destdir="$(pwd)/krb5-${krb5_version}-install"
+    if [ ! -d "${krb5_dir}" ]; then
+        curl -fsSL "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
+            | tar xzf -
+
+        pushd "${krb5_dir}"
+
+        # Configure the system paths, which are compiled into the libraries,
+        # instead of the build prefix, which is in /tmp: read krb5.conf and
+        # gss/mech from /etc, as the system krb5 does. The libdir is used as
+        # plugins dir: use a non-existing directory, not writable by
+        # unprivileged users. Install in a staging dir and copy from there.
+        ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+            --libdir=/usr/lib/psycopg-krb5 --with-keyutils --disable-nls
+        make -s
+    else
+        pushd "${krb5_dir}"
+    fi
+
+    # Install kerberos
+    make install DESTDIR="${krb5_destdir}"
+    mkdir -p "${LIBPQ_BUILD_PREFIX}/lib" "${LIBPQ_BUILD_PREFIX}/include"
+    cp -a "${krb5_destdir}/usr/lib/psycopg-krb5/"*.${library_suffix}* \
+        "${LIBPQ_BUILD_PREFIX}/lib/"
+    cp -a "${krb5_destdir}/usr/include/." "${LIBPQ_BUILD_PREFIX}/include/"
     popd
 
   fi

@@ -26,6 +26,7 @@ Psycopg 3.3.9 (unreleased)
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
+- Reduce the size of the binary packages.
 
 
 Current release
