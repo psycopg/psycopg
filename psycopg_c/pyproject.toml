@@ -91,6 +91,11 @@ psycopg_binary = [
     "*.pyi",
 ]
 
+[tool.setuptools.exclude-package-data]
+# The .c files are needed in the sdist (they are the ext-modules sources), but
+# not in the wheels.
+"*" = ["*.c"]
+
 # Note: these ext modules lack details such as libraries and directories.
 # They are added by the 'psycopg_build_ext' build module.
 [[tool.setuptools.ext-modules]]
