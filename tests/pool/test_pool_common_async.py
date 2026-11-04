@@ -119,6 +119,31 @@ async def test_wait_closed(pool_cls, dsn):
         await p.wait()
 
 
+@skip_sync
+async def test_wait_after_cancelled_wait(pool_cls, dsn):
+    from asyncio import CancelledError
+
+    async def slow_configure(conn):
+        await asleep(0.4)
+
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls, 2), configure=slow_configure
+    ) as p:
+        waiter = spawn(p.wait)
+        for _ in range(50):
+            if p._pool_full_event is not None:
+                break
+            await asleep(0.01)
+        else:
+            pytest.fail("wait() did not start")
+
+        waiter.cancel()
+        with pytest.raises(CancelledError):
+            await waiter
+
+        await p.wait(timeout=5.0)
+
+
 @pytest.mark.slow
 async def test_setup_no_timeout(pool_cls, dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
