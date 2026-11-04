@@ -146,60 +146,58 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
 fi
 
 
-if [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libkrb5.${library_suffix}" ]]; then
 
-    # Build kerberos if needed
-    krb5_dir="krb5-${krb5_version}/src"
-    if [ ! -d "${krb5_dir}" ]; then
-        curl -fsSL "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
-            | tar xzf -
-
-        pushd "${krb5_dir}"
-        ./configure "${make_configure_standard_flags[@]}"
-        make -s
-    else
-        pushd "${krb5_dir}"
-    fi
-
-    make install
-    popd
-
-  fi
-fi
-
-
-if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]; then
-  if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libkrb5.${library_suffix}" ]]; then
-
-    # Build kerberos if needed. Don't use the system one: on some images it
-    # links to the system OpenSSL, which would be bundled in the wheel too.
+    # Build kerberos if needed. On Linux the system one may link to another
+    # OpenSSL, which would be bundled too.
     krb5_dir="krb5-${krb5_version}/src"
     krb5_destdir="$(pwd)/krb5-${krb5_version}-install"
+    krb5_libdir=/usr/lib/psycopg-krb5
     if [ ! -d "${krb5_dir}" ]; then
         curl -fsSL "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
             | tar xzf -
 
         pushd "${krb5_dir}"
 
-        # Configure the system paths, which are compiled into the libraries,
-        # instead of the build prefix, which is in /tmp: read krb5.conf and
-        # gss/mech from /etc, as the system krb5 does. The libdir is used as
-        # plugins dir: use a non-existing directory, not writable by
-        # unprivileged users. Install in a staging dir and copy from there.
-        ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-            --libdir=/usr/lib/psycopg-krb5 --with-keyutils --disable-nls
+        # Don't compile in paths under the build prefix, in /tmp. The libdir
+        # is also the plugins dir: use a non-existing one. Same for the
+        # sysconfdir (for gss/mech, see #1476) on macOS; Linux uses /etc.
+        options=(--prefix=/usr --localstatedir=/var \
+            --libdir=${krb5_libdir} --disable-nls)
+        if [ "$ID" == "macos" ]; then
+            options+=(--sysconfdir=${krb5_libdir} \
+                "CPPFLAGS=-arch $MACOSX_ARCHITECTURE" \
+                "LDFLAGS=-arch $MACOSX_ARCHITECTURE")
+        else
+            options+=(--sysconfdir=/etc --with-keyutils)
+        fi
+        ./configure "${options[@]}"
         make -s
     else
         pushd "${krb5_dir}"
     fi
 
-    # Install kerberos
     make install DESTDIR="${krb5_destdir}"
     mkdir -p "${LIBPQ_BUILD_PREFIX}/lib" "${LIBPQ_BUILD_PREFIX}/include"
-    cp -a "${krb5_destdir}/usr/lib/psycopg-krb5/"*.${library_suffix}* \
+    cp -a "${krb5_destdir}${krb5_libdir}/"*.${library_suffix}* \
         "${LIBPQ_BUILD_PREFIX}/lib/"
     cp -a "${krb5_destdir}/usr/include/." "${LIBPQ_BUILD_PREFIX}/include/"
+
+    # On macOS, fix the install names, which contain the libdir.
+    if [ "$ID" == "macos" ]; then
+        for f in "${krb5_destdir}${krb5_libdir}/"*.dylib; do
+            [ -L "$f" ] && continue
+            lib="${LIBPQ_BUILD_PREFIX}/lib/${f##*/}"
+            install_name_tool -id "$lib" "$lib"
+            for dep in $(otool -L "$lib" | awk 'NR > 1 {print $1}' \
+                    | grep "^${krb5_libdir}/"); do
+                install_name_tool -change "$dep" \
+                    "${LIBPQ_BUILD_PREFIX}/lib/${dep##*/}" "$lib"
+            done
+            codesign --force -s - "$lib"
+        done
+    fi
     popd
 
   fi
