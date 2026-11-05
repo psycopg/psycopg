@@ -264,38 +264,25 @@ jobs:
   # }}}
 
   windows:  # {{{
-    # TODO: move the default back to windows-latest when the default runner
-    # switches.
-    runs-on: ${{ matrix.runner || 'windows-2025' }}
+    runs-on: ${{ matrix.platform.runner }}
     if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
 
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {impl: python, python: "3.10"}
-          - {impl: python, python: "3.11"}
-          - {impl: python, python: "3.12"}
-          - {impl: python, python: "3.13"}
-          - {impl: python, python: "3.14"}
-          - {impl: python, python: "3.15"}
-          - {impl: c, python: "3.10"}
-          - {impl: c, python: "3.11"}
-          - {impl: c, python: "3.12"}
-          - {impl: c, python: "3.13"}
-          - {impl: c, python: "3.14"}
-          - {impl: c, python: "3.15"}
-
-          # Windows arm64. Note: setup-python has no arm64 build for
-          # Python 3.10, so start from 3.11.
-          - {impl: python, python: "3.11", runner: windows-11-arm}
-          - {impl: python, python: "3.12", runner: windows-11-arm}
-          - {impl: python, python: "3.13", runner: windows-11-arm}
-          - {impl: python, python: "3.14", runner: windows-11-arm}
-          - {impl: c, python: "3.11", runner: windows-11-arm}
-          - {impl: c, python: "3.12", runner: windows-11-arm}
-          - {impl: c, python: "3.13", runner: windows-11-arm}
-          - {impl: c, python: "3.14", runner: windows-11-arm}
+        platform:
+          - runner: windows-latest
+            vcpkg_triplet: x64-windows-release
+          - &win_arm64
+            runner: windows-11-arm
+            # Note: there is no arm64-windows-release triplet in vcpkg.
+            vcpkg_triplet: arm64-windows
+        impl: [python, c]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        exclude:
+          # Python 3.10 does not have an arm64 release
+          - platform: *win_arm64
+            python: "3.10"
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -303,8 +290,7 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
-      # Note: there is no arm64-windows-release triplet in vcpkg.
-      VCPKG_TRIPLET: ${{ matrix.runner == 'windows-11-arm' && 'arm64-windows' || 'x64-windows-release' }}
+      VCPKG_TRIPLET: ${{ matrix.platform.vcpkg_triplet }}
 
     defaults:
       run:
