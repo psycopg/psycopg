@@ -23,6 +23,8 @@ Psycopg 3.3.9 (unreleased)
   made pipeline mode, `~AsyncCursor.executemany()` and `~AsyncCopy.write()`
   on async connections several times slower than on sync ones
   (:ticket:`#1468`).
+- Fix client-side quoting of negative zero floats and decimals, which could
+  produce a ``--`` SQL comment (:ticket:`#1480`).
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
