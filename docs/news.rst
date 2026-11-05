@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.9 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix client-side quoting of negative zero floats and decimals, which could
+  produce a ``--`` SQL comment, for instance in ``select 1-%s``.
+
+
 Current release
 ---------------
 

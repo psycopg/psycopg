@@ -352,7 +352,8 @@ cdef class _FloatDumper(CDumper):
         if ptr != NULL:
             return <object>ptr
 
-        return value if obj >= 0 else b" " + value
+        # Check the sign on the text: -0.0 and Decimal("-0") are >= 0.
+        return b" " + value if value.startswith(b"-") else value
 
 cdef dict _special_float = {
     b"inf": b"'Infinity'::float8",
@@ -462,7 +463,8 @@ cdef class DecimalDumper(CDumper):
         if ptr != NULL:
             return <object>ptr
 
-        return value if obj >= 0 else b" " + value
+        # Check the sign on the text: -0.0 and Decimal("-0") are >= 0.
+        return b" " + value if value.startswith(b"-") else value
 
 cdef dict _special_decimal = {
     b"Infinity": b"'Infinity'::numeric",

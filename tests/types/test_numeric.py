@@ -457,6 +457,20 @@ def test_quote_numeric(conn, val, expr):
         assert r == (val, -val)
 
 
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        (-0.0, b" -0.0"),
+        (Decimal("-0"), b" -0"),
+        (Decimal("-0.000"), b" -0.000"),
+    ],
+)
+def test_quote_minus_zero(val, expr):
+    # Without the space, "select 1-%s" would become "select 1--0.0", a comment.
+    tx = Transformer()
+    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == expr
+
+
 @pytest.mark.crdb_skip("binary decimal")
 @pytest.mark.parametrize(
     "expr",
