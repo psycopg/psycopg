@@ -264,16 +264,18 @@ class ListBinaryDumper(BaseListDumper):
         self._calc_dims(obj, dims)
         hasnull = self._dump_list(obj, 0, dims, data)
 
+        if not dims[-1]:
+            return _pack_head(0, 0, sub_oid)
+
         data[0] = _pack_head(len(dims), hasnull, sub_oid)
         data[1] = b"".join(_pack_dim(dim, 1) for dim in dims)
         return b"".join(data)
 
     def _calc_dims(self, L: list[Any], dims: list[int]) -> None:
         if isinstance(L, self.cls):
-            if not L:
-                raise e.DataError("lists cannot contain empty lists")
             dims.append(len(L))
-            self._calc_dims(L[0], dims)
+            if L:
+                self._calc_dims(L[0], dims)
 
     def _dump_list(
         self, L: list[Any], dim: int, dims: list[int], data: list[Buffer]
