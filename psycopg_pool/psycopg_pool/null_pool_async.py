@@ -91,13 +91,13 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
         logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))
-        if not await self._pool_full_event.wait_timeout(timeout):
-            await self.close()  # stop all the tasks
-            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
-
-        async with self._lock:
-            assert self._pool_full_event
-            self._pool_full_event = None
+        try:
+            if not await self._pool_full_event.wait_timeout(timeout):
+                await self.close()  # stop all the tasks
+                raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
+        finally:
+            async with self._lock:
+                self._pool_full_event = None
 
         logger.info("pool %r is ready to use", self.name)
 
