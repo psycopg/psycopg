@@ -36,11 +36,13 @@ READY_RW = Ready.RW
 
 logger = logging.getLogger(__name__)
 
-# How many times wait_async() may serve a ready socket in a row without
-# yielding to the event loop, so that a long executemany() or copy() doesn't
-# starve other tasks. Measured as basically free at 100.
-MAX_SKIPPED_WAITS = 100
-_nskip = 0
+# How long (in seconds) wait_async() may keep the event loop busy, serving
+# generators which don't block or sockets found ready, before yielding to it,
+# so that a long executemany() or copy() doesn't starve the other tasks.
+MAX_BUSY_TIME = 0.005
+
+# When the event loop last got control from wait_async().
+_last_yield = 0.0
 
 
 if sys.platform != "win32":
@@ -209,16 +211,15 @@ async def wait_async(
 
     # Don't touch the event loop before we know that we will have to wait: a
     # generator completing without blocking (e.g. every copy() round) pays
-    # nothing more than this.
-    global _nskip
+    # nothing more than this, unless the loop has been busy for too long.
+    global _last_yield
     try:
         s = next(gen)
     except StopIteration as ex:
         rv: RV = ex.value
-        _nskip += 1
-        if _nskip >= MAX_SKIPPED_WAITS:
-            _nskip = 0
+        if monotonic() - _last_yield >= MAX_BUSY_TIME:
             await sleep(0)
+            _last_yield = monotonic()
         return rv
 
     deadline = monotonic() + timeout if timeout is not None else None
@@ -251,10 +252,9 @@ async def wait_async(
             # pipeline mode and copy() would pay at every command or flush.
             if writer:
                 # Don't starve the loop if the socket is always ready.
-                _nskip += 1
-                if _nskip >= MAX_SKIPPED_WAITS:
-                    _nskip = 0
+                if monotonic() - _last_yield >= MAX_BUSY_TIME:
                     await sleep(0)
+                    _last_yield = monotonic()
                 if ready := _ready(fileno, s):
                     s = gen.send(ready)
                     if deadline is not None and monotonic() >= deadline:
@@ -270,12 +270,12 @@ async def wait_async(
                 t = interval if deadline is None else _wait_time(interval, deadline)
                 fut = loop.create_future()
                 timer = loop.call_later(t, timedout)
-                _nskip = 0
                 try:
                     await fut
                 finally:
                     timer.cancel()
                     fut = None
+                    _last_yield = monotonic()
             finally:
                 if reader:
                     loop.remove_reader(fileno)
