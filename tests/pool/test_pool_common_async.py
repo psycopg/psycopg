@@ -231,6 +231,55 @@ async def test_queue_size(pool_cls, dsn):
     assert p.get_stats()["requests_errors"] == 1
 
 
+async def test_timed_out_waiter_frees_queue_slot(pool_cls, dsn):
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls), max_size=1, max_waiting=1
+    ) as p:
+        await p.wait()
+        held = await p.getconn()
+        try:
+            for _ in range(2):
+                with pytest.raises(pool.PoolTimeout):
+                    await p.getconn(timeout=0.01)
+                assert p.get_stats()["requests_waiting"] == 0
+        finally:
+            await p.putconn(held)
+
+        async with p.connection(timeout=1) as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
+@skip_sync
+async def test_cancelled_waiter_frees_queue_slot(pool_cls, dsn):
+    from asyncio import CancelledError
+
+    async with pool_cls(
+        dsn, min_size=min_size(pool_cls), max_size=1, max_waiting=1
+    ) as p:
+        await p.wait()
+        held = await p.getconn()
+        try:
+            waiter = spawn(p.getconn)
+            await ensure_waiting(p)
+            waiter.cancel()
+            with pytest.raises(CancelledError):
+                await waiter
+            assert p.get_stats()["requests_waiting"] == 0
+
+            replacement = spawn(p.getconn)
+            await ensure_waiting(p)
+        finally:
+            await p.putconn(held)
+
+        conn = await replacement
+        try:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+        finally:
+            await p.putconn(conn)
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
