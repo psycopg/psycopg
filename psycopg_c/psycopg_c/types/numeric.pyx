@@ -11,7 +11,7 @@ from libc.string cimport memcpy, memset, strlen
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.long cimport PyLong_AsLongLong, PyLong_FromLong, PyLong_FromLongLong
 from cpython.long cimport PyLong_FromString, PyLong_FromUnsignedLong
-from cpython.bytes cimport PyBytes_AsStringAndSize
+from cpython.bytes cimport PyBytes_AS_STRING, PyBytes_AsStringAndSize
 from cpython.float cimport PyFloat_AsDouble, PyFloat_FromDouble
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 
@@ -352,8 +352,9 @@ cdef class _FloatDumper(CDumper):
         if ptr != NULL:
             return <object>ptr
 
-        # Check the sign on the text: -0.0 and Decimal("-0") are >= 0.
-        return b" " + value if value.startswith(b"-") else value
+        # Prepend a space to negative numbers to avoid a possible `--` in the output.
+        # Check the output instead of the sign to account for the negative 0.
+        return b" " + value if PyBytes_AS_STRING(value)[0] == b'-' else value
 
 cdef dict _special_float = {
     b"inf": b"'Infinity'::float8",
@@ -463,8 +464,9 @@ cdef class DecimalDumper(CDumper):
         if ptr != NULL:
             return <object>ptr
 
-        # Check the sign on the text: -0.0 and Decimal("-0") are >= 0.
-        return b" " + value if value.startswith(b"-") else value
+        # Prepend a space to negative numbers to avoid a possible `--` in the output.
+        # Check the output instead of the sign to account for the negative 0.
+        return b" " + value if PyBytes_AS_STRING(value)[0] == b'-' else value
 
 cdef dict _special_decimal = {
     b"Infinity": b"'Infinity'::numeric",

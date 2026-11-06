@@ -70,7 +70,8 @@ class _SpecialValuesDumper(Dumper):
         if value in self._special:
             return self._special[value]
 
-        # Check the sign on the text: -0.0 and Decimal("-0") are >= 0.
+        # Prepend a space to negative numbers to avoid a possible `--` in the output.
+        # Check the output instead of the sign to account for the negative 0.
         return b" " + value if value.startswith(b"-") else value
 
 

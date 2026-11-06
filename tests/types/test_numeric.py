@@ -273,6 +273,7 @@ def test_dump_float(conn, val, expr, fmt_in):
     "val, expr",
     [
         (0.0, b"0.0"),
+        (-0.0, b" -0.0"),
         (1.0, b"1.0"),
         (10000000000000000.0, b"1e+16"),
         (1000000.1, b"1000000.1"),
@@ -435,7 +436,9 @@ def test_roundtrip_numeric(conn, val, fmt_in, fmt_out):
     "val, expr",
     [
         ("0", b"0"),
+        ("-0", b" -0"),
         ("0.0", b"0.0"),
+        ("-0.000", b" -0.000"),
         ("0.00000000000000001", b"1E-17"),
         ("-0.00000000000000001", b" -1E-17"),
         ("nan", b"'NaN'::numeric"),
@@ -455,20 +458,6 @@ def test_quote_numeric(conn, val, expr):
         assert isnan(r[0]) and isnan(r[1])
     else:
         assert r == (val, -val)
-
-
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (-0.0, b" -0.0"),
-        (Decimal("-0"), b" -0"),
-        (Decimal("-0.000"), b" -0.000"),
-    ],
-)
-def test_quote_minus_zero(val, expr):
-    # Without the space, "select 1-%s" would become "select 1--0.0", a comment.
-    tx = Transformer()
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == expr
 
 
 @pytest.mark.crdb_skip("binary decimal")
