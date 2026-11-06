@@ -252,7 +252,35 @@ class FetchAll(Workload):
         await cur.fetchall()
 
 
-WORKLOADS: list[Workload] = [RoundTrips(), CopyOut(), FetchAll()]
+class CopyFrom(Workload):
+    name = "copy-in"
+    doc = "rows copied in one write each, the wait function entered once per row"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        await conn.execute("create temp table waittest (i int, s text)")
+        async with conn.cursor().copy("copy waittest from stdin") as copy:
+            for i in range(args.nrows):
+                await copy.write(f"{i}\t{i}\n")
+
+
+class Pipeline(Workload):
+    name = "pipeline"
+    doc = "small queries in pipeline mode, the wait function entered at each"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        async with conn.pipeline():
+            for _ in range(args.nqueries):
+                await cur.execute("select 1")
+
+
+WORKLOADS: list[Workload] = [
+    RoundTrips(),
+    CopyOut(),
+    FetchAll(),
+    CopyFrom(),
+    Pipeline(),
+]
 
 
 def get_workloads(args: Namespace) -> list[Workload]:
