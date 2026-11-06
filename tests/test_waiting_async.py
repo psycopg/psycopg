@@ -329,6 +329,40 @@ async def test_wait_w_yields():
         assert ticks >= 2
 
 
+@skip_sync
+@pytest.mark.parametrize("nwaits", [0, 1, 2])
+async def test_wait_many_calls_yields(nwaits):
+    # Many short calls finding the socket ready, such as copy.write() or
+    # execute() in pipeline mode, must let other tasks run now and then too,
+    # even when the generator doesn't wait at all or ends on a skipped wait.
+    import asyncio
+
+    ticks = 0
+
+    async def ticker():
+        nonlocal ticks
+        while True:
+            ticks += 1
+            await asyncio.sleep(0)
+
+    def gen():
+        for _ in range(nwaits):
+            yield waiting.Wait.W
+        return 42
+
+    rs, ws = socket.socketpair()
+    rs.setblocking(False)
+    ws.setblocking(False)
+    with rs, ws:
+        t = asyncio.ensure_future(ticker())
+        try:
+            for _ in range(waiting.MAX_SKIPPED_WAITS * 3):
+                assert await waiting.wait_async(gen(), ws.fileno(), 0.5) == 42
+        finally:
+            t.cancel()
+        assert ticks >= 2
+
+
 @pytest.mark.parametrize("waitfn", waitfns)
 @pytest.mark.parametrize("interval", intervals)
 async def test_wait(pgconn, waitfn, interval):

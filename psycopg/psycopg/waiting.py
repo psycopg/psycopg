@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 # yielding to the event loop, so that a long executemany() or copy() doesn't
 # starve other tasks. Measured as basically free at 100.
 MAX_SKIPPED_WAITS = 100
+_nskip = 0
 
 
 if sys.platform != "win32":
@@ -209,16 +210,20 @@ async def wait_async(
     # Don't touch the event loop before we know that we will have to wait: a
     # generator completing without blocking (e.g. every copy() round) pays
     # nothing more than this.
+    global _nskip
     try:
         s = next(gen)
     except StopIteration as ex:
         rv: RV = ex.value
+        _nskip += 1
+        if _nskip >= MAX_SKIPPED_WAITS:
+            _nskip = 0
+            await sleep(0)
         return rv
 
     deadline = monotonic() + timeout if timeout is not None else None
     loop = get_running_loop()
     ready: int = 0
-    nskip = 0
     fut: Future[None] | None = None
 
     # Block on a future and resolve it from the fd callbacks, or from a timer
@@ -244,16 +249,17 @@ async def wait_async(
             # A socket asked for writing is nearly always writable, and a
             # zero-timeout poll is much cheaper than a loop round trip, which
             # pipeline mode and copy() would pay at every command or flush.
-            if writer and (ready := _ready(fileno, s)):
-                s = gen.send(ready)
-                if deadline is not None and monotonic() >= deadline:
-                    raise e._WaitTimeout("wait timeout expired")
+            if writer:
                 # Don't starve the loop if the socket is always ready.
-                nskip += 1
-                if nskip >= MAX_SKIPPED_WAITS:
-                    nskip = 0
+                _nskip += 1
+                if _nskip >= MAX_SKIPPED_WAITS:
+                    _nskip = 0
                     await sleep(0)
-                continue
+                if ready := _ready(fileno, s):
+                    s = gen.send(ready)
+                    if deadline is not None and monotonic() >= deadline:
+                        raise e._WaitTimeout("wait timeout expired")
+                    continue
 
             ready = 0
             if reader:
@@ -264,6 +270,7 @@ async def wait_async(
                 t = interval if deadline is None else _wait_time(interval, deadline)
                 fut = loop.create_future()
                 timer = loop.call_later(t, timedout)
+                _nskip = 0
                 try:
                     await fut
                 finally:
