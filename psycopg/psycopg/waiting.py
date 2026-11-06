@@ -164,13 +164,10 @@ def wait_conn(
         return rv
 
 
-def _ready_poll(fileno: int, s: int) -> int:
+def _ready_poll(fileno: int, s: Wait) -> int:
     """Return the `Ready` state of `!fileno` right now, using poll()."""
     p = select.poll()
-    p.register(
-        fileno,
-        (select.POLLIN if s & WAIT_R else 0) | (select.POLLOUT if s & WAIT_W else 0),
-    )
+    p.register(fileno, _poll_evmasks[s])
     ready: int = READY_NONE
     for _, ev in p.poll(0):
         if ev & select.POLLIN:
@@ -180,7 +177,7 @@ def _ready_poll(fileno: int, s: int) -> int:
     return ready
 
 
-def _ready_select(fileno: int, s: int) -> int:
+def _ready_select(fileno: int, s: Wait) -> int:
     """Return the `Ready` state of `!fileno` right now, using select()."""
     rl = [fileno] if s & WAIT_R else []
     wl = [fileno] if s & WAIT_W else []
@@ -618,7 +615,7 @@ else:
 # Choose the function checking a fd readiness without waiting, used by
 # wait_async() before registering with the event loop.
 
-_ready: Callable[[int, int], int]
+_ready: Callable[[int, Wait], int]
 
 if hasattr(select, "poll"):
     _ready = _ready_poll
