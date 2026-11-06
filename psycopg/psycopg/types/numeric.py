@@ -70,7 +70,9 @@ class _SpecialValuesDumper(Dumper):
         if value in self._special:
             return self._special[value]
 
-        return value if obj >= 0 else b" " + value
+        # Prepend a space to negative numbers to avoid a possible `--` in the output.
+        # Check the output instead of the sign to account for the negative 0.
+        return b" " + value if value.startswith(b"-") else value
 
 
 class FloatDumper(_SpecialValuesDumper):
