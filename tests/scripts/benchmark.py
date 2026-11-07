@@ -498,7 +498,11 @@ def make_writer(args: Namespace, cur: Any, is_async: bool = False) -> Any:
     if is_async and not name.startswith("Async"):
         # Use the async version of the writer requested
         name = f"Async{name}"
-    return getattr(psycopg.copy, name)(cur)
+    cls = getattr(psycopg.copy, name)
+    if args.flush_threshold is None:
+        return cls(cur)
+    else:
+        return cls(cur, flush_threshold=args.flush_threshold)
 
 
 WORKLOADS: list[Workload] = [
@@ -844,6 +848,12 @@ def parse_cmdline() -> Namespace:
     common.add_argument(
         "--writer",
         help="the copy writer used by the copy command [default: LibpqWriter]",
+    )
+    common.add_argument(
+        "--flush-threshold",
+        type=int,
+        help="bytes the copy command sends before waiting for a flush"
+        " [default: the writer default]",
     )
     common.add_argument(
         "--nmany",
