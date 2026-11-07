@@ -483,6 +483,31 @@ def test_no_info_error(conn):
         register_composite(None, conn)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    "name, field, pyname, pyfield",
+    [
+        ("class", "value", "fclass", "value"),
+        ("normal", "class", "normal", "fclass"),
+        ("False", "return", "fFalse", "freturn"),
+    ],
+)
+def test_register_composite_keyword_names(name, field, pyname, pyfield):
+    from psycopg.adapt import AdaptersMap
+
+    info = CompositeInfo(
+        name,
+        oid=90000,
+        array_oid=90001,
+        field_names=[field],
+        field_types=[23],
+    )
+    register_composite(info, AdaptersMap())
+    assert info.python_type is not None
+    assert info.python_type.__name__ == pyname
+    obj = info.python_type(42)
+    assert getattr(obj, pyfield) == 42
+
+
 def test_invalid_fields_names(conn):
     conn.execute("set client_encoding to utf8")
     conn.execute(f"""
@@ -516,6 +541,21 @@ def test_literal_invalid_name(conn, name):
     assert type(got) is type(obj)
 
 
+@pytest.mark.parametrize("name, pyname", [("class", "fclass"), ("False", "fFalse")])
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_keyword_type_name(conn, name, pyname, fmt_out):
+    conn.execute(
+        sql.SQL("create type {name} as (foo text)").format(name=sql.Identifier(name))
+    )
+    info = CompositeInfo.fetch(conn, sql.Identifier(name).as_string(conn))
+    register_composite(info, conn)
+    assert info.python_type.__name__ == pyname
+    obj = info.python_type("hello")
+    got = conn.cursor(binary=fmt_out).execute("select %s", [obj]).fetchone()[0]
+    assert got == obj
+    assert type(got) is type(obj)
+
+
 @pytest.mark.parametrize(
     "name, attr",
     [
@@ -523,6 +563,7 @@ def test_literal_invalid_name(conn, name):
         (f"{eur}", "f_"),
         ("üåäö", "üåäö"),
         ("order", "order"),
+        ("class", "fclass"),
         ("1", "f1"),
     ],
 )
