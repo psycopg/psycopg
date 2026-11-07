@@ -4,7 +4,7 @@ C implementation of waiting functions
 
 # Copyright (C) 2022 The Psycopg Team
 
-from cpython.object cimport PyObject_CallFunctionObjArgs
+from cpython.object cimport PyObject
 
 from os import fstat
 from time import monotonic
@@ -286,6 +286,22 @@ ready_c_impl(int fileno, int wait)
     cdef int CWAIT_SOCKET_ERROR
 
 
+cdef extern from "Python.h":
+    # Resume a generator returning its return value, rather than raising
+    # StopIteration, which is costly to catch. Return PYGEN_RETURN or
+    # PYGEN_NEXT (PYGEN_ERROR = -1 if an exception is raised).
+    int PyIter_Send(object iter, object arg, PyObject **presult) except -1
+    int PYGEN_RETURN
+    void Py_DecRef(PyObject *o)
+
+
+cdef inline object _steal(PyObject *o):
+    """Return a new reference as a Python object, without increfing it."""
+    rv = <object>o
+    Py_DecRef(o)
+    return rv
+
+
 def wait_c(gen: PQGen[RV], int fileno, interval = 0.0, timeout = None) -> RV:
     """
     Wait for a generator using poll or select.
@@ -294,7 +310,8 @@ def wait_c(gen: PQGen[RV], int fileno, interval = 0.0, timeout = None) -> RV:
     cdef double deadline = 0.0, remaining
     cdef bint has_deadline = False
     cdef int wait, ready
-    cdef PyObject *pyready
+    cdef object pyready
+    cdef PyObject *pyrv
 
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")
@@ -308,47 +325,46 @@ def wait_c(gen: PQGen[RV], int fileno, interval = 0.0, timeout = None) -> RV:
         has_deadline = True
         deadline = monotonic() + float(timeout)
 
-    send = gen.send
+    # Most of the generators complete without blocking (e.g. at every copy()
+    # row): return their value as quickly as possible.
+    if PyIter_Send(gen, None, &pyrv) == PYGEN_RETURN:
+        return _steal(pyrv)
+    wait = _steal(pyrv)
 
-    try:
-        wait = next(gen)
+    while True:
+        ctimeout = cinterval
+        if has_deadline:
+            remaining = deadline - monotonic()
+            if remaining < ctimeout:
+                ctimeout = <float>remaining if remaining > 0.0 else 0.0
 
-        while True:
-            ctimeout = cinterval
-            if has_deadline:
-                remaining = deadline - monotonic()
-                if remaining < ctimeout:
-                    ctimeout = <float>remaining if remaining > 0.0 else 0.0
-
-            ready = wait_c_impl(fileno, wait, ctimeout)
-            if ready == READY_NONE:
-                pyready = <PyObject *>PY_READY_NONE
-            elif ready == READY_R:
-                pyready = <PyObject *>PY_READY_R
-            elif ready == READY_RW:
-                pyready = <PyObject *>PY_READY_RW
-            elif ready == READY_W:
-                pyready = <PyObject *>PY_READY_W
-            elif ready == CWAIT_SOCKET_ERROR:  # FD closed?
-                try:
-                    fstat(fileno)
-                except Exception as ex:
-                    raise e.OperationalError("connection socket closed") from ex
-                else:
-                    raise e.OperationalError("connection socket closed")
+        ready = wait_c_impl(fileno, wait, ctimeout)
+        if ready == READY_NONE:
+            pyready = PY_READY_NONE
+        elif ready == READY_R:
+            pyready = PY_READY_R
+        elif ready == READY_RW:
+            pyready = PY_READY_RW
+        elif ready == READY_W:
+            pyready = PY_READY_W
+        elif ready == CWAIT_SOCKET_ERROR:  # FD closed?
+            try:
+                fstat(fileno)
+            except Exception as ex:
+                raise e.OperationalError("connection socket closed") from ex
             else:
-                raise AssertionError(f"unexpected ready value: {ready}")
+                raise e.OperationalError("connection socket closed")
+        else:
+            raise AssertionError(f"unexpected ready value: {ready}")
 
-            wait = PyObject_CallFunctionObjArgs(send, pyready, NULL)
+        if PyIter_Send(gen, pyready, &pyrv) == PYGEN_RETURN:
+            return _steal(pyrv)
+        wait = _steal(pyrv)
 
-            # Check the deadline after resuming the generator, so that the data
-            # already available is processed and a timeout of 0 polls once.
-            if has_deadline and monotonic() >= deadline:
-                raise e._WaitTimeout("wait timeout expired")
-
-    except StopIteration as ex:
-        rv: RV = ex.value
-        return rv
+        # Check the deadline after resuming the generator, so that the data
+        # already available is processed and a timeout of 0 polls once.
+        if has_deadline and monotonic() >= deadline:
+            raise e._WaitTimeout("wait timeout expired")
 
 
 def ready_c(int fileno, int wait):

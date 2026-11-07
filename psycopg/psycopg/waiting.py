@@ -601,10 +601,7 @@ if "PSYCOPG_WAIT_FUNC" in os.environ:
     wait = globals()[fname]
     _ready = globals().get(f"_ready_{fname[5:]}", _ready_default)
 
-# On Windows, for the moment, avoid using wait_c, because it was reported to
-# use excessive CPU (see #645).
-# TODO: investigate why.
-elif _psycopg and sys.platform != "win32" and not _is_select_patched():
+elif _psycopg and not _is_select_patched():
     wait = wait_c
     _ready = _ready_c
 
