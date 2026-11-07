@@ -16,6 +16,7 @@ from psycopg.abc import Buffer
 from psycopg.copy import Copy, LibpqWriter, QueuedLibpqWriter
 from psycopg.adapt import Dumper, PyFormat
 from psycopg.types import TypeInfo
+from psycopg.generators import copy_to
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
@@ -799,6 +800,59 @@ def test_worker_error_propagated(conn, monkeypatch):
     with pytest.raises(ZeroDivisionError):
         with cur.copy("copy wat from stdin", writer=QueuedLibpqWriter(cur)) as copy:
             copy.write("a,b")
+
+
+@pytest.mark.parametrize("writer", [LibpqWriter, QueuedLibpqWriter])
+@pytest.mark.parametrize(
+    "threshold, flushes",
+    [
+        (0, [True] * 5),
+        (20, [False, True, False, True, False]),
+        (25, [False, False, True, False, False]),
+        (1000, [False] * 5),
+    ],
+)
+def test_flush_threshold(conn, monkeypatch, writer, threshold, flushes):
+    got = []
+
+    def copy_to_spy(pgconn, buffer, flush=True):
+        got.append(flush)
+        return copy_to(pgconn, buffer, flush=flush)
+
+    monkeypatch.setattr(psycopg._copy, "copy_to", copy_to_spy)
+    cur = conn.cursor()
+    cur.execute("create temp table wat (a text)")
+    with cur.copy(
+        "copy wat from stdin", writer=writer(cur, flush_threshold=threshold)
+    ) as copy:
+        for i in range(5):
+            copy.write(f"{i:09d}\n")
+
+    assert got == flushes
+    cur.execute("select count(*) from wat")
+    assert cur.fetchone() == (5,)
+
+
+def test_flush_threshold_big_block(conn, monkeypatch):
+    try:
+        from psycopg._copy_base import MAX_BUFFER_SIZE
+    except ImportError:
+        pytest.skip("MAX_BUFFER_SIZE not available")
+
+    got = []
+
+    def copy_to_spy(pgconn, buffer, flush=True):
+        got.append((len(buffer), flush))
+        return copy_to(pgconn, buffer, flush=flush)
+
+    monkeypatch.setattr(psycopg._copy, "copy_to", copy_to_spy)
+    cur = conn.cursor()
+    cur.execute("create temp table wat (a text)")
+    writer = LibpqWriter(cur, flush_threshold=MAX_BUFFER_SIZE + 1)
+    with cur.copy("copy wat from stdin", writer=writer) as copy:
+        copy.write("x" * (MAX_BUFFER_SIZE * 2) + "\n")
+
+    assert got == [(MAX_BUFFER_SIZE, False), (MAX_BUFFER_SIZE, True), (1, False)]
 
 
 @pytest.mark.parametrize(
