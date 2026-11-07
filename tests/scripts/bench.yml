@@ -5,8 +5,10 @@ name: Benchmark
 #
 # This workflow is not active: copy it to .github/workflows/ to run it.
 #
-# On push, compare origin/master with the commit pushed. Other comparisons can
-# be run manually setting ARGS, for example:
+# On push, compare origin/master with the commit pushed. On pull request,
+# compare the base of the pull request with the merge commit, only on Linux.
+# In both cases, check for regressions, reporting them as warnings. Other
+# comparisons can be run manually setting ARGS, for example:
 #
 #   # Compare two branches
 #   --tree base=origin/master --tree pr=origin/my-branch
@@ -36,6 +38,13 @@ on:
       - psycopg_c/**
       - tests/scripts/bench_compare.py
       - tests/scripts/benchmark.py
+  pull_request:
+    paths:
+      - .github/workflows/bench.yml
+      - psycopg/**
+      - psycopg_c/**
+      - tests/scripts/bench_compare.py
+      - tests/scripts/benchmark.py
   workflow_dispatch:
     inputs:
       args:
@@ -49,6 +58,11 @@ on:
       rounds:
         description: "Number of rounds of measures"
         default: "5"
+      check:
+        description: "Check for regressions: warn, fail, off"
+        type: choice
+        options: [warn, fail, "off"]
+        default: warn
       platforms:
         description: "Platforms to run on, among linux, macos, windows"
         default: "linux macos windows"
@@ -59,9 +73,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ARGS: ${{ inputs.args || '--tree base=origin/master --tree head=.' }}
+  # On pull request: compare the pull request base with the merge commit.
+  ARGS: ${{ inputs.args || (github.event_name == 'pull_request' && format('--tree base={0} --tree head=.', github.event.pull_request.base.sha)) || '--tree base=origin/master --tree head=.' }}
   PSYCOPG_IMPL: ${{ inputs.impl || 'python' }}
   ROUNDS: ${{ inputs.rounds || '5' }}
+  CHECK: ${{ inputs.check || 'warn' }}
 
 jobs:
 
@@ -97,13 +113,15 @@ jobs:
       - name: Run benchmark
         run: |
           python tests/scripts/bench_compare.py \
-            --impl $PSYCOPG_IMPL --rounds $ROUNDS $ARGS
+            --impl $PSYCOPG_IMPL --rounds $ROUNDS \
+            $( [ "$CHECK" = off ] || echo "--check $CHECK" ) $ARGS
 
 
   # }}}
 
   macos:  # {{{
-    if: ${{ !inputs.platforms || contains(inputs.platforms, 'macos') }}
+    # Not on pull request: Linux runners are the least noisy.
+    if: ${{ github.event_name != 'pull_request' && (!inputs.platforms || contains(inputs.platforms, 'macos')) }}
     runs-on: macos-latest
 
     env:
@@ -141,13 +159,15 @@ jobs:
       - name: Run benchmark
         run: |
           python tests/scripts/bench_compare.py \
-            --impl $PSYCOPG_IMPL --rounds $ROUNDS $ARGS
+            --impl $PSYCOPG_IMPL --rounds $ROUNDS \
+            $( [ "$CHECK" = off ] || echo "--check $CHECK" ) $ARGS
 
 
   # }}}
 
   windows:  # {{{
-    if: ${{ !inputs.platforms || contains(inputs.platforms, 'windows') }}
+    # Not on pull request: Linux runners are the least noisy.
+    if: ${{ github.event_name != 'pull_request' && (!inputs.platforms || contains(inputs.platforms, 'windows')) }}
     runs-on: windows-2025
 
     env:
@@ -211,7 +231,8 @@ jobs:
       - name: Run benchmark
         run: |
           python tests/scripts/bench_compare.py \
-            --impl $PSYCOPG_IMPL --rounds $ROUNDS $ARGS
+            --impl $PSYCOPG_IMPL --rounds $ROUNDS \
+            $( [ "$CHECK" = off ] || echo "--check $CHECK" ) $ARGS
 
 
   # }}}
