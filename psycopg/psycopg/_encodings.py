@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import codecs
 import string
+import keyword
 from typing import TYPE_CHECKING, Any
 from functools import cache
 
@@ -142,7 +143,7 @@ def _as_python_identifier(s: str, prefix: str = "f") -> str:
         if not s.isidentifier():
             s = _re_clean.sub("_", s)
     # namedtuple fields cannot start with underscore. So...
-    if s[0] == "_":
+    if s[0] == "_" or keyword.iskeyword(s):
         s = prefix + s
     return s
 
