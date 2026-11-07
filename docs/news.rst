@@ -13,6 +13,9 @@ Future releases
 Psycopg 3.3.9 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Use the C implementation of the wait functions on Windows too. It was
+  disabled because of an excessive CPU usage, fixed in Psycopg 3.2.11
+  (:ticket:`#645`).
 - Limit the memory used by :sql:`COPY FROM` if the server consumes data
   slower than it is produced. Add a `!flush_threshold` parameter to
   `~copy.LibpqWriter` to tune it (:ticket:`#1437`).
