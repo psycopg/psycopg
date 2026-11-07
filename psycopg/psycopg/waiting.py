@@ -36,10 +36,13 @@ READY_RW = Ready.RW
 
 logger = logging.getLogger(__name__)
 
-# How many times wait_async() may serve a ready socket in a row without
-# yielding to the event loop, so that a long executemany() or copy() doesn't
-# starve other tasks. Measured as basically free at 100.
-MAX_SKIPPED_WAITS = 100
+# How long (in seconds) wait_async() may keep the event loop busy, serving
+# generators which don't block or sockets found ready, before yielding to it,
+# so that a long executemany() or copy() doesn't starve the other tasks.
+MAX_BUSY_TIME = 0.005
+
+# When the event loop last got control from wait_async().
+_last_yield = 0.0
 
 
 if sys.platform != "win32":
@@ -205,17 +208,20 @@ async def wait_async(
 
     # Don't touch the event loop before we know that we will have to wait: a
     # generator completing without blocking (e.g. every copy() round) pays
-    # nothing more than this.
+    # nothing more than this, unless the loop has been busy for too long.
+    global _last_yield
     try:
         s = next(gen)
     except StopIteration as ex:
         rv: RV = ex.value
+        if monotonic() - _last_yield >= MAX_BUSY_TIME:
+            await sleep(0)
+            _last_yield = monotonic()
         return rv
 
     deadline = monotonic() + timeout if timeout is not None else None
     loop = get_running_loop()
     ready: int = 0
-    nskip = 0
     fut: Future[None] | None = None
 
     # Block on a future and resolve it from the fd callbacks, or from a timer
@@ -241,16 +247,16 @@ async def wait_async(
             # A socket asked for writing is nearly always writable, and a
             # zero-timeout poll is much cheaper than a loop round trip, which
             # pipeline mode and copy() would pay at every command or flush.
-            if writer and (ready := _ready(fileno, s)):
-                s = gen.send(ready)
-                if deadline is not None and monotonic() >= deadline:
-                    raise e._WaitTimeout("wait timeout expired")
+            if writer:
                 # Don't starve the loop if the socket is always ready.
-                nskip += 1
-                if nskip >= MAX_SKIPPED_WAITS:
-                    nskip = 0
+                if monotonic() - _last_yield >= MAX_BUSY_TIME:
                     await sleep(0)
-                continue
+                    _last_yield = monotonic()
+                if ready := _ready(fileno, s):
+                    s = gen.send(ready)
+                    if deadline is not None and monotonic() >= deadline:
+                        raise e._WaitTimeout("wait timeout expired")
+                    continue
 
             ready = 0
             if reader:
@@ -266,6 +272,7 @@ async def wait_async(
                 finally:
                     timer.cancel()
                     fut = None
+                    _last_yield = monotonic()
             finally:
                 if reader:
                     loop.remove_reader(fileno)

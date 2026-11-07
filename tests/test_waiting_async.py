@@ -300,9 +300,12 @@ async def test_wait_w_no_loop(event, ready, monkeypatch):
 
 
 @skip_sync
-async def test_wait_w_yields():
-    # A generator finding the socket always ready must still let other tasks
-    # run now and then (see MAX_SKIPPED_WAITS).
+@pytest.mark.parametrize("ncalls, nwaits", [(1, 50), (50, 0), (50, 1), (50, 2)])
+async def test_wait_busy_yields(ncalls, nwaits):
+    # A generator finding the socket always ready, such as executemany(), or
+    # many calls finding it ready, such as copy.write() or execute() in
+    # pipeline mode, must let other tasks run every MAX_BUSY_TIME, even when
+    # the generator doesn't wait at all or ends on a skipped wait.
     import asyncio
 
     ticks = 0
@@ -313,20 +316,59 @@ async def test_wait_w_yields():
             ticks += 1
             await asyncio.sleep(0)
 
+    def gen():
+        time.sleep(0.001)  # work keeping the loop busy
+        for _ in range(nwaits):
+            yield waiting.Wait.W
+            time.sleep(0.001)
+        return 42
+
     rs, ws = socket.socketpair()
     rs.setblocking(False)
     ws.setblocking(False)
     with rs, ws:
         t = asyncio.ensure_future(ticker())
         try:
-            n = waiting.MAX_SKIPPED_WAITS * 3
-            r = await waiting.wait_async(
-                tgen(waiting.Wait.W, times=n), ws.fileno(), 0.5
-            )
+            for _ in range(ncalls):
+                assert await waiting.wait_async(gen(), ws.fileno(), 0.5) == 42
         finally:
             t.cancel()
-        assert r == waiting.Ready.W
-        assert ticks >= 2
+        # About 50ms of work: expect a tick every MAX_BUSY_TIME (5ms).
+        assert ticks >= 3
+
+
+@skip_sync
+@pytest.mark.parametrize("ncalls, nwaits", [(1, 300), (300, 0), (300, 1)])
+async def test_wait_not_busy_no_yield(ncalls, nwaits, monkeypatch):
+    # Before MAX_BUSY_TIME, ready sockets and generators not blocking are
+    # served without going through the event loop at all.
+    import asyncio
+
+    monkeypatch.setattr(waiting, "MAX_BUSY_TIME", float("inf"))
+    ticks = 0
+
+    async def ticker():
+        nonlocal ticks
+        while True:
+            ticks += 1
+            await asyncio.sleep(0)
+
+    def gen():
+        for _ in range(nwaits):
+            yield waiting.Wait.W
+        return 42
+
+    rs, ws = socket.socketpair()
+    rs.setblocking(False)
+    ws.setblocking(False)
+    with rs, ws:
+        t = asyncio.ensure_future(ticker())
+        try:
+            for _ in range(ncalls):
+                assert await waiting.wait_async(gen(), ws.fileno(), 0.5) == 42
+        finally:
+            t.cancel()
+        assert ticks == 0
 
 
 @pytest.mark.parametrize("waitfn", waitfns)
