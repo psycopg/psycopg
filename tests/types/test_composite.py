@@ -2,6 +2,7 @@ import logging
 
 import pytest
 
+import psycopg
 from psycopg import postgres, pq, sql
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
@@ -541,3 +542,18 @@ def test_literal_invalid_attr(conn, name, attr):
     got = cur.fetchone()[0]
     assert got == obj
     assert type(got) is type(obj)
+
+
+@pytest.mark.parametrize(
+    "name, attrs",
+    [
+        pytest.param("test_attr", '"class" text', id="keyword-attr"),
+        pytest.param("test_attr", '"a-b" text, "a_b" text', id="duplicate-attr"),
+        pytest.param('"class"', "foo text", id="keyword-name"),
+    ],
+)
+def test_invalid_attr_namedtuple(conn, name, attrs):
+    conn.execute(f"create type {name} as ({attrs})")
+    info = CompositeInfo.fetch(conn, name)
+    with pytest.raises(psycopg.DataError, match="namedtuple"):
+        register_composite(info, conn)

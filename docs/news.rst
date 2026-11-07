@@ -25,6 +25,9 @@ Psycopg 3.3.9 (unreleased)
   (:ticket:`#1468`).
 - Fix client-side quoting of negative zero floats and decimals, which could
   produce a ``--`` SQL comment (:ticket:`#1480`).
+- Raise `DataError` instead of `!ValueError` registering a composite whose
+  name or attributes are not valid namedtuple names, for instance Python
+  keywords (:ticket:`#1482`).
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
