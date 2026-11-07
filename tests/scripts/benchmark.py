@@ -1,19 +1,26 @@
 #!/usr/bin/env python
-"""Micro-benchmarks for the async wait functions.
+"""Micro-benchmarks for psycopg, focused on the wait functions and the copy.
 
-The cost of `psycopg.waiting.wait_async()` is paid once per query round trip,
-and several times during a copy(), so it shows up in the throughput of small
-queries. This script measures it in three ways:
+The cost of the wait functions (`psycopg.waiting.wait_async()` for the async
+connections, `psycopg.waiting.wait()` for the sync ones) is paid once per
+query round trip, and once per row in a copy(), so it shows up in the
+throughput of small queries. This script measures it in four ways:
 
-- `bench`: wall clock and CPU time of workloads with a different mix of waits.
+- `time`: wall clock and CPU time of workloads with a different mix of waits.
+- `stall`: the longest time a workload keeps the event loop from running other
+  tasks, to catch a wait function which never yields when it doesn't block.
 - `idle`: CPU burned while *not* doing anything, to catch a wait function
   polling the socket instead of sleeping on it.
 - `calls`: how many times the wait function is entered per workload, and how
   often it actually has to block.
 
+The `time` and `idle` commands measure sync connections instead with
+`--sync`, using the wait function chosen by psycopg, which can be changed by
+setting PSYCOPG_WAIT_FUNC.
+
 Alternative implementations can be measured without patching the library:
 
-    ./waittest.py bench --wait-async mymodule:my_wait_async
+    ./benchmark.py time --wait-async mymodule:my_wait_async
 
 Passing more than one `--wait-async` compares them all with the builtin one:
 each workload is run once per implementation per round, rotating the order
@@ -34,6 +41,7 @@ wander between runs.
 from __future__ import annotations
 
 import sys
+import json
 import socket
 import asyncio
 import logging
@@ -43,6 +51,7 @@ import statistics
 from time import perf_counter, process_time
 from typing import Any, Protocol
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from dataclasses import dataclass
 from collections.abc import Coroutine
 
 import psycopg
@@ -93,27 +102,64 @@ def main() -> int:
     return rv
 
 
-async def cmd_bench(args: Namespace) -> int:
+async def cmd_time(args: Namespace) -> int:
     """Time the workloads, once per implementation, and report the medians."""
-    impls = get_impls(args)
-
     for workload in get_workloads(args):
-        results: dict[str, list[tuple[float, float]]] = {name: [] for name in impls}
-        for round_ in range(args.rounds):
-            # Rotate the order, so that a drift in the machine's performance
-            # doesn't systematically favour the implementation running first.
-            names = list(impls)
-            shift = round_ % len(names)
-            for name in names[shift:] + names[:shift]:
-                set_wait_async(impls[name])
-                try:
-                    results[name].append(await run_workload(args, workload))
-                finally:
-                    set_wait_async(impls[BUILTIN])
-
-        report_bench(workload, results, args)
+        results = await run_rounds(args, workload, ticker=False)
+        if args.json:
+            report_json("time", workload.name, results)
+        else:
+            report_time(workload, results, args)
 
     return 0
+
+
+async def cmd_stall(args: Namespace) -> int:
+    """Measure the longest time the workloads keep the event loop busy.
+
+    A task ticking on the loop runs next to the workload: the longest interval
+    between two ticks is how long any other task, a timeout, or a cancellation
+    would have had to wait. A wait function serving the socket without going
+    through the loop must still yield to it now and then.
+
+    The ticker competes with the workload for the loop, so the times measured
+    here are not comparable with the ones of the `time` command.
+    """
+    if args.sync:
+        raise SystemExit("the stall command doesn't support --sync")
+    for workload in get_workloads(args):
+        results = await run_rounds(args, workload, ticker=True)
+        if args.json:
+            report_json("stall", workload.name, results)
+        else:
+            report_stall(workload, results, args)
+
+    return 0
+
+
+async def run_rounds(
+    args: Namespace, workload: Workload, ticker: bool
+) -> dict[str, list[Measure]]:
+    """Run a workload once per implementation per round, return the measures."""
+    impls = get_impls(args)
+    results: dict[str, list[Measure]] = {name: [] for name in impls}
+    for round_ in range(args.rounds):
+        # Rotate the order, so that a drift in the machine's performance
+        # doesn't systematically favour the implementation running first.
+        names = list(impls)
+        shift = round_ % len(names)
+        for name in names[shift:] + names[:shift]:
+            set_wait_async(impls[name])
+            try:
+                if args.sync:
+                    m = run_workload_sync(args, workload)
+                else:
+                    m = await run_workload(args, workload, ticker)
+                results[name].append(m)
+            finally:
+                set_wait_async(impls[BUILTIN])
+
+    return results
 
 
 async def cmd_idle(args: Namespace) -> int:
@@ -126,18 +172,30 @@ async def cmd_idle(args: Namespace) -> int:
     """
     impls = get_impls(args)
 
-    logger.info("waiting %s sec on a socket which never becomes readable", args.idle)
+    if not args.json:
+        logger.info(
+            "waiting %s sec on a socket which never becomes readable", args.idle
+        )
+    results: dict[str, list[Measure]] = {}
     for name, impl in impls.items():
-        report_idle(name, await idle_socket(impl, args.idle), args)
+        if args.sync:
+            cpu = idle_socket_sync(args.idle)
+        else:
+            cpu = await idle_socket(impl, args.idle)
+        results[name] = [Measure(args.idle, cpu)]
+    report_idle_results("socket", results, args)
 
-    logger.info("waiting for a pg_sleep(%s) to return", args.idle)
+    if not args.json:
+        logger.info("waiting for a pg_sleep(%s) to return", args.idle)
+    results = {}
     for name, impl in impls.items():
         set_wait_async(impl)
         try:
-            cpu = await idle_query(args)
+            cpu = idle_query_sync(args) if args.sync else await idle_query(args)
         finally:
             set_wait_async(impls[BUILTIN])
-        report_idle(name, cpu, args)
+        results[name] = [Measure(args.idle, cpu)]
+    report_idle_results("query", results, args)
 
     return 0
 
@@ -150,6 +208,10 @@ async def cmd_calls(args: Namespace) -> int:
     and almost never blocks, so what matters there is the cost of *entering*
     it, not the cost of waiting.
     """
+    if args.json:
+        raise SystemExit("the calls command doesn't support --json")
+    if args.sync:
+        raise SystemExit("the calls command doesn't support --sync")
     counter = CallCounter(waiting.wait_async)
     set_wait_async(counter)
     try:
@@ -218,6 +280,9 @@ class Workload:
     async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
         raise NotImplementedError
 
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        raise NotImplementedError
+
 
 class RoundTrips(Workload):
     name = "roundtrips"
@@ -228,6 +293,11 @@ class RoundTrips(Workload):
         for _ in range(args.nqueries):
             await cur.execute("select 1")
 
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        for _ in range(args.nqueries):
+            cur.execute("select 1")
+
 
 class CopyOut(Workload):
     name = "copy-out"
@@ -237,6 +307,12 @@ class CopyOut(Workload):
         stmt = "copy (select i, i::text from generate_series(1, %s) i) to stdout"
         async with conn.cursor().copy(stmt, (args.nrows,)) as copy:
             async for _ in copy:
+                pass
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        stmt = "copy (select i, i::text from generate_series(1, %s) i) to stdout"
+        with conn.cursor().copy(stmt, (args.nrows,)) as copy:
+            for _ in copy:
                 pass
 
 
@@ -251,27 +327,163 @@ class FetchAll(Workload):
         )
         await cur.fetchall()
 
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        cur.execute("select i, i::text from generate_series(1, %s) i", (args.nrows,))
+        cur.fetchall()
 
-WORKLOADS: list[Workload] = [RoundTrips(), CopyOut(), FetchAll()]
+
+class CopyFrom(Workload):
+    name = "copy-in"
+    doc = "rows copied in one write each, the wait function entered once per row"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        await conn.execute("create temp table benchtest (i int, s text)")
+        async with conn.cursor().copy("copy benchtest from stdin") as copy:
+            for i in range(args.nrows):
+                await copy.write(f"{i}\t{i}\n")
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        conn.execute("create temp table benchtest (i int, s text)")
+        with conn.cursor().copy("copy benchtest from stdin") as copy:
+            for i in range(args.nrows):
+                copy.write(f"{i}\t{i}\n")
+
+
+class CopyRows(Workload):
+    name = "copy-rows"
+    doc = "rows copied in with write_row(), buffered before calling the wait"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        await conn.execute("create temp table benchtest (i int, s text)")
+        async with conn.cursor().copy("copy benchtest from stdin") as copy:
+            for i in range(args.nrows):
+                await copy.write_row((i, str(i)))
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        conn.execute("create temp table benchtest (i int, s text)")
+        with conn.cursor().copy("copy benchtest from stdin") as copy:
+            for i in range(args.nrows):
+                copy.write_row((i, str(i)))
+
+
+class Pipeline(Workload):
+    name = "pipeline"
+    doc = "small queries in pipeline mode, the wait function entered at each"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        async with conn.pipeline():
+            for _ in range(args.nqueries):
+                await cur.execute("select 1")
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        with conn.pipeline():
+            for _ in range(args.nqueries):
+                cur.execute("select 1")
+
+
+class ExecuteMany(Workload):
+    name = "executemany"
+    doc = "small inserts in one executemany(), the wait function entered once"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        await conn.execute("create temp table benchtest (i int, s text)")
+        await conn.cursor().executemany(
+            "insert into benchtest values (%s, %s)",
+            ((i, str(i)) for i in range(args.nmany)),
+        )
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        conn.execute("create temp table benchtest (i int, s text)")
+        conn.cursor().executemany(
+            "insert into benchtest values (%s, %s)",
+            ((i, str(i)) for i in range(args.nmany)),
+        )
+
+
+WORKLOADS: list[Workload] = [
+    RoundTrips(),
+    CopyOut(),
+    FetchAll(),
+    CopyFrom(),
+    CopyRows(),
+    Pipeline(),
+    ExecuteMany(),
+]
 
 
 def get_workloads(args: Namespace) -> list[Workload]:
     return [w for w in WORKLOADS if not args.workload or w.name in args.workload]
 
 
-async def run_workload(args: Namespace, workload: Workload) -> tuple[float, float]:
-    """Run a workload on a fresh connection, returning (wall, cpu) seconds."""
+@dataclass
+class Measure:
+    """The result of running a workload once. Times are in seconds."""
+
+    wall: float
+    cpu: float
+    # The longest time the ticker couldn't run and how many times it did,
+    # if it was running.
+    stall: float | None = None
+    ticks: int | None = None
+
+
+async def run_workload(
+    args: Namespace, workload: Workload, ticker: bool = False
+) -> Measure:
+    """Run a workload on a fresh connection and measure it."""
     async with await psycopg.AsyncConnection.connect(args.dsn, autocommit=True) as conn:
         # Warm up: the first queries pay for the type lookups and the caches.
         cur = conn.cursor()
         for _ in range(5):
             await cur.execute("select 1")
 
-        # Note: perf_counter() and not monotonic(), which until Python 3.13
-        # has a 15.625 ms resolution on Windows.
+        if not ticker:
+            # Note: perf_counter() and not monotonic(), which until Python 3.13
+            # has a 15.625 ms resolution on Windows.
+            wall0, cpu0 = perf_counter(), cpu_time()
+            await workload.run(conn, args)
+            return Measure(perf_counter() - wall0, cpu_time() - cpu0)
+
+        stall = 0.0
+        ticks = 0
+        running = True
+
+        async def tick() -> None:
+            nonlocal stall, ticks
+            last = perf_counter()
+            while running:
+                await asyncio.sleep(0)
+                now = perf_counter()
+                stall = max(stall, now - last)
+                ticks += 1
+                last = now
+
+        task = asyncio.ensure_future(tick())
+        await asyncio.sleep(0)  # let the ticker start
+        try:
+            wall0, cpu0 = perf_counter(), cpu_time()
+            await workload.run(conn, args)
+            wall, cpu = perf_counter() - wall0, cpu_time() - cpu0
+        finally:
+            running = False
+            await task
+
+        return Measure(wall, cpu, stall, ticks)
+
+
+def run_workload_sync(args: Namespace, workload: Workload) -> Measure:
+    """Run a workload on a fresh sync connection and measure it."""
+    with psycopg.Connection.connect(args.dsn, autocommit=True) as conn:
+        cur = conn.cursor()
+        for _ in range(5):
+            cur.execute("select 1")
+
         wall0, cpu0 = perf_counter(), cpu_time()
-        await workload.run(conn, args)
-        return perf_counter() - wall0, cpu_time() - cpu0
+        workload.run_sync(conn, args)
+        return Measure(perf_counter() - wall0, cpu_time() - cpu0)
 
 
 async def idle_socket(impl: AsyncWaitFunc, idle: float) -> float:
@@ -300,6 +512,22 @@ async def idle_socket(impl: AsyncWaitFunc, idle: float) -> float:
         ws.close()
 
 
+def idle_socket_sync(idle: float) -> float:
+    """Return the CPU seconds used by `wait()` on a socket with nothing to read."""
+    rs, ws = socket.socketpair()
+    rs.setblocking(False)
+    try:
+        cpu0 = cpu_time()
+        try:
+            waiting.wait(waiting_forever(), rs.fileno(), 0.1, timeout=idle)
+        except psycopg.errors._WaitTimeout:
+            pass
+        return cpu_time() - cpu0
+    finally:
+        rs.close()
+        ws.close()
+
+
 def waiting_forever() -> PQGen[None]:
     """A generator waiting to read, for as long as it is resumed."""
     while True:
@@ -316,26 +544,34 @@ async def idle_query(args: Namespace) -> float:
         return cpu_time() - cpu0
 
 
+def idle_query_sync(args: Namespace) -> float:
+    """Return the CPU seconds used waiting for a slow query, on a sync connection."""
+    with psycopg.Connection.connect(args.dsn, autocommit=True) as conn:
+        cur = conn.cursor()
+        cur.execute("select 1")  # warm up
+        cpu0 = cpu_time()
+        cur.execute("select pg_sleep(%s)", (args.idle,))
+        return cpu_time() - cpu0
+
+
 def cpu_time() -> float:
     """Return the CPU time used by this process, in seconds."""
     # Note: not resource.getrusage(), which is not available on Windows.
     return process_time()
 
 
-def report_bench(
-    workload: Workload,
-    results: dict[str, list[tuple[float, float]]],
-    args: Namespace,
+def report_time(
+    workload: Workload, results: dict[str, list[Measure]], args: Namespace
 ) -> None:
     """Print the median of the measures, relative to the builtin function."""
     logger.info(
         "%s: %s (median of %s rounds)", workload.name, workload.doc, args.rounds
     )
-    walls = {name: [w for w, _ in ms] for name, ms in results.items()}
+    walls = {name: [m.wall for m in ms] for name, ms in results.items()}
     base = statistics.median(walls[BUILTIN])
     for name, measures in results.items():
         wall = statistics.median(walls[name])
-        cpu = statistics.median(c for _, c in measures)
+        cpu = statistics.median(m.cpu for m in measures)
         logger.info(
             "  %-40s %9.2f ms %+7.1f%% cpu %9.2f ms min %9.2f ms",
             name,
@@ -344,6 +580,51 @@ def report_bench(
             cpu * 1000.0,
             min(walls[name]) * 1000.0,
         )
+
+
+def report_stall(
+    workload: Workload, results: dict[str, list[Measure]], args: Namespace
+) -> None:
+    """Print the longest stall of the loop, median and worst of the rounds."""
+    logger.info(
+        "%s: %s (median of %s rounds)", workload.name, workload.doc, args.rounds
+    )
+    for name, measures in results.items():
+        stalls = [m.stall or 0.0 for m in measures]
+        logger.info(
+            "  %-40s max stall %9.2f ms worst %9.2f ms ticks %9d in %9.2f ms",
+            name,
+            statistics.median(stalls) * 1000.0,
+            max(stalls) * 1000.0,
+            statistics.median(m.ticks or 0 for m in measures),
+            statistics.median(m.wall for m in measures) * 1000.0,
+        )
+
+
+def report_json(command: str, workload: str, results: dict[str, list[Measure]]) -> None:
+    """Print all the measures as a line of JSON, for other scripts to parse."""
+    for name, measures in results.items():
+        print(
+            json.dumps(
+                {
+                    "command": command,
+                    "workload": workload,
+                    "impl": name,
+                    "measures": [m.__dict__ for m in measures],
+                }
+            ),
+            flush=True,
+        )
+
+
+def report_idle_results(
+    what: str, results: dict[str, list[Measure]], args: Namespace
+) -> None:
+    if args.json:
+        report_json("idle", what, results)
+    else:
+        for name, (m,) in results.items():
+            report_idle(name, m.cpu, args)
 
 
 def report_idle(name: str, cpu: float, args: Namespace) -> None:
@@ -415,13 +696,19 @@ def parse_cmdline() -> Namespace:
         "--nqueries",
         type=int,
         default=2000,
-        help="queries in the roundtrips workload [default: %(default)s]",
+        help="queries in the roundtrips and pipeline workloads [default: %(default)s]",
     )
     common.add_argument(
         "--nrows",
         type=int,
         default=100_000,
-        help="rows in the copy-out and fetch-all workloads [default: %(default)s]",
+        help="rows in the copy and fetch-all workloads [default: %(default)s]",
+    )
+    common.add_argument(
+        "--nmany",
+        type=int,
+        default=20_000,
+        help="rows in the executemany workload [default: %(default)s]",
     )
     common.add_argument(
         "--idle",
@@ -435,6 +722,16 @@ def parse_cmdline() -> Namespace:
         default=[],
         choices=[w.name for w in WORKLOADS],
         help="only measure this workload (can be repeated)",
+    )
+    common.add_argument(
+        "--sync",
+        action="store_true",
+        help="measure sync connections instead of async ones (time, idle and copy)",
+    )
+    common.add_argument(
+        "--json",
+        action="store_true",
+        help="print the measures as JSON lines on stdout, for other scripts",
     )
 
     g = common.add_mutually_exclusive_group()
@@ -462,7 +759,8 @@ def parse_cmdline() -> Namespace:
     )
     sub = parser.add_subparsers(dest="command", required=True)
     for name, func in [
-        ("bench", cmd_bench),
+        ("time", cmd_time),
+        ("stall", cmd_stall),
         ("idle", cmd_idle),
         ("calls", cmd_calls),
     ]:
@@ -477,6 +775,8 @@ def parse_cmdline() -> Namespace:
         p.set_defaults(func=func)
 
     args = parser.parse_args()
+    if args.sync and args.wait_async:
+        parser.error("--wait-async can't be used with --sync")
     for spec in args.wait_async:
         try:
             import_wait_async(spec)
