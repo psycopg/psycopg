@@ -16,11 +16,11 @@ import select
 import logging
 import selectors
 from time import monotonic
-from asyncio import Future, get_running_loop
+from asyncio import Future, get_running_loop, sleep
 from selectors import DefaultSelector
 
 from . import errors as e
-from .abc import RV, PQGen, PQGenConn, WaitFunc
+from .abc import RV, PQGen, PQGenConn, ReadyFunc, WaitFunc
 from ._enums import Ready as Ready
 from ._enums import Wait as Wait  # re-exported
 from ._cmodule import _psycopg
@@ -34,6 +34,14 @@ READY_W = Ready.W
 READY_RW = Ready.RW
 
 logger = logging.getLogger(__name__)
+
+# How long (in seconds) wait_async() may keep the event loop busy, serving
+# generators which don't block or sockets found ready, before yielding to it,
+# so that a long executemany() or copy() doesn't starve the other tasks.
+MAX_BUSY_TIME = 0.005
+
+# When the event loop last got control from wait_async().
+_last_yield = 0.0
 
 
 if sys.platform != "win32":
@@ -155,6 +163,27 @@ def wait_conn(
         return rv
 
 
+def _ready_poll(fileno: int, s: Wait) -> int:
+    """Return the `Ready` state of `!fileno` right now, using poll()."""
+    p = select.poll()
+    p.register(fileno, _poll_evmasks[s])
+    ready: int = READY_NONE
+    for _, ev in p.poll(0):
+        if ev & select.POLLIN:
+            ready |= READY_R
+        if ev & select.POLLOUT:
+            ready |= READY_W
+    return ready
+
+
+def _ready_select(fileno: int, s: Wait) -> int:
+    """Return the `Ready` state of `!fileno` right now, using select()."""
+    rl = [fileno] if s & WAIT_R else []
+    wl = [fileno] if s & WAIT_W else []
+    r, w, _ = select.select(rl, wl, [], 0)
+    return (READY_R if r else READY_NONE) | (READY_W if w else READY_NONE)
+
+
 async def wait_async(
     gen: PQGen[RV], fileno: int, interval: float = 0.0, timeout: float | None = None
 ) -> RV:
@@ -178,11 +207,15 @@ async def wait_async(
 
     # Don't touch the event loop before we know that we will have to wait: a
     # generator completing without blocking (e.g. every copy() round) pays
-    # nothing more than this.
+    # nothing more than this, unless the loop has been busy for too long.
+    global _last_yield
     try:
         s = next(gen)
     except StopIteration as ex:
         rv: RV = ex.value
+        if monotonic() - _last_yield >= MAX_BUSY_TIME:
+            await sleep(0)
+            _last_yield = monotonic()
         return rv
 
     deadline = monotonic() + timeout if timeout is not None else None
@@ -209,6 +242,21 @@ async def wait_async(
             writer = s & WAIT_W
             if not (reader or writer):
                 raise e.InternalError(f"bad poll status: {s}")
+
+            # A socket asked for writing is nearly always writable, and a
+            # zero-timeout poll is much cheaper than a loop round trip, which
+            # pipeline mode and copy() would pay at every command or flush.
+            if writer:
+                # Don't starve the loop if the socket is always ready.
+                if monotonic() - _last_yield >= MAX_BUSY_TIME:
+                    await sleep(0)
+                    _last_yield = monotonic()
+                if ready := _ready(fileno, s):
+                    s = gen.send(ready)
+                    if deadline is not None and monotonic() >= deadline:
+                        raise e._WaitTimeout("wait timeout expired")
+                    continue
+
             ready = 0
             if reader:
                 loop.add_reader(fileno, wakeup, READY_R)
@@ -223,6 +271,7 @@ async def wait_async(
                 finally:
                     timer.cancel()
                     fut = None
+                    _last_yield = monotonic()
             finally:
                 if reader:
                     loop.remove_reader(fileno)
@@ -524,14 +573,22 @@ def _is_select_patched() -> bool:
 
 if _psycopg:
     wait_c = _psycopg.wait_c
+    _ready_c = _psycopg.ready_c
 
 
-# Choose the best wait strategy for the platform.
+# Choose the best wait strategy for the platform, and the function checking a
+# fd readiness without waiting with the same strategy, used by wait_async()
+# before going through the event loop.
 #
 # the selectors objects have a generic interface but come with some overhead,
 # so we also offer more finely tuned implementations.
 
 wait: WaitFunc
+_ready: ReadyFunc
+
+# For the wait functions without a matching _ready function. On Windows there
+# is no poll(); select() is fine for a single fd.
+_ready_default = _ready_poll if hasattr(select, "poll") else _ready_select
 
 # Allow the user to choose a specific function for testing
 if "PSYCOPG_WAIT_FUNC" in os.environ:
@@ -542,21 +599,26 @@ if "PSYCOPG_WAIT_FUNC" in os.environ:
             f" got {fname!r}"
         )
     wait = globals()[fname]
+    _ready = globals().get(f"_ready_{fname[5:]}", _ready_default)
 
 # On Windows, for the moment, avoid using wait_c, because it was reported to
 # use excessive CPU (see #645).
 # TODO: investigate why.
 elif _psycopg and sys.platform != "win32" and not _is_select_patched():
     wait = wait_c
+    _ready = _ready_c
 
 elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
     # On Windows, SelectSelector should be the default.
     wait = wait_select
+    _ready = _ready_select
 
 elif hasattr(selectors, "PollSelector"):
     # On linux, EpollSelector is the default. However, it hangs if the fd is
     # closed while polling.
     wait = wait_poll
+    _ready = _ready_poll
 
 else:
     wait = wait_selector
+    _ready = _ready_default
