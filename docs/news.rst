@@ -7,6 +7,21 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.9 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Don't wait on the event loop when the socket is already writable, which
+  made pipeline mode, `~AsyncCursor.executemany()` and `~AsyncCopy.write()`
+  on async connections several times slower than on sync ones
+  (:ticket:`#1468`).
+- Limit the memory used by :sql:`COPY FROM` if the server consumes data
+  slower than it is produced. Add a `!flush_threshold` parameter to
+  `~copy.LibpqWriter` to tune it (:ticket:`#1437`).
+
+
 Current release
 ---------------
 
