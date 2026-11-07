@@ -4,7 +4,7 @@
 The cost of the wait functions (`psycopg.waiting.wait_async()` for the async
 connections, `psycopg.waiting.wait()` for the sync ones) is paid once per
 query round trip, and once per row in a copy(), so it shows up in the
-throughput of small queries. This script measures it in four ways:
+throughput of small queries. This script measures it in different ways:
 
 - `time`: wall clock and CPU time of workloads with a different mix of waits.
 - `stall`: the longest time a workload keeps the event loop from running other
@@ -13,8 +13,10 @@ throughput of small queries. This script measures it in four ways:
   polling the socket instead of sleeping on it.
 - `calls`: how many times the wait function is entered per workload, and how
   often it actually has to block.
+- `copy`: time and memory of a large copy from the client, optionally to a
+  server slower than the client.
 
-The `time` and `idle` commands measure sync connections instead with
+The `time`, `idle` and `copy` commands measure sync connections instead with
 `--sync`, using the wait function chosen by psycopg, which can be changed by
 setting PSYCOPG_WAIT_FUNC.
 
@@ -55,8 +57,8 @@ from dataclasses import dataclass
 from collections.abc import Coroutine
 
 import psycopg
-from psycopg import waiting
-from psycopg.abc import RV, PQGen
+from psycopg import sql, waiting
+from psycopg.abc import RV, PQGen, Query
 
 logger = logging.getLogger()
 logging.basicConfig(
@@ -196,6 +198,32 @@ async def cmd_idle(args: Namespace) -> int:
             set_wait_async(impls[BUILTIN])
         results[name] = [Measure(args.idle, cpu)]
     report_idle_results("query", results, args)
+
+    return 0
+
+
+async def cmd_copy(args: Namespace) -> int:
+    """Measure a large copy from the client, and the memory it uses.
+
+    Copy `--nrows` records of `--ncols` fields, `--colsize` characters each,
+    using `write_row()`. `--server-delay` makes the server slower than the
+    client, sleeping every 100 records, which shows how much data the client
+    buffers.
+
+    The max rss reported is the peak of the whole process: it is only
+    meaningful running a single copy (`--rounds 1`, no `--wait-async`).
+    """
+    results = await run_rounds(args, CopyPut(), ticker=False)
+    rss = get_maxrss()
+    for measures in results.values():
+        for m in measures:
+            m.maxrss = rss
+    if args.json:
+        report_json("copy", CopyPut.name, results)
+    else:
+        report_time(CopyPut(), results, args)
+        if rss is not None:
+            logger.info("  max rss: %.1f MB", rss)
 
     return 0
 
@@ -403,6 +431,76 @@ class ExecuteMany(Workload):
         )
 
 
+class CopyPut(Workload):
+    """A large copy, used by the copy command, not part of the benchmarks."""
+
+    name = "copy"
+    doc = "a large copy from the client, with write_row()"
+
+    async def run(self, conn: psycopg.AsyncConnection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        for stmt in copy_setup_stmts(args):
+            await cur.execute(stmt)
+        writer = make_writer(args, cur, is_async=True)
+        record = copy_record(args)
+        async with cur.copy(copy_stmt(args), writer=writer) as copy:
+            for _ in range(args.nrows):
+                await copy.write_row(record)
+
+    def run_sync(self, conn: psycopg.Connection[Any], args: Namespace) -> None:
+        cur = conn.cursor()
+        for stmt in copy_setup_stmts(args):
+            cur.execute(stmt)
+        writer = make_writer(args, cur)
+        record = copy_record(args)
+        with cur.copy(copy_stmt(args), writer=writer) as copy:
+            for _ in range(args.nrows):
+                copy.write_row(record)
+
+
+def copy_setup_stmts(args: Namespace) -> list[Query]:
+    fields = sql.SQL(", ").join(sql.SQL(f"f{i} text") for i in range(args.ncols))
+    rv: list[Query] = [
+        sql.SQL("create temp table benchcopy (id serial primary key, {})").format(
+            fields
+        )
+    ]
+    if args.server_delay:
+        # Make the server slower than the client
+        rv.append(sql.SQL("""\
+create function pg_temp.benchcopy_delay() returns trigger language plpgsql as $$
+begin
+    if new.id % 100 = 0 then
+        perform pg_sleep({});
+    end if;
+    return new;
+end
+$$
+""").format(args.server_delay))
+        rv.append(sql.SQL("""\
+create trigger benchcopy_delay before insert on benchcopy
+for each row execute function pg_temp.benchcopy_delay()
+"""))
+    return rv
+
+
+def copy_stmt(args: Namespace) -> Query:
+    fields = sql.SQL(", ").join(sql.Identifier(f"f{i}") for i in range(args.ncols))
+    return sql.SQL("copy benchcopy ({}) from stdin").format(fields)
+
+
+def copy_record(args: Namespace) -> tuple[Any, ...]:
+    return tuple("x" * args.colsize for _ in range(args.ncols))
+
+
+def make_writer(args: Namespace, cur: Any, is_async: bool = False) -> Any:
+    name = args.writer or "LibpqWriter"
+    if is_async and not name.startswith("Async"):
+        # Use the async version of the writer requested
+        name = f"Async{name}"
+    return getattr(psycopg.copy, name)(cur)
+
+
 WORKLOADS: list[Workload] = [
     RoundTrips(),
     CopyOut(),
@@ -428,6 +526,8 @@ class Measure:
     # if it was running.
     stall: float | None = None
     ticks: int | None = None
+    # The peak memory of the process in MB, measured by the copy command.
+    maxrss: float | None = None
 
 
 async def run_workload(
@@ -552,6 +652,24 @@ def idle_query_sync(args: Namespace) -> float:
         cpu0 = cpu_time()
         cur.execute("select pg_sleep(%s)", (args.idle,))
         return cpu_time() - cpu0
+
+
+def get_maxrss() -> float | None:
+    """Return the peak memory used by the process in MB, if available."""
+    try:
+        import resource
+    except ImportError:  # Windows
+        try:
+            import psutil  # type: ignore[import-untyped,unused-ignore]
+        except ImportError:
+            return None
+        rss: int = psutil.Process().memory_info().peak_wset // 1024
+    else:
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # Reported in KB on Linux, bytes on macOS
+        if sys.platform == "darwin":
+            rss //= 1024
+    return rss / 1024
 
 
 def cpu_time() -> float:
@@ -705,6 +823,29 @@ def parse_cmdline() -> Namespace:
         help="rows in the copy and fetch-all workloads [default: %(default)s]",
     )
     common.add_argument(
+        "--ncols",
+        type=int,
+        default=10,
+        help="columns copied by the copy command [default: %(default)s]",
+    )
+    common.add_argument(
+        "--colsize",
+        type=int,
+        default=10,
+        help="width of the columns copied by the copy command [default: %(default)s]",
+    )
+    common.add_argument(
+        "--server-delay",
+        type=float,
+        default=0.0,
+        help="seconds the server sleeps every 100 rows in the copy command"
+        " [default: %(default)s]",
+    )
+    common.add_argument(
+        "--writer",
+        help="the copy writer used by the copy command [default: LibpqWriter]",
+    )
+    common.add_argument(
         "--nmany",
         type=int,
         default=20_000,
@@ -763,6 +904,7 @@ def parse_cmdline() -> Namespace:
         ("stall", cmd_stall),
         ("idle", cmd_idle),
         ("calls", cmd_calls),
+        ("copy", cmd_copy),
     ]:
         doc = func.__doc__ or ""
         p = sub.add_parser(
@@ -777,6 +919,8 @@ def parse_cmdline() -> Namespace:
     args = parser.parse_args()
     if args.sync and args.wait_async:
         parser.error("--wait-async can't be used with --sync")
+    if args.writer and not hasattr(psycopg.copy, args.writer):
+        parser.error(f"unknown writer: {args.writer!r}")
     for spec in args.wait_async:
         try:
             import_wait_async(spec)
