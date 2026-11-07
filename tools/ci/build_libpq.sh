@@ -12,7 +12,7 @@ openssl_version="${OPENSSL_VERSION}"
 krb5_version="1.22.2"
 
 # Latest release: https://openldap.org/software/download/
-ldap_version="2.6.14"
+ldap_version="2.6.16"
 
 export LIBPQ_BUILD_PREFIX=${LIBPQ_BUILD_PREFIX:-/tmp/libpq.build}
 
@@ -50,8 +50,8 @@ fi
 case "$ID" in
     centos | almalinux | rocky)
         yum update -y
-        yum install -y flex cyrus-sasl-devel krb5-devel pam-devel \
-            perl perl-IPC-Cmd perl-Time-Piece zlib-devel
+        yum install -y bison flex cyrus-sasl-devel keyutils-libs-devel \
+            pam-devel perl perl-IPC-Cmd perl-Time-Piece zlib-devel
         ;;
 
     alpine)
@@ -146,23 +146,58 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
 fi
 
 
-if [ "$ID" == "macos" ]; then
+if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [ "$ID" == "macos" ]; then
   if [[ ! -f "${LIBPQ_BUILD_PREFIX}/lib/libkrb5.${library_suffix}" ]]; then
 
-    # Build kerberos if needed
+    # Build kerberos if needed. On Linux the system one may link to another
+    # OpenSSL, which would be bundled too.
     krb5_dir="krb5-${krb5_version}/src"
+    krb5_destdir="$(pwd)/krb5-${krb5_version}-install"
+    krb5_libdir=/usr/lib/psycopg-krb5
     if [ ! -d "${krb5_dir}" ]; then
         curl -fsSL "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
             | tar xzf -
 
         pushd "${krb5_dir}"
-        ./configure "${make_configure_standard_flags[@]}"
+
+        # Don't compile in paths under the build prefix, in /tmp. The libdir
+        # is also the plugins dir: use a non-existing one. Same for the
+        # sysconfdir (for gss/mech, see #1476) on macOS; Linux uses /etc.
+        options=(--prefix=/usr --localstatedir=/var \
+            --libdir=${krb5_libdir} --disable-nls)
+        if [ "$ID" == "macos" ]; then
+            options+=(--sysconfdir=${krb5_libdir} \
+                "CPPFLAGS=-arch $MACOSX_ARCHITECTURE" \
+                "LDFLAGS=-arch $MACOSX_ARCHITECTURE")
+        else
+            options+=(--sysconfdir=/etc --with-keyutils)
+        fi
+        ./configure "${options[@]}"
         make -s
     else
         pushd "${krb5_dir}"
     fi
 
-    make install
+    make install DESTDIR="${krb5_destdir}"
+    mkdir -p "${LIBPQ_BUILD_PREFIX}/lib" "${LIBPQ_BUILD_PREFIX}/include"
+    cp -a "${krb5_destdir}${krb5_libdir}/"*.${library_suffix}* \
+        "${LIBPQ_BUILD_PREFIX}/lib/"
+    cp -a "${krb5_destdir}/usr/include/." "${LIBPQ_BUILD_PREFIX}/include/"
+
+    # On macOS, fix the install names, which contain the libdir.
+    if [ "$ID" == "macos" ]; then
+        for f in "${krb5_destdir}${krb5_libdir}/"*.dylib; do
+            [ -L "$f" ] && continue
+            lib="${LIBPQ_BUILD_PREFIX}/lib/${f##*/}"
+            install_name_tool -id "$lib" "$lib"
+            for dep in $(otool -L "$lib" | awk 'NR > 1 {print $1}' \
+                    | grep "^${krb5_libdir}/"); do
+                install_name_tool -change "$dep" \
+                    "${LIBPQ_BUILD_PREFIX}/lib/${dep##*/}" "$lib"
+            done
+            codesign --force -s - "$lib"
+        done
+    fi
     popd
 
   fi

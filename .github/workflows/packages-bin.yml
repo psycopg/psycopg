@@ -31,14 +31,10 @@ env:
   # https://github.com/microsoft/vcpkg/discussions/25622
 
   # Latest release: https://www.openssl.org/source/
-  OPENSSL_VERSION: "3.5.8"
+  OPENSSL_VERSION: "3.5.9"
 
-  # A string to differentiate build cacke keys to allow building different
-  # flavours of libpq in different branches without mixups. Currently used to
-  # make sure that libpq packages built for Psycopg 3.2 and 3.3 don't mix (in
-  # order to change the gssencmode default only on 3.3). We may use it for
-  # different reasons in the future.
-  PQ_FLAGS: "-gssencmode-disable-openssldir-2"
+  # Suffix of the libpq cache keys: change it to rebuild the libpq.
+  PQ_FLAGS: "-r1"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
