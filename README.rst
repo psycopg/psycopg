@@ -109,6 +109,24 @@ Please follow the `conventional commits`__ specification for your commit message
 
 .. __: https://www.conventionalcommits.org/en/v1.0.0/
 
+If your change may affect the performance, for instance in the code waiting
+for the network, the COPY, or the adaptation of the data, please measure it,
+comparing it with the master branch::
+
+    python tests/scripts/bench_compare.py --tree base=master --tree head=. \
+        --check warn
+
+This runs the micro-benchmarks of ``tests/scripts/benchmark.py`` on both
+trees and reports the differences: the time of different workloads, sync and
+async, how long the async event loop is blocked, the CPU used while idle, and
+the memory used by a large COPY. ``--check warn`` lists the measures worse
+than the base beyond the usual noise. Use ``--impl c`` to measure the C
+implementation (it builds the ``psycopg_c`` extension of each tree). Please
+report the results in your pull request. Run the scripts with ``--help`` for
+details; the ``tests/scripts/bench.yml`` workflow runs the same comparison
+on Linux, macOS and Windows: copy it to ``.github/workflows/`` in a temporary
+commit to run the comparison on CI.
+
 
 Cross-compiling
 ---------------
