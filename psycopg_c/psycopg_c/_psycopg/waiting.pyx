@@ -194,8 +194,95 @@ finally:
     return rv;
 
 }
+
+/* Return the SELECT_EV_* events fileno is ready for, without waiting.
+ *
+ * - Return 0 if not ready, or if the fd is in error: the caller will find
+ *   out the error once it waits on it.
+ * - Return CWAIT_SELECT_ERROR (and set an exception) on error.
+ *
+ * Unlike wait_c_impl(), don't release the GIL: the call doesn't block.
+ */
+static int
+ready_c_impl(int fileno, int wait)
+{
+    int select_rv;
+    int rv = 0;
+
+#if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
+
+    struct pollfd input_fd;
+
+    input_fd.fd = fileno;
+    input_fd.events = 0;
+    input_fd.revents = 0;
+
+    if (wait & SELECT_EV_READ) { input_fd.events |= POLLIN; }
+    if (wait & SELECT_EV_WRITE) { input_fd.events |= POLLOUT; }
+
+    do {
+        errno = 0;
+        select_rv = poll(&input_fd, 1, 0);
+    } while (select_rv < 0 && errno == EINTR);
+
+    if (select_rv < 0) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        return CWAIT_SELECT_ERROR;
+    }
+
+    if (input_fd.revents & POLLIN) { rv |= SELECT_EV_READ; }
+    if (input_fd.revents & POLLOUT) { rv |= SELECT_EV_WRITE; }
+
+#else
+
+    fd_set ifds;
+    fd_set ofds;
+    fd_set efds;
+    struct timeval tv = {0, 0};
+
+#ifndef MS_WINDOWS
+    if (fileno >= 1024) {
+        PyErr_SetString(
+            PyExc_ValueError,  /* same exception of Python's 'select.select()' */
+            "connection file descriptor out of range for 'select()'");
+        return CWAIT_SELECT_ERROR;
+    }
+#endif
+
+    FD_ZERO(&ifds);
+    FD_ZERO(&ofds);
+    FD_ZERO(&efds);
+
+    if (wait & SELECT_EV_READ) { FD_SET(fileno, &ifds); }
+    if (wait & SELECT_EV_WRITE) { FD_SET(fileno, &ofds); }
+    FD_SET(fileno, &efds);
+
+    do {
+        errno = 0;
+        select_rv = select(fileno + 1, &ifds, &ofds, &efds, &tv);
+    } while (select_rv < 0 && errno == EINTR);
+
+    if (select_rv < 0) {
+#ifdef MS_WINDOWS
+        PyErr_SetExcFromWindowsErr(PyExc_OSError, WSAGetLastError());
+#else
+        PyErr_SetFromErrno(PyExc_OSError);
+#endif
+        return CWAIT_SELECT_ERROR;
+    }
+
+    if (select_rv > 0 && !FD_ISSET(fileno, &efds)) {
+        if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
+        if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
+    }
+
+#endif  /* HAVE_POLL */
+
+    return rv;
+}
     """
     cdef int wait_c_impl(int fileno, int wait, float timeout) except -1
+    cdef int ready_c_impl(int fileno, int wait) except -1
     cdef int CWAIT_SOCKET_ERROR
 
 
@@ -262,3 +349,23 @@ def wait_c(gen: PQGen[RV], int fileno, interval = 0.0, timeout = None) -> RV:
     except StopIteration as ex:
         rv: RV = ex.value
         return rv
+
+
+def ready_c(int fileno, int wait):
+    """
+    Return the `Ready` state of `!fileno` right now, without waiting.
+
+    Used by `wait_async()` to check if the socket is ready before going
+    through the event loop.
+    """
+    cdef int ready = ready_c_impl(fileno, wait)
+    if ready == READY_NONE:
+        return PY_READY_NONE
+    elif ready == READY_W:
+        return PY_READY_W
+    elif ready == READY_RW:
+        return PY_READY_RW
+    elif ready == READY_R:
+        return PY_READY_R
+    else:
+        raise AssertionError(f"unexpected ready value: {ready}")

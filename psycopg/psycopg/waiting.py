@@ -18,10 +18,9 @@ import selectors
 from time import monotonic
 from asyncio import Future, get_running_loop, sleep
 from selectors import DefaultSelector
-from collections.abc import Callable
 
 from . import errors as e
-from .abc import RV, PQGen, PQGenConn, WaitFunc
+from .abc import RV, PQGen, PQGenConn, ReadyFunc, WaitFunc
 from ._enums import Ready as Ready
 from ._enums import Wait as Wait  # re-exported
 from ._cmodule import _psycopg
@@ -574,14 +573,22 @@ def _is_select_patched() -> bool:
 
 if _psycopg:
     wait_c = _psycopg.wait_c
+    _ready_c = _psycopg.ready_c
 
 
-# Choose the best wait strategy for the platform.
+# Choose the best wait strategy for the platform, and the function checking a
+# fd readiness without waiting with the same strategy, used by wait_async()
+# before going through the event loop.
 #
 # the selectors objects have a generic interface but come with some overhead,
 # so we also offer more finely tuned implementations.
 
 wait: WaitFunc
+_ready: ReadyFunc
+
+# For the wait functions without a matching _ready function. On Windows there
+# is no poll(); select() is fine for a single fd.
+_ready_default = _ready_poll if hasattr(select, "poll") else _ready_select
 
 # Allow the user to choose a specific function for testing
 if "PSYCOPG_WAIT_FUNC" in os.environ:
@@ -592,33 +599,26 @@ if "PSYCOPG_WAIT_FUNC" in os.environ:
             f" got {fname!r}"
         )
     wait = globals()[fname]
+    _ready = globals().get(f"_ready_{fname[5:]}", _ready_default)
 
 # On Windows, for the moment, avoid using wait_c, because it was reported to
 # use excessive CPU (see #645).
 # TODO: investigate why.
 elif _psycopg and sys.platform != "win32" and not _is_select_patched():
     wait = wait_c
+    _ready = _ready_c
 
 elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
     # On Windows, SelectSelector should be the default.
     wait = wait_select
+    _ready = _ready_select
 
 elif hasattr(selectors, "PollSelector"):
     # On linux, EpollSelector is the default. However, it hangs if the fd is
     # closed while polling.
     wait = wait_poll
+    _ready = _ready_poll
 
 else:
     wait = wait_selector
-
-
-# Choose the function checking a fd readiness without waiting, used by
-# wait_async() before registering with the event loop.
-
-_ready: Callable[[int, Wait], int]
-
-if hasattr(select, "poll"):
-    _ready = _ready_poll
-else:
-    # On Windows there is no poll(); select() is fine for a single fd.
-    _ready = _ready_select
+    _ready = _ready_default

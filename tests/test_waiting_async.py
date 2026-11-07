@@ -300,6 +300,44 @@ async def test_wait_w_no_loop(event, ready, monkeypatch):
 
 
 @skip_sync
+@pytest.mark.parametrize(
+    "readyfn",
+    [
+        "_ready_select",
+        pytest.param(
+            "_ready_poll", marks=pytest.mark.skipif("not hasattr(select, 'poll')")
+        ),
+        pytest.param(
+            "_ready_c", marks=pytest.mark.skipif("not psycopg._cmodule._psycopg")
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "wait, readable, expected",
+    [
+        ("R", False, "NONE"),
+        ("W", False, "W"),
+        ("RW", False, "W"),
+        ("R", True, "R"),
+        ("W", True, "W"),
+        ("RW", True, "RW"),
+    ],
+)
+async def test_ready(readyfn, wait, readable, expected):
+    # Report what the socket is ready for now, among what was asked, without
+    # waiting.
+    ready = getattr(waiting, readyfn)
+    rs, ws = socket.socketpair()  # the w socket is already ready for writing
+    with rs, ws:
+        if readable:
+            rs.send(b"x")  # make the w socket ready for reading too
+        t0 = time.monotonic()
+        r = ready(ws.fileno(), getattr(waiting.Wait, wait))
+        assert time.monotonic() - t0 < 0.1
+        assert r == getattr(waiting.Ready, expected)
+
+
+@skip_sync
 @pytest.mark.parametrize("ncalls, nwaits", [(1, 50), (50, 0), (50, 1), (50, 2)])
 async def test_wait_busy_yields(ncalls, nwaits):
     # A generator finding the socket always ready, such as executemany(), or

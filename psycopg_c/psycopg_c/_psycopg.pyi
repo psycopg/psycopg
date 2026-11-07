@@ -15,6 +15,7 @@ from collections import deque
 from psycopg import BaseConnection, abc, pq
 from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
+from psycopg._enums import Ready, Wait
 from psycopg.pq.abc import PGcancelConn, PGconn, PGresult
 
 class Transformer(abc.AdaptContext):
@@ -66,6 +67,7 @@ def wait_c(
     interval: float | None = None,
     timeout: float | None = None,
 ) -> abc.RV: ...
+def ready_c(fileno: int, wait: Wait) -> Ready: ...
 
 # Copy support
 def format_row_text(

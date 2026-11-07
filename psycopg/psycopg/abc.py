@@ -66,6 +66,14 @@ class WaitFunc(Protocol):
     ) -> RV: ...
 
 
+class ReadyFunc(Protocol):
+    """
+    Return the `Ready` state of a file descriptor right now, without waiting.
+    """
+
+    def __call__(self, fileno: int, wait: Wait, /) -> Ready | int: ...
+
+
 # Adaptation types
 
 DumpFunc: TypeAlias = Callable[[Any], Buffer | None]
