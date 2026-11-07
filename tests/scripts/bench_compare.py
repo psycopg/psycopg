@@ -385,9 +385,10 @@ def annotate(args: Namespace, regressions: list[Regression]) -> None:
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
     level = "error" if args.check == "fail" else "warning"
+    where = f"{platform.system()} {platform.machine()}, psycopg {args.impl}"
     for r in regressions:
         print(
-            f"::{level} title=Possible performance regression::"
+            f"::{level} title=Possible performance regression ({where})::"
             f"{r.config}: {r.table}, {r.row}: {r.reason}"
         )
 
