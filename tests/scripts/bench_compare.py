@@ -31,6 +31,13 @@ The C implementation (--impl c) can only be used if all the configurations
 use the same tree, because the C extension installed is built for a single
 tree: mixing it with the Python code of another tree would measure neither.
 
+With --check, report the measures of each configuration worse than the base
+beyond a tolerance: times (both median and minimum) by more than 10%, loop
+stalls by more than 10 ms, idle CPU above 5% of a core, max rss by more than
+20% and 10 MB. The measures found worse are measured again, with twice the
+rounds, before reporting them, to filter out noise. With --check=fail, exit
+with status 1 if any is found.
+
 BEWARE: the numbers are only comparable within the same run. On shared
 machines, such as CI runners, differences below 5-10% are often noise; the
 minimum time is usually more stable than the median.
@@ -88,17 +95,64 @@ class Config:
 # Measures by table, row, configuration. One value per round.
 Results = dict[str, dict[str, dict[str, list[float]]]]
 
+# A set of (table, row) to measure, or None to measure everything.
+Only = set[tuple[str, str]] | None
+
+IDLE_TABLE = "idle CPU (% of a core)"
+COPY_TIME_TABLE = "copy time (s)"
+COPY_RSS_TABLE = "copy max rss (MB)"
+
+
+def time_table(mode: str) -> str:
+    return f"{mode} time (ms)"
+
+
+def stall_table(mode: str) -> str:
+    return f"{mode} loop max stall (ms)"
+
+
+@dataclass
+class Regression:
+    config: str
+    table: str
+    row: str
+    base: float
+    value: float
+    reason: str
+
 
 def main() -> None:
     args = parse_cmdline()
+    regressions: list[Regression] = []
+    confirmed: Only = set()
     with checkout_trees(args) as configs:
-        results = run_rounds(args, configs)
+        results = run_rounds(args, configs, args.rounds)
+        if args.check:
+            regressions = find_regressions(args, configs, results)
+            if regressions and args.confirm_rounds:
+                # Measure again the rows found worse, to filter out the noise.
+                confirmed = {(r.table, r.row) for r in regressions}
+                logger.info(
+                    "measuring again %d possible regressions with %d rounds",
+                    len(confirmed),
+                    args.confirm_rounds,
+                )
+                again = run_rounds(args, configs, args.confirm_rounds, confirmed)
+                for table, row in confirmed:
+                    if row in again.get(table, {}):
+                        results[table][row] = again[table][row]
+                regressions = find_regressions(args, configs, results)
 
-    report = format_report(args, configs, results)
+    report = format_report(args, configs, results, regressions, confirmed)
     print(report)
     if output := (args.output or os.environ.get("GITHUB_STEP_SUMMARY")):
         with open(output, "a") as f:
             f.write(report)
+
+    if args.check:
+        annotate(args, regressions)
+        if regressions and args.check == "fail":
+            sys.exit(1)
 
 
 @contextmanager
@@ -189,20 +243,22 @@ def setup_env(args: Namespace, config: Config) -> None:
     logger.info("%s: psycopg %s implementation from %s", config.name, impl, fn)
 
 
-def run_rounds(args: Namespace, configs: list[Config]) -> Results:
+def run_rounds(
+    args: Namespace, configs: list[Config], rounds: int, only: Only = None
+) -> Results:
     results: Results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    for round_ in range(args.rounds):
+    for round_ in range(rounds):
         shift = round_ % len(configs)
         for config in configs[shift:] + configs[:shift]:
-            logger.info("round %d of %d, %s", round_ + 1, args.rounds, config.name)
+            logger.info("round %d of %d, %s", round_ + 1, rounds, config.name)
             if not args.copy_only:
-                run_benches(args, config, results)
+                run_benches(args, config, results, only)
             if not args.no_copy:
-                run_copies(args, config, results)
+                run_copies(args, config, results, only)
     return results
 
 
-def run_benches(args: Namespace, config: Config, results: Results) -> None:
+def run_benches(args: Namespace, config: Config, results: Results, only: Only) -> None:
     runs = [("time", "async"), ("stall", "async")]
     if not args.no_sync:
         runs.insert(1, ("time", "sync"))
@@ -216,28 +272,43 @@ def run_benches(args: Namespace, config: Config, results: Results) -> None:
         cmdline += ["--dsn", args.dsn]
         if mode == "sync":
             cmdline.append("--sync")
-        if command != "idle":
-            cmdline += [f"--workload={w}" for w in args.workload]
+        if command == "idle":
+            if only is not None and not any(
+                t == IDLE_TABLE and r.startswith(f"{mode} ") for t, r in only
+            ):
+                continue
+        else:
+            workloads = args.workload
+            if only is not None:
+                table = time_table(mode) if command == "time" else stall_table(mode)
+                if not (workloads := sorted(r for t, r in only if t == table)):
+                    continue
+            cmdline += [f"--workload={w}" for w in workloads]
         out = run(config, cmdline)
         for line in out.splitlines():
             rec = json.loads(line)
             (m,) = rec["measures"]
             if command == "time":
-                table, row = f"{mode} time (ms)", rec["workload"]
+                table, row = time_table(mode), rec["workload"]
                 value = m["wall"] * 1000.0
             elif command == "stall":
-                table, row = f"{mode} loop max stall (ms)", rec["workload"]
+                table, row = stall_table(mode), rec["workload"]
                 value = m["stall"] * 1000.0
             else:
-                table, row = "idle CPU (% of a core)", f"{mode} {rec['workload']}"
+                table, row = IDLE_TABLE, f"{mode} {rec['workload']}"
                 value = m["cpu"] / m["wall"] * 100.0
             results[table][row][config.name].append(value)
 
 
-def run_copies(args: Namespace, config: Config, results: Results) -> None:
+def run_copies(args: Namespace, config: Config, results: Results, only: Only) -> None:
     # One copy per process, for the max rss to be meaningful.
     for scenario in args.copy_scenario:
         for mode in ("sync", "async"):
+            row = f"{scenario} {mode}"
+            if only is not None and not (
+                (COPY_TIME_TABLE, row) in only or (COPY_RSS_TABLE, row) in only
+            ):
+                continue
             cmdline = [str(BENCHMARK), "copy", "--json", "-q", "--rounds", "1"]
             cmdline += ["--dsn", args.dsn, *COPY_SCENARIOS[scenario]]
             cmdline += config.copy_args
@@ -245,10 +316,80 @@ def run_copies(args: Namespace, config: Config, results: Results) -> None:
                 cmdline.append("--sync")
             (line,) = run(config, cmdline).splitlines()
             (m,) = json.loads(line)["measures"]
-            row = f"{scenario} {mode}"
-            results["copy time (s)"][row][config.name].append(m["wall"])
+            results[COPY_TIME_TABLE][row][config.name].append(m["wall"])
             if m["maxrss"] is not None:
-                results["copy max rss (MB)"][row][config.name].append(m["maxrss"])
+                results[COPY_RSS_TABLE][row][config.name].append(m["maxrss"])
+
+
+def find_regressions(
+    args: Namespace, configs: list[Config], results: Results
+) -> list[Regression]:
+    """Return the measures of each configuration worse than the base."""
+    rv = []
+    base = configs[0].name
+    for table, rows in results.items():
+        for row, by_config in rows.items():
+            for config in configs[1:]:
+                b, v = by_config[base], by_config[config.name]
+                if not (b and v):
+                    continue
+                if reason := check_measure(args, table, b, v):
+                    rv.append(
+                        Regression(
+                            config.name,
+                            table,
+                            row,
+                            statistics.median(b),
+                            statistics.median(v),
+                            reason,
+                        )
+                    )
+    return rv
+
+
+def check_measure(
+    args: Namespace, table: str, base: list[float], values: list[float]
+) -> str | None:
+    """Return the reason why the values are worse than the base, if they are."""
+    bmed, vmed = statistics.median(base), statistics.median(values)
+    if table == IDLE_TABLE:
+        if vmed > args.idle_max:
+            return f"above {args.idle_max:g}% of a core"
+    elif "stall" in table:
+        if vmed - bmed > args.stall_tolerance:
+            return f"{vmed - bmed:+.1f} ms, over {args.stall_tolerance:g} ms"
+    elif table == COPY_RSS_TABLE:
+        if bmed and (
+            (vmed / bmed - 1.0) * 100.0 > args.rss_tolerance
+            and vmed - bmed > args.rss_min
+        ):
+            return (
+                f"{(vmed / bmed - 1.0) * 100.0:+.0f}% ({vmed - bmed:+.1f} MB),"
+                f" over {args.rss_tolerance:g}% and {args.rss_min:g} MB"
+            )
+    elif "time" in table:
+        bmin, vmin = min(base), min(values)
+        if bmed and bmin:
+            dmed = (vmed / bmed - 1.0) * 100.0
+            dmin = (vmin / bmin - 1.0) * 100.0
+            if dmed > args.time_tolerance and dmin > args.time_tolerance:
+                return (
+                    f"median {dmed:+.0f}%, min {dmin:+.0f}%,"
+                    f" over {args.time_tolerance:g}%"
+                )
+    return None
+
+
+def annotate(args: Namespace, regressions: list[Regression]) -> None:
+    """Report the regressions as GitHub Actions annotations, if running there."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    level = "error" if args.check == "fail" else "warning"
+    for r in regressions:
+        print(
+            f"::{level} title=Possible performance regression::"
+            f"{r.config}: {r.table}, {r.row}: {r.reason}"
+        )
 
 
 def run(config: Config, cmdline: list[str]) -> str:
@@ -269,7 +410,13 @@ def describe(config: Config) -> str:
     return ", ".join(parts)
 
 
-def format_report(args: Namespace, configs: list[Config], results: Results) -> str:
+def format_report(
+    args: Namespace,
+    configs: list[Config],
+    results: Results,
+    regressions: list[Regression],
+    confirmed: Only,
+) -> str:
     out = [
         f"## psycopg benchmark: {platform.system()} {platform.machine()},"
         f" Python {platform.python_version()}",
@@ -306,7 +453,30 @@ def format_report(args: Namespace, configs: list[Config], results: Results) -> s
                     if config is not configs[0] and base:
                         cell += f" ({(value / base - 1.0) * 100.0:+.0f}%)"
                     cells.append(cell)
-            out.append(f"| {row} | " + " | ".join(cells) + " |")
+            label = f"{row} *" if confirmed and (table, row) in confirmed else row
+            out.append(f"| {label} | " + " | ".join(cells) + " |")
+
+    if confirmed:
+        out += [
+            "",
+            f"\\* measured again with {args.confirm_rounds} rounds, to confirm"
+            " a possible regression.",
+        ]
+
+    if args.check:
+        out += ["", "### Possible regressions", ""]
+        if regressions:
+            out += [
+                "| | measure | base | value | reason |",
+                "|---|---|--:|--:|---|",
+            ]
+            for r in regressions:
+                out.append(
+                    f"| {r.config} | {r.table}: {r.row} | {r.base:.2f}"
+                    f" | {r.value:.2f} | {r.reason} |"
+                )
+        else:
+            out.append("None found.")
 
     return "\n".join(out) + "\n"
 
@@ -385,7 +555,57 @@ def parse_cmdline() -> Namespace:
     parser.add_argument(
         "--output", help="append the report to this file [default: no file]"
     )
+    g = parser.add_argument_group("regression check")
+    g.add_argument(
+        "--check",
+        choices=["warn", "fail"],
+        help="report the measures worse than the base; with 'fail' exit with"
+        " status 1 if any is found",
+    )
+    g.add_argument(
+        "--confirm-rounds",
+        type=int,
+        help="rounds to measure again the measures found worse, 0 to skip"
+        " [default: twice --rounds]",
+    )
+    g.add_argument(
+        "--time-tolerance",
+        type=float,
+        default=10.0,
+        metavar="PERCENT",
+        help="max increase of median and min times [default: %(default)s]",
+    )
+    g.add_argument(
+        "--stall-tolerance",
+        type=float,
+        default=10.0,
+        metavar="MS",
+        help="max increase of the loop stall [default: %(default)s]",
+    )
+    g.add_argument(
+        "--idle-max",
+        type=float,
+        default=5.0,
+        metavar="PERCENT",
+        help="max idle CPU, as percentage of a core [default: %(default)s]",
+    )
+    g.add_argument(
+        "--rss-tolerance",
+        type=float,
+        default=20.0,
+        metavar="PERCENT",
+        help="max increase of the max rss [default: %(default)s]",
+    )
+    g.add_argument(
+        "--rss-min",
+        type=float,
+        default=10.0,
+        metavar="MB",
+        help="min increase of the max rss to be reported [default: %(default)s]",
+    )
     args = parser.parse_args()
+    if args.confirm_rounds is None:
+        args.confirm_rounds = 2 * args.rounds
 
     names = [spec.partition("=")[0] for spec in args.tree]
     if len(set(names)) < len(names):
