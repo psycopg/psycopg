@@ -266,6 +266,10 @@ class QueuedLibpqWriter(LibpqWriter):
         except BaseException as ex:
             # Propagate the error to the main thread.
             self._worker_error = ex
+            # Keep consuming the queue, or write() would block forever on put()
+            # once the queue is full, never seeing the error.
+            while self._queue.get():
+                pass
 
     def write(self, data: Buffer) -> None:
         if not self._worker:

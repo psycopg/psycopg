@@ -821,6 +821,23 @@ async def test_worker_error_propagated(aconn, monkeypatch):
             await copy.write("a,b")
 
 
+async def test_worker_error_queue_full(aconn, monkeypatch):
+    def copy_to_broken(pgconn, buffer, flush=True):
+        raise ZeroDivisionError
+        yield
+
+    monkeypatch.setattr(psycopg._copy_async, "copy_to", copy_to_broken)
+    monkeypatch.setattr(psycopg._copy_async, "QUEUE_SIZE", 2)
+    cur = aconn.cursor()
+    await cur.execute("create temp table wat (a text, b text)")
+    with pytest.raises(ZeroDivisionError):
+        async with cur.copy(
+            "copy wat from stdin", writer=AsyncQueuedLibpqWriter(cur)
+        ) as copy:
+            for i in range(10):
+                await copy.writer.write(b"a,b\n")
+
+
 @pytest.mark.parametrize("writer", [AsyncLibpqWriter, AsyncQueuedLibpqWriter])
 @pytest.mark.parametrize(
     "threshold, flushes",
