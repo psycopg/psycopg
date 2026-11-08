@@ -184,29 +184,27 @@ class ListDumper(BaseListDumper):
             tokens.append(b"{}")
             return
 
+        dump = self.sub_dumper.dump if self.sub_dumper else self._dump_item
+        delimiter = self.delimiter
         tokens.append(b"{")
         for item in obj:
-            if isinstance(item, list):
-                self._dump_list(item, tokens, needs_quotes)
-            elif item is not None:
-                if (ad := self._dump_item(item)) is None:
-                    tokens.append(b"NULL")
-                else:
-                    if needs_quotes(ad):
-                        ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
-                    tokens.append(ad)
-            else:
+            if item is None:
                 tokens.append(b"NULL")
+            elif isinstance(item, list):
+                self._dump_list(item, tokens, needs_quotes)
+            elif (ad := dump(item)) is None:
+                tokens.append(b"NULL")
+            else:
+                if needs_quotes(ad):
+                    ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
+                tokens.append(ad)
 
-            tokens.append(self.delimiter)
+            tokens.append(delimiter)
 
         tokens[-1] = b"}"
 
     def _dump_item(self, item: Any) -> Buffer | None:
-        if self.sub_dumper:
-            return self.sub_dumper.dump(item)
-        else:
-            return self._tx.get_dumper(item, PY_TEXT).dump(item)
+        return self._tx.get_dumper(item, PY_TEXT).dump(item)
 
 
 @cache
