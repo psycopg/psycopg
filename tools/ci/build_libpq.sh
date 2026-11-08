@@ -108,7 +108,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
     openssl_tag="openssl-${openssl_version}"
     openssl_dir="openssl-${openssl_tag}"
     if [ ! -d "${openssl_dir}" ]; then
-        curl -fsSL \
+        curl -fsSL --retry 5 --retry-delay 10 \
             https://github.com/openssl/openssl/archive/${openssl_tag}.tar.gz \
             | tar xzf -
 
@@ -155,7 +155,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
     krb5_destdir="$(pwd)/krb5-${krb5_version}-install"
     krb5_libdir=/usr/lib/psycopg-krb5
     if [ ! -d "${krb5_dir}" ]; then
-        curl -fsSL "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
+        curl -fsSL --retry 5 --retry-delay 10 "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
             | tar xzf -
 
         pushd "${krb5_dir}"
@@ -211,7 +211,7 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
     ldap_tag="${ldap_version}"
     ldap_dir="openldap-${ldap_tag}"
     if [ ! -d "${ldap_dir}" ]; then
-        curl -fsSL \
+        curl -fsSL --retry 5 --retry-delay 10 \
             https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${ldap_tag}.tgz \
             | tar xzf -
 
@@ -242,7 +242,7 @@ fi
 postgres_tag="REL_${postgres_version//./_}"
 postgres_dir="postgres-${postgres_tag}"
 if [ ! -d "${postgres_dir}" ]; then
-    curl -fsSL \
+    curl -fsSL --retry 5 --retry-delay 10 \
         https://github.com/postgres/postgres/archive/${postgres_tag}.tar.gz \
         | tar xzf -
 
