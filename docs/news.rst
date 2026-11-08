@@ -16,6 +16,9 @@ Psycopg 3.3.9 (unreleased)
 - Use the C implementation of the wait functions on Windows too. It was
   disabled because of an excessive CPU usage, fixed in Psycopg 3.2.11
   (:ticket:`#645`).
+- Close the connection if the query cancellation following a Ctrl-C or a
+  task cancellation is interrupted again, instead of leaving it stuck in
+  ACTIVE state (:ticket:`#1435`).
 - Limit the memory used by :sql:`COPY FROM` if the server consumes data
   slower than it is produced. Add a `!flush_threshold` parameter to
   `~copy.LibpqWriter` to tune it (:ticket:`#1437`).

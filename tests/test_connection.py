@@ -963,6 +963,68 @@ def test_interrupt_unresponsive_server(conn_cls, proxy, caplog):
     assert any(("not terminated after cancellation" in m for m in messages))
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+def test_interrupt_twice(conn_cls, proxy, caplog):
+    # https://github.com/psycopg/psycopg/issues/1435
+    # A second interruption during the query cancellation must close the
+    # connection, instead of leaving it in ACTIVE state.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    with conn_cls.connect(proxy.client_dsn) as conn:
+        with proxy.frozen():
+            t0 = time.time()
+            import signal
+
+            # Raise KeyboardInterrupt twice, as Ctrl-C would.
+            handler = signal.signal(signal.SIGALRM, signal.default_int_handler)
+            signal.setitimer(signal.ITIMER_REAL, 0.5, 0.5)
+            try:
+                with pytest.raises(KeyboardInterrupt):
+                    conn.execute("select 1")
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, handler)
+            elapsed = time.time() - t0
+
+        assert conn.broken
+
+    assert elapsed == pytest.approx(1.0, abs=0.5)
+    messages = [r.message for r in caplog.records]
+    assert any(("query cancellation interrupted" in m for m in messages))
+
+
+@pytest.mark.slow
+def test_interrupt_cancel_error(conn, monkeypatch, caplog):
+    # An error during the query cancellation must close the connection but
+    # not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    def try_cancel(*, timeout):
+        raise e.OperationalError("cancel failed")
+
+    monkeypatch.setattr(conn, "_try_cancel", try_cancel)
+    import signal
+
+    if sys.platform == "win32":
+        pytest.skip("SIGALRM not available on Windows")
+    handler = signal.signal(signal.SIGALRM, signal.default_int_handler)
+    signal.setitimer(signal.ITIMER_REAL, 0.5)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            conn.execute("select pg_sleep(10)")
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, handler)
+
+    assert conn.broken
+    messages = [r.message for r in caplog.records]
+    assert any(
+        ("query cancellation interrupted (OperationalError)" in m for m in messages)
+    )
+
+
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
     got = ""
 

@@ -536,8 +536,8 @@ class AsyncConnection(BaseConnection[Row]):
             if self.pgconn.transaction_status == ACTIVE:
                 # On Ctrl-C, try to cancel the query in the server, otherwise
                 # the connection will remain stuck in ACTIVE state.
-                await self._try_cancel(timeout=5.0)
                 try:
+                    await self._try_cancel(timeout=5.0)
                     await waiting.wait_async(
                         gen, self.pgconn.socket, interval=interval, timeout=5.0
                     )
@@ -550,6 +550,18 @@ class AsyncConnection(BaseConnection[Row]):
                         "query not terminated after cancellation: closing connection"
                     )
                     self.pgconn.finish()
+                except BaseException as ex:
+                    # Interrupted again (e.g. a second Ctrl-C) or failed while
+                    # cancelling: the connection is in an unknown state (#1435).
+                    logger.warning(
+                        "query cancellation interrupted (%s): closing connection",
+                        type(ex).__name__,
+                    )
+                    self.pgconn.finish()
+                    # Let a new interruption bubble up, but don't let an error
+                    # replace the interruption we are handling.
+                    if not isinstance(ex, Exception):
+                        raise
             raise
 
     def _set_autocommit(self, value: bool) -> None:
