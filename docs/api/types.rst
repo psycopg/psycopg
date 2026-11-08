@@ -275,3 +275,62 @@ See :ref:`adapt-multirange` for details.
     `~psycopg.types.TypeInfo.fetch()` method.
 
 .. autofunction:: register_multirange
+
+
+.. _composite-api:
+
+Composite adapters
+------------------
+
+See :ref:`adapt-composite` for details.
+
+.. currentmodule:: psycopg.types.composite
+
+.. autoclass:: CompositeInfo
+
+   `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   documentation for the general usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: field_names
+       :type: tuple[str, ...]
+
+       Tuple containing the field names of the composite type.
+
+   .. attribute:: field_types
+       :type: tuple[int, ...]
+
+       Tuple containing the field OIDs of the composite type.
+
+   .. attribute:: python_type
+       :type: Callable | None
+
+       After `register_composite()` is called, it will contain the Python type
+       adapting the registered composite.
+
+.. autofunction:: register_composite
+
+   After registering the `CompositeInfo`, fetching data of the registered
+   composite type will invoke `!factory` to create corresponding Python
+   objects. If no factory is specified, Psycopg will generate a
+   `~collections.namedtuple` with the same fields of the composite type, and
+   use it to return fetched data. The factory will be made available on
+   `!info.`\ `~CompositeInfo.python_type`.
+
+   If the `!factory` is a type (and not a generic callable) then dumpers for
+   such type are created and registered too, so that passing objects of that
+   type to a query will adapt them to the registered composite type. This
+   assumes that the `!factory` type is a sequence; if this is not the case you
+   can specify the `!make_sequence` parameter: a function taking the object to
+   dump and the composite info and returning a sequence of values. See
+   :ref:`composite-non-sequence`.
+
+   The `!factory` callable will be called with the sequence of value from the
+   composite. If passing the sequence of positional arguments is not suitable
+   for the `!factory` type you can specify the `!make_object` parameter: a
+   function taking the sequence of composite values and the type info, and
+   which should return a new instance of the object to load. See
+   :ref:`composite-non-sequence`.
+
+   .. versionadded:: 3.3
+        the `!make_object` and `!make_sequence` parameters.
