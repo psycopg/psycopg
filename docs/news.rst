@@ -34,6 +34,8 @@ Psycopg 3.3.9 (unreleased)
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
+- Don't replace the exception raised in a :sql:`COPY` block, for instance an
+  interruption, with an error terminating the operation (:ticket:`#1486`).
 - Fix `~copy.QueuedLibpqWriter` hanging forever, instead of raising the
   error, if sending data to the server fails while its queue is full
   (:ticket:`#1489`).

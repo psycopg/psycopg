@@ -1,5 +1,6 @@
 import string
 import hashlib
+import logging
 from io import BytesIO, StringIO
 from random import choice, randrange
 from itertools import cycle
@@ -293,6 +294,41 @@ async def test_copy_in_error(aconn):
             await copy.write(sample_text.decode())
 
     assert aconn.info.transaction_status == pq.TransactionStatus.INERROR
+
+
+@pytest.mark.parametrize("writer", [AsyncLibpqWriter, AsyncQueuedLibpqWriter])
+async def test_copy_in_interrupted_closed(aconn, writer, caplog):
+    # An error terminating the copy must not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    cur = aconn.cursor()
+    await ensure_table_async(cur, sample_tabledef)
+    with pytest.raises(KeyboardInterrupt):
+        async with cur.copy("copy copy_in from stdin", writer=writer(cur)) as copy:
+            await copy.write(sample_text)
+            # The connection is closed after a double Ctrl-C.
+            aconn.pgconn.finish()
+            raise KeyboardInterrupt
+
+    assert any("error ignored terminating" in r.message for r in caplog.records)
+
+
+async def test_copy_out_interrupted_error(aconn, monkeypatch, caplog):
+    # An error terminating the copy must not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    async def try_cancel(*, timeout=5.0):
+        raise e.OperationalError("cancel failed")
+
+    monkeypatch.setattr(aconn, "_try_cancel", try_cancel)
+    cur = aconn.cursor()
+    with pytest.raises(KeyboardInterrupt):
+        async with cur.copy(
+            "copy (select generate_series(1, 1000000)) to stdout"
+        ) as copy:
+            await copy.read()
+            raise KeyboardInterrupt
+
+    assert any("error ignored terminating" in r.message for r in caplog.records)
 
 
 @pytest.mark.parametrize("format", pq.Format)
