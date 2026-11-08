@@ -234,26 +234,6 @@ All the PostgreSQL range types are loaded as the
 `~psycopg.types.multirange.Multirange` Python type, which is a mutable
 sequence of `~psycopg.types.range.Range` elements.
 
-.. autoclass:: psycopg.types.multirange.Multirange
-
-    This Python type is only used to pass and retrieve multirange values to
-    and from PostgreSQL and doesn't attempt to replicate the PostgreSQL
-    multirange features: overlapping items are not merged, empty ranges are
-    not discarded, the items are not ordered, the behaviour of `multirange
-    operators`__ is not replicated in Python.
-
-    PostgreSQL will perform normalisation on `!Multirange` objects used as
-    query parameters, so, when they are fetched back, they will be found
-    ordered, with overlapping ranges merged, etc.
-
-    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#MULTIRANGE-OPERATORS-TABLE
-
-    `!Multirange` objects are a `~collections.abc.MutableSequence` and are
-    totally ordered: they behave pretty much like a list of `!Range`. Like
-    Range, they are `~typing.Generic` on the subtype of their range, so you
-    can declare a variable to be `!Multirange[date]` and mypy will complain if
-    you try to add it a `Range[Decimal]`.
-
 Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
 automatically: if a `!Multirange` object contains `!Range` with
 `~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
@@ -263,14 +243,6 @@ If you have created your own range type you can use
 `~psycopg.types.multirange.MultirangeInfo` and
 `~psycopg.types.multirange.register_multirange()` to associate the resulting
 multirange type with its subtype and make it work like the builtin ones.
-
-.. autoclass:: psycopg.types.multirange.MultirangeInfo
-
-   `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for general details, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-.. autofunction:: psycopg.types.multirange.register_multirange
 
 Example::
 

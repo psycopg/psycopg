@@ -237,3 +237,41 @@ See :ref:`adapt-range` for details.
     `~psycopg.types.TypeInfo.fetch()` method.
 
 .. autofunction:: register_range
+
+
+.. _multirange-api:
+
+Multirange adapters
+-------------------
+
+See :ref:`adapt-multirange` for details.
+
+.. currentmodule:: psycopg.types.multirange
+
+.. autoclass:: Multirange
+
+    This Python type is only used to pass and retrieve multirange values to
+    and from PostgreSQL and doesn't attempt to replicate the PostgreSQL
+    multirange features: overlapping items are not merged, empty ranges are
+    not discarded, the items are not ordered, the behaviour of `multirange
+    operators`__ is not replicated in Python.
+
+    PostgreSQL will perform normalisation on `!Multirange` objects used as
+    query parameters, so, when they are fetched back, they will be found
+    ordered, with overlapping ranges merged, etc.
+
+    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#MULTIRANGE-OPERATORS-TABLE
+
+    `!Multirange` objects are a `~collections.abc.MutableSequence` and are
+    totally ordered: they behave pretty much like a list of `!Range`. Like
+    Range, they are `~typing.Generic` on the subtype of their range, so you
+    can declare a variable to be `!Multirange[date]` and mypy will complain if
+    you try to add it a `Range[Decimal]`.
+
+.. autoclass:: MultirangeInfo
+
+    `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+    documentation for general details, especially the
+    `~psycopg.types.TypeInfo.fetch()` method.
+
+.. autofunction:: register_multirange
