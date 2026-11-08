@@ -15,7 +15,9 @@ from functools import cache
 from collections import namedtuple
 from collections.abc import Callable, Sequence
 
-from .. import abc, postgres, pq, sql
+from .. import abc
+from .. import errors as e
+from .. import postgres, pq, sql
 from .._oids import TEXT_OID
 from ..adapt import Buffer, Dumper, Loader, PyFormat, RecursiveDumper, RecursiveLoader
 from ..adapt import Transformer
@@ -385,7 +387,12 @@ def register_default_adapters(context: abc.AdaptContext) -> None:
 def _nt_from_info(info: CompositeInfo) -> type[NamedTuple]:
     name = _as_python_identifier(info.name)
     fields = tuple(_as_python_identifier(n) for n in info.field_names)
-    return _make_nt(name, fields)
+    try:
+        return _make_nt(name, fields)
+    except ValueError as ex:
+        raise e.DataError(
+            f"can't create a namedtuple for the composite {info.name!r}: {ex}"
+        ) from None
 
 
 def _dump_text_sequence(seq: Sequence[Any], tx: abc.Transformer) -> bytes:
