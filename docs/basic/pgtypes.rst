@@ -193,34 +193,6 @@ All the PostgreSQL range types are loaded as the `~psycopg.types.range.Range`
 Python type, which is a `~typing.Generic` type and can hold bounds of
 different types.
 
-.. autoclass:: psycopg.types.range.Range
-
-    This Python type is only used to pass and retrieve range values to and
-    from PostgreSQL and doesn't attempt to replicate the PostgreSQL range
-    features: it doesn't perform normalization and doesn't implement all the
-    operators__ supported by the database.
-
-    PostgreSQL will perform normalisation on `!Range` objects used as query
-    parameters, so, when they are fetched back, they will be found in the
-    normal form (for instance ranges on integers will have `[)` bounds).
-
-    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
-
-    `!Range` objects are immutable, hashable, and support the `!in` operator
-    (checking if an element is within the range). They can be tested for
-    equivalence. Empty ranges evaluate to `!False` in a boolean context,
-    nonempty ones evaluate to `!True`.
-
-    `!Range` objects have the following attributes:
-
-    .. autoattribute:: isempty
-    .. autoattribute:: lower
-    .. autoattribute:: upper
-    .. autoattribute:: lower_inc
-    .. autoattribute:: upper_inc
-    .. autoattribute:: lower_inf
-    .. autoattribute:: upper_inf
-
 The built-in range objects are adapted automatically: if a `!Range` objects
 contains `~datetime.date` bounds, it is dumped using the :sql:`daterange` OID,
 and of course :sql:`daterange` values are loaded back as `!Range[date]`.
@@ -228,14 +200,6 @@ and of course :sql:`daterange` values are loaded back as `!Range[date]`.
 If you create your own range type you can use `~psycopg.types.range.RangeInfo`
 and `~psycopg.types.range.register_range()` to associate the range type with
 its subtype and make it work like the builtin ones.
-
-.. autoclass:: psycopg.types.range.RangeInfo
-
-   `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-.. autofunction:: psycopg.types.range.register_range
 
 Example::
 
