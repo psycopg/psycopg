@@ -192,3 +192,48 @@ type, overriding the automatic choice described in :ref:`adapt-numbers`.
 .. autoclass:: Float8
 .. autoclass:: Oid
 
+
+.. _range-api:
+
+Range adapters
+--------------
+
+See :ref:`adapt-range` for details.
+
+.. currentmodule:: psycopg.types.range
+
+.. autoclass:: Range
+
+    This Python type is only used to pass and retrieve range values to and
+    from PostgreSQL and doesn't attempt to replicate the PostgreSQL range
+    features: it doesn't perform normalization and doesn't implement all the
+    operators__ supported by the database.
+
+    PostgreSQL will perform normalisation on `!Range` objects used as query
+    parameters, so, when they are fetched back, they will be found in the
+    normal form (for instance ranges on integers will have `[)` bounds).
+
+    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
+
+    `!Range` objects are immutable, hashable, and support the `!in` operator
+    (checking if an element is within the range). They can be tested for
+    equivalence. Empty ranges evaluate to `!False` in a boolean context,
+    nonempty ones evaluate to `!True`.
+
+    `!Range` objects have the following attributes:
+
+    .. autoattribute:: isempty
+    .. autoattribute:: lower
+    .. autoattribute:: upper
+    .. autoattribute:: lower_inc
+    .. autoattribute:: upper_inc
+    .. autoattribute:: lower_inf
+    .. autoattribute:: upper_inf
+
+.. autoclass:: RangeInfo
+
+    `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+    documentation for generic details, especially the
+    `~psycopg.types.TypeInfo.fetch()` method.
+
+.. autofunction:: register_range
