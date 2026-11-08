@@ -166,3 +166,29 @@ object. Otherwise use the function specified by `set_json_dumps()`.
 
 .. autofunction:: set_json_dumps
 .. autofunction:: set_json_loads
+
+
+.. _numeric-wrappers:
+
+Numeric wrappers
+-----------------
+
+.. currentmodule:: psycopg.types.numeric
+
+Wrappers to force a Python number to be dumped as a specific PostgreSQL
+type, overriding the automatic choice described in :ref:`adapt-numbers`.
+
+.. code:: python
+
+    >>> from psycopg.types.numeric import Int8
+    >>> conn.execute("SELECT pg_typeof(%s)", [Int8(1)]).fetchone()[0]
+    'bigint'
+
+.. autoclass:: Int2
+.. autoclass:: Int4
+.. autoclass:: Int8
+.. autoclass:: IntNumeric
+.. autoclass:: Float4
+.. autoclass:: Float8
+.. autoclass:: Oid
+
