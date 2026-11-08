@@ -34,6 +34,7 @@ Psycopg 3.3.9 (unreleased)
 - Fix `~copy.QueuedLibpqWriter` hanging forever, instead of raising the
   error, if sending data to the server fails while its queue is full
   (:ticket:`#1489`).
+- Performance improvements to lists dumping (:ticket:`#1490`).
 - Reduce the size of the binary packages.
 
 

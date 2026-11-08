@@ -54,18 +54,29 @@ class BaseListDumper(RecursiveDumper):
         """
         Find the first non-null element of an eventually nested list
         """
-        items = list(self._flatiter(L, set()))
-        if not (types := {type(item): item for item in items}):
+        # Flattening the list in Python is slow: only do it if it is nested.
+        types = set(map(type, L))
+        if any(issubclass(t, list) for t in types):
+            items = list(self._flatiter(L, set()))
+            types = set(map(type, items))
+        elif NoneType in types:
+            items = [item for item in L if item is not None]
+            types.discard(NoneType)
+        else:
+            items = L
+
+        if not types:
             return None
 
         if len(types) == 1:
-            t, v = types.popitem()
+            t, v = types.pop(), items[-1]
         else:
             # More than one type in the list. It might be still good, as long
             # as they dump with the same oid (e.g. IPv4Network, IPv6Network).
-            dumpers = [self._tx.get_dumper(item, format) for item in types.values()]
+            values = {type(item): item for item in items}
+            dumpers = [self._tx.get_dumper(item, format) for item in values.values()]
             if len({d.oid for d in dumpers}) == 1:
-                t, v = types.popitem()
+                t, v = values.popitem()
             else:
                 raise e.DataError(
                     "cannot dump lists of mixed types;"
