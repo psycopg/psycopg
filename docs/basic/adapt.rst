@@ -531,30 +531,6 @@ and registered enums is different.
   - The registered PostgreSQL enum is loaded back as the registered Python
     enum members.
 
-.. autoclass:: psycopg.types.enum.EnumInfo
-
-   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
-   latter's documentation for generic usage, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-   .. attribute:: labels
-
-       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
-       in the PostgreSQL enum type.
-
-   .. attribute:: enum
-
-       After `register_enum()` is called, it will contain the Python type
-       mapping to the registered enum.
-
-.. autofunction:: psycopg.types.enum.register_enum
-
-   After registering, fetching data of the registered enum will cast
-   PostgreSQL enum labels into corresponding Python enum members.
-
-   If no `!enum` is specified, a new `Enum` is created based on
-   PostgreSQL enum labels.
-
 Example::
 
     >>> from enum import Enum, auto

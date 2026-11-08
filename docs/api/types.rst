@@ -334,3 +334,82 @@ See :ref:`adapt-composite` for details.
 
    .. versionadded:: 3.3
         the `!make_object` and `!make_sequence` parameters.
+
+
+.. _hstore-api:
+
+Hstore adapters
+---------------
+
+See :ref:`adapt-hstore` for details.
+
+.. currentmodule:: psycopg.types.hstore
+
+.. autofunction:: register_hstore
+
+
+.. _shapely-api:
+
+Shapely adapters
+----------------
+
+See :ref:`adapt-shapely` for details.
+
+.. currentmodule:: psycopg.types.shapely
+
+.. function:: register_shapely
+
+    Register Shapely dumper and loaders.
+
+    After invoking this function on an adapter, the queries retrieving
+    PostGIS geometry objects will return Shapely's shape object instances
+    both in text and binary mode.
+
+    Similarly, shape objects can be sent to the database.
+
+    This requires the Shapely library to be installed.
+
+    :param info: The object with the information about the geometry type.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
+
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
+
+
+.. _enum-api:
+
+Enum adapters
+-------------
+
+See :ref:`adapt-enum` for details.
+
+.. currentmodule:: psycopg.types.enum
+
+.. autoclass:: EnumInfo
+
+   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
+   latter's documentation for generic usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: labels
+
+       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
+       in the PostgreSQL enum type.
+
+   .. attribute:: enum
+
+       After `register_enum()` is called, it will contain the Python type
+       mapping to the registered enum.
+
+.. autofunction:: register_enum
+
+   After registering, fetching data of the registered enum will cast
+   PostgreSQL enum labels into corresponding Python enum members.
+
+   If no `!enum` is specified, a new `Enum` is created based on
+   PostgreSQL enum labels.

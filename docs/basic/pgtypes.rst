@@ -249,8 +249,6 @@ resulting object can be passed to
 |hstore| and parsing |hstore| back to `!dict`, in the context where the
 adapter is registered.
 
-.. autofunction:: psycopg.types.hstore.register_hstore
-
 Example::
 
     >>> from psycopg.types import TypeInfo
@@ -300,29 +298,6 @@ resulting object can be passed to `~psycopg.types.shapely.register_shapely()`
 to configure dumping `shape`_ instances to :sql:`geometry` columns and parsing
 :sql:`geometry` data back to `!shape` instances, in the context where the
 adapters are registered.
-
-.. function:: psycopg.types.shapely.register_shapely
-
-    Register Shapely dumper and loaders.
-
-    After invoking this function on an adapter, the queries retrieving
-    PostGIS geometry objects will return Shapely's shape object instances
-    both in text and binary mode.
-
-    Similarly, shape objects can be sent to the database.
-
-    This requires the Shapely library to be installed.
-
-    :param info: The object with the information about the geometry type.
-    :param context: The context where to register the adapters. If `!None`,
-        register it globally.
-
-    .. note::
-
-        Registering the adapters doesn't affect objects already created, even
-        if they are children of the registered context. For instance,
-        registering the adapter globally doesn't affect already existing
-        connections.
 
 Example::
 
