@@ -41,6 +41,7 @@ Psycopg 3.3.9 (unreleased)
   error, if sending data to the server fails while its queue is full
   (:ticket:`#1489`).
 - Performance improvements to lists dumping (:tickets:`#1490, #1491`).
+- 2.5x faster UUID loading in the C implementation (:ticket:`#1494`).
 - Reduce the size of the binary packages by about 15 to 40%, depending on the
   platform.
 
