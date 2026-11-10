@@ -830,12 +830,22 @@ async def test_worker_error_queue_full(aconn, monkeypatch):
     monkeypatch.setattr(psycopg._copy_async, "QUEUE_SIZE", 2)
     cur = aconn.cursor()
     await cur.execute("create temp table wat (a text, b text)")
-    with pytest.raises(ZeroDivisionError):
-        async with cur.copy(
-            "copy wat from stdin", writer=AsyncQueuedLibpqWriter(cur)
-        ) as copy:
-            for i in range(10):
-                await copy.writer.write(b"a,b\n")
+    errors = []
+
+    async def worker():
+        try:
+            async with cur.copy(
+                "copy wat from stdin", writer=AsyncQueuedLibpqWriter(cur)
+            ) as copy:
+                for i in range(10):
+                    await copy.writer.write(b"a,b\n")
+        except Exception as ex:
+            errors.append(ex)
+
+    # Run in a separate task/thread to fail with a timeout instead of hanging.
+    await gather(spawn(worker), timeout=5.0)
+    assert len(errors) == 1
+    assert isinstance(errors[0], ZeroDivisionError)
 
 
 @pytest.mark.parametrize("writer", [AsyncLibpqWriter, AsyncQueuedLibpqWriter])
