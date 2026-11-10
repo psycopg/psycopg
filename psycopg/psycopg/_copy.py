@@ -9,6 +9,7 @@ Objects to support the COPY protocol (sync version).
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
@@ -30,6 +31,8 @@ COPY_IN = pq.ExecStatus.COPY_IN
 COPY_OUT = pq.ExecStatus.COPY_OUT
 
 ACTIVE = pq.TransactionStatus.ACTIVE
+
+logger = logging.getLogger("psycopg")
 
 
 class Copy(BaseCopy["Connection[Any]"]):
@@ -135,25 +138,32 @@ class Copy(BaseCopy["Connection[Any]"]):
         by exit. It is available if, despite what is documented, you end up
         using the `Copy` object outside a block.
         """
-        if self._direction == COPY_IN:
+        try:
+            if self._direction == COPY_IN:
+                if not exc:
+                    if data := self.formatter.end():
+                        self._write(data)
+                self.writer.finish(exc)
+                self._finished = True
+            else:
+                if not exc:
+                    return
+                if self._pgconn.transaction_status != ACTIVE:
+                    # The server has already finished to send copy data. The
+                    # connection is already in a good state.
+                    return
+                # Throw a cancel to the server, then consume the rest of the copy
+                # data (which might or might not have been already transferred
+                # entirely to the client, so we won't necessary see the exception
+                # associated with canceling).
+                self.connection._try_cancel()
+                self.connection.wait(self._end_copy_out_gen())
+        except Exception as exc2:
             if not exc:
-                if data := self.formatter.end():
-                    self._write(data)
-            self.writer.finish(exc)
-            self._finished = True
-        else:
-            if not exc:
-                return
-            if self._pgconn.transaction_status != ACTIVE:
-                # The server has already finished to send copy data. The connection
-                # is already in a good state.
-                return
-            # Throw a cancel to the server, then consume the rest of the copy data
-            # (which might or might not have been already transferred entirely to
-            # the client, so we won't necessary see the exception associated with
-            # canceling).
-            self.connection._try_cancel()
-            self.connection.wait(self._end_copy_out_gen())
+                raise
+            # Don't clobber the exception that terminated the copy, which
+            # might be an interruption.
+            logger.warning("error ignored terminating %r: %s", self, exc2)
 
 
 class Writer(ABC):

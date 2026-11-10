@@ -986,6 +986,85 @@ async def test_interrupt_unresponsive_server(aconn_cls, proxy, caplog):
     assert any("not terminated after cancellation" in m for m in messages)
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+@pytest.mark.libpq(">= 17")
+async def test_interrupt_twice(aconn_cls, proxy, caplog):
+    # https://github.com/psycopg/psycopg/issues/1435
+    # A second interruption during the query cancellation must close the
+    # connection, instead of leaving it in ACTIVE state.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    proxy.start()
+    async with await aconn_cls.connect(proxy.client_dsn) as aconn:
+        with proxy.frozen():
+            t0 = time.time()
+            if True:  # ASYNC
+                import asyncio
+
+                task = asyncio.create_task(aconn.execute("select 1"))
+                await asyncio.sleep(0.5)
+                task.cancel()
+                await asyncio.sleep(0.5)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+            else:
+                import signal
+
+                # Raise KeyboardInterrupt twice, as Ctrl-C would.
+                handler = signal.signal(signal.SIGALRM, signal.default_int_handler)
+                signal.setitimer(signal.ITIMER_REAL, 0.5, 0.5)
+                try:
+                    with pytest.raises(KeyboardInterrupt):
+                        await aconn.execute("select 1")
+                finally:
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+                    signal.signal(signal.SIGALRM, handler)
+            elapsed = time.time() - t0
+
+        assert aconn.broken
+
+    assert elapsed == pytest.approx(1.0, abs=0.5)
+    messages = [r.message for r in caplog.records]
+    assert any("query cancellation interrupted" in m for m in messages)
+
+
+@pytest.mark.slow
+async def test_interrupt_cancel_error(aconn, monkeypatch, caplog):
+    # An error during the query cancellation must close the connection but
+    # not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    async def try_cancel(*, timeout):
+        raise e.OperationalError("cancel failed")
+
+    monkeypatch.setattr(aconn, "_try_cancel", try_cancel)
+    if True:  # ASYNC
+        import asyncio
+
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(aconn.execute("select pg_sleep(10)"), 0.5)
+    else:
+        import signal
+
+        if sys.platform == "win32":
+            pytest.skip("SIGALRM not available on Windows")
+        handler = signal.signal(signal.SIGALRM, signal.default_int_handler)
+        signal.setitimer(signal.ITIMER_REAL, 0.5)
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                await aconn.execute("select pg_sleep(10)")
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, handler)
+
+    assert aconn.broken
+    messages = [r.message for r in caplog.records]
+    assert any(
+        "query cancellation interrupted (OperationalError)" in m for m in messages
+    )
+
+
 async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch, fake_resolve):
     got = ""
 

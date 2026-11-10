@@ -3,6 +3,7 @@
 # DO NOT CHANGE! Change the original file instead.
 import string
 import hashlib
+import logging
 from io import BytesIO, StringIO
 from random import choice, randrange
 from itertools import cycle
@@ -284,6 +285,39 @@ def test_copy_in_error(conn):
             copy.write(sample_text.decode())
 
     assert conn.info.transaction_status == pq.TransactionStatus.INERROR
+
+
+@pytest.mark.parametrize("writer", [LibpqWriter, QueuedLibpqWriter])
+def test_copy_in_interrupted_closed(conn, writer, caplog):
+    # An error terminating the copy must not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with pytest.raises(KeyboardInterrupt):
+        with cur.copy("copy copy_in from stdin", writer=writer(cur)) as copy:
+            copy.write(sample_text)
+            # The connection is closed after a double Ctrl-C.
+            conn.pgconn.finish()
+            raise KeyboardInterrupt
+
+    assert any(("error ignored terminating" in r.message for r in caplog.records))
+
+
+def test_copy_out_interrupted_error(conn, monkeypatch, caplog):
+    # An error terminating the copy must not replace the interruption.
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    def try_cancel(*, timeout=5.0):
+        raise e.OperationalError("cancel failed")
+
+    monkeypatch.setattr(conn, "_try_cancel", try_cancel)
+    cur = conn.cursor()
+    with pytest.raises(KeyboardInterrupt):
+        with cur.copy("copy (select generate_series(1, 1000000)) to stdout") as copy:
+            copy.read()
+            raise KeyboardInterrupt
+
+    assert any(("error ignored terminating" in r.message for r in caplog.records))
 
 
 @pytest.mark.parametrize("format", pq.Format)

@@ -16,6 +16,9 @@ Psycopg 3.3.9 (unreleased)
 - Use the C implementation of the wait functions on Windows too. It was
   disabled because of an excessive CPU usage, fixed in Psycopg 3.2.11
   (:ticket:`#645`).
+- Close the connection if the query cancellation following a Ctrl-C or a
+  task cancellation is interrupted again, instead of leaving it stuck in
+  ACTIVE state (:ticket:`#1435`).
 - Limit the memory used by :sql:`COPY FROM` if the server consumes data
   slower than it is produced. Add a `!flush_threshold` parameter to
   `~copy.LibpqWriter` to tune it (:ticket:`#1437`).
@@ -31,6 +34,8 @@ Psycopg 3.3.9 (unreleased)
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
+- Don't replace the exception raised in a :sql:`COPY` block, for instance an
+  interruption, with an error terminating the operation (:ticket:`#1486`).
 - Fix `~copy.QueuedLibpqWriter` hanging forever, instead of raising the
   error, if sending data to the server fails while its queue is full
   (:ticket:`#1489`).
