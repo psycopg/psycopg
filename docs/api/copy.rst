@@ -105,7 +105,7 @@ Writers instances can be used passing them to the cursor
 
         with open("target-file.pgcopy", "wb") as f:
             with Copy(cur, writer=FileWriter(f)) as copy:
-                for record in records
+                for record in records:
                     copy.write_row(record)
 
 
