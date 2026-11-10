@@ -121,6 +121,14 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
         options=(--prefix=${LIBPQ_BUILD_PREFIX} \
             --openssldir=/usr/lib/psycopg-openssl \
             zlib -fPIC shared)
+        # Don't generate unwind tables for the libraries used by libpq (but
+        # not for the libpq itself): they are a large part of the wheels, and
+        # losing tracebacks and profiles inside the crypto/kerberos/ldap
+        # libraries is acceptable. Linux only: macOS uses a different unwind
+        # format.
+        if [ "$ID" != "macos" ]; then
+            options+=(-fno-asynchronous-unwind-tables -fno-unwind-tables)
+        fi
         if [ -z "${MACOSX_ARCHITECTURE:-}" ]; then
             ./config ${options[*]}
         else
@@ -155,7 +163,8 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
     krb5_destdir="$(pwd)/krb5-${krb5_version}-install"
     krb5_libdir=/usr/lib/psycopg-krb5
     if [ ! -d "${krb5_dir}" ]; then
-        curl -fsSL --retry 5 --retry-delay 10 "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
+        curl -fsSL --retry 5 --retry-delay 10 \
+            "https://kerberos.org/dist/krb5/${krb5_version%.*}/krb5-${krb5_version}.tar.gz" \
             | tar xzf -
 
         pushd "${krb5_dir}"
@@ -170,7 +179,9 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
                 "CPPFLAGS=-arch $MACOSX_ARCHITECTURE" \
                 "LDFLAGS=-arch $MACOSX_ARCHITECTURE")
         else
-            options+=(--sysconfdir=/etc --with-keyutils)
+            # No unwind tables: see the OpenSSL build.
+            options+=(--sysconfdir=/etc --with-keyutils \
+                "CFLAGS=-O2 -fno-asynchronous-unwind-tables -fno-unwind-tables")
         fi
         ./configure "${options[@]}"
         make -s
@@ -217,7 +228,14 @@ if [ "$ID" == "centos" ] || [ "$ID" == "rocky" ] || [ "$ID" == "almalinux" ]|| [
 
         pushd "${ldap_dir}"
 
-        ./configure "${make_configure_standard_flags[@]}" --enable-backends=no --enable-null
+        options=("${make_configure_standard_flags[@]}" \
+            --enable-backends=no --enable-null)
+        if [ "$ID" != "macos" ]; then
+            # No unwind tables: see the OpenSSL build.
+            options+=( \
+                "CFLAGS=-O2 -fno-asynchronous-unwind-tables -fno-unwind-tables")
+        fi
+        ./configure "${options[@]}"
 
         make -s depend
         make -s -C libraries/liblutil/

@@ -34,7 +34,7 @@ env:
   OPENSSL_VERSION: "3.5.9"
 
   # Suffix of the libpq cache keys: change it to rebuild the libpq.
-  PQ_FLAGS: "-r1"
+  PQ_FLAGS: "-r2"
 
 concurrency:
   # Cancel older requests of the same workflow in the same branch.
