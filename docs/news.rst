@@ -31,6 +31,9 @@ Psycopg 3.3.9 (unreleased)
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
   (:ticket:`#1484`).
+- Fix `~copy.QueuedLibpqWriter` hanging forever, instead of raising the
+  error, if sending data to the server fails while its queue is full
+  (:ticket:`#1489`).
 - Reduce the size of the binary packages.
 
 

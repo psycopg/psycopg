@@ -802,6 +802,32 @@ def test_worker_error_propagated(conn, monkeypatch):
             copy.write("a,b")
 
 
+def test_worker_error_queue_full(conn, monkeypatch):
+
+    def copy_to_broken(pgconn, buffer, flush=True):
+        raise ZeroDivisionError
+        yield
+
+    monkeypatch.setattr(psycopg._copy, "copy_to", copy_to_broken)
+    monkeypatch.setattr(psycopg._copy, "QUEUE_SIZE", 2)
+    cur = conn.cursor()
+    cur.execute("create temp table wat (a text, b text)")
+    errors = []
+
+    def worker():
+        try:
+            with cur.copy("copy wat from stdin", writer=QueuedLibpqWriter(cur)) as copy:
+                for i in range(10):
+                    copy.writer.write(b"a,b\n")
+        except Exception as ex:
+            errors.append(ex)
+
+    # Run in a separate task/thread to fail with a timeout instead of hanging.
+    gather(spawn(worker), timeout=5.0)
+    assert len(errors) == 1
+    assert isinstance(errors[0], ZeroDivisionError)
+
+
 @pytest.mark.parametrize("writer", [LibpqWriter, QueuedLibpqWriter])
 @pytest.mark.parametrize(
     "threshold, flushes",
