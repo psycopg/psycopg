@@ -91,7 +91,7 @@ def parse_cmdline() -> Namespace:
     )
 
     if not (opt := parser.parse_args()).pgroot.is_dir():
-        parser.error("not a valid directory: {opt.pgroot}")
+        parser.error(f"not a valid directory: {opt.pgroot}")
 
     return opt
 
