@@ -16,6 +16,8 @@ Psycopg 3.3.9 (unreleased)
 - Use the C implementation of the wait functions on Windows too. It was
   disabled because of an excessive CPU usage, fixed in Psycopg 3.2.11
   (:ticket:`#645`).
+- Fix binary dumping of `!Int4Range` and other typed ranges and multiranges
+  (:ticket:`#1157`).
 - Fix dumping of Decimal 0 with large exponent (part of :ticket:`#1414`).
 - Close the connection if the query cancellation following a Ctrl-C or a
   task cancellation is interrupted again, instead of leaving it stuck in

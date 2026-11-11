@@ -51,6 +51,7 @@ samples = [
     ),
 ]
 
+# Please keep these two lists aligned.
 range_names = """
     int4range int8range numrange daterange tsrange tstzrange
     """.split()
@@ -133,6 +134,69 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     cur = conn.execute(
         f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in.value}",
         (min, max, bounds, r),
+    )
+    assert cur.fetchone()[0] is True
+
+
+wrapper_samples = [
+    ("int4range", 1, 5, "[)"),
+    ("int4range", 1, 100_000, "[)"),
+    ("int4range", None, 5, "(]"),
+    ("int4range", -(2**31), (2**31) - 1, "[)"),
+    ("int8range", 1, 5, "[)"),
+    ("int8range", 1, 2**40, "[)"),
+    ("int8range", -(2**63), (2**63) - 1, "[)"),
+    ("numrange", 1, 5, "[)"),
+    ("numrange", 1, Decimal("5.5"), "[]"),
+    ("numrange", Decimal("-1.5"), None, "()"),
+    ("daterange", dt.date(2000, 1, 1), dt.date(2020, 1, 1), "[)"),
+    ("daterange", dt.datetime(2000, 1, 1), dt.datetime(2020, 1, 1), "[)"),
+    (
+        "tsrange",
+        dt.datetime(2000, 1, 1, 00, 00),
+        dt.datetime(2020, 1, 1, 23, 59, 59, 999999),
+        "[]",
+    ),
+    (
+        "tstzrange",
+        dt.datetime(2000, 1, 1, 00, 00, tzinfo=tzinfo),
+        dt.datetime(2020, 1, 1, 23, 59, 59, 999999, tzinfo=tzinfo),
+        "()",
+    ),
+]
+
+
+@pytest.mark.parametrize("pgtype, min, max, bounds", wrapper_samples)
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_builtin_range_wrapper(conn, pgtype, min, max, bounds, fmt_in):
+    wrapper = getattr(range_module, range_classes[range_names.index(pgtype)])
+    r = wrapper(min, max, bounds)
+    sub = type2sub[pgtype]
+    cur = conn.execute(
+        f"select {pgtype}(%t::{sub}, %t::{sub}, %s) = %{fmt_in.value}",
+        (min, max, bounds, r),
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_tstzrange_naive_bounds(conn, fmt_in):
+    conn.execute("set timezone to 'Europe/Rome'")
+    r = range_module.TimestamptzRange(dt.datetime(2020, 1, 1), dt.datetime(2020, 7, 1))
+    cur = conn.execute(
+        f"select tstzrange('2020-01-01', '2020-07-01') = %{fmt_in.value}", (r,)
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_tsrange_aware_bounds(conn, fmt_in):
+    conn.execute("set timezone to 'Europe/Rome'")
+    r = range_module.TimestampRange(
+        dt.datetime(2020, 1, 1, tzinfo=tzinfo), dt.datetime(2020, 7, 1, tzinfo=tzinfo)
+    )
+    cur = conn.execute(
+        f"select tsrange('2020-01-01', '2020-07-01') = %{fmt_in.value}", (r,)
     )
     assert cur.fetchone()[0] is True
 
@@ -231,6 +295,25 @@ def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
 
     rec = cur.execute("select r from copyrange order by id").fetchone()
     assert rec[0] == r
+
+
+@pytest.mark.parametrize("pgtype, min, max, bounds", wrapper_samples)
+@pytest.mark.parametrize("format", pq.Format)
+def test_copy_in_wrapper(conn, pgtype, min, max, bounds, format):
+    wrapper = getattr(range_module, range_classes[range_names.index(pgtype)])
+    r = wrapper(min, max, bounds)
+    sub = type2sub[pgtype]
+    cur = conn.cursor()
+    cur.execute(f"create table copyrange (id serial primary key, r {pgtype})")
+
+    with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
+        copy.write_row([r])
+
+    cur.execute(
+        f"select r = {pgtype}(%t::{sub}, %t::{sub}, %s) from copyrange",
+        (min, max, bounds),
+    )
+    assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("bounds", "() empty".split())

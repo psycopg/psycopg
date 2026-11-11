@@ -11,7 +11,7 @@ from psycopg.types.range import Range
 from psycopg.types.multirange import Multirange, MultirangeInfo, register_multirange
 
 from ..utils import eur
-from .test_range import create_test_range
+from .test_range import create_test_range, type2sub, wrapper_samples
 from ..test_adapt import StrNoneBinaryDumper, StrNoneDumper
 
 pytestmark = [
@@ -159,6 +159,7 @@ samples = [
     ),
 ]
 
+# Please keep these two lists aligned.
 mr_names = """
     int4multirange int8multirange nummultirange
     datemultirange tsmultirange tstzmultirange""".split()
@@ -256,6 +257,53 @@ def test_dump_builtin_multirange(conn, pgtype, ranges, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize("rname, min, max, bounds", wrapper_samples)
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_builtin_multirange_wrapper(conn, rname, min, max, bounds, fmt_in):
+    pgtype = rname.replace("range", "multirange")
+    sub = type2sub[rname]
+    wrapper = getattr(multirange, mr_classes[mr_names.index(pgtype)])
+    mr = wrapper([Range(min, max, bounds)])
+    cur = conn.execute(
+        f"select {pgtype}({rname}(%t::{sub}, %t::{sub}, %s)) = %{fmt_in.value}",
+        (min, max, bounds, mr),
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_tstzmultirange_naive_bounds(conn, fmt_in):
+    conn.execute("set timezone to 'Europe/Rome'")
+    mr = multirange.TimestamptzMultirange(
+        [Range(dt.datetime(2020, 1, 1), dt.datetime(2020, 7, 1))]
+    )
+    cur = conn.execute(
+        "select tstzmultirange(tstzrange('2020-01-01', '2020-07-01'))"
+        f" = %{fmt_in.value}",
+        (mr,),
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_tsmultirange_aware_bounds(conn, fmt_in):
+    conn.execute("set timezone to 'Europe/Rome'")
+    mr = multirange.TimestampMultirange(
+        [
+            Range(
+                dt.datetime(2020, 1, 1, tzinfo=tzinfo),
+                dt.datetime(2020, 7, 1, tzinfo=tzinfo),
+            )
+        ]
+    )
+    cur = conn.execute(
+        "select tsmultirange(tsrange('2020-01-01', '2020-07-01'))"
+        f" = %{fmt_in.value}",
+        (mr,),
+    )
+    assert cur.fetchone()[0] is True
+
+
 @pytest.mark.parametrize("pgtype", mr_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_empty(conn, pgtype, fmt_out):
@@ -320,6 +368,26 @@ def test_copy_in(conn, min, max, bounds, format):
         assert rec[0] == mr
     else:
         assert rec[0] == Multirange()
+
+
+@pytest.mark.parametrize("rname, min, max, bounds", wrapper_samples)
+@pytest.mark.parametrize("format", pq.Format)
+def test_copy_in_wrapper(conn, rname, min, max, bounds, format):
+    pgtype = rname.replace("range", "multirange")
+    sub = type2sub[rname]
+    wrapper = getattr(multirange, mr_classes[mr_names.index(pgtype)])
+    mr = wrapper([Range(min, max, bounds)])
+    cur = conn.cursor()
+    cur.execute(f"create table copymr (id serial primary key, mr {pgtype})")
+
+    with cur.copy(f"copy copymr (mr) from stdin (format {format.name})") as copy:
+        copy.write_row([mr])
+
+    cur.execute(
+        f"select mr = {pgtype}({rname}(%t::{sub}, %t::{sub}, %s)) from copymr",
+        (min, max, bounds),
+    )
+    assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("wrapper", mr_classes)

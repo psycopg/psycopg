@@ -16,9 +16,9 @@ from .. import _oids
 from .. import errors as e
 from .. import postgres, sql
 from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, QueryNoTemplate
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, QueryNoTemplate
 from .range import Range, T, dump_range_binary, dump_range_text, fail_dump
-from .range import load_range_binary, load_range_text
+from .range import load_range_binary, load_range_text, make_bound_dump
 from .._oids import INVALID_OID, TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._struct import pack_len, unpack_len
@@ -179,10 +179,19 @@ class TimestamptzMultirange(Multirange[datetime]):
 
 
 class BaseMultirangeDumper(RecursiveDumper):
+    # Specified by the subclasses dumping builtin types.
+    subtype_oid = INVALID_OID
+
     def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         self.sub_dumper: Dumper | None = None
         self._adapt_format = PyFormat.from_pq(self.format)
+
+        # If the class specifies the subtype, dump the bounds using its
+        # dumper (see BaseRangeDumper).
+        self._dump_bound: DumpFunc | None = None
+        if self.subtype_oid != INVALID_OID:
+            self._dump_bound = make_bound_dump(self._tx, self.subtype_oid, self.format)
 
     def get_key(self, obj: Multirange[Any], format: PyFormat) -> DumperKey:
         # If we are a subclass whose oid is specified we don't need upgrade
@@ -224,6 +233,17 @@ class BaseMultirangeDumper(RecursiveDumper):
 
         return dumper
 
+    def _get_dump_bound(self, obj: Multirange[Any]) -> DumpFunc:
+        """
+        Return the function to dump the bounds of the ranges.
+        """
+        if self._dump_bound:
+            return self._dump_bound
+        elif (item := self._get_item(obj)) is not None:
+            return self._tx.get_dumper(item, self._adapt_format).dump
+        else:
+            return fail_dump
+
     def _get_item(self, obj: Multirange[Any]) -> Any:
         """
         Return a member representative of the multirange
@@ -254,11 +274,7 @@ class MultirangeDumper(BaseMultirangeDumper):
         if not obj:
             return b"{}"
 
-        if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
-        else:
-            dump = fail_dump
-
+        dump = self._get_dump_bound(obj)
         out: list[Buffer] = [b"{"]
         for r in obj:
             out.append(dump_range_text(r, dump))
@@ -271,11 +287,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
     format = Format.BINARY
 
     def dump(self, obj: Multirange[Any]) -> Buffer | None:
-        if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
-        else:
-            dump = fail_dump
-
+        dump = self._get_dump_bound(obj)
         out: list[Buffer] = [pack_len(len(obj))]
         for r in obj:
             data = dump_range_binary(r, dump)
@@ -425,26 +437,32 @@ def _make_binary_loader(name: str, oid: int) -> type[MultirangeBinaryLoader[Any]
 
 class Int4MultirangeDumper(MultirangeDumper):
     oid = _oids.INT4MULTIRANGE_OID
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8MultirangeDumper(MultirangeDumper):
     oid = _oids.INT8MULTIRANGE_OID
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericMultirangeDumper(MultirangeDumper):
     oid = _oids.NUMMULTIRANGE_OID
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateMultirangeDumper(MultirangeDumper):
     oid = _oids.DATEMULTIRANGE_OID
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampMultirangeDumper(MultirangeDumper):
     oid = _oids.TSMULTIRANGE_OID
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestamptzMultirangeDumper(MultirangeDumper):
     oid = _oids.TSTZMULTIRANGE_OID
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Binary dumpers for builtin multirange types wrappers
@@ -454,26 +472,32 @@ class TimestamptzMultirangeDumper(MultirangeDumper):
 
 class Int4MultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.INT4MULTIRANGE_OID
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8MultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.INT8MULTIRANGE_OID
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericMultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.NUMMULTIRANGE_OID
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateMultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.DATEMULTIRANGE_OID
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampMultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.TSMULTIRANGE_OID
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestamptzMultirangeBinaryDumper(MultirangeBinaryDumper):
     oid = _oids.TSTZMULTIRANGE_OID
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Text loaders for builtin multirange types

@@ -16,8 +16,9 @@ from .. import _oids
 from .. import errors as e
 from .. import postgres, sql
 from ..pq import Format
+from .._tz import get_tzinfo
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc
-from ..abc import QueryNoTemplate
+from ..abc import QueryNoTemplate, Transformer
 from .._oids import INVALID_OID, TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._compat import TypeVar
@@ -282,10 +283,20 @@ class TimestamptzRange(Range[datetime]):
 
 
 class BaseRangeDumper(RecursiveDumper):
+    # Specified by the subclasses dumping builtin types.
+    subtype_oid = INVALID_OID
+
     def __init__(self, cls: type, context: AdaptContext | None = None):
         super().__init__(cls, context)
         self.sub_dumper: Dumper | None = None
         self._adapt_format = PyFormat.from_pq(self.format)
+
+        # If the class specifies the subtype, dump the bounds using its dumper.
+        # Choosing the dumper from the value might pick a type of a different
+        # size (e.g. int2 for a small int).
+        self._dump_bound: DumpFunc | None = None
+        if self.subtype_oid != INVALID_OID:
+            self._dump_bound = make_bound_dump(self._tx, self.subtype_oid, self.format)
 
     def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
         # If we are a subclass whose oid is specified we don't need upgrade
@@ -325,6 +336,17 @@ class BaseRangeDumper(RecursiveDumper):
 
         return dumper
 
+    def _get_dump_bound(self, obj: Range[Any]) -> DumpFunc:
+        """
+        Return the function to dump the bounds of the range.
+        """
+        if self._dump_bound:
+            return self._dump_bound
+        elif (item := self._get_item(obj)) is not None:
+            return self._tx.get_dumper(item, self._adapt_format).dump
+        else:
+            return fail_dump
+
     def _get_item(self, obj: Range[Any]) -> Any:
         """
         Return a member representative of the range
@@ -348,12 +370,7 @@ class RangeDumper(BaseRangeDumper):
     """
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
-        if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
-        else:
-            dump = fail_dump
-
-        return dump_range_text(obj, dump)
+        return dump_range_text(obj, self._get_dump_bound(obj))
 
 
 def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
@@ -393,12 +410,7 @@ class RangeBinaryDumper(BaseRangeDumper):
     format = Format.BINARY
 
     def dump(self, obj: Range[Any]) -> Buffer | None:
-        if (item := self._get_item(obj)) is not None:
-            dump = self._tx.get_dumper(item, self._adapt_format).dump
-        else:
-            dump = fail_dump
-
-        return dump_range_binary(obj, dump)
+        return dump_range_binary(obj, self._get_dump_bound(obj))
 
 
 def dump_range_binary(obj: Range[Any], dump: DumpFunc) -> Buffer:
@@ -433,6 +445,39 @@ def dump_range_binary(obj: Range[Any], dump: DumpFunc) -> Buffer:
 
     out[0] = head
     return out
+
+
+def make_bound_dump(tx: Transformer, subtype_oid: int, format: Format) -> DumpFunc:
+    """
+    Return the function to dump the bounds of a range with a known subtype.
+    """
+    dcls = tx.adapters.get_dumper_by_oid(subtype_oid, format)
+    dump = dcls(object, tx).dump
+    if format != Format.BINARY:
+        return dump
+
+    # In binary, a datetime can't be dumped as a different type and cast by
+    # the server: convert it as Postgres would do with its text representation.
+    if subtype_oid == _oids.TIMESTAMP_OID:
+
+        def dump_naive(item: datetime) -> Buffer | None:
+            if item.tzinfo is not None:
+                item = item.replace(tzinfo=None)
+            return dump(item)
+
+        return dump_naive
+
+    elif subtype_oid == _oids.TIMESTAMPTZ_OID:
+        conn = tx.connection
+
+        def dump_aware(item: datetime) -> Buffer | None:
+            if item.tzinfo is None:
+                item = item.replace(tzinfo=get_tzinfo(conn.pgconn if conn else None))
+            return dump(item)
+
+        return dump_aware
+
+    return dump
 
 
 def fail_dump(obj: Any) -> Buffer:
@@ -598,26 +643,32 @@ def _make_binary_loader(name: str, oid: int) -> type[RangeBinaryLoader[Any]]:
 
 class Int4RangeDumper(RangeDumper):
     oid = _oids.INT4RANGE_OID
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeDumper(RangeDumper):
     oid = _oids.INT8RANGE_OID
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeDumper(RangeDumper):
     oid = _oids.NUMRANGE_OID
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeDumper(RangeDumper):
     oid = _oids.DATERANGE_OID
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeDumper(RangeDumper):
     oid = _oids.TSRANGE_OID
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestamptzRangeDumper(RangeDumper):
     oid = _oids.TSTZRANGE_OID
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Binary dumpers for builtin range types wrappers
@@ -627,26 +678,32 @@ class TimestamptzRangeDumper(RangeDumper):
 
 class Int4RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT4RANGE_OID
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.INT8RANGE_OID
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.NUMRANGE_OID
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.DATERANGE_OID
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.TSRANGE_OID
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
     oid = _oids.TSTZRANGE_OID
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Text loaders for builtin range types
