@@ -12,6 +12,17 @@ from psycopg._queries import PostgresQuery, _split_query
         (b"", [(b"", 0, PyFormat.AUTO)]),
         (b"foo bar", [(b"foo bar", 0, PyFormat.AUTO)]),
         (b"foo %% bar", [(b"foo % bar", 0, PyFormat.AUTO)]),
+        (b"foo %%%% bar", [(b"foo %% bar", 0, PyFormat.AUTO)]),
+        (b"foo %%", [(b"foo %", 0, PyFormat.AUTO)]),  # %% at the very end of query
+        (b"%%", [(b"%", 0, PyFormat.AUTO)]),  # %% as the entire query
+        # %% immediately before named placeholder
+        (b"%%%(name)s", [(b"%", "name", PyFormat.AUTO), (b"", 0, PyFormat.AUTO)]),
+        # consecutive %%%% then a placeholder
+        (b"%%%% %s", [(b"%% ", 0, PyFormat.AUTO), (b"", 0, PyFormat.AUTO)]),
+        # placeholder then trailing %%
+        (b"%s %%", [(b"", 0, PyFormat.AUTO), (b" %", 0, PyFormat.AUTO)]),
+        # multiple %% groups separated by text
+        (b"a %% b %% c", [(b"a % b % c", 0, PyFormat.AUTO)]),
         (b"%s", [(b"", 0, PyFormat.AUTO), (b"", 0, PyFormat.AUTO)]),
         (b"%s foo", [(b"", 0, PyFormat.AUTO), (b" foo", 0, PyFormat.AUTO)]),
         (b"%b foo", [(b"", 0, PyFormat.BINARY), (b" foo", 0, PyFormat.AUTO)]),
