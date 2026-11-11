@@ -8,7 +8,7 @@ static const int8_t hex_to_int_map[] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0-15
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 16-31
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 32-47
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1,            // 48-63 ('0'-'9')
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,  // 48-63 ('0'-'9')
     -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 64-79 ('A'-'F')
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 80-95
     -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 96-111 ('a'-'f')
@@ -159,17 +159,17 @@ cdef class UUIDLoader(_UUIDLoader):
         cdef uint64_t low = 0
         cdef size_t i
         cdef int ndigits = 0
-        cdef int8_t c
+        cdef int8_t v
 
         for i in range(length):
-            c = data[i]
-            if hex_to_int_map[c] == -1:
+            # Index as unsigned: bytes >= 0x80 would read before the map.
+            if (v := hex_to_int_map[<uint8_t>data[i]]) == -1:
                 continue
 
             if ndigits < 16:
-                high = (high << 4) | hex_to_int_map[c]
+                high = (high << 4) | v
             else:
-                low = (low << 4) | hex_to_int_map[c]
+                low = (low << 4) | v
             ndigits += 1
 
         if ndigits != 32:
