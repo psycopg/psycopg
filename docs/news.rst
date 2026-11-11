@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.3.9 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.3.9
+^^^^^^^^^^^^^
 
 - Use the C implementation of the wait functions on Windows too. It was
   disabled because of an excessive CPU usage, fixed in Psycopg 3.2.11
@@ -47,9 +47,6 @@ Psycopg 3.3.9 (unreleased)
 - Reduce the size of the binary packages by about 15 to 40%, depending on the
   platform.
 
-
-Current release
----------------
 
 Psycopg 3.3.8
 ^^^^^^^^^^^^^
