@@ -502,12 +502,11 @@ class ConnectionPool(Generic[CT], BasePool):
         """Change the size of the pool during runtime."""
         min_size, max_size = self._check_size(min_size, max_size)
 
-        ngrow = max(0, min_size - self._min_size)
-
         logger.info(
             "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
         )
         with self._lock:
+            ngrow = max(0, min_size - self._nconns)
             self._min_size = min_size
             self._max_size = max_size
             self._nconns += ngrow
