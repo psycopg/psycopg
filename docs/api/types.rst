@@ -166,3 +166,250 @@ object. Otherwise use the function specified by `set_json_dumps()`.
 
 .. autofunction:: set_json_dumps
 .. autofunction:: set_json_loads
+
+
+.. _numeric-wrappers:
+
+Numeric wrappers
+-----------------
+
+.. currentmodule:: psycopg.types.numeric
+
+Wrappers to force a Python number to be dumped as a specific PostgreSQL
+type, overriding the automatic choice described in :ref:`adapt-numbers`.
+
+.. code:: python
+
+    >>> from psycopg.types.numeric import Int8
+    >>> conn.execute("SELECT pg_typeof(%s)", [Int8(1)]).fetchone()[0]
+    'bigint'
+
+.. autoclass:: Int2
+.. autoclass:: Int4
+.. autoclass:: Int8
+.. autoclass:: IntNumeric
+.. autoclass:: Float4
+.. autoclass:: Float8
+.. autoclass:: Oid
+
+
+.. _range-api:
+
+Range adapters
+--------------
+
+See :ref:`adapt-range` for details.
+
+.. currentmodule:: psycopg.types.range
+
+.. autoclass:: Range
+
+    This Python type is only used to pass and retrieve range values to and
+    from PostgreSQL and doesn't attempt to replicate the PostgreSQL range
+    features: it doesn't perform normalization and doesn't implement all the
+    operators__ supported by the database.
+
+    PostgreSQL will perform normalisation on `!Range` objects used as query
+    parameters, so, when they are fetched back, they will be found in the
+    normal form (for instance ranges on integers will have `[)` bounds).
+
+    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
+
+    `!Range` objects are immutable, hashable, and support the `!in` operator
+    (checking if an element is within the range). They can be tested for
+    equivalence. Empty ranges evaluate to `!False` in a boolean context,
+    nonempty ones evaluate to `!True`.
+
+    `!Range` objects have the following attributes:
+
+    .. autoattribute:: isempty
+    .. autoattribute:: lower
+    .. autoattribute:: upper
+    .. autoattribute:: lower_inc
+    .. autoattribute:: upper_inc
+    .. autoattribute:: lower_inf
+    .. autoattribute:: upper_inf
+
+.. autoclass:: RangeInfo
+
+    `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+    documentation for generic details, especially the
+    `~psycopg.types.TypeInfo.fetch()` method.
+
+.. autofunction:: register_range
+
+
+.. _multirange-api:
+
+Multirange adapters
+-------------------
+
+See :ref:`adapt-multirange` for details.
+
+.. currentmodule:: psycopg.types.multirange
+
+.. autoclass:: Multirange
+
+    This Python type is only used to pass and retrieve multirange values to
+    and from PostgreSQL and doesn't attempt to replicate the PostgreSQL
+    multirange features: overlapping items are not merged, empty ranges are
+    not discarded, the items are not ordered, the behaviour of `multirange
+    operators`__ is not replicated in Python.
+
+    PostgreSQL will perform normalisation on `!Multirange` objects used as
+    query parameters, so, when they are fetched back, they will be found
+    ordered, with overlapping ranges merged, etc.
+
+    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#MULTIRANGE-OPERATORS-TABLE
+
+    `!Multirange` objects are a `~collections.abc.MutableSequence` and are
+    totally ordered: they behave pretty much like a list of `!Range`. Like
+    Range, they are `~typing.Generic` on the subtype of their range, so you
+    can declare a variable to be `!Multirange[date]` and mypy will complain if
+    you try to add it a `Range[Decimal]`.
+
+.. autoclass:: MultirangeInfo
+
+    `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+    documentation for general details, especially the
+    `~psycopg.types.TypeInfo.fetch()` method.
+
+.. autofunction:: register_multirange
+
+
+.. _composite-api:
+
+Composite adapters
+------------------
+
+See :ref:`adapt-composite` for details.
+
+.. currentmodule:: psycopg.types.composite
+
+.. autoclass:: CompositeInfo
+
+   `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   documentation for the general usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: field_names
+       :type: tuple[str, ...]
+
+       Tuple containing the field names of the composite type.
+
+   .. attribute:: field_types
+       :type: tuple[int, ...]
+
+       Tuple containing the field OIDs of the composite type.
+
+   .. attribute:: python_type
+       :type: Callable | None
+
+       After `register_composite()` is called, it will contain the Python type
+       adapting the registered composite.
+
+.. autofunction:: register_composite
+
+   After registering the `CompositeInfo`, fetching data of the registered
+   composite type will invoke `!factory` to create corresponding Python
+   objects. If no factory is specified, Psycopg will generate a
+   `~collections.namedtuple` with the same fields of the composite type, and
+   use it to return fetched data. The factory will be made available on
+   `!info.`\ `~CompositeInfo.python_type`.
+
+   If the `!factory` is a type (and not a generic callable) then dumpers for
+   such type are created and registered too, so that passing objects of that
+   type to a query will adapt them to the registered composite type. This
+   assumes that the `!factory` type is a sequence; if this is not the case you
+   can specify the `!make_sequence` parameter: a function taking the object to
+   dump and the composite info and returning a sequence of values. See
+   :ref:`composite-non-sequence`.
+
+   The `!factory` callable will be called with the sequence of value from the
+   composite. If passing the sequence of positional arguments is not suitable
+   for the `!factory` type you can specify the `!make_object` parameter: a
+   function taking the sequence of composite values and the type info, and
+   which should return a new instance of the object to load. See
+   :ref:`composite-non-sequence`.
+
+   .. versionadded:: 3.3
+        the `!make_object` and `!make_sequence` parameters.
+
+
+.. _hstore-api:
+
+Hstore adapters
+---------------
+
+See :ref:`adapt-hstore` for details.
+
+.. currentmodule:: psycopg.types.hstore
+
+.. autofunction:: register_hstore
+
+
+.. _shapely-api:
+
+Shapely adapters
+----------------
+
+See :ref:`adapt-shapely` for details.
+
+.. currentmodule:: psycopg.types.shapely
+
+.. function:: register_shapely
+
+    Register Shapely dumper and loaders.
+
+    After invoking this function on an adapter, the queries retrieving
+    PostGIS geometry objects will return Shapely's shape object instances
+    both in text and binary mode.
+
+    Similarly, shape objects can be sent to the database.
+
+    This requires the Shapely library to be installed.
+
+    :param info: The object with the information about the geometry type.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
+
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
+
+
+.. _enum-api:
+
+Enum adapters
+-------------
+
+See :ref:`adapt-enum` for details.
+
+.. currentmodule:: psycopg.types.enum
+
+.. autoclass:: EnumInfo
+
+   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
+   latter's documentation for generic usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: labels
+
+       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
+       in the PostgreSQL enum type.
+
+   .. attribute:: enum
+
+       After `register_enum()` is called, it will contain the Python type
+       mapping to the registered enum.
+
+.. autofunction:: register_enum
+
+   After registering, fetching data of the registered enum will cast
+   PostgreSQL enum labels into corresponding Python enum members.
+
+   If no `!enum` is specified, a new `Enum` is created based on
+   PostgreSQL enum labels.

@@ -35,56 +35,6 @@ Before using a composite type it is necessary to get information about it
 using the `~psycopg.types.composite.CompositeInfo` class and to register it
 using `~psycopg.types.composite.register_composite()`.
 
-.. autoclass:: psycopg.types.composite.CompositeInfo
-
-   `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for the general usage, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-   .. attribute:: field_names
-       :type: tuple[str, ...]
-
-       Tuple containing the field names of the composite type.
-
-   .. attribute:: field_types
-       :type: tuple[int, ...]
-
-       Tuple containing the field OIDs of the composite type.
-
-   .. attribute:: python_type
-       :type: Callable | None
-
-       After `register_composite()` is called, it will contain the Python type
-       adapting the registered composite.
-
-.. autofunction:: psycopg.types.composite.register_composite
-
-   After registering the `CompositeInfo`, fetching data of the registered
-   composite type will invoke `!factory` to create corresponding Python
-   objects. If no factory is specified, Psycopg will generate a
-   `~collection.namedtuple` with the same fields of the composite type, and
-   use it to return fetched data. The factory will be made available on
-   `!info.`\ `~CompositeInfo.python_type`.
-
-   If the `!factory` is a type (and not a generic callable) then dumpers for
-   such type are created and registered too, so that passing objects of that
-   type to a query will adapt them to the registered composite type. This
-   assumes that the `!factory` type is a sequence; if this is not the case you
-   can specify the `!make_sequence` parameter: a function taking the object to
-   dump and the composite info and returning a sequence of values. See
-   :ref:`composite-non-sequence`.
-
-   The `!factory` callable will be called with the sequence of value from the
-   composite. If passing the sequence of positional arguments is not suitable
-   for the `!factory` type you can specify the `!make_object` parameter: a
-   function taking the sequence of composite values and the type info, and
-   which should return a new instance of the object to load. See
-   :ref:`composite-non-sequence`.
-
-   .. versionadded:: 3.3
-        the `!make_object` and `!make_sequence` parameters.
-
-
 .. _composite-sequence:
 
 Example: Python sequence
@@ -193,34 +143,6 @@ All the PostgreSQL range types are loaded as the `~psycopg.types.range.Range`
 Python type, which is a `~typing.Generic` type and can hold bounds of
 different types.
 
-.. autoclass:: psycopg.types.range.Range
-
-    This Python type is only used to pass and retrieve range values to and
-    from PostgreSQL and doesn't attempt to replicate the PostgreSQL range
-    features: it doesn't perform normalization and doesn't implement all the
-    operators__ supported by the database.
-
-    PostgreSQL will perform normalisation on `!Range` objects used as query
-    parameters, so, when they are fetched back, they will be found in the
-    normal form (for instance ranges on integers will have `[)` bounds).
-
-    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
-
-    `!Range` objects are immutable, hashable, and support the `!in` operator
-    (checking if an element is within the range). They can be tested for
-    equivalence. Empty ranges evaluate to `!False` in a boolean context,
-    nonempty ones evaluate to `!True`.
-
-    `!Range` objects have the following attributes:
-
-    .. autoattribute:: isempty
-    .. autoattribute:: lower
-    .. autoattribute:: upper
-    .. autoattribute:: lower_inc
-    .. autoattribute:: upper_inc
-    .. autoattribute:: lower_inf
-    .. autoattribute:: upper_inf
-
 The built-in range objects are adapted automatically: if a `!Range` objects
 contains `~datetime.date` bounds, it is dumped using the :sql:`daterange` OID,
 and of course :sql:`daterange` values are loaded back as `!Range[date]`.
@@ -228,14 +150,6 @@ and of course :sql:`daterange` values are loaded back as `!Range[date]`.
 If you create your own range type you can use `~psycopg.types.range.RangeInfo`
 and `~psycopg.types.range.register_range()` to associate the range type with
 its subtype and make it work like the builtin ones.
-
-.. autoclass:: psycopg.types.range.RangeInfo
-
-   `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-.. autofunction:: psycopg.types.range.register_range
 
 Example::
 
@@ -270,26 +184,6 @@ All the PostgreSQL range types are loaded as the
 `~psycopg.types.multirange.Multirange` Python type, which is a mutable
 sequence of `~psycopg.types.range.Range` elements.
 
-.. autoclass:: psycopg.types.multirange.Multirange
-
-    This Python type is only used to pass and retrieve multirange values to
-    and from PostgreSQL and doesn't attempt to replicate the PostgreSQL
-    multirange features: overlapping items are not merged, empty ranges are
-    not discarded, the items are not ordered, the behaviour of `multirange
-    operators`__ is not replicated in Python.
-
-    PostgreSQL will perform normalisation on `!Multirange` objects used as
-    query parameters, so, when they are fetched back, they will be found
-    ordered, with overlapping ranges merged, etc.
-
-    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#MULTIRANGE-OPERATORS-TABLE
-
-    `!Multirange` objects are a `~collections.abc.MutableSequence` and are
-    totally ordered: they behave pretty much like a list of `!Range`. Like
-    Range, they are `~typing.Generic` on the subtype of their range, so you
-    can declare a variable to be `!Multirange[date]` and mypy will complain if
-    you try to add it a `Range[Decimal]`.
-
 Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
 automatically: if a `!Multirange` object contains `!Range` with
 `~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
@@ -299,14 +193,6 @@ If you have created your own range type you can use
 `~psycopg.types.multirange.MultirangeInfo` and
 `~psycopg.types.multirange.register_multirange()` to associate the resulting
 multirange type with its subtype and make it work like the builtin ones.
-
-.. autoclass:: psycopg.types.multirange.MultirangeInfo
-
-   `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for general details, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-.. autofunction:: psycopg.types.multirange.register_multirange
 
 Example::
 
@@ -363,8 +249,6 @@ resulting object can be passed to
 |hstore| and parsing |hstore| back to `!dict`, in the context where the
 adapter is registered.
 
-.. autofunction:: psycopg.types.hstore.register_hstore
-
 Example::
 
     >>> from psycopg.types import TypeInfo
@@ -414,29 +298,6 @@ resulting object can be passed to `~psycopg.types.shapely.register_shapely()`
 to configure dumping `shape`_ instances to :sql:`geometry` columns and parsing
 :sql:`geometry` data back to `!shape` instances, in the context where the
 adapters are registered.
-
-.. function:: psycopg.types.shapely.register_shapely
-
-    Register Shapely dumper and loaders.
-
-    After invoking this function on an adapter, the queries retrieving
-    PostGIS geometry objects will return Shapely's shape object instances
-    both in text and binary mode.
-
-    Similarly, shape objects can be sent to the database.
-
-    This requires the Shapely library to be installed.
-
-    :param info: The object with the information about the geometry type.
-    :param context: The context where to register the adapters. If `!None`,
-        register it globally.
-
-    .. note::
-
-        Registering the adapters doesn't affect objects already created, even
-        if they are children of the registered context. For instance,
-        registering the adapter globally doesn't affect already existing
-        connections.
 
 Example::
 
