@@ -220,6 +220,23 @@ def test_queue_size(pool_cls, dsn):
     assert p.get_stats()["requests_errors"] == 1
 
 
+def test_timed_out_waiter_frees_queue_slot(pool_cls, dsn):
+    with pool_cls(dsn, min_size=min_size(pool_cls), max_size=1, max_waiting=1) as p:
+        p.wait()
+        held = p.getconn()
+        try:
+            for _ in range(2):
+                with pytest.raises(pool.PoolTimeout):
+                    p.getconn(timeout=0.01)
+                assert p.get_stats()["requests_waiting"] == 0
+        finally:
+            p.putconn(held)
+
+        with p.connection(timeout=1) as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
