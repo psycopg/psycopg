@@ -158,13 +158,13 @@ class ConnectionPool(Generic[CT], BasePool):
             self._pool_full_event = Event()
 
         logger.info("waiting for pool %r initialization", self.name)
-        if not self._pool_full_event.wait(timeout):
-            self.close()  # stop all the tasks
-            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
-
-        with self._lock:
-            assert self._pool_full_event
-            self._pool_full_event = None
+        try:
+            if not self._pool_full_event.wait(timeout):
+                self.close()  # stop all the tasks
+                raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
+        finally:
+            with self._lock:
+                self._pool_full_event = None
 
         logger.info("pool %r is ready to use", self.name)
 
