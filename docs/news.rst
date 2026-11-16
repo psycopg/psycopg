@@ -7,6 +7,17 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.10 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Raise `!DataError` dumping out-of-range ints to binary int2 or int4: the C
+  implementation sent a wrong value, the Python one failed with a struct error
+  (:ticket:`#1498`).
+
+
 Current release
 ---------------
 
