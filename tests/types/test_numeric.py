@@ -11,7 +11,8 @@ import psycopg
 from psycopg import pq, sql
 from psycopg.abc import Buffer
 from psycopg.adapt import PyFormat, Transformer
-from psycopg.types.numeric import FloatLoader, Int8, Int8BinaryDumper, Int8Dumper
+from psycopg.types.numeric import FloatLoader, Int2, Int4, Int8, Int8BinaryDumper
+from psycopg.types.numeric import Int8Dumper
 
 from ..fix_crdb import is_crdb, skip_crdb
 
@@ -90,6 +91,33 @@ def test_dump_int_numeric_binary_limits():
     for val in (limit, -limit):
         with pytest.raises(psycopg.DataError, match="maximum 32768 base-10000 digits"):
             Transformer().dump_sequence([val], [PyFormat.AUTO])
+
+
+@pytest.mark.parametrize(
+    "wrapper, val",
+    [
+        (Int2, 2**15),
+        (Int2, -(2**15) - 1),
+        (Int2, 2**31),
+        (Int4, 2**31),
+        (Int4, -(2**31) - 1),
+        (Int4, 2**32 + 5),
+    ],
+)
+def test_dump_int_binary_out_of_range(wrapper, val):
+    name = wrapper.__name__.lower()
+    with pytest.raises(psycopg.DataError, match=f"out of range for {name}"):
+        Transformer().dump_sequence([wrapper(val)], [PyFormat.BINARY])
+
+
+@pytest.mark.parametrize(
+    "wrapper, val",
+    [(Int2, 2**15 - 1), (Int2, -(2**15)), (Int4, 2**31 - 1), (Int4, -(2**31))],
+)
+def test_dump_int_binary_range_limits(wrapper, val):
+    data = Transformer().dump_sequence([wrapper(val)], [PyFormat.BINARY])[0]
+    assert data is not None
+    assert int.from_bytes(data, "big", signed=True) == val
 
 
 def test_dump_decimal_numeric_binary_limits():

@@ -168,14 +168,20 @@ class Int2BinaryDumper(Int2Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> Buffer | None:
-        return pack_int2(obj)
+        try:
+            return pack_int2(obj)
+        except struct.error:
+            raise e.DataError(f"int out of range for int2: {obj}") from None
 
 
 class Int4BinaryDumper(Int4Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> Buffer | None:
-        return pack_int4(obj)
+        try:
+            return pack_int4(obj)
+        except struct.error:
+            raise e.DataError(f"int out of range for int4: {obj}") from None
 
 
 class Int8BinaryDumper(Int8Dumper):
