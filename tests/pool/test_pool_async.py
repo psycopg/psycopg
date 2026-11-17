@@ -744,6 +744,81 @@ async def test_check_idle(dsn):
             assert conn.info.transaction_status == TransactionStatus.IDLE
 
 
+@skip_sync
+async def test_check_cancelled(dsn, caplog, monkeypatch):
+    # A task cancellation hitting `check()` must propagate, and must not
+    # discard the healthy connection it interrupted nor lose the connections
+    # not checked yet (see #1401 for the same bug in the `getconn()` check).
+    from asyncio import CancelledError
+
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+    orig_check = pool.AsyncConnectionPool.check_connection
+
+    async def slow_check(conn):
+        # Give the cancellation a chance to land while the check awaits.
+        await asleep(0.2)
+        await orig_check(conn)
+
+    monkeypatch.setattr(
+        pool.AsyncConnectionPool, "check_connection", staticmethod(slow_check)
+    )
+
+    async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
+        await p.wait(1.0)
+        conns = list(p._pool)
+
+        t = spawn(p.check)
+        await asleep(0.1)
+        t.cancel()
+        with pytest.raises(CancelledError):
+            await t
+
+        # The connection interrupted during the check is returned to the pool
+        # and not replaced; the connections not checked yet are back too.
+        assert p.get_stats()["pool_available"] == 3
+        assert p.get_stats().get("connections_lost", 0) == 0
+        assert not any(conn.closed for conn in conns)
+        assert set(map(id, p._pool)) == set(map(id, conns))
+        assert not caplog.records
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
+async def test_check_interrupted(dsn, monkeypatch):
+    # KeyboardInterrupt (or any BaseException) escaping `check()` must leave
+    # the pool with all its connections: `check()` empties the pool before
+    # testing the connections, so the ones not tested yet would be lost.
+    orig_check = pool.AsyncConnectionPool.check_connection
+    do_raise = True
+
+    async def check(conn):
+        nonlocal do_raise
+        if do_raise:
+            do_raise = False
+            raise KeyboardInterrupt()
+        await orig_check(conn)
+
+    monkeypatch.setattr(
+        pool.AsyncConnectionPool, "check_connection", staticmethod(check)
+    )
+
+    async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
+        await p.wait(1.0)
+        conns = list(p._pool)
+
+        with pytest.raises(KeyboardInterrupt):
+            await p.check()
+
+        assert p.get_stats()["pool_available"] == 3
+        assert not any(conn.closed for conn in conns)
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
 @pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_connect_no_check(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=2) as p:

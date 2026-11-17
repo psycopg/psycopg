@@ -545,10 +545,22 @@ class ConnectionPool(Generic[CT], BasePool):
             # Check for broken connections
             try:
                 self.check_connection(conn)
-            except CLIENT_EXCEPTIONS:
+            except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
+            except BaseException:
+                # Cancellation, KeyboardInterrupt etc.: the check was
+                # interrupted, the connection is not known to be broken.
+                # Return it through the normal path, which disposes of it if
+                # the interruption left it unusable (see #1401 for the same
+                # problem in the getconn() check), and put back the
+                # connections not checked yet: they are still counted in
+                # _nconns, so nothing would replace them if we lost them.
+                self._putconn(conn, from_getconn=True)
+                for conn in conns:
+                    self._add_to_pool(conn)
+                raise
             else:
                 self._add_to_pool(conn)
 
