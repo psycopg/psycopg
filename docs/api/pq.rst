@@ -189,9 +189,9 @@ Enumerations
 
 .. autoclass:: DiagnosticField
     :members:
-    :undoc-members:
 
-    .. seealso:: :pq:`PQresultErrorField` for a description of these values.
+    .. seealso:: :pq:`PQresultErrorField` for a description of these values,
+        or the attributes of `~psycopg.errors.Diagnostic`, which expose them.
 
 
 .. autoclass:: Ping

@@ -104,35 +104,38 @@ Error diagnostics
 
     All the information available from the :pq:`PQresultErrorField()` function
     are exposed as attributes by the object. For instance the `!severity`
-    attribute returns the `!PG_DIAG_SEVERITY` code. Please refer to the
-    PostgreSQL documentation for the meaning of all the attributes.
+    attribute returns the `!PG_DIAG_SEVERITY` code.
 
-    The attributes available are:
+    Every attribute is a string with the error field if available; `!None` if
+    not available. The attribute value is available only for errors sent by
+    the server: not all the fields are available for all the errors and for
+    all the server versions.
 
-    .. attribute::
-        column_name
-        constraint_name
-        context
-        datatype_name
-        internal_position
-        internal_query
-        message_detail
-        message_hint
-        message_primary
-        schema_name
-        severity
-        severity_nonlocalized
-        source_file
-        source_function
-        source_line
-        sqlstate
-        statement_position
-        table_name
+    .. note::
 
-        A string with the error field if available; `!None` if not available.
-        The attribute value is available only for errors sent by the server:
-        not all the fields are available for all the errors and for all the
-        server versions.
+        The fields for schema name, table name, column name, data type name,
+        and constraint name are supplied only for a limited number of error
+        types. Do not assume that the presence of any of these fields
+        guarantees the presence of another field.
+
+    .. autoattribute:: severity
+    .. autoattribute:: severity_nonlocalized
+    .. autoattribute:: sqlstate
+    .. autoattribute:: message_primary
+    .. autoattribute:: message_detail
+    .. autoattribute:: message_hint
+    .. autoattribute:: statement_position
+    .. autoattribute:: internal_position
+    .. autoattribute:: internal_query
+    .. autoattribute:: context
+    .. autoattribute:: schema_name
+    .. autoattribute:: table_name
+    .. autoattribute:: column_name
+    .. autoattribute:: datatype_name
+    .. autoattribute:: constraint_name
+    .. autoattribute:: source_file
+    .. autoattribute:: source_line
+    .. autoattribute:: source_function
 
 
 .. _sqlstate-exceptions:

@@ -201,32 +201,75 @@ class PipelineStatus(IntEnum):
 
 
 class DiagnosticField(IntEnum):
-    """
-    Fields in an error report.
-    """
+    """Fields in an error report."""
 
     __module__ = "psycopg.pq"
 
     # from src/include/postgres_ext.h
 
     SEVERITY = ord("S")
+    """The severity of the notice or error."""
+
     SEVERITY_NONLOCALIZED = ord("V")
+    """The severity of the notice or error, never localized."""
+
     SQLSTATE = ord("C")
+    """The SQLSTATE code for the error."""
+
     MESSAGE_PRIMARY = ord("M")
+    """The primary human-readable error message (typically one line)."""
+
     MESSAGE_DETAIL = ord("D")
+    """
+    An optional secondary error message carrying more detail about the problem.
+    """
+
     MESSAGE_HINT = ord("H")
+    """An optional suggestion what to do about the problem."""
+
     STATEMENT_POSITION = ord("P")
+    """
+    An error cursor position as an index into the original statement string.
+    """
+
     INTERNAL_POSITION = ord("p")
+    """An error cursor position into an internally generated command."""
+
     INTERNAL_QUERY = ord("q")
+    """The text of a failed internally-generated command."""
+
     CONTEXT = ord("W")
+    """An indication of the context in which the error occurred."""
+
     SCHEMA_NAME = ord("s")
+    """
+    The name of the schema containing the object associated with the error.
+    """
+
     TABLE_NAME = ord("t")
+    """The name of the table associated with the error."""
+
     COLUMN_NAME = ord("c")
+    """The name of the table column associated with the error."""
+
     DATATYPE_NAME = ord("d")
+    """The name of the data type associated with the error."""
+
     CONSTRAINT_NAME = ord("n")
+    """The name of the constraint associated with the error."""
+
     SOURCE_FILE = ord("F")
+    """
+    The file name of the source-code location where the error was reported.
+    """
+
     SOURCE_LINE = ord("L")
+    """
+    The line number of the source-code location where the error was reported.
+    """
+
     SOURCE_FUNCTION = ord("R")
+    """The name of the source-code function reporting the error."""
 
 
 class Format(IntEnum):
