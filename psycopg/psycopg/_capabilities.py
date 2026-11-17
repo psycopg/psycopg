@@ -19,7 +19,7 @@ class Capabilities:
         self._cache: dict[str, str] = {}
 
     def has_full_protocol_version(self, check: bool = False) -> bool:
-        """Check if the `PGconn.full_protocol_version()` method is implemented.
+        """Check if the `pq.PGconn.full_protocol_version` attribute is implemented.
 
         If the method is implemented, then `ConnectionInfo.full_protocol_version`
         will return a meaningful value.
@@ -31,7 +31,7 @@ class Capabilities:
         )
 
     def has_encrypt_password(self, check: bool = False) -> bool:
-        """Check if the `PGconn.encrypt_password()` method is implemented.
+        """Check if the `pq.PGconn.encrypt_password()` method is implemented.
 
         The feature requires libpq 10.0 or greater.
         """
@@ -83,7 +83,7 @@ class Capabilities:
         )
 
     def has_send_close_prepared(self, check: bool = False) -> bool:
-        """Check if the `pq.PGconn.send_closed_prepared()` method is implemented.
+        """Check if the `pq.PGconn.send_close_prepared()` method is implemented.
 
         The feature requires libpq 17.0 or greater.
         """

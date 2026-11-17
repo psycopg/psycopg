@@ -24,29 +24,82 @@ OK = ConnStatus.OK
 
 
 class PGnotify(NamedTuple):
+    """
+    A notification received from the server.
+
+    Returned by `PGconn.notifies()`.
+    """
+
     relname: bytes
+    """The name of the notification channel."""
+
     be_pid: int
+    """The process ID of the notifying server process."""
+
     extra: bytes
+    """The payload of the notification."""
 
 
 class ConninfoOption(NamedTuple):
+    """
+    A connection option and its value.
+
+    Returned by `PGconn.info`, `Conninfo.get_defaults()`, and
+    `Conninfo.parse()`.
+    """
+
     keyword: bytes
+    """The keyword of the option, for instance ``b"dbname"``."""
+
     envvar: bytes | None
+    """The environment variable providing the default value, if any."""
+
     compiled: bytes | None
+    """The compiled-in default value, if any."""
+
     val: bytes | None
+    """The current value of the option, or `!None` if not set."""
+
     label: bytes
+    """A label for the option, to use in a connection dialog."""
+
     dispchar: bytes
+    """How to display the option in a connection dialog: ``b""`` to display
+    the value as it is, ``b"*"`` for a password to hide, ``b"D"`` for a
+    debug option not to display by default.
+    """
+
     dispsize: int
+    """The size of the field in a connection dialog, in characters."""
 
 
 class PGresAttDesc(NamedTuple):
+    """
+    The description of a result column.
+
+    Used by `PGresult.set_attributes()`.
+    """
+
     name: bytes
+    """The name of the column. See `PGresult.fname()`."""
+
     tableid: int
+    """The OID of the table the column comes from. See `PGresult.ftable()`."""
+
     columnid: int
+    """The number of the column in its table. See `PGresult.ftablecol()`."""
+
     format: int
+    """The `Format` of the column. See `PGresult.fformat()`."""
+
     typid: int
+    """The OID of the data type of the column. See `PGresult.ftype()`."""
+
     typlen: int
+    """The size of the data type of the column. See `PGresult.fsize()`."""
+
     atttypmod: int
+    """The type modifier of the column. See `PGresult.fmod()`."""
 
 
 @cache
