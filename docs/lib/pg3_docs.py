@@ -66,7 +66,7 @@ def type_field_to_signature(app, domain, objtype, contentnode):
     if domain != "py" or objtype not in ("attribute", "property"):
         return
 
-    signodes = list(contentnode.parent.findall(addnodes.desc_signature))
+    signodes = own_signatures(contentnode)
     if found := find_type_field(contentnode):
         flist, field = found
         typenodes = unliteral(field[1][0].deepcopy()).children
@@ -98,6 +98,15 @@ def type_field_to_signature(app, domain, objtype, contentnode):
                 *(n.deepcopy() for n in typenodes),
             ),
         )
+
+
+def own_signatures(contentnode):
+    """Return the signatures of an object description, not of its members."""
+    from sphinx import addnodes
+
+    return [
+        n for n in contentnode.parent.children if isinstance(n, addnodes.desc_signature)
+    ]
 
 
 def unliteral(node):
@@ -137,6 +146,18 @@ def find_type_field(contentnode):
     return None
 
 
+def tidy_signature(app, what, name, obj, options, signature, return_annotation):
+    """
+    Render a default such as ``<class 'psycopg.Connection'>`` as its name.
+
+    The repr of a class is not valid Python, so the signature would not be
+    parsed: it would be rendered as plain text, on a single line.
+    """
+    if signature:
+        signature = re.sub(r"<class '(?:[\w.]+\.)?(\w+)'>", r"\1", signature)
+    return signature, return_annotation
+
+
 # Objects and modules from the Python docs that are not useful to link
 unlinked_objects = {"typing.Any", "typing.Self"}
 unlinked_modules = {"collections.abc"}
@@ -173,6 +194,7 @@ def unlink_builtins(app, env, node, contnode):
 def setup(app):
     app.connect("missing-reference", unlink_builtins, priority=400)
     app.connect("autodoc-before-process-signature", before_process_signature)
+    app.connect("autodoc-process-signature", tidy_signature)
     app.connect("autodoc-process-docstring", record_property_type)
     app.connect("object-description-transform", type_field_to_signature)
 
