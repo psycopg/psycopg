@@ -21,32 +21,9 @@ def before_process_signature(app, obj, bound_method):
             del ann["return"]
 
 
-# Type annotations of the properties documented as attributes, by full name
-property_types: dict[str, str] = {}
-
-
-def record_property_type(app, what, name, obj, options, lines):
-    """
-    Record the return annotation of a property documented as attribute.
-
-    Autodoc ignores it, unlike for an ``autoproperty`` directive.
-    """
-    from sphinx.util.typing import stringify_annotation
-    from sphinx.util.inspect import signature
-
-    if what != "attribute" or not isinstance(obj, property) or not obj.fget:
-        return
-    try:
-        sig = signature(obj.fget)
-    except (TypeError, ValueError):
-        return
-    if sig.return_annotation is not sig.empty:
-        property_types[name] = stringify_annotation(sig.return_annotation, "smart")
-
-
 def type_field_to_signature(app, domain, objtype, contentnode):
     """
-    Add the type of an attribute to its signature.
+    Add the type of an attribute (or module data) to its signature.
 
     Convert a docstring such as::
 
@@ -57,13 +34,14 @@ def type_field_to_signature(app, domain, objtype, contentnode):
     into a signature such as ``connection: Connection``. The type in the
     docstring replaces the one from the annotations, if any.
 
-    If the attribute is a property with no type in the docstring, use its
-    return annotation.
+    If an attribute has no type in the docstring and none in the signature
+    (a ``:type:`` option, or one found by autodoc), use the annotation of the
+    object: the return annotation of a property, or the class annotation.
+    Autodoc doesn't use the former, and hand-written directives neither.
     """
-    from sphinx import addnodes
     from sphinx.domains.python._annotations import _parse_annotation
 
-    if domain != "py" or objtype not in ("attribute", "property"):
+    if domain != "py" or objtype not in ("attribute", "property", "data"):
         return
 
     signodes = own_signatures(contentnode)
@@ -73,31 +51,88 @@ def type_field_to_signature(app, domain, objtype, contentnode):
         flist.remove(field)
         if not flist.children:
             contentnode.remove(flist)
-    elif objtype == "attribute" and signodes:
-        sig = signodes[0]
-        fullname = f"{sig.get('module')}.{sig.get('fullname')}"
-        if not (ann := property_types.get(fullname)):
-            return
-        typenodes = _parse_annotation(ann, app.env)
+        for signode in signodes:
+            set_signature_type(signode, typenodes)
+
+    elif objtype == "attribute":
+        for signode in signodes:
+            if signature_type(signode) is None:
+                if ann := introspect_type(signode):
+                    set_signature_type(signode, _parse_annotation(ann, app.env))
+
+
+def signature_type(signode):
+    """Return the ``: type`` annotation node of a signature, None if missing."""
+    from sphinx import addnodes
+
+    for ann in signode.findall(addnodes.desc_annotation):
+        if ann.astext().startswith(":"):
+            return ann
+    return None
+
+
+def set_signature_type(signode, typenodes):
+    """Set the ``: type`` annotation of a signature, replacing an existing one."""
+    from sphinx import addnodes
+
+    if (ann := signature_type(signode)) is not None:
+        ann.parent.remove(ann)
+
+    name = next(signode.findall(addnodes.desc_name))
+    name.parent.insert(
+        name.parent.index(name) + 1,
+        addnodes.desc_annotation(
+            "",
+            "",
+            addnodes.desc_sig_punctuation("", ":"),
+            addnodes.desc_sig_space(),
+            *(n.deepcopy() for n in typenodes),
+        ),
+    )
+
+
+def introspect_type(signode):
+    """
+    Return the annotation of the attribute described by a signature, as string.
+
+    Return None if the object or the annotation can't be found.
+    """
+    import typing
+    import inspect
+
+    from sphinx.util.typing import stringify_annotation
+    from sphinx.util.inspect import signature
+
+    try:
+        owner = importlib.import_module(signode["module"])
+        *parents, name = signode["fullname"].split(".")
+        for part in parents:
+            owner = getattr(owner, part)
+    except (KeyError, ImportError, AttributeError):
+        return None
+    if not isinstance(owner, type):
+        return None
+
+    ann = inspect.Parameter.empty
+    attr = inspect.getattr_static(owner, name, None)
+    if isinstance(attr, property):
+        try:
+            ann = signature(attr.fget).return_annotation
+        except (TypeError, ValueError):
+            return None
     else:
-        return
+        for cls in owner.__mro__:
+            try:
+                hints = typing.get_type_hints(cls)
+            except Exception:
+                hints = inspect.get_annotations(cls)
+            if name in hints:
+                ann = hints[name]
+                break
 
-    for signode in signodes:
-        for ann in list(signode.findall(addnodes.desc_annotation)):
-            if ann.astext().startswith(":"):
-                ann.parent.remove(ann)
-
-        name = next(signode.findall(addnodes.desc_name))
-        name.parent.insert(
-            name.parent.index(name) + 1,
-            addnodes.desc_annotation(
-                "",
-                "",
-                addnodes.desc_sig_punctuation("", ":"),
-                addnodes.desc_sig_space(),
-                *(n.deepcopy() for n in typenodes),
-            ),
-        )
+    if ann is inspect.Parameter.empty:
+        return None
+    return stringify_annotation(ann, "smart")
 
 
 def own_signatures(contentnode):
@@ -218,7 +253,6 @@ def setup(app):
     app.connect("missing-reference", unlink_builtins, priority=400)
     app.connect("autodoc-before-process-signature", before_process_signature)
     app.connect("autodoc-process-signature", tidy_signature)
-    app.connect("autodoc-process-docstring", record_property_type)
     app.connect("object-description-transform", type_field_to_signature)
     app.connect("object-description-transform", unwrap_short_signatures)
 

@@ -97,6 +97,7 @@ CockroachDB-specific objects
 
 
 .. data:: adapters
+    :type: ~psycopg.adapt.AdaptersMap
 
     The default adapters map establishing how Python and CockroachDB types are
     converted into each other.
