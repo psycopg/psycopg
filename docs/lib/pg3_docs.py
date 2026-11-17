@@ -146,6 +146,29 @@ def find_type_field(contentnode):
     return None
 
 
+def unwrap_short_signatures(app, domain, objtype, contentnode):
+    """
+    Render on a single line the signatures that fit `maximum_signature_line_length`.
+
+    Sphinx measures the signature text received from autodoc, which contains
+    fully qualified names (e.g. ``~collections.abc.Iterator``) and the class
+    name, so it can split a signature that is short once rendered.
+    """
+    from sphinx import addnodes
+
+    if domain != "py" or not (max_len := app.config.maximum_signature_line_length):
+        return
+
+    # Overloaded signatures are unwrapped only together, for consistency
+    signodes = own_signatures(contentnode)
+    if any(len(signode.astext()) > max_len for signode in signodes):
+        return
+    for signode in signodes:
+        for plist in signode.findall(addnodes.desc_parameterlist):
+            if plist.get("multi_line_parameter_list"):
+                plist["multi_line_parameter_list"] = False
+
+
 def tidy_signature(app, what, name, obj, options, signature, return_annotation):
     """
     Render a default such as ``<class 'psycopg.Connection'>`` as its name.
@@ -197,6 +220,7 @@ def setup(app):
     app.connect("autodoc-process-signature", tidy_signature)
     app.connect("autodoc-process-docstring", record_property_type)
     app.connect("object-description-transform", type_field_to_signature)
+    app.connect("object-description-transform", unwrap_short_signatures)
 
     import psycopg  # type: ignore
 
