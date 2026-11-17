@@ -137,7 +137,41 @@ def find_type_field(contentnode):
     return None
 
 
+# Objects and modules from the Python docs that are not useful to link
+unlinked_objects = {"typing.Any", "typing.Self"}
+unlinked_modules = {"collections.abc"}
+
+
+def unlink_builtins(app, env, node, contnode):
+    """
+    Don't link builtin types and constants (`str`, `None`...) to Python docs.
+
+    Same for the objects in `unlinked_objects` and `unlinked_modules`.
+
+    The links are not useful and they make signatures noisy. Run before
+    intersphinx, which would resolve them.
+    """
+    import builtins
+
+    if node.get("refdomain") != "py":
+        return None
+    name = node.get("reftarget", "")
+    if name in unlinked_objects or f"typing.{name}" in unlinked_objects:
+        return contnode
+    if name.rpartition(".")[0] in unlinked_modules:
+        return contnode
+    name = name.removeprefix("builtins.")
+    if name not in (names := vars(builtins)):
+        return None
+    if (obj := names[name]) is None or obj is True or obj is False:
+        return contnode
+    if isinstance(obj, type) and not issubclass(obj, BaseException):
+        return contnode  # exceptions docs are useful, functions too
+    return None
+
+
 def setup(app):
+    app.connect("missing-reference", unlink_builtins, priority=400)
     app.connect("autodoc-before-process-signature", before_process_signature)
     app.connect("autodoc-process-docstring", record_property_type)
     app.connect("object-description-transform", type_field_to_signature)
