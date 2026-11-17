@@ -66,6 +66,11 @@ Numbers adaptation
 
 - Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
 
+If you need a number to be passed as a specific PostgreSQL type you can wrap
+it in one of the :ref:`numeric wrappers <numeric-wrappers>`: for instance
+`Int8(1) <psycopg.types.numeric.Int8>` is passed as a :sql:`bigint` and
+`Float4(1.5) <psycopg.types.numeric.Float4>` as a :sql:`real`.
+
 .. warning::
 
     The Python `int` type has arbitrary precision, but PostgreSQL integers
@@ -505,7 +510,7 @@ about the PostgreSQL enum using the `~types.enum.EnumInfo` class and
 register it using `~types.enum.register_enum()`. The behaviour of unregistered
 and registered enums is different.
 
-- If the enum is not registered with `register_enum()`:
+- If the enum is not registered with `~types.enum.register_enum()`:
 
   - Pure `!Enum` classes are dumped as normal strings, using their member
     names as value. The unknown oid is used, so PostgreSQL should be able to
@@ -530,30 +535,6 @@ and registered enums is different.
 
   - The registered PostgreSQL enum is loaded back as the registered Python
     enum members.
-
-.. autoclass:: psycopg.types.enum.EnumInfo
-
-   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
-   latter's documentation for generic usage, especially the
-   `~psycopg.types.TypeInfo.fetch()` method.
-
-   .. attribute:: labels
-
-       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
-       in the PostgreSQL enum type.
-
-   .. attribute:: enum
-
-       After `register_enum()` is called, it will contain the Python type
-       mapping to the registered enum.
-
-.. autofunction:: psycopg.types.enum.register_enum
-
-   After registering, fetching data of the registered enum will cast
-   PostgreSQL enum labels into corresponding Python enum members.
-
-   If no `!enum` is specified, a new `Enum` is created based on
-   PostgreSQL enum labels.
 
 Example::
 
