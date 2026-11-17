@@ -66,6 +66,11 @@ Numbers adaptation
 
 - Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
 
+If you need a number to be passed as a specific PostgreSQL type you can wrap
+it in one of the :ref:`numeric wrappers <numeric-wrappers>`: for instance
+`Int8(1) <psycopg.types.numeric.Int8>` is passed as a :sql:`bigint` and
+`Float4(1.5) <psycopg.types.numeric.Float4>` as a :sql:`real`.
+
 .. warning::
 
     The Python `int` type has arbitrary precision, but PostgreSQL integers
