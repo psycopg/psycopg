@@ -219,7 +219,7 @@ Gevent support
 
 Psycopg 3 supports `gevent <https://www.gevent.org/>`__ out of the box. If the
 `select` module is found patched by functions such as
-`gevent.monkey.patch_select()`__ or `patch_all()`__, psycopg will behave in a
+`gevent.monkey.patch_select()`__ or `patch_all()`__, Psycopg will behave in a
 collaborative way.
 
 Unlike with `!psycopg2`, using the `!psycogreen` module is not required.
@@ -230,9 +230,9 @@ Unlike with `!psycopg2`, using the `!psycogreen` module is not required.
 .. warning::
 
     gevent support was initially accidental, and was accidentally broken in
-    psycopg 3.1.4.
+    Psycopg 3.1.4.
 
-    gevent is officially supported only starting from psycopg 3.1.14.
+    gevent is officially supported only starting from Psycopg 3.1.14.
 
 
 .. index::

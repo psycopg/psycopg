@@ -220,7 +220,7 @@ developer is free to use (and responsible for calling) `~Connection.commit()`,
 but be careful about its quirkiness: see :ref:`async-with` for details.
 
 
-Adapting psycopg to your program
+Adapting Psycopg to your program
 --------------------------------
 
 The above :ref:`pattern of use <usage>` only shows the default behaviour of

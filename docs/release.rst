@@ -1,6 +1,6 @@
 :orphan:
 
-How to make a psycopg release
+How to make a Psycopg release
 =============================
 
 - Check if there is a new version or libpq_ or OpenSSL_; in such case

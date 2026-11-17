@@ -438,7 +438,7 @@ Integration with SQLAlchemy
 
 .. versionadded:: 3.3
 
-If you want to use SQLAlchemy__ with psycopg's connection pool you can use the
+If you want to use SQLAlchemy__ with Psycopg's connection pool you can use the
 SQLAlchemy's NullPool__ feature, using the pool's `~ConnectionPool.getconn`
 as `!creator` function. However, SQLAlchemy expects that calling
 `~psycopg.Connection.close()` on the connection will return the connection to

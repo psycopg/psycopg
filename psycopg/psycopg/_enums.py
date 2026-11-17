@@ -30,7 +30,7 @@ class PyFormat(str, Enum):
     """
     Enum representing the format wanted for a query argument.
 
-    The value `AUTO` allows psycopg to choose the best format for a certain
+    The value `AUTO` allows Psycopg to choose the best format for a certain
     parameter.
     """
 

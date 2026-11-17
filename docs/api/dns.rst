@@ -122,14 +122,14 @@ server before performing a connection.
            #LIBPQ-PARAMKEYWORDS
 
     .. warning::
-        Before psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
+        Before Psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
 
     .. note::
-       Starting from psycopg 3.1, a similar operation is performed
+       Starting from Psycopg 3.1, a similar operation is performed
        automatically by `!AsyncConnection._get_connection_params()`, so this
        function is unneeded.
 
-       In psycopg 3.0, one possible way to use this function automatically is
+       In Psycopg 3.0, one possible way to use this function automatically is
        to subclass `~psycopg.AsyncConnection`, extending the
        `~psycopg.AsyncConnection._get_connection_params()` method::
 

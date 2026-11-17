@@ -59,7 +59,7 @@ class BasePipeline:
 
     @classmethod
     def is_supported(cls) -> bool:
-        """Return `!True` if the psycopg libpq wrapper supports pipeline mode."""
+        """Return `!True` if the Psycopg libpq wrapper supports pipeline mode."""
         return capabilities.has_pipeline()
 
     def _enter_gen(self) -> PQGen[None]:

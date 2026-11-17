@@ -254,7 +254,7 @@ class Warning(Exception):
 
 class Error(Exception):
     """
-    Base exception for all the errors psycopg will raise.
+    Base exception for all the errors Psycopg will raise.
 
     Exception that is the base class of all other error exceptions. You can
     use this to catch all errors with one single `!except` statement.

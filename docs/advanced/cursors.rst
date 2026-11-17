@@ -154,7 +154,7 @@ as argument.
 Simple query protocol
 ^^^^^^^^^^^^^^^^^^^^^
 
-Using the `!ClientCursor` should ensure that psycopg will always use the
+Using the `!ClientCursor` should ensure that Psycopg will always use the
 `simple query protocol`__ for querying. In most cases, the choice of the
 frontend/backend protocol used is transparent on PostgreSQL. However, in some
 case using the simple query protocol is mandatory. This is the case querying
