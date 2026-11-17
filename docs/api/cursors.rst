@@ -92,7 +92,7 @@ The `!Cursor` class
 
         .. versionchanged:: 3.1
 
-            The `query` argument must be a `~typing.StringLiteral`. If you
+            The `query` argument must be a `~typing.LiteralString`. If you
             need to compose a query dynamically, please use `sql.SQL` and
             related objects.
 

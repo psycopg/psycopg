@@ -57,6 +57,11 @@ library will fail if the requested implementation is not available::
        ...
     ImportError: couldn't import requested psycopg 'c' implementation: No module named 'psycopg_c'
 
+.. envvar:: PSYCOPG_IMPL
+
+    If set, force the use of a specific implementation of the libpq wrapper:
+    ``python``, ``c``, or ``binary``.
+
 
 Module content
 --------------

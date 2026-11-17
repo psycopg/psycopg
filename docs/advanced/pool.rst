@@ -190,7 +190,7 @@ can use a `lifespan`__ function::
 
 .. warning::
     Opening an async pool in the constructor is deprecated and will be removed
-    in the future. When using `AsyncConnectionPool` you should call `await
+    in the future. When using `AsyncConnectionPool` you should call `!await
     pool.open()` or `async with ... as pool` explicitly.
 
 

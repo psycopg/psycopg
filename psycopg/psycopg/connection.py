@@ -567,7 +567,7 @@ class Connection(BaseConnection[Row]):
 
     def tpc_prepare(self) -> None:
         """
-        Perform the first phase of a transaction started with `tpc_begin()`.
+        Perform the first phase of a transaction started with `~Connection.tpc_begin()`.
         """
         try:
             with self.lock:

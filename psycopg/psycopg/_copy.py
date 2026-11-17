@@ -100,7 +100,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         Iterate on the result of a :sql:`COPY TO` operation record by record.
 
         Note that the records returned will be tuples of unparsed strings or
-        bytes, unless data types are specified using `set_types()`.
+        bytes, unless data types are specified using `~Copy.set_types()`.
         """
         while (record := self.read_row()) is not None:
             yield record
@@ -112,7 +112,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         Return `!None` when the data is finished.
 
         Note that the records returned will be tuples of unparsed strings or
-        bytes, unless data types are specified using `set_types()`.
+        bytes, unless data types are specified using `~Copy.set_types()`.
         """
         return self.connection.wait(self._read_row_gen())
 

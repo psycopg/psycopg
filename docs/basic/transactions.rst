@@ -18,7 +18,7 @@ discarded by `Connection.rollback()`. The following operation on the same
 connection will start a new transaction.
 
 If a database operation fails, the server will refuse further commands, until
-a `~rollback()` is called.
+a `~Connection.rollback()` is called.
 
 If the connection is closed with a transaction open, no COMMIT command is sent
 to the server, which will then discard the connection. Certain middleware (such

@@ -75,7 +75,7 @@ While the mechanism resembles regular Python strings manipulation, there are a
 few subtle differences you should care about when passing parameters to a
 query.
 
-- The Python string operator ``%`` *must not be used*: the `~cursor.execute()`
+- The Python string operator ``%`` *must not be used*: the `~psycopg.Cursor.execute()`
   method accepts a tuple or dictionary of values as second parameter.
   |sql-warn|__:
 
