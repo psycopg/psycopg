@@ -97,7 +97,6 @@ docs = [
     "Sphinx >= 9.1",
     "furo == 2025.12.19",
     "sphinx-autobuild >= 2025.8.25",
-    "sphinx-autodoc-typehints >= 3.10.2",
 ]
 
 [tool.setuptools]

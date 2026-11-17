@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import os
 import re
-import logging
 import importlib
 from collections import deque
 
@@ -41,12 +40,6 @@ def setup(app):
     )
     merge_attr_docs()
     monkeypatch_autodoc()
-
-    # Disable warnings in sphinx_autodoc_typehints because it doesn't seem that
-    # there is a workaround for: "WARNING: Cannot resolve forward reference in
-    # type annotations"
-    logger = logging.getLogger("sphinx.sphinx_autodoc_typehints")
-    logger.setLevel(logging.ERROR)
 
 
 # Classes which may have __module__ overwritten
