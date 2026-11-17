@@ -60,13 +60,33 @@ class IsolationLevel(IntEnum):
     __module__ = "psycopg"
 
     READ_UNCOMMITTED = 1
-    """:sql:`READ UNCOMMITTED` isolation level."""
+    """
+    In PostgreSQL :sql:`READ UNCOMMITTED` is treated as `READ_COMMITTED`.
+    """
+
     READ_COMMITTED = 2
-    """:sql:`READ COMMITTED` isolation level."""
+    """
+    A statement can only see rows committed before it began.
+
+    This is the PostgreSQL default isolation level.
+    """
+
     REPEATABLE_READ = 3
-    """:sql:`REPEATABLE READ` isolation level."""
+    """
+    All statements of the current transaction can only see rows committed
+    before the first query or data-modification statement was executed in
+    this transaction.
+    """
+
     SERIALIZABLE = 4
-    """:sql:`SERIALIZABLE` isolation level."""
+    """
+    Like `REPEATABLE_READ`, and protects from serialization anomalies.
+
+    If a pattern of reads and writes among concurrent serializable
+    transactions would create a situation which could not have occurred for
+    any serial (one-at-a-time) execution of those transactions, one of them
+    will be rolled back with a `!psycopg.errors.SerializationFailure` error.
+    """
 
 
 _py2pg = {
