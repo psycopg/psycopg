@@ -263,12 +263,20 @@ def tidy_signature(app, what, name, obj, options, signature, return_annotation):
     - Render ``Callable[..., T]`` correctly: Sphinx renders it as
       ``Callable[[...], T]``. Reported in
       https://github.com/sphinx-doc/sphinx/issues/14856
+
+    - Render the internal ``BaseCursor`` (e.g. in row factories) as the public
+      classes it stands for.
     """
 
     def tidy(text):
         if text:
             text = re.sub(r"<class '(?:[\w.]+\.)?(\w+)'>", r"\1", text)
             text = re.sub(r"Callable\[\[\.\.\.\],", "Callable[...,", text)
+            text = re.sub(
+                r"\bBaseCursor\[Any, Any\]",
+                "~psycopg.Cursor[Any] | ~psycopg.AsyncCursor[Any]",
+                text,
+            )
         return text
 
     return tidy(signature), tidy(return_annotation)
