@@ -63,7 +63,6 @@ class Composable(ABC):
         Return the value of the object as bytes.
 
         :param context: the context to evaluate the object into.
-        :type context: `connection` or `cursor`
 
         The method is automatically invoked by `~psycopg.Cursor.execute()`,
         `~psycopg.Cursor.executemany()`, `~psycopg.Cursor.copy()` if a
@@ -77,7 +76,6 @@ class Composable(ABC):
         Return the value of the object as a string.
 
         :param context: the context to evaluate the string into.
-        :type context: `connection` or `cursor`
 
         """
         enc = conn_encoding(context.connection if context else None)
@@ -414,7 +412,7 @@ class Literal(Composable):
     A `Composable` representing an SQL value to include in a query.
 
     Usually you will want to include placeholders in the query and pass values
-    as `~cursor.execute()` arguments. If however you really really need to
+    as `~psycopg.Cursor.execute()` arguments. If however you really really need to
     include a literal value in the query you can use this object.
 
     The string returned by `!as_string()` follows the normal :ref:`adaptation
