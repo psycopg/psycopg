@@ -264,6 +264,23 @@ def tidy_signature(app, what, name, obj, options, signature, return_annotation):
     return signature, return_annotation
 
 
+def unlink_typevars(app, env, node, contnode):
+    """
+    Don't try to link type variables (e.g. `!T` in `!Range[T]`).
+
+    They are generic placeholders, not documented objects.
+    """
+    import typing
+
+    if node.get("refdomain") != "py":
+        return None
+    try:
+        obj = deep_import(node.get("reftarget", ""))
+    except Exception:
+        return None
+    return contnode if isinstance(obj, typing.TypeVar) else None
+
+
 # Objects and modules from the Python docs that are not useful to link
 unlinked_objects = {"typing.Any", "typing.Self"}
 unlinked_modules = {"collections.abc"}
@@ -299,6 +316,7 @@ def unlink_builtins(app, env, node, contnode):
 
 def setup(app):
     app.connect("missing-reference", unlink_builtins, priority=400)
+    app.connect("missing-reference", unlink_typevars, priority=400)
     app.connect("doctree-read", drop_separator_tooltips)
     app.connect("autodoc-before-process-signature", before_process_signature)
     app.connect("autodoc-process-signature", tidy_signature)
