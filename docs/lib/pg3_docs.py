@@ -254,14 +254,24 @@ def drop_separator_tooltips(app, doctree):
 
 def tidy_signature(app, what, name, obj, options, signature, return_annotation):
     """
-    Render a default such as ``<class 'psycopg.Connection'>`` as its name.
+    Fix signature details that Sphinx renders badly.
 
-    The repr of a class is not valid Python, so the signature would not be
-    parsed: it would be rendered as plain text, on a single line.
+    - Render a default such as ``<class 'psycopg.Connection'>`` as its name.
+      The repr of a class is not valid Python, so the signature would not be
+      parsed: it would be rendered as plain text, on a single line.
+
+    - Render ``Callable[..., T]`` correctly: Sphinx renders it as
+      ``Callable[[...], T]``. Reported in
+      https://github.com/sphinx-doc/sphinx/issues/14856
     """
-    if signature:
-        signature = re.sub(r"<class '(?:[\w.]+\.)?(\w+)'>", r"\1", signature)
-    return signature, return_annotation
+
+    def tidy(text):
+        if text:
+            text = re.sub(r"<class '(?:[\w.]+\.)?(\w+)'>", r"\1", text)
+            text = re.sub(r"Callable\[\[\.\.\.\],", "Callable[...,", text)
+        return text
+
+    return tidy(signature), tidy(return_annotation)
 
 
 def unlink_typevars(app, env, node, contnode):

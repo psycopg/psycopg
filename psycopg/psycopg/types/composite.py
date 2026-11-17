@@ -294,7 +294,6 @@ def register_composite(
         register it globally.
     :param factory: Callable to create a Python object from the sequence of
         attributes read from the composite.
-    :type factory: `!Callable[..., T]` | `!None`
     :param make_object: optional function that will be used when loading a
         composite type from the database if the Python type is not a sequence
         compatible with the composite fields
