@@ -86,3 +86,32 @@ checking.
 
     .. seealso:: :ref:`adaptation` for an explanation about how contexts are
         connected.
+
+
+Type aliases
+------------
+
+.. autotype:: Buffer
+
+    The type of the data handled by dumpers and loaders: an object
+    implementing the buffer protocol.
+
+    A `Dumper.dump()` method can return any of these types. A `Loader.load()`
+    method must accept all of them: don't assume to receive `!bytes`, but
+    convert the data with ``bytes(data)`` if you need methods such as
+    `!decode()`.
+
+.. autotype:: Query
+
+    The type of a query that can be passed to `~psycopg.Cursor.execute()` and
+    similar methods. See :ref:`query-parameters` and :ref:`template-strings`.
+
+.. autotype:: QueryNoTemplate
+
+    Any `Query` type except a template string: the type of the queries that
+    can be used with separate `Params`.
+
+.. autotype:: Params
+
+    The type of the parameters of a query: a sequence, for ``%s`` positional
+    placeholders, or a mapping, for ``%(name)s`` named placeholders.
