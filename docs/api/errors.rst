@@ -173,9 +173,6 @@ the classes defined.
 Every exception class is a subclass of one of the :ref:`standard DB-API
 exception <dbapi-exceptions>`, thus exposing the `~psycopg.Error` interface.
 
-.. versionchanged:: 3.1.4
-    Added exceptions introduced in PostgreSQL 15.
-
 .. autofunction:: lookup
 
     Example: if you have code using constant names or sql codes you can use
@@ -323,6 +320,7 @@ SQLSTATE  Exception                                          Base exception
 ``22P04`` `!BadCopyFileFormat`                               `!DataError`
 ``22P05`` `!UntranslatableCharacter`                         `!DataError`
 ``22P06`` `!NonstandardUseOfEscapeCharacter`                 `!DataError`
+``22P07`` `!DatumVersionMismatch`                            `!DataError`
 **Class 23** - Integrity Constraint Violation
 ---------------------------------------------------------------------------------
 ``23000`` `!IntegrityConstraintViolation`                    `!IntegrityError`
@@ -553,5 +551,8 @@ SQLSTATE  Exception                                          Base exception
     Exception `!TransactionTimeout`, introduced in PostgreSQL 17.
 
 .. versionadded:: 3.2.10
-    Exception `!InvalidArgumentForXquery`, `FileNameTooLong`, introduced in
+    Exceptions `!InvalidArgumentForXquery`, `FileNameTooLong`, introduced in
     PostgreSQL 18.
+
+.. versionadded:: 3.3.10
+    Exception `!DatumVersionMismatch`, introduced in PostgreSQL 19.

@@ -1140,6 +1140,10 @@ class NonstandardUseOfEscapeCharacter(DataError,
     code='22P06', name='NONSTANDARD_USE_OF_ESCAPE_CHARACTER'):
     pass
 
+class DatumVersionMismatch(DataError,
+    code='22P07', name='DATUM_VERSION_MISMATCH'):
+    pass
+
 
 # Class 23 - Integrity Constraint Violation
 
