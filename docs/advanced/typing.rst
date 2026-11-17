@@ -281,7 +281,7 @@ and similar to escape safely table and field names. The parameter of the
         return conn.execute(query).fetchone()[0]
 
 At the time of writing, no Python static analyzer implements this check (`mypy
-doesn't implement it`__, Pyre_ does, but `doesn't work with psycopg yet`__).
+doesn't implement it`__, Pyre_ does, but `doesn't work with Psycopg yet`__).
 Once the type checkers support will be complete, the above bad statements
 should be reported as errors.
 

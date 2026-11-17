@@ -57,6 +57,11 @@ library will fail if the requested implementation is not available::
        ...
     ImportError: couldn't import requested psycopg 'c' implementation: No module named 'psycopg_c'
 
+.. envvar:: PSYCOPG_IMPL
+
+    If set, force the use of a specific implementation of the libpq wrapper:
+    ``python``, ``c``, or ``binary``.
+
 
 Module content
 --------------
@@ -188,30 +193,10 @@ Enumerations
 
 
 .. autoclass:: DiagnosticField
+    :members:
 
-    Available attributes:
-
-    .. attribute::
-        SEVERITY
-        SEVERITY_NONLOCALIZED
-        SQLSTATE
-        MESSAGE_PRIMARY
-        MESSAGE_DETAIL
-        MESSAGE_HINT
-        STATEMENT_POSITION
-        INTERNAL_POSITION
-        INTERNAL_QUERY
-        CONTEXT
-        SCHEMA_NAME
-        TABLE_NAME
-        COLUMN_NAME
-        DATATYPE_NAME
-        CONSTRAINT_NAME
-        SOURCE_FILE
-        SOURCE_LINE
-        SOURCE_FUNCTION
-
-    .. seealso:: :pq:`PQresultErrorField` for a description of these values.
+    .. seealso:: :pq:`PQresultErrorField` for a description of these values,
+        or the attributes of `~psycopg.errors.Diagnostic`, which expose them.
 
 
 .. autoclass:: Ping

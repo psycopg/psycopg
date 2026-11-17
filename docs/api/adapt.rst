@@ -34,7 +34,6 @@ Dumpers and loaders
             the database.
 
     .. attribute:: format
-        :type: psycopg.pq.Format
         :value: TEXT
 
         Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
@@ -56,7 +55,6 @@ Dumpers and loaders
     .. automethod:: load
 
     .. attribute:: format
-        :type: psycopg.pq.Format
         :value: TEXT
 
         Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
@@ -82,8 +80,6 @@ Other objects used in adaptations
 
        The object where to look up for types information (such as the mapping
        between type names and oids in the specified context).
-
-       :type: `~psycopg.types.TypesRegistry`
 
    .. automethod:: get_dumper
    .. automethod:: get_dumper_by_oid

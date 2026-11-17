@@ -69,7 +69,6 @@ The `!Connection` class
             added `!prepare_threshold` and `!cursor_factory` parameters.
 
     .. attribute:: adapters
-        :type: ~adapt.AdaptersMap
 
         The adapters configuration used to convert Python parameters and
         PostgreSQL results for the queries executed on this cursor.
@@ -378,7 +377,6 @@ The `!Connection` class
     .. automethod:: tpc_begin
 
         :param xid: The id of the transaction
-        :type xid: Xid or str
 
         This method should be called outside of a transaction (i.e. nothing
         may have executed since the last `commit()` or `rollback()` and
@@ -412,7 +410,6 @@ The `!Connection` class
     .. automethod:: tpc_commit
 
         :param xid: The id of the transaction
-        :type xid: Xid or str
 
         When called with no arguments, `!tpc_commit()` commits a TPC
         transaction previously prepared with `tpc_prepare()`.
@@ -437,7 +434,6 @@ The `!Connection` class
     .. automethod:: tpc_rollback
 
         :param xid: The id of the transaction
-        :type xid: Xid or str
 
         When called with no arguments, `!tpc_rollback()` rolls back a TPC
         transaction.  It may be called before or after `tpc_prepare()`.

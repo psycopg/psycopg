@@ -188,7 +188,7 @@ Psycopg 3.3.0
   .. warning::
 
     Please explicitly set the gssencmode_ connection parameter or the
-    :envvar:`PGGSSENCMODE` environment variable to interact reliably with the
+    ``PGGSSENCMODE`` environment variable to interact reliably with the
     GSSAPI.
 
 - Drop support for Python 3.8 (:ticket:`#976`) and 3.9 (:ticket:`#1056`).
@@ -267,7 +267,7 @@ Psycopg 3.2.10
     In a future Psycopg version the default in the binary package will be
     changed to ``disable``. If you need to interact with the GSSAPI reliably
     you should explicitly set the gssencmode_ parameter in the connection
-    string or the :envvar:`PGGSSENCMODE` environment variable to ``prefer`` or
+    string or the ``PGGSSENCMODE`` environment variable to ``prefer`` or
     ``require``.
 
 .. _gssencmode: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
@@ -556,7 +556,7 @@ Psycopg 3.1.10
 Psycopg 3.1.9
 ^^^^^^^^^^^^^
 
-- Fix `TypeInfo.fetch()` using a connection in `!sql_ascii` encoding
+- Fix `~psycopg.types.TypeInfo.fetch()` using a connection in `!sql_ascii` encoding
   (:ticket:`#503`).
 - Fix "filedescriptor out of range" using a large number of files open
   in Python implementation (:ticket:`#532`).
@@ -572,11 +572,11 @@ Psycopg 3.1.9
 Psycopg 3.1.8
 ^^^^^^^^^^^^^
 
-- Don't pollute server logs when types looked for by `TypeInfo.fetch()`
+- Don't pollute server logs when types looked for by `~psycopg.types.TypeInfo.fetch()`
   are not found (:ticket:`#473`).
 - Set `Cursor.rowcount` to the number of rows of each result set from
   `~Cursor.executemany()` when called with `!returning=True` (:ticket:`#479`).
-- Fix `TypeInfo.fetch()` when used with `ClientCursor` (:ticket:`#484`).
+- Fix `~psycopg.types.TypeInfo.fetch()` when used with `ClientCursor` (:ticket:`#484`).
 
 
 Psycopg 3.1.7

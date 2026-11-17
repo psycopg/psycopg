@@ -290,21 +290,16 @@ def register_composite(
     """Register the adapters to load and dump a composite type.
 
     :param info: The object with the information about the composite to register.
-    :type info: `CompositeInfo`
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
-    :type context: `~psycopg.abc.AdaptContext` | `!None`
     :param factory: Callable to create a Python object from the sequence of
         attributes read from the composite.
-    :type factory: `!Callable[..., T]` | `!None`
     :param make_object: optional function that will be used when loading a
         composite type from the database if the Python type is not a sequence
         compatible with the composite fields
-    :type make_object: `!Callable[[Sequence[Any], CompositeInfo], T]` | `!None`
     :param make_sequence: optional function that will be used when dumping an
         object to the database if the object is not a sequence compatible
         with the composite fields
-    :type make_sequence: `!Callable[[T, CompositeInfo], Sequence[Any]]` | `!None`
 
     .. note::
 

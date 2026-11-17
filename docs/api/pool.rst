@@ -40,7 +40,7 @@ This package exposes a few connection pool classes:
 The `!ConnectionPool` class
 ---------------------------
 
-.. autoclass:: ConnectionPool
+.. autoclass:: ConnectionPool()
 
    This class implements a connection pool serving `~psycopg.Connection`
    instances (or subclasses). The constructor has several arguments, but
@@ -292,7 +292,7 @@ specified so in the `!connection_class` parameter.
 Only the functions and parameters with different signature from
 `!ConnectionPool` are listed here.
 
-.. autoclass:: AsyncConnectionPool
+.. autoclass:: AsyncConnectionPool()
 
    :param conninfo: The connection string. It can be an async function too.
    :type conninfo: `!str` or `!Callable[[], str]` or `async Callable[[], str]`
@@ -404,7 +404,7 @@ connections preemptively and doesn't keep unused connections in its state. See
 The interface of the object is entirely compatible with its parent class. Its
 behaviour is similar, with the following differences:
 
-.. autoclass:: NullConnectionPool
+.. autoclass:: NullConnectionPool()
 
    All the other constructor parameters are the same as in `ConnectionPool`.
 
@@ -438,7 +438,7 @@ behaviour is similar, with the following differences:
 The `AsyncNullConnectionPool` is, similarly, an `AsyncConnectionPool` subclass
 with the same behaviour of the `NullConnectionPool`.
 
-.. autoclass:: AsyncNullConnectionPool
+.. autoclass:: AsyncNullConnectionPool()
 
     The interface is the same of its parent class `AsyncConnectionPool`. The
     behaviour is different in the same way described for `NullConnectionPool`.

@@ -20,7 +20,7 @@ it also exposes the `module-level objects`__ required by the specifications.
 .. data:: capabilities
 
     An object that can be used to verify that the client library used by
-    psycopg implements a certain feature. For instance::
+    Psycopg implements a certain feature. For instance::
 
         # Fail at import time if encrypted passwords is not available
         import psycopg

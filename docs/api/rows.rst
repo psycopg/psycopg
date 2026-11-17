@@ -11,6 +11,12 @@ the basic tuples.
 
 Check out :ref:`row-factory-create` for information about how to use these objects.
 
+.. type:: Row
+
+    The type of the records returned by a cursor, for instance by
+    `~psycopg.Cursor.fetchone()`. It depends on the cursor row factory: by
+    default the records are tuples. See :ref:`static-typing` for details.
+
 .. autofunction:: tuple_row
 
     Example::

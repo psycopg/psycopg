@@ -23,14 +23,13 @@ server before performing a connection.
     .. _dnspython: https://dnspython.readthedocs.io/
 
 
-.. function:: resolve_srv(params)
+.. function:: resolve_srv(params: dict[str, Any]) -> dict[str, Any]
 
     Apply SRV DNS lookup as defined in :RFC:`2782`.
 
     :param params: The input parameters, for instance as returned by
         `~psycopg.conninfo.conninfo_to_dict()`.
-    :type params: `!dict`
-    :return: An updated list of connection parameters.
+    :return: The updated connection parameters.
 
     For every host defined in the ``params["host"]`` list (comma-separated),
     perform SRV lookup if the host is in the form ``_Service._Proto.Target``.
@@ -65,7 +64,7 @@ server before performing a connection.
            cnn = SrvCognizantConnection.connect("host=_postgres._tcp.db.psycopg.org")
 
 
-.. function:: resolve_srv_async(params)
+.. function:: resolve_srv_async(params: dict[str, Any]) -> dict[str, Any]
     :async:
 
     Async equivalent of `resolve_srv()`.
@@ -93,7 +92,7 @@ server before performing a connection.
         This is an experimental method.
 
 
-.. function:: resolve_hostaddr_async(params)
+.. function:: resolve_hostaddr_async(params: dict[str, Any]) -> dict[str, Any]
     :async:
 
     Perform async DNS lookup of the hosts and return a new params dict.
@@ -105,7 +104,6 @@ server before performing a connection.
 
     :param params: The input parameters, for instance as returned by
         `~psycopg.conninfo.conninfo_to_dict()`.
-    :type params: `!dict`
 
     If a ``host`` param is present but not ``hostname``, resolve the host
     addresses dynamically.
@@ -124,14 +122,14 @@ server before performing a connection.
            #LIBPQ-PARAMKEYWORDS
 
     .. warning::
-        Before psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
+        Before Psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
 
     .. note::
-       Starting from psycopg 3.1, a similar operation is performed
+       Starting from Psycopg 3.1, a similar operation is performed
        automatically by `!AsyncConnection._get_connection_params()`, so this
        function is unneeded.
 
-       In psycopg 3.0, one possible way to use this function automatically is
+       In Psycopg 3.0, one possible way to use this function automatically is
        to subclass `~psycopg.AsyncConnection`, extending the
        `~psycopg.AsyncConnection._get_connection_params()` method::
 

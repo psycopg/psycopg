@@ -44,7 +44,6 @@ The `!Cursor` class
         The connection this cursor is using.
 
     .. attribute:: adapters
-        :type: ~adapt.AdaptersMap
 
         The adapters configuration used to convert Python parameters and
         PostgreSQL results for the queries executed on this cursor.
@@ -93,7 +92,7 @@ The `!Cursor` class
 
         .. versionchanged:: 3.1
 
-            The `query` argument must be a `~typing.StringLiteral`. If you
+            The `query` argument must be a `~typing.LiteralString`. If you
             need to compose a query dynamically, please use `sql.SQL` and
             related objects.
 
@@ -106,7 +105,6 @@ The `!Cursor` class
         :param params_seq: The parameters to pass to the query
         :type params_seq: Sequence of Sequences or Mappings
         :param returning: If `!True`, fetch the results of the queries executed
-        :type returning: `!bool`
 
         This is more efficient than performing separate queries, but in case of
         several :sql:`INSERT` (and with some SQL creativity for massive
@@ -331,6 +329,7 @@ The `!Cursor` class
     .. autoattribute:: rownumber
 
     .. attribute:: _query
+        :type: PostgresQuery | None
 
         An helper object used to convert queries and parameters before sending
         them to PostgreSQL.
@@ -484,6 +483,8 @@ The `!ServerCursor` class
 
         Number of records to fetch at time when iterating on the cursor. The
         default is 100.
+
+        :type: int
 
     .. automethod:: scroll
 

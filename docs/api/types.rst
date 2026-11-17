@@ -93,7 +93,6 @@ as a subtype.
         :param context: the context where the type is registered, for instance
             a `~psycopg.Connection` or `~psycopg.Cursor`. `!None` registers
             the `!TypeInfo` globally.
-        :type context: Optional[~psycopg.abc.AdaptContext]
 
         Registering the `TypeInfo` in a context allows the adapters of that
         context to look up type information: for instance it allows to
@@ -184,11 +183,13 @@ See :ref:`adapt-enum` for details.
    `~psycopg.types.TypeInfo.fetch()` method.
 
    .. attribute:: labels
+       :type: Sequence[str]
 
        After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
        in the PostgreSQL enum type.
 
    .. attribute:: enum
+       :type: type[Enum] | None
 
        After `register_enum()` is called, it will contain the Python type
        mapping to the registered enum.

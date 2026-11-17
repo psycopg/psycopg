@@ -63,7 +63,6 @@ class Composable(ABC):
         Return the value of the object as bytes.
 
         :param context: the context to evaluate the object into.
-        :type context: `connection` or `cursor`
 
         The method is automatically invoked by `~psycopg.Cursor.execute()`,
         `~psycopg.Cursor.executemany()`, `~psycopg.Cursor.copy()` if a
@@ -77,7 +76,6 @@ class Composable(ABC):
         Return the value of the object as a string.
 
         :param context: the context to evaluate the string into.
-        :type context: `connection` or `cursor`
 
         """
         enc = conn_encoding(context.connection if context else None)
@@ -225,7 +223,6 @@ class SQL(Composable):
             auto-numbered (``{}``) placeholders
         :param kwargs: parameters to replace to named (``{name}``) placeholders
         :return: the union of the `!SQL` string with placeholders replaced
-        :rtype: `Composed`
 
         The method is similar to the Python `str.format()` method: the string
         template supports auto-numbered (``{}``), numbered (``{0}``,
@@ -415,7 +412,7 @@ class Literal(Composable):
     A `Composable` representing an SQL value to include in a query.
 
     Usually you will want to include placeholders in the query and pass values
-    as `~cursor.execute()` arguments. If however you really really need to
+    as `~psycopg.Cursor.execute()` arguments. If however you really really need to
     include a literal value in the query you can use this object.
 
     The string returned by `!as_string()` follows the normal :ref:`adaptation
@@ -510,7 +507,6 @@ def as_string(obj: Any, context: AdaptContext | None = None) -> str:
 
     :param obj: the object to convert
     :param context: the context in which to convert the object
-    :type context: `~psycopg.abc.AdaptContext` | `!None`
 
     Adaptation happens according to the type of `!obj`:
 
@@ -539,7 +535,6 @@ def as_bytes(obj: Any, context: AdaptContext | None = None) -> bytes:
 
     :param obj: the object to convert
     :param context: the context in which to convert the object
-    :type context: `~psycopg.abc.AdaptContext` | `!None`
 
     See `as_string()` for details.
     """

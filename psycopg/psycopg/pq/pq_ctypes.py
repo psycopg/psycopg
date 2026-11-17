@@ -138,7 +138,7 @@ class PGconn:
         `!None` if the connection is closed.
 
         The value can be used to pass the structure to libpq functions which
-        psycopg doesn't (currently) wrap, either in C or in Python using FFI
+        Psycopg doesn't (currently) wrap, either in C or in Python using FFI
         libraries such as `ctypes`.
         """
         if self._pgconn_ptr is None:
@@ -859,7 +859,7 @@ class PGresult:
         `!None` if the result was cleared.
 
         The value can be used to pass the structure to libpq functions which
-        psycopg doesn't (currently) wrap, either in C or in Python using FFI
+        Psycopg doesn't (currently) wrap, either in C or in Python using FFI
         libraries such as `ctypes`.
         """
         if self._pgresult_ptr is None:

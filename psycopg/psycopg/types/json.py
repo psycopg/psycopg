@@ -33,7 +33,6 @@ def set_json_dumps(
     Set the JSON serialisation function to store JSON objects in the database.
 
     :param dumps: The dump function to use.
-    :type dumps: `!Callable[[Any], str]`
     :param context: Where to use the `!dumps` function. If not specified, use it
         globally.
     :type context: `~psycopg.Connection` or `~psycopg.Cursor`
@@ -72,7 +71,6 @@ def set_json_loads(
     Set the JSON parsing function to fetch JSON objects from the database.
 
     :param loads: The load function to use.
-    :type loads: `!Callable[[bytes], Any]`
     :param context: Where to use the `!loads` function. If not specified, use
         it globally.
     :type context: `~psycopg.Connection` or `~psycopg.Cursor`

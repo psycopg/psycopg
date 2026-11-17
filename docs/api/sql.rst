@@ -1,5 +1,5 @@
-`sql` -- SQL string composition
-===============================
+`!sql` -- SQL string composition
+================================
 
 .. index::
     double: Binding; Client-Side
@@ -165,6 +165,6 @@ Utility functions
     NULL
     DEFAULT
 
-    `sql.SQL` objects often useful in queries.
+    `SQL` objects often useful in queries.
 
 .. autofunction:: quote

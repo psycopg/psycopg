@@ -11,7 +11,7 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import LiteralString, Template, TypeVar
+from ._compat import LiteralString, Template, TypeAliasType, TypeVar
 
 if TYPE_CHECKING:
     from . import sql
@@ -24,11 +24,13 @@ if TYPE_CHECKING:
 NoneType: type = type(None)
 
 # An object implementing the buffer protocol
-Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
+Buffer = TypeAliasType("Buffer", Union[bytes, bytearray, memoryview])
 
-QueryNoTemplate: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
-Query: TypeAlias = Union[QueryNoTemplate, Template]
-Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
+QueryNoTemplate = TypeAliasType(
+    "QueryNoTemplate", Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
+)
+Query = TypeAliasType("Query", Union[QueryNoTemplate, Template])
+Params = TypeAliasType("Params", Union[Sequence[Any], Mapping[str, Any]])
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
 DumperKey: TypeAlias = Union[type, tuple["DumperKey", ...]]

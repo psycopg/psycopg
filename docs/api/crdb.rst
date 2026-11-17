@@ -74,7 +74,6 @@ CockroachDB-specific objects
     .. automethod:: is_crdb
 
         :param conn: the connection to check
-        :type conn: `~psycopg.Connection`, `~psycopg.AsyncConnection`, `~psycopg.pq.PGconn`
 
 
 .. autoclass:: AsyncCrdbConnection
@@ -97,6 +96,7 @@ CockroachDB-specific objects
 
 
 .. data:: adapters
+    :type: ~psycopg.adapt.AdaptersMap
 
     The default adapters map establishing how Python and CockroachDB types are
     converted into each other.

@@ -134,7 +134,7 @@ use the `psycopg.sql` module::
 Extended query Protocol
 -----------------------
 
-In order to use :ref:`server-side-binding`, psycopg normally uses the
+In order to use :ref:`server-side-binding`, Psycopg normally uses the
 `extended query protocol`__ to communicate with the backend.
 
 In certain context outside pure PostgreSQL, the extended query protocol is not

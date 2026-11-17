@@ -359,7 +359,6 @@ class Connection(BaseConnection[Row]):
             transaction. If `!None`, one will be chosen automatically.
         :param force_rollback: Roll back the transaction at the end of the
             block even if there were no error (e.g. to try a no-op process).
-        :rtype: Transaction
         """
         tx = Transaction(self, savepoint_name, force_rollback)
         if self._pipeline:
@@ -568,7 +567,7 @@ class Connection(BaseConnection[Row]):
 
     def tpc_prepare(self) -> None:
         """
-        Perform the first phase of a transaction started with `tpc_begin()`.
+        Perform the first phase of a transaction started with `~Connection.tpc_begin()`.
         """
         try:
             with self.lock:
