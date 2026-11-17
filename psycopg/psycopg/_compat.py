@@ -15,12 +15,16 @@ else:
     from typing_extensions import LiteralString, Self
 
 if sys.version_info >= (3, 12):
+    from typing import TypeAliasType
+
     _asyncio_run_snippet = (
         "running 'asyncio.run(...,"
         " loop_factory=asyncio.SelectorEventLoop(selectors.SelectSelector()))'"
     )
 
 else:
+    from typing_extensions import TypeAliasType
+
     _asyncio_run_snippet = (
         "setting 'asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())'"
     )
@@ -62,5 +66,6 @@ __all__ = [
     "LiteralString",
     "Self",
     "Template",
+    "TypeAliasType",
     "TypeVar",
 ]
