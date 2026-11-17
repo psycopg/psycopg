@@ -266,10 +266,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     @property
     def connection(self) -> Connection[Any]:
-        """The connection the object is managing.
-
-        :type: `Connection`
-        """
+        """The connection the object is managing."""
         return self._conn
 
     def __enter__(self) -> Self:
@@ -310,10 +307,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
 
     @property
     def connection(self) -> AsyncConnection[Any]:
-        """The connection the object is managing.
-
-        :type: `AsyncConnection`
-        """
+        """The connection the object is managing."""
         return self._conn
 
     async def __aenter__(self) -> Self:

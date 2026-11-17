@@ -217,7 +217,6 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         Move to a specific result set.
 
         :arg index: index of the result to go to
-        :type index: `!int`
 
         More than one result will be available after executing calling
         `executemany()` or `execute()` with more than one query.

@@ -44,7 +44,6 @@ The `!Cursor` class
         The connection this cursor is using.
 
     .. attribute:: adapters
-        :type: ~adapt.AdaptersMap
 
         The adapters configuration used to convert Python parameters and
         PostgreSQL results for the queries executed on this cursor.
@@ -106,7 +105,6 @@ The `!Cursor` class
         :param params_seq: The parameters to pass to the query
         :type params_seq: Sequence of Sequences or Mappings
         :param returning: If `!True`, fetch the results of the queries executed
-        :type returning: `!bool`
 
         This is more efficient than performing separate queries, but in case of
         several :sql:`INSERT` (and with some SQL creativity for massive

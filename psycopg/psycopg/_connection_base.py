@@ -324,7 +324,6 @@ class BaseConnection(Generic[Row]):
         Register a callable to be invoked when a notice message is received.
 
         :param callback: the callback to call upon message received.
-        :type callback: Callable[[~psycopg.errors.Diagnostic], None]
         """
         self._notice_handlers.append(callback)
 
@@ -333,7 +332,6 @@ class BaseConnection(Generic[Row]):
         Unregister a notice message callable previously registered.
 
         :param callback: the callback to remove.
-        :type callback: Callable[[~psycopg.errors.Diagnostic], None]
         """
         self._notice_handlers.remove(callback)
 
@@ -357,7 +355,6 @@ class BaseConnection(Generic[Row]):
         Register a callable to be invoked whenever a notification is received.
 
         :param callback: the callback to call upon notification received.
-        :type callback: Callable[[~psycopg.Notify], None]
         """
         self._notify_handlers.append(callback)
 
@@ -366,7 +363,6 @@ class BaseConnection(Generic[Row]):
         Unregister a notification callable previously registered.
 
         :param callback: the callback to remove.
-        :type callback: Callable[[~psycopg.Notify], None]
         """
         self._notify_handlers.remove(callback)
 

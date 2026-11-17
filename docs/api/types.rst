@@ -93,7 +93,6 @@ as a subtype.
         :param context: the context where the type is registered, for instance
             a `~psycopg.Connection` or `~psycopg.Cursor`. `!None` registers
             the `!TypeInfo` globally.
-        :type context: Optional[~psycopg.abc.AdaptContext]
 
         Registering the `TypeInfo` in a context allows the adapters of that
         context to look up type information: for instance it allows to

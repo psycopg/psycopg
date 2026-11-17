@@ -225,7 +225,6 @@ class SQL(Composable):
             auto-numbered (``{}``) placeholders
         :param kwargs: parameters to replace to named (``{name}``) placeholders
         :return: the union of the `!SQL` string with placeholders replaced
-        :rtype: `Composed`
 
         The method is similar to the Python `str.format()` method: the string
         template supports auto-numbered (``{}``), numbered (``{0}``,
@@ -510,7 +509,6 @@ def as_string(obj: Any, context: AdaptContext | None = None) -> str:
 
     :param obj: the object to convert
     :param context: the context in which to convert the object
-    :type context: `~psycopg.abc.AdaptContext` | `!None`
 
     Adaptation happens according to the type of `!obj`:
 
@@ -539,7 +537,6 @@ def as_bytes(obj: Any, context: AdaptContext | None = None) -> bytes:
 
     :param obj: the object to convert
     :param context: the context in which to convert the object
-    :type context: `~psycopg.abc.AdaptContext` | `!None`
 
     See `as_string()` for details.
     """

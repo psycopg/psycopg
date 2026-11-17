@@ -74,7 +74,6 @@ CockroachDB-specific objects
     .. automethod:: is_crdb
 
         :param conn: the connection to check
-        :type conn: `~psycopg.Connection`, `~psycopg.AsyncConnection`, `~psycopg.pq.PGconn`
 
 
 .. autoclass:: AsyncCrdbConnection
