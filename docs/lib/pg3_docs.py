@@ -266,11 +266,19 @@ def tidy_signature(app, what, name, obj, options, signature, return_annotation):
 
     - Render the internal ``BaseCursor`` (e.g. in row factories) as the public
       classes it stands for.
+
+    - Drop private parameters, such as ``__PQfinish`` in ``PGconn.finish()``,
+      which only bind a function for the object finalizer.
     """
 
     def tidy(text):
         if text:
             text = re.sub(r"<class '(?:[\w.]+\.)?(\w+)'>", r"\1", text)
+            # The parameter name is mangled, e.g. '_PGconn__PQfinish'.
+            text = re.sub(
+                r"(?:, )?\b_\w+__\w+(?:: [^=,)\s]+)?(?: = <[^>]*>)?", "", text
+            )
+            text = text.replace("(, ", "(")
             text = re.sub(r"Callable\[\[\.\.\.\],", "Callable[...,", text)
             text = re.sub(
                 r"\bBaseCursor\[Any, Any\]",
