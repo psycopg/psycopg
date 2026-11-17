@@ -280,35 +280,7 @@ See :ref:`transactions` for details about these objects.
 
 .. class:: psycopg.Transaction.Status()
 .. autoclass:: psycopg.AsyncTransaction.Status()
-
-    .. note: `:members:` doesn't seem to work currently. Nested class problem?
-
-    .. attribute:: NON_STARTED
-
-        Transaction created but not yet entered.
-
-    .. attribute:: ACTIVE
-
-        Transaction currently active (inside the `!with` block).
-
-    .. attribute:: COMMITTED
-
-        Transaction successfully committed.
-
-    .. attribute:: ROLLED_BACK_EXPLICITLY
-
-        The transaction was explicitly rolled back (by raising
-        `~psycopg.Rollback` or calling `!transaction(force_rollback=True)`).
-
-    .. attribute:: ROLLED_BACK_WITH_ERROR
-
-        The transaction was rolled back due to an exception raised within the
-        transaction block.
-
-    .. attribute:: FAILED
-
-        The transaction failed due to a connection failure (e.g., the
-        connection was closed or became unavailable during the transaction).
+    :members:
 
 
 .. autoexception:: Rollback

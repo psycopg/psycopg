@@ -39,6 +39,7 @@ def setup(app):
     recover_defined_module(
         psycopg, skip_modules=["psycopg._dns", "psycopg.types.shapely"]
     )
+    merge_attr_docs()
     monkeypatch_autodoc()
 
     # Disable warnings in sphinx_autodoc_typehints because it doesn't seem that
@@ -74,6 +75,37 @@ def recover_defined_module(m, skip_modules=()):
             for cls in classnames:
                 if (cls := deep_import(f"{modname}.{cls}")).__module__ != modname:
                     recovered_classes[cls] = modname
+
+
+def merge_attr_docs():
+    """
+    Make the attribute docstrings of `recovered_classes` visible to autodoc.
+
+    Autodoc looks for the docstrings of the attributes (e.g. enum members) in
+    the source of the module declared by `__module__`, where they are not
+    found, so the members are dropped as undocumented. Copy them to the source
+    analyzer of the declared module, which is cached by Sphinx.
+
+    This works with every autodoc implementation, whereas patching its
+    internals broke silently in Sphinx 9.
+    """
+    from sphinx.pycode import ModuleAnalyzer
+
+    for cls, modname in recovered_classes.items():
+        src = ModuleAnalyzer.for_module(modname)
+        src.analyze()
+        dst = ModuleAnalyzer.for_module(cls.__module__)
+        dst.analyze()
+
+        offset = max(dst.tagorder.values(), default=0) + 1
+        prefix = f"{cls.__qualname__}."
+        for name, order in src.tagorder.items():
+            if name.startswith(prefix):
+                dst.tagorder.setdefault(name, order + offset)
+
+        for (scope, name), doc in src.attr_docs.items():
+            if scope == cls.__qualname__:
+                dst.attr_docs.setdefault((scope, name), doc)
 
 
 def monkeypatch_autodoc():

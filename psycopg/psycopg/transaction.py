@@ -61,11 +61,26 @@ class BaseTransaction(Generic[ConnectionType]):
         """
 
         NOT_STARTED = "not_started"
+        """Transaction created but not yet entered."""
         ACTIVE = "active"
+        """Transaction currently active (inside the `!with` block)."""
         COMMITTED = "committed"
+        """Transaction successfully committed."""
         FAILED = "failed"
+        """
+        The transaction failed due to a connection failure (e.g., the
+        connection was closed or became unavailable during the transaction).
+        """
         ROLLED_BACK_EXPLICITLY = "rolled_back_explicitly"
+        """
+        The transaction was explicitly rolled back (by raising
+        `~psycopg.Rollback` or calling `!transaction(force_rollback=True)`).
+        """
         ROLLED_BACK_WITH_ERROR = "rolled_back_with_error"
+        """
+        The transaction was rolled back due to an exception raised within the
+        transaction block.
+        """
 
     def __init__(
         self,
