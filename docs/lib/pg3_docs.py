@@ -103,15 +103,9 @@ def introspect_type(signode):
     from sphinx.util.typing import stringify_annotation
     from sphinx.util.inspect import signature
 
-    try:
-        owner = importlib.import_module(signode["module"])
-        *parents, name = signode["fullname"].split(".")
-        for part in parents:
-            owner = getattr(owner, part)
-    except (KeyError, ImportError, AttributeError):
+    if not (found := find_owner(signode)):
         return None
-    if not isinstance(owner, type):
-        return None
+    owner, name = found
 
     ann = inspect.Parameter.empty
     attr = inspect.getattr_static(owner, name, None)
@@ -133,6 +127,45 @@ def introspect_type(signode):
     if ann is inspect.Parameter.empty:
         return None
     return stringify_annotation(ann, "smart")
+
+
+def find_owner(signode):
+    """
+    Return the class owning the attribute described by a signature.
+
+    Return a tuple (class, attribute name), None if not found.
+    """
+    try:
+        path, name = f"{signode['module']}.{signode['fullname']}".rsplit(".", 1)
+        owner = deep_import(path)
+    except (KeyError, ImportError, AttributeError):
+        return None
+    if not isinstance(owner, type):
+        return None
+    return owner, name
+
+
+def drop_enum_values(app, domain, objtype, contentnode):
+    """
+    Don't show the values of the enum members (e.g. ``OK = 0``).
+
+    The values are implementation details, not useful to the user.
+    """
+    import enum
+
+    from sphinx import addnodes
+
+    if domain != "py" or objtype != "attribute":
+        return
+    for signode in own_signatures(contentnode):
+        if not (found := find_owner(signode)):
+            continue
+        owner, name = found
+        if not (isinstance(owner, enum.EnumMeta) and name in owner.__members__):
+            continue
+        for ann in list(signode.findall(addnodes.desc_annotation)):
+            if ann.astext().strip().startswith("="):
+                ann.parent.remove(ann)
 
 
 def own_signatures(contentnode):
@@ -204,6 +237,21 @@ def unwrap_short_signatures(app, domain, objtype, contentnode):
                 plist["multi_line_parameter_list"] = False
 
 
+def drop_separator_tooltips(app, doctree):
+    """
+    Drop the tooltips from the ``*`` and ``/`` separators in signatures.
+
+    Sphinx renders them as an abbreviation explaining e.g. "Keyword-only
+    parameters separator (PEP 3102)", which is more distracting than useful.
+    """
+    from sphinx import addnodes
+    from docutils import nodes
+
+    for abbr in list(doctree.findall(nodes.abbreviation)):
+        if isinstance(abbr.parent, addnodes.desc_sig_operator):
+            abbr.replace_self(nodes.Text(abbr.astext()))
+
+
 def tidy_signature(app, what, name, obj, options, signature, return_annotation):
     """
     Render a default such as ``<class 'psycopg.Connection'>`` as its name.
@@ -251,10 +299,12 @@ def unlink_builtins(app, env, node, contnode):
 
 def setup(app):
     app.connect("missing-reference", unlink_builtins, priority=400)
+    app.connect("doctree-read", drop_separator_tooltips)
     app.connect("autodoc-before-process-signature", before_process_signature)
     app.connect("autodoc-process-signature", tidy_signature)
     app.connect("object-description-transform", type_field_to_signature)
     app.connect("object-description-transform", unwrap_short_signatures)
+    app.connect("object-description-transform", drop_enum_values)
 
     import psycopg  # type: ignore
 
