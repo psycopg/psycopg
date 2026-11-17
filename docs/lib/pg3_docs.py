@@ -21,8 +21,126 @@ def before_process_signature(app, obj, bound_method):
             del ann["return"]
 
 
+# Type annotations of the properties documented as attributes, by full name
+property_types: dict[str, str] = {}
+
+
+def record_property_type(app, what, name, obj, options, lines):
+    """
+    Record the return annotation of a property documented as attribute.
+
+    Autodoc ignores it, unlike for an ``autoproperty`` directive.
+    """
+    from sphinx.util.typing import stringify_annotation
+    from sphinx.util.inspect import signature
+
+    if what != "attribute" or not isinstance(obj, property) or not obj.fget:
+        return
+    try:
+        sig = signature(obj.fget)
+    except (TypeError, ValueError):
+        return
+    if sig.return_annotation is not sig.empty:
+        property_types[name] = stringify_annotation(sig.return_annotation, "smart")
+
+
+def type_field_to_signature(app, domain, objtype, contentnode):
+    """
+    Add the type of an attribute to its signature.
+
+    Convert a docstring such as::
+
+        The connection the object is managing.
+
+        :type: `Connection`
+
+    into a signature such as ``connection: Connection``. The type in the
+    docstring replaces the one from the annotations, if any.
+
+    If the attribute is a property with no type in the docstring, use its
+    return annotation.
+    """
+    from sphinx import addnodes
+    from sphinx.domains.python._annotations import _parse_annotation
+
+    if domain != "py" or objtype not in ("attribute", "property"):
+        return
+
+    signodes = list(contentnode.parent.findall(addnodes.desc_signature))
+    if found := find_type_field(contentnode):
+        flist, field = found
+        typenodes = unliteral(field[1][0].deepcopy()).children
+        flist.remove(field)
+        if not flist.children:
+            contentnode.remove(flist)
+    elif objtype == "attribute" and signodes:
+        sig = signodes[0]
+        fullname = f"{sig.get('module')}.{sig.get('fullname')}"
+        if not (ann := property_types.get(fullname)):
+            return
+        typenodes = _parse_annotation(ann, app.env)
+    else:
+        return
+
+    for signode in signodes:
+        for ann in list(signode.findall(addnodes.desc_annotation)):
+            if ann.astext().startswith(":"):
+                ann.parent.remove(ann)
+
+        name = next(signode.findall(addnodes.desc_name))
+        name.parent.insert(
+            name.parent.index(name) + 1,
+            addnodes.desc_annotation(
+                "",
+                "",
+                addnodes.desc_sig_punctuation("", ":"),
+                addnodes.desc_sig_space(),
+                *(n.deepcopy() for n in typenodes),
+            ),
+        )
+
+
+def unliteral(node):
+    """
+    Replace the literals in a node with their content.
+
+    Cross-references in signatures are not styled as inline code.
+    """
+    from docutils import nodes
+
+    for lit in list(node.findall(nodes.literal)):
+        parent = lit.parent
+        idx = parent.index(lit)
+        parent.remove(lit)
+        for child in reversed(lit.children):
+            parent.insert(idx, child)
+    return node
+
+
+def find_type_field(contentnode):
+    """
+    Return the ``:type:`` or ``:rtype:`` field of an object description.
+
+    Return a tuple (field list, field), None if not found.
+    """
+    from docutils import nodes
+
+    for flist in contentnode.children:
+        if not isinstance(flist, nodes.field_list):
+            continue
+        for field in flist.children:
+            if field[0].astext() not in ("type", "rtype"):
+                continue
+            if len(field[1]) == 1 and isinstance(field[1][0], nodes.paragraph):
+                return flist, field
+
+    return None
+
+
 def setup(app):
     app.connect("autodoc-before-process-signature", before_process_signature)
+    app.connect("autodoc-process-docstring", record_property_type)
+    app.connect("object-description-transform", type_field_to_signature)
 
     import psycopg  # type: ignore
 

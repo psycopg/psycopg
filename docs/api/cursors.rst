@@ -331,6 +331,7 @@ The `!Cursor` class
     .. autoattribute:: rownumber
 
     .. attribute:: _query
+        :type: PostgresQuery | None
 
         An helper object used to convert queries and parameters before sending
         them to PostgreSQL.
@@ -484,6 +485,8 @@ The `!ServerCursor` class
 
         Number of records to fetch at time when iterating on the cursor. The
         default is 100.
+
+        :type: int
 
     .. automethod:: scroll
 

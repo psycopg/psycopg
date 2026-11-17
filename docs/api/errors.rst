@@ -128,6 +128,7 @@ Error diagnostics
         sqlstate
         statement_position
         table_name
+        :type: str | None
 
         A string with the error field if available; `!None` if not available.
         The attribute value is available only for errors sent by the server:

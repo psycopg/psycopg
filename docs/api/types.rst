@@ -184,11 +184,13 @@ See :ref:`adapt-enum` for details.
    `~psycopg.types.TypeInfo.fetch()` method.
 
    .. attribute:: labels
+       :type: Sequence[str]
 
        After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
        in the PostgreSQL enum type.
 
    .. attribute:: enum
+       :type: type[Enum] | None
 
        After `register_enum()` is called, it will contain the Python type
        mapping to the registered enum.

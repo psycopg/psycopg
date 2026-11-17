@@ -286,7 +286,7 @@ class Error(Exception):
     def pgconn(self) -> PGconn | None:
         """The connection object, if the error was raised from a connection attempt.
 
-        :rtype: psycopg.pq.PGconn | None
+        :type: `~psycopg.pq.PGconn` | `!None`
         """
         return self._pgconn if self._pgconn else None
 
@@ -294,7 +294,7 @@ class Error(Exception):
     def pgresult(self) -> PGresult | None:
         """The result object, if the exception was raised after a failed query.
 
-        :rtype: psycopg.pq.PGresult | None
+        :type: `~psycopg.pq.PGresult` | `!None`
         """
         return self._info if _is_pgresult(self._info) else None
 
