@@ -198,7 +198,7 @@ See :ref:`adapt-enum` for details.
    After registering, fetching data of the registered enum will cast
    PostgreSQL enum labels into corresponding Python enum members.
 
-   If no `!enum` is specified, a new `Enum` is created based on
+   If no `!enum` is specified, a new `~enum.Enum` is created based on
    PostgreSQL enum labels.
 
 
@@ -245,7 +245,7 @@ See :ref:`adapt-range` for details.
 
     PostgreSQL will perform normalisation on `!Range` objects used as query
     parameters, so, when they are fetched back, they will be found in the
-    normal form (for instance ranges on integers will have `[)` bounds).
+    normal form (for instance ranges on integers will have ``[)`` bounds).
 
     .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
 
@@ -300,7 +300,7 @@ See :ref:`adapt-multirange` for details.
     totally ordered: they behave pretty much like a list of `!Range`. Like
     Range, they are `~typing.Generic` on the subtype of their range, so you
     can declare a variable to be `!Multirange[date]` and mypy will complain if
-    you try to add it a `Range[Decimal]`.
+    you try to add it a `!Range[Decimal]`.
 
 .. autoclass:: MultirangeInfo
 

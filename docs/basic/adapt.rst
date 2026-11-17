@@ -510,7 +510,7 @@ about the PostgreSQL enum using the `~types.enum.EnumInfo` class and
 register it using `~types.enum.register_enum()`. The behaviour of unregistered
 and registered enums is different.
 
-- If the enum is not registered with `register_enum()`:
+- If the enum is not registered with `~types.enum.register_enum()`:
 
   - Pure `!Enum` classes are dumped as normal strings, using their member
     names as value. The unknown oid is used, so PostgreSQL should be able to
