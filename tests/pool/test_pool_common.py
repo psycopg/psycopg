@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from time import time
 from typing import Any
+from importlib import import_module
 
 import pytest
 
@@ -16,6 +17,7 @@ from ..acompat import Event, gather, is_alive, skip_async, sleep, spawn
 
 try:
     import psycopg_pool as pool
+    from psycopg_pool._acompat import Event as PoolEvent
 except ImportError:
     # Tests should have been skipped if the package is not available
     pass
@@ -110,6 +112,39 @@ def test_wait_closed(pool_cls, dsn):
         p.wait()
 
 
+def test_wait_after_interrupt(pool_cls, dsn, monkeypatch):
+    release = Event()
+
+    class InterruptedEvent(PoolEvent):
+
+        def wait(self, timeout=None):
+            raise KeyboardInterrupt
+
+    def configure(conn):
+        assert release.wait(5.0)
+
+    with pool_cls(dsn, min_size=min_size(pool_cls), configure=configure) as p:
+        try:
+            with monkeypatch.context() as patch:
+                patch.setattr(
+                    import_module(pool_cls.__module__),
+                    PoolEvent.__name__,
+                    InterruptedEvent,
+                )
+                with pytest.raises(KeyboardInterrupt):
+                    p.wait()
+            assert p._pool_full_event is None
+            assert not p.closed
+        finally:
+            release.set()
+
+        p.wait(timeout=5.0)
+        assert p._pool_full_event is None
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+
 @pytest.mark.slow
 def test_setup_no_timeout(pool_cls, dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
@@ -117,6 +152,9 @@ def test_setup_no_timeout(pool_cls, dsn, proxy):
             proxy.client_dsn, min_size=min_size(pool_cls), num_workers=1
         ) as p:
             p.wait(0.2)
+
+    assert p.closed
+    assert p._pool_full_event is None
 
     with pool_cls(proxy.client_dsn, min_size=min_size(pool_cls), num_workers=1) as p:
         sleep(0.5)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from time import time
 from typing import Any
+from importlib import import_module
 
 import pytest
 
@@ -13,6 +14,7 @@ from ..acompat import AEvent, asleep, gather, is_alive, skip_async, skip_sync, s
 
 try:
     import psycopg_pool as pool
+    from psycopg_pool._acompat import AEvent as PoolEvent
 except ImportError:
     # Tests should have been skipped if the package is not available
     pass
@@ -119,6 +121,118 @@ async def test_wait_closed(pool_cls, dsn):
         await p.wait()
 
 
+@skip_sync
+@pytest.mark.parametrize("method", ["wait", "open"])
+@pytest.mark.parametrize("ready", [False, True], ids=["filling", "ready"])
+async def test_wait_after_cancelled_wait(pool_cls, dsn, monkeypatch, method, ready):
+    import asyncio
+
+    started = AEvent()
+    release = AEvent()
+
+    class ObservedEvent(PoolEvent):
+        async def wait_timeout(self, timeout):
+            started.set()
+            return await super().wait_timeout(timeout)
+
+    monkeypatch.setattr(import_module(pool_cls.__module__), "AEvent", ObservedEvent)
+
+    async def configure(conn):
+        assert await release.wait_timeout(5.0)
+
+    p = pool_cls(
+        dsn,
+        open=False,
+        min_size=min_size(pool_cls, 2),
+        configure=configure,
+        num_workers=1,
+    )
+
+    async def wait():
+        if method == "open":
+            await p.open(wait=True, timeout=5.0)
+        else:
+            await p.wait(timeout=5.0)
+
+    async def settled():
+        while len(p._pool) != p.min_size or p._nconns != p.min_size:
+            await asleep(0)
+
+    tasks = []
+    try:
+        if method == "wait":
+            await p.open()
+        tasks.append(waiter := spawn(wait))
+        assert await started.wait_timeout(5.0)
+        event = p._pool_full_event
+        with pytest.raises(AssertionError):
+            await p.wait()
+        assert p._pool_full_event is event
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert p._pool_full_event is None
+        assert not p.closed
+
+        if ready:
+            release.set()
+            await asyncio.wait_for(settled(), 5.0)
+            await wait()
+        else:
+            started.clear()
+            tasks.append(waiter := spawn(wait))
+            assert await started.wait_timeout(5.0)
+            assert not waiter.done()
+            release.set()
+            await asyncio.wait_for(waiter, 5.0)
+
+        await asyncio.wait_for(settled(), 5.0)
+        assert p._pool_full_event is None
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+        await asyncio.wait_for(settled(), 5.0)
+    finally:
+        release.set()
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await p.close()
+
+
+async def test_wait_after_interrupt(pool_cls, dsn, monkeypatch):
+    release = AEvent()
+
+    class InterruptedEvent(PoolEvent):
+        async def wait_timeout(self, timeout=None):
+            raise KeyboardInterrupt
+
+    async def configure(conn):
+        assert await release.wait_timeout(5.0)
+
+    async with pool_cls(dsn, min_size=min_size(pool_cls), configure=configure) as p:
+        try:
+            with monkeypatch.context() as patch:
+                patch.setattr(
+                    import_module(pool_cls.__module__),
+                    PoolEvent.__name__,
+                    InterruptedEvent,
+                )
+                with pytest.raises(KeyboardInterrupt):
+                    await p.wait()
+            assert p._pool_full_event is None
+            assert not p.closed
+        finally:
+            release.set()
+
+        await p.wait(timeout=5.0)
+        assert p._pool_full_event is None
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+
 @pytest.mark.slow
 async def test_setup_no_timeout(pool_cls, dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
@@ -126,6 +240,9 @@ async def test_setup_no_timeout(pool_cls, dsn, proxy):
             proxy.client_dsn, min_size=min_size(pool_cls), num_workers=1
         ) as p:
             await p.wait(0.2)
+
+    assert p.closed
+    assert p._pool_full_event is None
 
     async with pool_cls(
         proxy.client_dsn, min_size=min_size(pool_cls), num_workers=1

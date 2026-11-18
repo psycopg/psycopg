@@ -18,6 +18,8 @@ psycopg_pool 3.3.4 (unreleased)
 - Fix the count of the connections in `NullConnectionPool` becoming negative
   after a failed `~NullConnectionPool.wait()`.
 - Don't grow the pool when calling `~ConnectionPool.check()` (:ticket:`#1434`).
+- Allow calling `~ConnectionPool.wait()` again after cancellation or interruption,
+  in both regular and null pools (:ticket:`#1475`).
 
 
 Current release
