@@ -256,6 +256,13 @@ def test_quote_int(conn, val, expr):
         ("-9223372036854775808", "bigint", -9223372036854775808),
         ("9223372036854775807", "bigint", 9223372036854775807),
         ("4294967295", "oid", 4294967295),
+        pytest.param("0", "oid8", 0, marks=pytest.mark.pg(">= 19")),
+        pytest.param(
+            "18446744073709551615",
+            "oid8",
+            18446744073709551615,
+            marks=pytest.mark.pg(">= 19"),
+        ),
     ],
 )
 @pytest.mark.parametrize("fmt_out", pq.Format)

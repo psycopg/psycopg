@@ -19,6 +19,7 @@ Psycopg 3.3.10 (unreleased)
   (:ticket:`#1498`).
 - Fix `!json` and `!jsonb` loading and dumping when the connection encoding
   is not UTF-8 (:ticket:`#1504`).
+- Add loaders for the PostgreSQL 19 :sql:`oid8` data type (:ticket:`#1510`).
 
 
 Current release
