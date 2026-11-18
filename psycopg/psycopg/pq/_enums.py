@@ -300,3 +300,25 @@ class Trace(IntFlag):
 
     REGRESS_MODE = 2
     """Redact some fields, e.g. OIDs, from messages."""
+
+
+class CopyResultFlag(IntFlag):
+    """
+    Enum to choose what `PGresult.copy()` copies from the source result.
+
+    The values can be combined with ``|``.
+    """
+
+    __module__ = "psycopg.pq"
+
+    ATTRS = 0x01
+    """Copy the description of the columns."""
+
+    TUPLES = 0x02
+    """Copy the rows. It implies `!ATTRS`."""
+
+    EVENTS = 0x04
+    """Copy the result's event procedures."""
+
+    NOTICEHOOKS = 0x08
+    """Copy the notice hooks."""

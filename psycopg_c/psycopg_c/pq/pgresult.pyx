@@ -158,3 +158,25 @@ cdef class PGresult:
         PyMem_Free(attrs)
         if (res == 0):
             raise e.OperationalError("PQsetResultAttrs failed")
+
+    def set_value(
+        self, int row_number, int column_number, value: bytes | None
+    ) -> None:
+        cdef int rv
+        cdef bytes bvalue
+        if value is None:
+            rv = libpq.PQsetvalue(
+                self._pgresult_ptr, row_number, column_number, NULL, -1)
+        else:
+            bvalue = value
+            rv = libpq.PQsetvalue(
+                self._pgresult_ptr, row_number, column_number,
+                bvalue, <int>len(bvalue))
+        if not rv:
+            raise e.OperationalError("PQsetvalue failed")
+
+    def copy(self, int flags) -> PGresult:
+        cdef libpq.PGresult *rv = libpq.PQcopyResult(self._pgresult_ptr, flags)
+        if rv is NULL:
+            raise e.OperationalError("PQcopyResult failed")
+        return PGresult._from_ptr(rv)

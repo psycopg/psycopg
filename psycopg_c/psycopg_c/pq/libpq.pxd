@@ -312,6 +312,9 @@ cdef extern from "libpq-fe.h":
     int PQsetResultAttrs(PGresult *res,
                          int numAttributes,
                          PGresAttDesc *attDescs) noexcept nogil
+    int PQsetvalue(PGresult *res, int tup_num, int field_num,
+                   char *value, int len) noexcept nogil
+    PGresult *PQcopyResult(const PGresult *src, int flags) noexcept nogil
     int PQlibVersion() noexcept nogil
 
     # 33.12. Notice Processing

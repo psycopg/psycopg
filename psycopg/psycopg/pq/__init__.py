@@ -17,8 +17,8 @@ from collections.abc import Callable
 
 from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc, error_message, version_pretty
-from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Ping
-from ._enums import PipelineStatus, PollingStatus, Trace, TransactionStatus
+from ._enums import ConnStatus, CopyResultFlag, DiagnosticField, ExecStatus, Format
+from ._enums import Ping, PipelineStatus, PollingStatus, Trace, TransactionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,7 @@ __all__ = (
     "DiagnosticField",
     "Format",
     "Trace",
+    "CopyResultFlag",
     "PGconn",
     "PGnotify",
     "Conninfo",
