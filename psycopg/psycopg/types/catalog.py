@@ -69,24 +69,44 @@ class Lsn(str):
     def __sub__(self, other: Lsn) -> int:
         return int(self) - int(other)
 
+    # Equality with a str compares the value, so it is case insensitive and
+    # ignores leading zeros. The hash is the one of the canonical string, so
+    # only canonical strings can be used to look up Lsn keys in a dict.
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Lsn):
+            return self._value == other._value
+        if isinstance(other, str):
+            try:
+                return self._value == self._parse_lsn(other)
+            except ValueError:
+                return False
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return not self.__eq__(other)
+        return NotImplemented
+
+    __hash__ = str.__hash__
+
     def __lt__(self, other: object) -> bool:
         if isinstance(other, str):
-            return int(self) < int(Lsn(other))
+            return self._value < self._to_value(other)
         return NotImplemented
 
     def __le__(self, other: object) -> bool:
         if isinstance(other, str):
-            return int(self) <= int(Lsn(other))
+            return self._value <= self._to_value(other)
         return NotImplemented
 
     def __gt__(self, other: object) -> bool:
         if isinstance(other, str):
-            return int(self) > int(Lsn(other))
+            return self._value > self._to_value(other)
         return NotImplemented
 
     def __ge__(self, other: object) -> bool:
         if isinstance(other, str):
-            return int(self) >= int(Lsn(other))
+            return self._value >= self._to_value(other)
         return NotImplemented
 
     @classmethod
@@ -94,6 +114,10 @@ class Lsn(str):
         if not (m := cls._re_lsn.fullmatch(s)):
             raise ValueError(f"invalid Lsn value: {s!r}")
         return (int(m[1], 16) << 32) | int(m[2], 16)
+
+    @classmethod
+    def _to_value(cls, s: str) -> int:
+        return s._value if isinstance(s, Lsn) else cls._parse_lsn(s)
 
 
 class LsnLoader(Loader):

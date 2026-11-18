@@ -105,15 +105,48 @@ def test_ordering_is_numeric_not_lexical() -> None:
     assert lsn_10 >= lsn_10
 
 
+def test_ordering_with_str() -> None:
+    assert Lsn("F/0") < "10/0"
+    assert "10/0" > Lsn("F/0")
+    assert Lsn("A/0") <= "a/0"
+    assert Lsn("A/0") >= "a/0"
+
+
 def test_ordering_with_invalid_str() -> None:
     with pytest.raises(ValueError, match="invalid Lsn"):
         Lsn("0/0") < "foo"
 
 
+def test_ordering_with_int() -> None:
+    with pytest.raises(TypeError):
+        Lsn("0/0") < 1
+
+
 def test_equality() -> None:
     assert Lsn("A/0") == Lsn("A/0")
     assert Lsn("A/0") == "A/0"
+    assert "A/0" == Lsn("A/0")
     assert Lsn("A/0") != Lsn("B/0")
+    assert not (Lsn("A/0") != "A/0")
+
+
+def test_equality_normalised() -> None:
+    assert Lsn("A/B") == "a/b"
+    assert "a/b" == Lsn("A/B")
+    assert Lsn("A/B") == "0000000A/0000000B"
+    assert not (Lsn("A/B") != "a/b")
+
+
+def test_equality_other_types() -> None:
+    assert Lsn("0/A") != "foo"
+    assert Lsn("0/A") != 10
+
+
+def test_hash() -> None:
+    assert hash(Lsn("a/b")) == hash("A/B")
+    d: dict[str, int] = {Lsn("A/B"): 1}
+    assert d["A/B"] == 1
+    assert d[Lsn("a/b")] == 1
 
 
 def test_lsn_text_loader_registered() -> None:
