@@ -29,6 +29,10 @@ Psycopg 3.3.9
   made pipeline mode, `~AsyncCursor.executemany()` and `~AsyncCopy.write()`
   on async connections several times slower than on sync ones
   (:ticket:`#1468`).
+- Use the values of ``host``, ``hostaddr``, ``port``, ``connect_timeout``,
+  ``load_balance_hosts``, ``target_session_attrs`` found in the service file,
+  not only the ones in the connection string and in the env vars
+  (:ticket:`#698`).
 - Fix client-side quoting of negative zero floats and decimals, which could
   produce a ``--`` SQL comment (:ticket:`#1480`).
 - Raise `DataError` instead of `!ValueError` registering a composite whose

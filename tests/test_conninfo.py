@@ -122,3 +122,15 @@ def test_timeout_bad_value(setpgenv, conninfo):
     params = conninfo_to_dict(conninfo)
     with pytest.raises(ProgrammingError, match="bad value for connect_timeout"):
         timeout_from_conninfo(params)
+
+
+def test_timeout_from_service(setpgenv, tmp_path, monkeypatch):
+    setpgenv({"PGCONNECT_TIMEOUT": "7"})
+    fn = tmp_path / "pg_service.conf"
+    fn.write_text("[foo]\nconnect_timeout=11\n")
+    monkeypatch.setenv("PGSERVICEFILE", str(fn))
+    assert timeout_from_conninfo(conninfo_to_dict("service=foo")) == 11
+    # The connection string has precedence on the service
+    assert timeout_from_conninfo(conninfo_to_dict("service=foo connect_timeout=5")) == 5
+    # The service has precedence on the env var
+    assert timeout_from_conninfo(conninfo_to_dict("service=bar")) == 7
