@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import decimal
 from math import exp, isinf, isnan
 from decimal import Decimal
 
@@ -112,7 +113,7 @@ def test_dump_decimal_numeric_binary_limits():
     [
         ("1E+131072", "maximum 32768 base-10000 digits"),
         ("-1E+131072", "maximum 32768 base-10000 digits"),
-        ("1E+999999999999999999", "maximum 32768 base-10000 digits"),
+        (f"1E+{decimal.MAX_EMAX}", "maximum 32768 base-10000 digits"),
         ("1E-16384", "maximum 16383 digits after the decimal point"),
         ("-1E-16384", "maximum 16383 digits after the decimal point"),
         ("0E-16384", "maximum 16383 digits after the decimal point"),
@@ -146,7 +147,7 @@ def test_roundtrip_numeric_binary_limits(conn):
 
     # A zero is dumped as 0 whatever the exponent: the server wouldn't even
     # parse a literal with an exponent this large.
-    cur.execute("select %b::numeric::text", (Decimal("0E+999999999999999999"),))
+    cur.execute("select %b::numeric::text", (Decimal(f"0E+{decimal.MAX_EMAX}"),))
     assert cur.fetchone()[0] == "0"
 
 
