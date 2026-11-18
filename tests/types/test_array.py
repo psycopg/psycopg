@@ -46,6 +46,49 @@ def test_dump_empty_list(conn, fmt_in, type):
 
 @pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_empty_nested_list(conn, fmt_in):
+    cur = conn.cursor(binary=True)
+    fmt = pq.Format.BINARY if fmt_in == PyFormat.BINARY else pq.Format.TEXT
+    # Use a known-OID dumper so empty lists cannot fall back to text
+    dumper = cur.adapters.get_dumper_by_oid(builtins["text"].array_oid, fmt)
+    cur.adapters.register_dumper(list, dumper)
+
+    query = f"select %{fmt_in.value}::text[]"
+    objs: list[list[Any]] = [[[]], [[], []], [[[]]]]
+    for obj in objs:
+        if fmt == pq.Format.TEXT and conn.info.server_version < 170000:
+            # PostgreSQL < 17 rejects nested empty arrays in text format
+            with pytest.raises(psycopg.errors.InvalidTextRepresentation):
+                with conn.transaction():
+                    cur.execute(query, (obj,))
+        else:
+            cur.execute(query, (obj,))
+            assert cur.fetchone()[0] == []
+            assert cur._query.formats == [fmt]
+
+
+@pytest.mark.crdb_skip("nested array")
+@pytest.mark.parametrize("type", ["text", "int4"])
+def test_copy_empty_nested_list(conn, type):
+    cur = conn.cursor()
+    cur.execute(f"create table copyarray (id serial primary key, arr {type}[])")
+    objs: list[list[Any]] = [[], [[]], [[], []], [[[], []], [[], []]]]
+    with cur.copy("copy copyarray (arr) from stdin (format binary)") as copy:
+        copy.set_types([f"{type}[]"])
+        for obj in objs:
+            copy.write_row([obj])
+
+    got = cur.execute("select arr from copyarray order by id").fetchall()
+    assert got == [([],)] * len(objs)
+
+    with pytest.raises(psycopg.DataError):
+        with cur.copy("copy copyarray (arr) from stdin (format binary)") as copy:
+            copy.set_types([f"{type}[]"])
+            copy.write_row([[[[], []], [[]]]])
+
+
+@pytest.mark.crdb_skip("nested array")
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
@@ -163,6 +206,7 @@ def test_dump_list_int(conn, obj, want):
     [
         [["a"], ["b", "c"]],
         [["a"], []],
+        [[], ["a"]],
         [[["a"]], ["b"]],
         # [["a"], [["b"]]],  # todo, but expensive (an isinstance per item)
         # [True, b"a"], # TODO expensive too
