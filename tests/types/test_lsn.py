@@ -11,7 +11,7 @@ try:
 except ImportError:
     # Allow importing the test module with Psycopg < 3.4 installed.
     # (e.g. to run pool compatibility tests).
-    pass
+    Lsn = str  # type: ignore
 
 
 def test_right_module_defined() -> None:
@@ -90,8 +90,37 @@ def test_addition() -> None:
     assert isinstance(result, Lsn)
 
 
+def test_addition_reflected() -> None:
+    result = 0x100 + Lsn("0/100")
+    assert result == Lsn("0/200")
+    assert isinstance(result, Lsn)
+
+
+@pytest.mark.parametrize("other", [Lsn("0/1"), "0/1", 1.0])
+def test_addition_bad_type(other: Any) -> None:
+    with pytest.raises(TypeError):
+        Lsn("0/100") + other
+
+
 def test_subtraction() -> None:
-    assert Lsn("0/200") - Lsn("0/100") == 0x100
+    result = Lsn("0/200") - Lsn("0/100")
+    assert result == 0x100
+    assert type(result) is int
+    assert Lsn("0/100") - Lsn("0/200") == -0x100
+
+
+def test_subtraction_int() -> None:
+    result = Lsn("0/200") - 0x100
+    assert result == Lsn("0/100")
+    assert isinstance(result, Lsn)
+
+
+@pytest.mark.parametrize("other", ["0/1", 1.0])
+def test_subtraction_bad_type(other: Any) -> None:
+    with pytest.raises(TypeError):
+        Lsn("0/100") - other
+    with pytest.raises(TypeError):
+        other - Lsn("0/100")
 
 
 def test_ordering_is_numeric_not_lexical() -> None:

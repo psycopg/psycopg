@@ -7,7 +7,7 @@ Adapters for catalog types.
 from __future__ import annotations
 
 import re
-from typing import ClassVar
+from typing import ClassVar, overload
 
 from .. import _oids
 from ..pq import Format
@@ -64,10 +64,27 @@ class Lsn(str):
         return bool(self._value)
 
     def __add__(self, other: int) -> Lsn:  # type: ignore[override]
-        return Lsn(int(self) + other)
+        if isinstance(other, int):
+            return Lsn(self._value + other)
+        return NotImplemented
 
-    def __sub__(self, other: Lsn) -> int:
-        return int(self) - int(other)
+    def __radd__(self, other: int) -> Lsn:
+        if isinstance(other, int):
+            return Lsn(other + self._value)
+        return NotImplemented
+
+    @overload
+    def __sub__(self, other: Lsn) -> int: ...
+
+    @overload
+    def __sub__(self, other: int) -> Lsn: ...
+
+    def __sub__(self, other: Lsn | int) -> int | Lsn:
+        if isinstance(other, Lsn):
+            return self._value - other._value
+        if isinstance(other, int):
+            return Lsn(self._value - other)
+        return NotImplemented
 
     # Equality with a str compares the value, so it is case insensitive and
     # ignores leading zeros. The hash is the one of the canonical string, so
