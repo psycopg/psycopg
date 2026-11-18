@@ -31,7 +31,7 @@ cdef extern from * nogil:
 
 #endif
 
-#if defined(__linux__) || defined(__CYGWIN__)
+#if defined(__linux__) || defined(__CYGWIN__) || defined(__EMSCRIPTEN__)
 
 #   include <endian.h>
 
