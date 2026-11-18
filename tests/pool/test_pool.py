@@ -691,6 +691,18 @@ def test_resize(dsn):
     assert size == [2, 1, 3, 4, 3, 2, 2]
 
 
+def test_resize_grown_pool(dsn):
+    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
+        conns = [p.getconn() for _ in range(4)]
+        assert p.get_stats()["pool_size"] == 4
+
+        p.resize(3, 4)
+        assert p.get_stats()["pool_size"] == 4
+
+        for conn in conns:
+            p.putconn(conn)
+
+
 @pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
 def test_bad_resize(dsn, min_size, max_size):
     with pool.ConnectionPool() as p:
