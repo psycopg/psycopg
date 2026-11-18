@@ -80,7 +80,7 @@ class Lsn(str):
 
 class LsnLoader(Loader):
     def load(self, data: Buffer) -> Lsn:
-        return Lsn(bytes(data).decode())
+        return Lsn(str(data, "utf-8"))
 
 
 class LsnBinaryLoader(Loader):
