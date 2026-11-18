@@ -48,6 +48,27 @@ def test_normalises_to_uppercase() -> None:
     assert Lsn("a/3b000000") == "A/3B000000"
 
 
+@pytest.mark.parametrize(
+    "s",
+    ["", "0", "/", "0/", "/0", "0/0/0", "0/100000000", "100000000/0", "0x1/0"]
+    + ["1_0/0", " 1/0", "1/0 ", "+1/0", "-0/0", "g/0", "\uff11/0"],
+)
+def test_invalid_string(s: str) -> None:
+    with pytest.raises(ValueError, match="invalid Lsn"):
+        Lsn(s)
+
+
+def test_max_digits() -> None:
+    assert int(Lsn("00000001/0000000A")) == 0x1_0000000A
+    assert Lsn("00000001/0000000A") == "1/A"
+
+
+@pytest.mark.parametrize("value", [1.0, None, b"0/0"])
+def test_invalid_type(value: Any) -> None:
+    with pytest.raises(TypeError):
+        Lsn(value)
+
+
 def test_is_str_subclass() -> None:
     assert isinstance(Lsn(0), str)
 
@@ -82,6 +103,11 @@ def test_ordering_is_numeric_not_lexical() -> None:
     assert lsn_f <= lsn_10
     assert lsn_f <= lsn_f
     assert lsn_10 >= lsn_10
+
+
+def test_ordering_with_invalid_str() -> None:
+    with pytest.raises(ValueError, match="invalid Lsn"):
+        Lsn("0/0") < "foo"
 
 
 def test_equality() -> None:

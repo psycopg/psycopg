@@ -6,6 +6,9 @@ Adapters for catalog types.
 
 from __future__ import annotations
 
+import re
+from typing import ClassVar
+
 from .. import _oids
 from ..pq import Format
 from ..abc import AdaptContext, Buffer
@@ -26,10 +29,19 @@ class Lsn(str):
 
     _value: int
 
+    # Same rules of the PostgreSQL pg_lsn input function: 1 to 8 hex digits on
+    # each side of the slash.
+    _re_lsn: ClassVar[re.Pattern[str]] = re.compile(
+        r"([0-9A-Fa-f]{1,8})/([0-9A-Fa-f]{1,8})"
+    )
+
     def __new__(cls, value: int | str) -> Lsn:
         if isinstance(value, str):
-            shigh, slow = value.split("/")
-            value = (int(shigh, 16) << 32) | int(slow, 16)
+            value = cls._parse_lsn(value)
+        elif not isinstance(value, int):
+            raise TypeError(
+                f"Lsn() argument must be int or str, not {type(value).__name__}"
+            )
 
         if not 0 <= value < 2**64:
             raise OverflowError("Lsn value must be in the unsigned 64 bits range")
@@ -76,6 +88,12 @@ class Lsn(str):
         if isinstance(other, str):
             return int(self) >= int(Lsn(other))
         return NotImplemented
+
+    @classmethod
+    def _parse_lsn(cls, s: str) -> int:
+        if not (m := cls._re_lsn.fullmatch(s)):
+            raise ValueError(f"invalid Lsn value: {s!r}")
+        return (int(m[1], 16) << 32) | int(m[2], 16)
 
 
 class LsnLoader(Loader):
