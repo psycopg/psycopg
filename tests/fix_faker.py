@@ -21,6 +21,13 @@ from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
 
+try:
+    from psycopg.types.numeric import Oid8
+except ImportError:
+    # Allow importing the test module with Psycopg < 3.4 installed.
+    # (e.g. to run pool compatibility tests).
+    Oid8 = None  # type: ignore
+
 
 @pytest.fixture
 def faker(conn):
@@ -237,6 +244,8 @@ class Faker:
                     continue
             if issubclass(cls, Multirange) and self.conn.info.server_version < 140000:
                 continue
+            if cls is Oid8 and not self._has_oid8():
+                continue
 
             rv.add(cls)
 
@@ -245,6 +254,10 @@ class Faker:
             self.get_maker(cls)
 
         return rv
+
+    def _has_oid8(self) -> bool:
+        info = self.conn.info
+        return bool(info.vendor == "PostgreSQL" and info.server_version >= 190000)
 
     def make_schema(self, cls: type) -> tuple[type, ...] | type | None:
         """Create a schema spec from a Python type.
@@ -655,6 +668,9 @@ class Faker:
 
     def make_Oid(self, spec):
         return spec(randrange(1 << 32))
+
+    def make_Oid8(self, spec):
+        return spec(randrange(1 << 64))
 
     def schema_Range(self, cls):
         subtypes = [

@@ -226,6 +226,9 @@ type, overriding the automatic choice described in :ref:`adapt-numbers`.
 .. autoclass:: Float4
 .. autoclass:: Float8
 .. autoclass:: Oid
+.. autoclass:: Oid8
+
+    .. versionadded:: 3.4
 
 
 .. _range-api:
