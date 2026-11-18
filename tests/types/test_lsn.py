@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+import pickle
+import weakref
 from typing import Any
 
 import pytest
@@ -176,6 +179,30 @@ def test_hash() -> None:
     d: dict[str, int] = {Lsn("A/B"): 1}
     assert d["A/B"] == 1
     assert d[Lsn("a/b")] == 1
+
+
+@pytest.mark.parametrize("proto", range(pickle.HIGHEST_PROTOCOL + 1))
+def test_pickle(proto: int) -> None:
+    lsn = Lsn("AB/12345678")
+    lsn2 = pickle.loads(pickle.dumps(lsn, proto))
+    assert type(lsn2) is Lsn
+    assert lsn2 == lsn
+    assert int(lsn2) == int(lsn)
+
+
+@pytest.mark.parametrize("func", [copy.copy, copy.deepcopy])
+def test_copy(func: Any) -> None:
+    lsn = Lsn("AB/12345678")
+    lsn2 = func(lsn)
+    assert type(lsn2) is Lsn
+    assert lsn2 == lsn
+    assert int(lsn2) == int(lsn)
+
+
+def test_weakref() -> None:
+    lsn = Lsn("AB/12345678")
+    ref = weakref.ref(lsn)
+    assert ref() is lsn
 
 
 def test_lsn_text_loader_registered() -> None:

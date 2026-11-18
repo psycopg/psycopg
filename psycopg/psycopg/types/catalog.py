@@ -25,7 +25,7 @@ class Lsn(str):
     in digit count, e.g. ``"F/0"`` vs ``"10/0"``).
     """
 
-    __slots__ = ("_value",)
+    __slots__ = ("_value", "__weakref__")
 
     _value: int
 
@@ -56,6 +56,9 @@ class Lsn(str):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({super().__repr__()})"
+
+    def __reduce__(self) -> tuple[type[Lsn], tuple[int]]:
+        return (type(self), (self._value,))
 
     def __int__(self) -> int:
         return self._value
