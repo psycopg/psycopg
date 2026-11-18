@@ -803,7 +803,7 @@ cdef class PGconn:
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
 
-        :raises ~e.OperationalError: in case of failure to enter the pipeline
+        :raises ~psycopg.OperationalError: in case of failure to enter the pipeline
             mode.
         """
         _check_supported("PQenterPipelineMode", 140000)
@@ -816,7 +816,7 @@ cdef class PGconn:
     def exit_pipeline_mode(self) -> None:
         """Exit pipeline mode.
 
-        :raises ~e.OperationalError: in case of failure to exit the pipeline
+        :raises ~psycopg.OperationalError: in case of failure to exit the pipeline
             mode.
         """
         _check_supported("PQexitPipelineMode", 140000)
@@ -829,7 +829,7 @@ cdef class PGconn:
     def pipeline_sync(self) -> None:
         """Mark a synchronization point in a pipeline.
 
-        :raises ~e.OperationalError: if the connection is not in pipeline mode
+        :raises ~psycopg.OperationalError: if the connection is not in pipeline mode
             or if sync failed.
         """
         _check_supported("PQpipelineSync", 140000)
@@ -844,7 +844,7 @@ cdef class PGconn:
     def send_flush_request(self) -> None:
         """Sends a request for the server to flush its output buffer.
 
-        :raises ~e.OperationalError: if the flush request failed.
+        :raises ~psycopg.OperationalError: if the flush request failed.
         """
         _check_supported("PQsendFlushRequest ", 140000)
         cdef int rv

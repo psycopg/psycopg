@@ -37,6 +37,7 @@ class LibpqParser(HTMLParser):
         self.varlist_id = None
         self.in_term = False
         self.in_func = False
+        self.func_id = None
 
     def handle_starttag(self, tag, attrs):
         if tag == "sect1":
@@ -47,18 +48,22 @@ class LibpqParser(HTMLParser):
             self.in_term = True
         elif tag == "function":
             self.in_func = True
+            # Some functions are defined in the text rather than in a
+            # <varlistentry>, e.g. <function id="libpq-PQnotifies">.
+            self.func_id = dict(attrs).get("id")
 
     def handle_endtag(self, tag):
         if tag == "term":
             self.in_term = False
         elif tag == "function":
             self.in_func = False
+            self.func_id = None
 
     def handle_data(self, data):
-        if not (self.in_term and self.in_func):
-            return
-
-        self.add_function(data)
+        if self.in_func and self.func_id:
+            self.add_function(data, self.func_id)
+        elif self.in_term and self.in_func:
+            self.add_function(data)
 
     def handle_sect1(self, tag, attrs):
         if "id" in (attrs := dict(attrs)):
@@ -68,16 +73,18 @@ class LibpqParser(HTMLParser):
         if "id" in (attrs := dict(attrs)):
             self.varlist_id = attrs["id"]
 
-    def add_function(self, func_name):
-        self.data[func_name] = self.get_func_url()
+    def add_function(self, func_name, func_id=None):
+        self.data[func_name] = self.get_func_url(func_id)
 
-    def get_func_url(self):
+    def get_func_url(self, func_id=None):
         assert self.section_id, "<sect1> tag not found"
-        assert self.varlist_id, "<varlistentry> tag not found"
+        if not func_id:
+            assert self.varlist_id, "<varlistentry> tag not found"
+            func_id = self.varlist_id
         return self._url_pattern.format(
             version=self.version,
             section=self.section_id,
-            func_id=self.varlist_id.upper(),
+            func_id=func_id.upper(),
         )
 
     _url_pattern = "https://www.postgresql.org/docs/{version}/{section}.html#{func_id}"

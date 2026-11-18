@@ -83,20 +83,74 @@ Module content
 Objects wrapping libpq structures and functions
 -----------------------------------------------
 
-.. admonition:: TODO
+The objects expose the libpq functions with minimal changes. Their names are
+the libpq names in snake case, without the ``PQ`` prefix: for instance
+`PGconn.exec_params()` wraps :pq:`PQexecParams()`. Strings are passed and
+returned as `!bytes`, numbers and enum values as `!int`.
 
-    finish documentation
+Unlike the libpq functions, the methods raise an exception if the libpq
+returns an error code, or if the connection is closed. They also raise
+`~psycopg.NotSupportedError` if the function requires a libpq version newer
+than the one loaded (see `version()`).
 
 .. autoclass:: PGconn()
 
     .. autoattribute:: pgconn_ptr
-    .. automethod:: cancel_conn
-    .. automethod:: get_cancel
+
+    .. rubric:: Connecting to the database
+
+    .. automethod:: connect
+    .. automethod:: connect_start
+    .. automethod:: connect_poll
+    .. automethod:: finish
+    .. automethod:: reset
+    .. automethod:: reset_start
+    .. automethod:: reset_poll
+    .. automethod:: ping
+    .. autoattribute:: info
+
+    .. rubric:: Connection status
+
+    .. autoattribute:: status
+    .. autoattribute:: transaction_status
+    .. automethod:: parameter_status
+    .. autoattribute:: db
+    .. autoattribute:: user
+    .. autoattribute:: password
+    .. autoattribute:: host
+    .. autoattribute:: hostaddr
+    .. autoattribute:: port
+    .. autoattribute:: tty
+    .. autoattribute:: options
+    .. autoattribute:: error_message
+    .. automethod:: get_error_message
+    .. autoattribute:: protocol_version
+    .. autoattribute:: full_protocol_version
+
+        .. versionadded:: 3.3
+
+    .. autoattribute:: server_version
+    .. autoattribute:: socket
+    .. autoattribute:: backend_pid
     .. autoattribute:: needs_password
     .. autoattribute:: used_password
     .. autoattribute:: used_gssapi
 
         .. versionadded:: 3.3
+
+    .. autoattribute:: ssl_in_use
+
+    .. rubric:: Executing commands
+
+    .. automethod:: exec_
+    .. automethod:: exec_params
+    .. automethod:: prepare
+    .. automethod:: exec_prepared
+    .. automethod:: describe_prepared
+    .. automethod:: describe_portal
+    .. automethod:: close_prepared
+    .. automethod:: close_portal
+    .. automethod:: make_empty_result
 
     .. automethod:: encrypt_password
 
@@ -107,6 +161,68 @@ Objects wrapping libpq structures and functions
            b'SCRAM-SHA-256$4096:...
 
     .. automethod:: change_password
+
+    .. rubric:: Asynchronous command processing
+
+    .. automethod:: send_query
+    .. automethod:: send_query_params
+    .. automethod:: send_prepare
+    .. automethod:: send_query_prepared
+    .. automethod:: send_describe_prepared
+    .. automethod:: send_describe_portal
+    .. automethod:: send_close_prepared
+    .. automethod:: send_close_portal
+    .. automethod:: get_result
+    .. automethod:: consume_input
+    .. automethod:: is_busy
+    .. autoattribute:: nonblocking
+    .. automethod:: flush
+    .. automethod:: set_single_row_mode
+    .. automethod:: set_chunked_rows_mode
+
+    .. rubric:: Pipeline mode
+
+    .. autoattribute:: pipeline_status
+    .. automethod:: enter_pipeline_mode
+    .. automethod:: exit_pipeline_mode
+    .. automethod:: pipeline_sync
+    .. automethod:: send_flush_request
+
+    .. rubric:: Canceling commands
+
+    .. automethod:: cancel_conn
+    .. automethod:: get_cancel
+
+    .. rubric:: Notices and notifications
+
+    .. attribute:: notice_handler
+        :type: Callable[[PGresult], None] | None
+
+        A function called when the server sends a notice or warning.
+
+        The function receives a `PGresult` with the notice, whose fields can
+        be read with `~PGresult.error_field()`.
+
+        .. seealso:: :pq:`PQsetNoticeReceiver()`
+
+    .. attribute:: notify_handler
+        :type: Callable[[PGnotify], None] | None
+
+        A function called when a notification is received.
+
+        The `!PGconn` methods don't call it: Psycopg calls it for each
+        notification received while it waits for the results of a command.
+        Otherwise, use `notifies()` to retrieve the notifications.
+
+    .. automethod:: notifies
+
+    .. rubric:: COPY operations
+
+    .. automethod:: put_copy_data
+    .. automethod:: put_copy_end
+    .. automethod:: get_copy_data
+
+    .. rubric:: Tracing
 
     .. automethod:: trace
     .. automethod:: set_trace_flags
@@ -139,16 +255,76 @@ Objects wrapping libpq structures and functions
 .. autoclass:: PGresult()
 
     .. autoattribute:: pgresult_ptr
+    .. automethod:: clear
+
+    .. rubric:: Result status
+
+    .. autoattribute:: status
+    .. autoattribute:: error_message
+    .. automethod:: get_error_message
+    .. automethod:: error_field
+
+    .. rubric:: Retrieving query results
+
+    .. autoattribute:: ntuples
+    .. autoattribute:: nfields
+    .. automethod:: fname
+    .. automethod:: ftable
+    .. automethod:: ftablecol
+    .. automethod:: fformat
+    .. automethod:: ftype
+    .. automethod:: fmod
+    .. automethod:: fsize
+    .. autoattribute:: binary_tuples
+    .. automethod:: get_value
+    .. autoattribute:: nparams
+    .. automethod:: param_type
+
+    .. rubric:: Other command results
+
+    .. autoattribute:: command_status
+    .. autoattribute:: command_tuples
+    .. autoattribute:: oid_value
+
+    .. rubric:: Building results
+
+    .. automethod:: set_attributes
 
 
 .. autoclass:: Conninfo
+    :members:
+
 .. autoclass:: Escaping
+    :members:
 
 .. autoclass:: PGcancelConn()
-    :members:
+
+    .. automethod:: start
+    .. automethod:: blocking
+    .. automethod:: poll
+    .. autoattribute:: status
+    .. autoattribute:: socket
+    .. autoattribute:: error_message
+    .. automethod:: get_error_message
+    .. automethod:: reset
+    .. automethod:: finish
 
 .. autoclass:: PGcancel()
     :members:
+
+
+Data structures
+---------------
+
+.. autoclass:: PGnotify()
+    :members:
+
+.. autoclass:: ConninfoOption()
+    :members:
+
+.. autoclass:: PGresAttDesc()
+    :members:
+
 
 Enumerations
 ------------
