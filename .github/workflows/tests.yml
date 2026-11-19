@@ -152,6 +152,63 @@ jobs:
 
   # }}}
 
+  linux-32:  # {{{
+    # Run the tests on a 32 bits userland, in an i386 container.
+    #
+    # Use the Debian Python and numpy because there are no i686 wheels for
+    # numpy. The container is run "by hand" because actions/checkout and the
+    # other JavaScript actions cannot run in an i386 container.
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.repository == 'psycopg/psycopg'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        impl: [python, c]
+
+    env:
+      IMAGE: "i386/debian:trixie"
+      POSTGRES: "postgres:18"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start PostgreSQL service
+        run: |
+          docker pull $POSTGRES
+          docker run --rm -d --name postgres -p 5432:5432 \
+            -e POSTGRES_PASSWORD=password $POSTGRES \
+            -c max_prepared_transactions=10
+
+      - name: Run tests in the 32 bits container
+        # The default Docker seccomp profile makes socket() fail with ENOSYS
+        # for 32 bits processes (seen on Docker 29.4), so disable it.
+        run: |
+          docker run --rm --platform linux/386 --network host \
+            --security-opt seccomp=unconfined \
+            -v ${{ github.workspace }}:/src -w /src \
+            -e PSYCOPG_IMPL=${{ matrix.impl }} \
+            -e PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres password=password" \
+            -e NOT_MARKERS="mypy" \
+            $IMAGE bash -euxc '
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                python3-venv python3-dev python3-numpy \
+                libpq5 libpq-dev gcc
+              python3 -c "import struct; assert struct.calcsize(\"P\") == 4"
+              python3 -m venv --system-site-packages /venv
+              source /venv/bin/activate
+              DEPS="./psycopg[test] ./psycopg_pool"
+              if [[ $PSYCOPG_IMPL == c ]]; then
+                DEPS="$DEPS ./psycopg_c"
+              fi
+              pip install $DEPS
+              ./tools/ci/ci_test.sh
+            '
+
+
+  # }}}
+
   pool-integration:  # {{{
     # Test the current pool version with older psycopg versions
     runs-on: ubuntu-latest
