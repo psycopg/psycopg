@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.3.10 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `!json` and `!jsonb` loading when the connection encoding is not UTF-8
+  (:ticket:`#1504`).
+
+
 Current release
 ---------------
 

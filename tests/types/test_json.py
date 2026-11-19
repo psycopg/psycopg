@@ -139,6 +139,21 @@ def test_load_non_utf8_encoding(conn, jtype, fmt_out):
     assert cur.fetchone()[0] == {"a": "\xe9"}
 
 
+@pytest.mark.crdb_skip("encoding")
+@pytest.mark.parametrize("jtype", ["json", "jsonb"])
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_ascii_encoding(conn, jtype, fmt_out):
+    # SQL_ASCII means no recoding: the server sends the stored bytes as
+    # they are; if they are UTF-8, json.loads() parses them as usual (#1504).
+    cur = conn.cursor(binary=fmt_out)
+    tname = f"json_ascii_{jtype}_{fmt_out.name.lower()}"
+    cur.execute(f"create table {tname} (v {jtype})")
+    cur.execute(f"insert into {tname} values (%s::{jtype})", ('{"a": "\xe9"}',))
+    conn.execute("set client_encoding to sql_ascii")
+    cur.execute(f"select v from {tname}")
+    assert cur.fetchone()[0] == {"a": "\xe9"}
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_dump_customise(conn, wrapper, fmt_in):
