@@ -181,8 +181,6 @@ def test_dump_non_utf8_encoding(conn, encoding, fmt_in, dumper, pgtype):
     assert json.loads(cur.fetchone()[0]) == obj
 
 
-
-
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_dump_customise(conn, wrapper, fmt_in):
