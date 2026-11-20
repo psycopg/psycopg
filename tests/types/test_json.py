@@ -8,7 +8,7 @@ import pytest
 import psycopg.types
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat
-from psycopg.types.json import set_json_dumps, set_json_loads
+from psycopg.types.json import Json, Jsonb, set_json_dumps, set_json_loads
 
 samples = [
     "null",
@@ -152,6 +152,35 @@ def test_load_ascii_encoding(conn, jtype, fmt_out):
     conn.execute("set client_encoding to sql_ascii")
     cur.execute(f"select v from {tname}")
     assert cur.fetchone()[0] == {"a": "\xe9"}
+
+
+@pytest.mark.crdb_skip("encoding")
+@pytest.mark.parametrize("encoding", ["utf8", "sql_ascii", "latin9"])
+@pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.BINARY])
+@pytest.mark.parametrize("dumper", ["str", "bytes"])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_dump_non_utf8_encoding(conn, encoding, fmt_in, dumper, pgtype):
+    # The dumpers must send data in the connection encoding; if the dumps
+    # function returns utf8 bytes they must be recoded (#1504).
+    obj = {"a": "\u20ac"}
+
+    if dumper == "str":
+
+        def dumps(obj):
+            return json.dumps(obj, ensure_ascii=False)
+
+    else:
+
+        def dumps(obj):
+            return json.dumps(obj, ensure_ascii=False).encode()
+
+    conn.execute(f"set client_encoding to {encoding}")
+    cur = conn.cursor()
+    wrapper = Json if pgtype == "json" else Jsonb
+    cur.execute(f"select %{fmt_in.value}::{pgtype}::text", (wrapper(obj, dumps=dumps),))
+    assert json.loads(cur.fetchone()[0]) == obj
+
+
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
