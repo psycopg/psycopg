@@ -207,6 +207,8 @@ class _JsonDumper(Dumper):
     def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
+        enc = conn_encoding(self.connection)
+        self._encoding = "" if enc in ("utf-8", "ascii") else enc
 
     def dump(self, obj: Any) -> Buffer | None:
         if isinstance(obj, _JsonWrapper):
@@ -214,8 +216,13 @@ class _JsonDumper(Dumper):
             obj = obj.obj
         else:
             dumps = self.dumps
-        if isinstance((data := dumps(obj)), str):
-            return data.encode()
+        data = dumps(obj)
+        if isinstance(data, str):
+            return data.encode(self._encoding or "utf-8")
+        if self._encoding:
+            # The dumps function returned bytes, which are expected to be
+            # utf8: recode them to the connection encoding (#1504).
+            return str(data, "utf-8").encode(self._encoding)
         return data
 
 

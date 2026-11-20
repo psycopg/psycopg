@@ -8,7 +8,7 @@ import pytest
 import psycopg.types
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat
-from psycopg.types.json import set_json_dumps, set_json_loads
+from psycopg.types.json import Json, Jsonb, set_json_dumps, set_json_loads
 
 samples = [
     "null",
@@ -152,6 +152,59 @@ def test_load_ascii_encoding(conn, jtype, fmt_out):
     conn.execute("set client_encoding to sql_ascii")
     cur.execute(f"select v from {tname}")
     assert cur.fetchone()[0] == {"a": "\xe9"}
+
+
+@pytest.mark.crdb_skip("encoding")
+@pytest.mark.parametrize("encoding", ["utf8", "sql_ascii", "latin9"])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("dumper", ["str", "bytes"])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_dump_non_utf8_encoding(conn, encoding, fmt_in, dumper, pgtype):
+    # The dumpers must send data in the connection encoding; if the dumps
+    # function returns utf8 bytes they must be recoded (#1504).
+    obj = {"a": "\u20ac"}
+
+    if dumper == "str":
+
+        def dumps(obj):
+            return json.dumps(obj, ensure_ascii=False)
+
+    else:
+
+        def dumps(obj):
+            return json.dumps(obj, ensure_ascii=False).encode()
+
+    conn.execute(f"create temporary table json_encoding (v {pgtype})")
+    conn.execute(f"set client_encoding to {encoding}")
+    wrapper = Json if pgtype == "json" else Jsonb
+    conn.execute(
+        f"insert into json_encoding values (%{fmt_in.value})",
+        (wrapper(obj, dumps=dumps),),
+    )
+    # Read using a different encoding so matching encode/decode errors
+    # cannot hide corrupted stored data.
+    conn.execute("set client_encoding to utf8")
+    assert conn.execute("select v from json_encoding").fetchone()[0] == obj
+
+
+@pytest.mark.crdb_skip("encoding")
+@pytest.mark.parametrize("buffer", [bytearray, memoryview])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("wrapper", [Json, Jsonb])
+def test_dump_non_utf8_buffer(conn, buffer, fmt_in, wrapper):
+    obj = {"a": "\u20ac"}
+
+    def dumps(obj):
+        return buffer(json.dumps(obj, ensure_ascii=False).encode())
+
+    conn.execute("create temporary table json_buffer (v jsonb)")
+    conn.execute("set client_encoding to latin9")
+    conn.execute(
+        f"insert into json_buffer values (%{fmt_in.value})",
+        (wrapper(obj, dumps=dumps),),
+    )
+    conn.execute("set client_encoding to utf8")
+    assert conn.execute("select v from json_buffer").fetchone()[0] == obj
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
