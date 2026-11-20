@@ -712,6 +712,14 @@ PQsetResultAttrs = pq.PQsetResultAttrs
 PQsetResultAttrs.argtypes = [PGresult_ptr, c_int, PGresAttDesc_ptr]
 PQsetResultAttrs.restype = c_int
 
+PQsetvalue = pq.PQsetvalue
+PQsetvalue.argtypes = [PGresult_ptr, c_int, c_int, c_char_p, c_int]
+PQsetvalue.restype = c_int
+
+PQcopyResult = pq.PQcopyResult
+PQcopyResult.argtypes = [PGresult_ptr, c_int]
+PQcopyResult.restype = PGresult_ptr
+
 
 # 33.12. Notice Processing
 

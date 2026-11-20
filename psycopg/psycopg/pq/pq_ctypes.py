@@ -1580,6 +1580,44 @@ class PGresult:
         if impl.PQsetResultAttrs(self._pgresult_ptr, len(structs), array) == 0:
             raise e.OperationalError("PQsetResultAttrs failed")
 
+    def set_value(
+        self, row_number: int, column_number: int, value: bytes | None
+    ) -> None:
+        """Set the value of a field of the result.
+
+        A `!row_number` equal to `ntuples` adds a row. The columns must have
+        been set already, for instance with `set_attributes()`.
+
+        :param value: the value in the format of the column, or `!None` to set
+            an SQL :sql:`NULL`.
+        :raises ~psycopg.OperationalError: if setting the value failed, for
+            instance if the row or the column number is out of range.
+
+        See :pq:`PQsetvalue()` for details.
+        """
+        length = len(value) if value is not None else -1
+        if not impl.PQsetvalue(
+            self._pgresult_ptr, row_number, column_number, value, length
+        ):
+            raise e.OperationalError("PQsetvalue failed")
+
+    def copy(self, flags: int) -> PGresult:
+        """Return a copy of the result.
+
+        The copy is always in `~ExecStatus.TUPLES_OK` status and has no error
+        message, but it keeps the command status.
+
+        :param flags: what to copy from the result, for instance
+            ``CopyResultFlag.ATTRS | CopyResultFlag.TUPLES``.
+        :raises ~psycopg.OperationalError: if the copy failed.
+
+        See :pq:`PQcopyResult()` for details.
+        """
+        rv = impl.PQcopyResult(self._pgresult_ptr, flags)
+        if not rv:
+            raise e.OperationalError("PQcopyResult failed")
+        return PGresult(rv)
+
 
 class PGcancelConn:
     """
