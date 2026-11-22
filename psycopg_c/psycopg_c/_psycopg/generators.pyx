@@ -256,7 +256,7 @@ def pipeline_communicate(
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
-    Return a list results, including single PIPELINE_SYNC elements.
+    Return a list of results, including single PIPELINE_SYNC elements.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef int cires

@@ -26,7 +26,7 @@ def quote(obj: Any, context: AdaptContext | None = None) -> str:
 
     Use this function only if you absolutely want to convert a Python string to
     an SQL quoted literal to use e.g. to generate batch SQL and you won't have
-    a connection available when you will need to use it.
+    a connection available when you need to use it.
 
     This function is relatively inefficient, because it doesn't cache the
     adaptation rules. If you pass a `!context` you can adapt the adaptation
@@ -112,7 +112,7 @@ class Composed(Composable):
     directly to `~psycopg.Cursor.execute()`, `~psycopg.Cursor.executemany()`,
     `~psycopg.Cursor.copy()` in place of the query string.
 
-    It is also possible to create a `!Composed` directly specifying a sequence
+    It is also possible to create a `!Composed` directly by specifying a sequence
     of objects as arguments: if they are not `!Composable` they will be wrapped
     in a `Literal`.
 
@@ -219,9 +219,9 @@ class SQL(Composable):
         """
         Merge `Composable` objects into a template.
 
-        :param args: parameters to replace to numbered (``{0}``, ``{1}``) or
+        :param args: parameters to replace numbered (``{0}``, ``{1}``) or
             auto-numbered (``{}``) placeholders
-        :param kwargs: parameters to replace to named (``{name}``) placeholders
+        :param kwargs: parameters to replace named (``{name}``) placeholders
         :return: the union of the `!SQL` string with placeholders replaced
 
         The method is similar to the Python `str.format()` method: the string
@@ -231,7 +231,7 @@ class SQL(Composable):
         the named ones. However placeholder modifiers (``{0!r}``, ``{0:<10}``)
         are not supported.
 
-        If a `!Composable` objects is passed to the template it will be merged
+        If a `!Composable` object is passed to the template it will be merged
         according to its `as_string()` method. If any other Python object is
         passed, it will be wrapped in a `Literal` object and so escaped
         according to SQL rules.
@@ -301,12 +301,12 @@ class SQL(Composable):
         Use the `!SQL` object's string to separate the elements in `!seq`.
         Elements that are not `Composable` will be considered `Literal`.
 
-        If the arguments are `Template` instance, return a `Template` joining
+        If the arguments are `Template` instances, return a `Template` joining
         all the items. Note that arguments must either be all templates or
         none should be.
 
         Note that `Composed` objects are iterable too, so they can be used as
-        argument for this method.
+        an argument for this method.
 
         Example::
 
@@ -514,10 +514,10 @@ def as_string(obj: Any, context: AdaptContext | None = None) -> str:
       `~Composable.as_string()` method;
     - `~string.templatelib.Template` strings are converted according to the
       rules documented in :ref:`template-strings`;
-    - every other object is converted as it was :ref:`a parameter passed to a
+    - every other object is converted as if it were :ref:`a parameter passed to a
       query <types-adaptation>`.
 
-    If `!context` is specified then it is be used to customize the conversion.
+    If `!context` is specified then it is used to customize the conversion,
     for example using the encoding of a connection or the dumpers registered.
     """
     if isinstance(obj, Composable):

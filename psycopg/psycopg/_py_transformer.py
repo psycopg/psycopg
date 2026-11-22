@@ -1,7 +1,7 @@
 """
 Helper object to transform values between Python and PostgreSQL
 
-Python implementation of the object. Use the `_transformer module to import
+Python implementation of the object. Use the `_transformer` module to import
 the right implementation (Python or C). The public place where the object
 is exported is `psycopg.adapt` (which we may not use to avoid circular
 dependencies problems).
@@ -43,7 +43,7 @@ class Transformer(AdaptContext):
 
     The life cycle of the object is the query, so it is assumed that attributes
     such as the server version or the connection encoding will not change. The
-    object have its state so adapting several values of the same type can be
+    object has its state so adapting several values of the same type can be
     optimised.
 
     """
@@ -278,7 +278,7 @@ class Transformer(AdaptContext):
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> abc.Dumper:
         """
-        Return a Dumper to dump an object to the type with given oid.
+        Return a Dumper to dump an object to the type with the given oid.
         """
         if not self._oid_dumpers:
             self._oid_dumpers = ({}, {})

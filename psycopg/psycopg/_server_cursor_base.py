@@ -30,7 +30,7 @@ INTRANS = pq.TransactionStatus.INTRANS
 
 
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
-    """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
+    """Mixin to add ServerCursor behaviour and implementation to a BaseCursor."""
 
     __slots__ = """_name _scrollable _withhold _described itersize _format
         _iter_rows _page_pos

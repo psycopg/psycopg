@@ -28,7 +28,7 @@ class _BaseStrDumper(Dumper):
 
 class _StrBinaryDumper(_BaseStrDumper):
     """
-    Base class to dump a Python strings to a Postgres text type, in binary format.
+    Base class to dump Python strings to a Postgres text type, in binary format.
 
     Subclasses shall specify the oids of real types (text, varchar, name...).
     """
@@ -42,7 +42,7 @@ class _StrBinaryDumper(_BaseStrDumper):
 
 class _StrDumper(_BaseStrDumper):
     """
-    Base class to dump a Python strings to a Postgres text type, in text format.
+    Base class to dump Python strings to a Postgres text type, in text format.
 
     Subclasses shall specify the oids of real types (text, varchar, name...).
     """
@@ -74,7 +74,7 @@ class StrDumper(_StrDumper):
     Dumper for strings in text format to the text oid.
 
     Note that this dumper is not used by default because the type is too strict
-    and PostgreSQL would require an explicit casts to everything that is not a
+    and PostgreSQL would require explicit casts to everything that is not a
     text field. However it is useful where the unknown oid is ambiguous and the
     text oid is required, for instance with variadic functions.
     """

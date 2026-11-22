@@ -2,7 +2,7 @@
 Code concerned with waiting in different contexts (blocking, async, etc).
 
 These functions are designed to consume the generators returned by the
-`generators` module function and to return their final value.
+`generators` module functions and to return their final value.
 
 """
 
@@ -78,7 +78,7 @@ def wait_selector(
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
-    :param interval: interval (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupts, e.g.
         to allow Ctrl-C.
     :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
         Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
@@ -127,14 +127,14 @@ def wait_conn(
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
-    :param interval: interval (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupts, e.g.
         to allow Ctrl-C.
     :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
         Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
         timeout.
     :return: whatever `!gen` returns on completion.
 
-    Behave like in `wait()`, but take the fileno to wait from the generator
+    Behave like in `wait()`, but take the fileno to wait on from the generator
     itself, which might change during processing.
     """
     if interval is None:
@@ -193,7 +193,7 @@ async def wait_async(
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
-    :param interval: interval (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupts, e.g.
         to allow Ctrl-C.
     :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
         Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
@@ -298,14 +298,14 @@ async def wait_conn_async(
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
-    :param interval: interval (in seconds) to check for other interrupt, e.g.
+    :param interval: interval (in seconds) to check for other interrupts, e.g.
         to allow Ctrl-C.
     :param timeout: maximum time (in seconds) to wait for `!gen` to complete.
         Raise `~psycopg.errors._WaitTimeout` when it expires. `!None` means no
         timeout.
     :return: whatever `!gen` returns on completion.
 
-    Behave like in `wait()`, but take the fileno to wait from the generator
+    Behave like in `wait()`, but take the fileno to wait on from the generator
     itself, which might change during processing.
     """
     if interval is None:
@@ -555,7 +555,7 @@ def _is_select_patched() -> bool:
     """
     Detect if some greenlet library has patched the select library.
 
-    If this is the case, avoid to use the wait_c function as it doesn't behave
+    If this is the case, avoid using the wait_c function as it doesn't behave
     in a collaborative way.
 
     Currently supported: gevent.

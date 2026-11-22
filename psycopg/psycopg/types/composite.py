@@ -162,7 +162,7 @@ class RecordLoader(RecursiveLoader):
     """
     Load a `record` field from PostgreSQL.
 
-    In text mode we don't have type information of the composite's fields, so
+    In text mode we don't have type information about the composite's fields, so
     convert every item as text. Note that in binary loading we have per-field
     oids instead.
     """
@@ -223,7 +223,7 @@ class _CompositeLoader(Loader, Generic[T], ABC):
     """
     Base class to create text loaders of specific composite types.
 
-    The class is complete but lack information about the fields types and
+    The class is complete but lacks information about the field types and
     object factory. These will be added by register_composite(), which will
     create a subclass of this class.
     """
@@ -255,7 +255,7 @@ class _CompositeBinaryLoader(Loader, Generic[T], ABC):
     """
     Base class to create text loaders of specific composite types.
 
-    The class is complete but lack information about the fields types, names,
+    The class is complete but lacks information about the field types, names,
     and object factory. These will be added by register_composite(), which will
     create a subclass of this class.
     """
@@ -478,7 +478,7 @@ def _parse_binary_record(data: abc.Buffer) -> tuple[list[Buffer | None], list[in
     Parse the binary representation of a composite type.
 
     Return the sequence of fields and oids found in the type. The fields
-    are returned as buffer: they will need a Transformer to be converted
+    are returned as buffers: they will need a Transformer to be converted
     to Python types.
     """
     nfields = unpack_len(data, 0)[0]

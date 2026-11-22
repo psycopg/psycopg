@@ -60,7 +60,7 @@ class PostgresQuery:
         """
         Set up the query and parameters to convert.
 
-        The results of this function can be obtained accessing the object
+        The results of this function can be obtained by accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
         if isinstance(query, Template):
@@ -264,7 +264,7 @@ class PostgresClientQuery(PostgresQuery):
         """
         Set up the query and parameters to convert.
 
-        The results of this function can be obtained accessing the object
+        The results of this function can be obtained by accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
         if isinstance(query, Template):

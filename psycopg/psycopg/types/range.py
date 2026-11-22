@@ -73,8 +73,8 @@ WHERE t.oid = {regtype}
 class Range(Generic[T]):
     """Python representation for a PostgreSQL range type.
 
-    :param lower: lower bound for the range. `!None` means unbound
-    :param upper: upper bound for the range. `!None` means unbound
+    :param lower: lower bound for the range. `!None` means unbounded
+    :param upper: upper bound for the range. `!None` means unbounded
     :param bounds: one of the literal strings ``()``, ``[)``, ``(]``, ``[]``,
         representing whether the lower or upper bounds are included
     :param empty: if `!True`, the range is empty
@@ -131,12 +131,12 @@ class Range(Generic[T]):
 
     @property
     def lower(self) -> T | None:
-        """The lower bound of the range. `!None` if empty or unbound."""
+        """The lower bound of the range. `!None` if empty or unbounded."""
         return self._lower
 
     @property
     def upper(self) -> T | None:
-        """The upper bound of the range. `!None` if empty or unbound."""
+        """The upper bound of the range. `!None` if empty or unbounded."""
         return self._upper
 
     @property

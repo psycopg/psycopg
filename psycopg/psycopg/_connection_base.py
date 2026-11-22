@@ -287,7 +287,7 @@ class BaseConnection(Generic[Row]):
     def fileno(self) -> int:
         """Return the file descriptor of the connection.
 
-        This function allows to use the connection as file-like object in
+        This function allows you to use the connection as a file-like object in
         functions waiting for readiness, such as the ones defined in the
         `selectors` module.
         """
@@ -490,7 +490,7 @@ class BaseConnection(Generic[Row]):
 
     def _deallocate(self, name: bytes | None) -> PQGen[None]:
         """
-        Deallocate one, or all, prepared statement in the session.
+        Deallocate one, or all, prepared statements in the session.
 
         ``name == None`` stands for DEALLOCATE ALL.
 
@@ -619,7 +619,7 @@ class BaseConnection(Generic[Row]):
 
     def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
         """
-        Returns a `Xid` to pass to the `!tpc_*()` methods of this connection.
+        Returns an `Xid` to pass to the `!tpc_*()` methods of this connection.
 
         The argument types and constraints are explained in
         :ref:`two-phase-commit`.

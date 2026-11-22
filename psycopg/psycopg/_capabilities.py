@@ -24,7 +24,7 @@ class Capabilities:
         If the method is implemented, then `ConnectionInfo.full_protocol_version`
         will return a meaningful value.
 
-        The feature requires libpq 18.0 and greater.
+        The feature requires libpq 18.0 or greater.
         """
         return self._has_feature(
             "pq.PGconn.full_protocol_version()", 180000, check=check
@@ -74,7 +74,7 @@ class Capabilities:
 
     def has_stream_chunked(self, check: bool = False) -> bool:
         """Check if `Cursor.stream()` can handle a `size` parameter value
-        greater than 1 to retrieve results by chunks.
+        greater than 1 to retrieve results in chunks.
 
         The feature requires libpq 17.0 or greater.
         """
@@ -91,12 +91,12 @@ class Capabilities:
 
     def _has_feature(self, feature: str, want_version: int, check: bool) -> bool:
         """
-        Check is a version is supported.
+        Check if a version is supported.
 
         If `check` is true, raise an exception with an explicative message
         explaining why the feature is not supported.
 
-        The expletive messages, are left to the user.
+        The expletive messages are left to the user.
         """
         try:
             msg = self._cache[feature]
@@ -113,7 +113,7 @@ class Capabilities:
 
     def _get_unsupported_message(self, feature: str, want_version: int) -> str:
         """
-        Return a descriptinve message to describe why a feature is unsupported.
+        Return a descriptive message to describe why a feature is unsupported.
 
         Return an empty string if the feature is supported.
         """

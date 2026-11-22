@@ -115,17 +115,17 @@ class BaseCopy(Generic[ConnectionType]):
         """
         Set the types expected in a COPY operation.
 
-        The types must be specified as a sequence of oid or PostgreSQL type
+        The types must be specified as a sequence of oids or PostgreSQL type
         names (e.g. ``int4``, ``timestamptz[]``).
 
         This operation overcomes the lack of metadata returned by PostgreSQL
         when a COPY operation begins:
 
-        - On :sql:`COPY TO`, `!set_types()` allows to specify what types the
+        - On :sql:`COPY TO`, `!set_types()` allows you to specify what types the
           operation returns. If `!set_types()` is not used, the data will be
           returned as unparsed strings or bytes instead of Python objects.
 
-        - On :sql:`COPY FROM`, `!set_types()` allows to choose what type the
+        - On :sql:`COPY FROM`, `!set_types()` allows you to choose what type the
           database expects. This is especially useful in binary copy, because
           PostgreSQL will apply no cast rule.
 
@@ -181,7 +181,7 @@ class BaseCopy(Generic[ConnectionType]):
 
 class Formatter(ABC):
     """
-    A class which understand a copy format (text, binary).
+    A class which understands a copy format (text, binary).
     """
 
     format: pq.Format

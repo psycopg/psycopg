@@ -36,25 +36,25 @@ class AdaptersMap:
     Every `!AdaptContext` object has an underlying `!AdaptersMap` defining how
     types are converted in that context, exposed as the
     `~psycopg.abc.AdaptContext.adapters` attribute: changing such map allows
-    to customise adaptation in a context without changing separated contexts.
+    you to customise adaptation in a context without changing separate contexts.
 
     When a context is created from another context (for instance when a
     `~psycopg.Cursor` is created from a `~psycopg.Connection`), the parent's
-    `!adapters` are used as template for the child's `!adapters`, so that every
-    cursor created from the same connection use the connection's types
+    `!adapters` are used as a template for the child's `!adapters`, so that every
+    cursor created from the same connection uses the connection's types
     configuration, but separate connections have independent mappings.
 
     Once created, `!AdaptersMap` are independent. This means that objects
     already created are not affected if a wider scope (e.g. the global one) is
     changed.
 
-    The connections adapters are initialised using a global `!AdaptersMap`
-    template, exposed as `psycopg.adapters`: changing such mapping allows to
-    customise the type mapping for every connections created afterwards.
+    The connections' adapters are initialised using a global `!AdaptersMap`
+    template, exposed as `psycopg.adapters`: changing such mapping allows you
+    to customise the type mapping for every connection created afterwards.
 
     The object can start empty or copy from another object of the same class.
     Copies are copy-on-write: if the maps are updated make a copy. This way
-    extending e.g. global map by a connection or a connection map from a cursor
+    extending e.g. the global map by a connection or a connection map from a cursor
     is cheap: a copy is only made on customisation.
     """
 
@@ -167,9 +167,9 @@ class AdaptersMap:
         Configure the context to use `!loader` to convert data of oid `!oid`.
 
         :param oid: The PostgreSQL OID or type name to manage.
-        :param loader: The loar to register for `!oid`.
+        :param loader: The loader to register for `!oid`.
 
-        If `oid` is specified as string, it refers to a type name, which is
+        If `oid` is specified as a string, it refers to a type name, which is
         looked up in the `types` registry.
 
         """

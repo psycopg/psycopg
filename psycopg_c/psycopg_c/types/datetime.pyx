@@ -1054,7 +1054,7 @@ cdef const char *_parse_micros(const char *start, int *us):
     """
     Parse microseconds from a string.
 
-    Micros are assumed up to 6 digit chars separated by a non-digit.
+    Micros are assumed to be up to 6 digit chars separated by a non-digit.
 
     Return the pointer at the separator after the final digit.
     """
@@ -1076,7 +1076,7 @@ cdef const char *_parse_micros(const char *start, int *us):
 
 cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     """
-    Parse a timezone from a string, return Python timezone object.
+    Parse a timezone from a string, return a Python timezone object.
 
     Modify the buffer pointer to point at the first character after the
     timezone parsed. In case of parse error make it NULL.

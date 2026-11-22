@@ -1,7 +1,7 @@
 """
 Information about PostgreSQL types
 
-These types allow to read information from the system catalog and provide
+These types allow you to read information from the system catalog and provide
 information to the adapters if needed.
 """
 

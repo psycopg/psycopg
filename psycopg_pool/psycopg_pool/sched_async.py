@@ -1,7 +1,7 @@
 """
 A minimal scheduler to schedule tasks to run in the future (async version).
 
-Inspired to the standard library `sched.scheduler`, but designed for
+Inspired by the standard library `sched.scheduler`, but designed for
 multi-thread usage from the ground up, not as an afterthought. Tasks can be
 scheduled in front of the one currently running and `Scheduler.run()` can be
 left running without any tasks scheduled.

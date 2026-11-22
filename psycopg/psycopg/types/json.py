@@ -40,8 +40,8 @@ def set_json_dumps(
     By default dumping JSON uses the builtin `json.dumps`. You can override
     it to use a different JSON library or to use customised arguments.
 
-    If the `Json` wrapper specified a `!dumps` function, use it in precedence
-    of the one set by this function.
+    If the `Json` wrapper specified a `!dumps` function, use it in preference
+    to the one set by this function.
     """
     if context is None:
         # If changing load function globally, just change the default on the
@@ -148,8 +148,8 @@ def _get_adapter_key(t: type, f: Callable[..., Any]) -> _AdapterKey | None:
     Return an adequate caching key for a dumps/loads function and a base type.
 
     We can't use just the function, even if it is hashable, because different
-    lambda expression will have a different hash. The code, instead, will be
-    the same if a lambda if defined in a function, so we can use it as a more
+    lambda expressions will have a different hash. The code, instead, will be
+    the same if a lambda is defined in a function, so we can use it as a more
     stable hash key.
     """
     # If this function has no code or closure, optimistically assume that it's

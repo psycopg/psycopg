@@ -791,7 +791,7 @@ cdef class PGconn:
     def pipeline_status(self) -> int:
         """The current pipeline mode status.
 
-        For libpq < 14.0, always return 0 (PQ_PIPELINE_OFF).
+        For libpq < 14.0, always returns 0 (PQ_PIPELINE_OFF).
         """
         if libpq.PG_VERSION_NUM < 140000:
             return libpq.PQ_PIPELINE_OFF
@@ -842,7 +842,7 @@ cdef class PGconn:
             raise e.OperationalError("failed to sync pipeline")
 
     def send_flush_request(self) -> None:
-        """Sends a request for the server to flush its output buffer.
+        """Send a request for the server to flush its output buffer.
 
         :raises ~psycopg.OperationalError: if the flush request failed.
         """

@@ -36,9 +36,9 @@ Row = TypeVar("Row", covariant=True, default="TupleRow")
 
 class RowMaker(Protocol[Row]):
     """
-    Callable protocol taking a sequence of value and returning an object.
+    Callable protocol taking a sequence of values and returning an object.
 
-    The sequence of value is what is returned from a database query, already
+    The sequence of values is what is returned from a database query, already
     adapted to the right Python types. The return value is the object that your
     program would like to receive: by default (`tuple_row()`) it is a simple
     tuple, but it may be any type of object.
@@ -58,8 +58,8 @@ class RowFactory(Protocol[Row]):
     `~psycopg.Cursor.description` attribute) and help a `!RowMaker` to create
     a complete object.
 
-    For instance the `dict_row()` `!RowFactory` uses the names of the column to
-    define the dictionary key and returns a `!RowMaker` function which would
+    For instance the `dict_row()` `!RowFactory` uses the names of the columns to
+    define the dictionary keys and returns a `!RowMaker` function which would
     use the values to create a dictionary for each record.
     """
 
@@ -92,7 +92,7 @@ DictRow: TypeAlias = dict[str, Any]
 """
 An alias for the type returned by `dict_row()`
 
-A `!DictRow` is a dictionary with keys as string and any value returned by the
+A `!DictRow` is a dictionary with keys as strings and any value returned by the
 database.
 """
 
@@ -228,9 +228,9 @@ def scalar_row(cursor: BaseCursor[Any, Any]) -> RowMaker[Any]:
 
 
 def no_result(values: Sequence[Any]) -> NoReturn:
-    """A `RowMaker` that always fail.
+    """A `RowMaker` that always fails.
 
-    It can be used as return value for a `RowFactory` called with no result.
+    It can be used as the return value for a `RowFactory` called with no result.
     Note that the `!RowFactory` *will* be called with no result, but the
     resulting `!RowMaker` never should.
     """

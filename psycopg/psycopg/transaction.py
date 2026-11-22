@@ -31,11 +31,11 @@ logger = logging.getLogger(__name__)
 
 class Rollback(Exception):
     """
-    Exit the current `Transaction` context immediately and rollback any changes
+    Exit the current `Transaction` context immediately and roll back any changes
     made within this context.
 
-    If a transaction context is specified in the constructor, rollback
-    enclosing transactions contexts up to and including the one specified.
+    If a transaction context is specified in the constructor, roll back
+    enclosing transaction contexts up to and including the one specified.
     """
 
     __module__ = "psycopg"

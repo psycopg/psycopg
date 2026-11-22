@@ -21,9 +21,9 @@ logger = logging.getLogger("psycopg")
 
 
 async def conninfo_attempts_async(params: ConnMapping) -> list[ConnDict]:
-    """Split a set of connection params on the single attempts to perform.
+    """Split a set of connection params into the single attempts to perform.
 
-    A connection param can perform more than one attempt more than one ``host``
+    A connection param can perform more than one attempt if more than one ``host``
     is provided.
 
     Also perform async resolution of the hostname into hostaddr. Because a host
