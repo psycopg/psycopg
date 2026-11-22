@@ -8,16 +8,16 @@
 Concurrent operations
 =====================
 
-Psycopg allows to write *concurrent* code, executing more than one operation
-at time.
+Psycopg allows you to write *concurrent* code, executing more than one
+operation at a time.
 
-- `Connection` objects *are thread-safe*: more than one thread at time can use
-  the same connection. Different thread can use the same connection by
+- `Connection` objects *are thread-safe*: more than one thread at a time can
+  use the same connection. Different threads can use the same connection by
   creating different cursors.
 
 - `Cursor` objects *are not thread-safe*, and are not designed to be used by
   several threads at the same time. However, cursors are lightweight objects:
-  different threads can create each one its own cursor to use independently
+  different threads can each create their own cursor to use independently
   from other threads.
 
 .. note::
@@ -38,12 +38,12 @@ at time.
     Should you use many cursors or many connections?
 
     Query execution and results retrieval on a connection is serialized: only
-    one cursor at time will be able to run a query on the same connection (the
-    `!Connection` object will coordinate different cursors' access). If your
-    program runs a mix of database and non-database operations in several
+    one cursor at a time will be able to run a query on the same connection
+    (the `!Connection` object will coordinate different cursors' access). If
+    your program runs a mix of database and non-database operations in several
     threads, then these threads might be able to share the same connection.
     However, if you expect to execute massively parallel operations on the
-    database, it might be useful to use more than one connection at time,
+    database, it might be useful to use more than one connection at a time,
     rather than many cursors on the same connection (or a mix of both).
 
     Using several connections, however, has an impact on the server's
@@ -51,9 +51,9 @@ at time.
     is limited by grumpy sysadmins with long beards and a strict control on
     the `max_connections`__ server setting.
 
-    If you want to use more than one connection at time, but still avoid to
-    create too many connections and starve the server, you might want to use a
-    :ref:`connection pool <connection-pools>`.
+    If you want to use more than one connection at a time, but still avoid
+    creating too many connections and starving the server, you might want to
+    use a :ref:`connection pool <connection-pools>`.
 
     .. __: https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS
 
@@ -65,7 +65,7 @@ at time.
     If you are using Psycopg in a forking framework (for instance in a web
     server that implements concurrency using multiprocessing), you should make
     sure that the database connections are created after the worker process is
-    forked. Failing to do so you will probably find the connection in broken
+    forked. Failing to do so, you will probably find the connection in a broken
     state.
 
 
@@ -79,7 +79,7 @@ Asynchronous operations
 Psycopg `Connection` and `Cursor` have counterparts `AsyncConnection` and
 `AsyncCursor` supporting an `asyncio` interface.
 
-The design of the asynchronous objects is pretty much the same of the sync
+The design of the asynchronous objects is pretty much the same as the sync
 ones: in order to use them you will only have to scatter the `!await` keyword
 here and there.
 
@@ -187,13 +187,13 @@ Interrupting async operations
 
 If a long running operation is interrupted by a Ctrl-C on a normal connection
 running in the main thread, the operation will be cancelled and the connection
-will be put in error state, from which can be recovered with a normal
+will be put in error state, from which it can be recovered with a normal
 `~Connection.rollback()`.
 
 An async connection provides similar behavior in that if the async task is
 cancelled, any operation on the connection will similarly be cancelled.  This
 can happen either indirectly via Ctrl-C or similar signal, or directly by
-cancelling the Python Task via the normal way.  Psycopg will ask the
+cancelling the Python Task in the normal way.  Psycopg will ask the
 PostgreSQL postmaster to cancel the operation when it encounters the standard
 Python `CancelledError`__.
 
@@ -259,7 +259,7 @@ reported by :program:`psql`::
 .. __: https://www.postgresql.org/docs/current/runtime-config-logging.html
     #RUNTIME-CONFIG-SEVERITY-LEVELS
 
-Messages can be also sent by the `PL/pgSQL 'RAISE' statement`__ (at a level
+Messages can also be sent by the `PL/pgSQL 'RAISE' statement`__ (at a level
 lower than EXCEPTION, otherwise the appropriate `DatabaseError` will be
 raised). The level of the messages received can be controlled using the
 client_min_messages__ setting.
@@ -313,7 +313,7 @@ Asynchronous notifications
 
 Psycopg allows asynchronous interaction with other database sessions using the
 facilities offered by PostgreSQL commands |LISTEN|_ and |NOTIFY|_. Please
-refer to the PostgreSQL documentation for examples about how to use this form
+refer to the PostgreSQL documentation for examples of how to use this form
 of communication.
 
 .. |LISTEN| replace:: :sql:`LISTEN`
@@ -391,7 +391,7 @@ You may get output from the Python process such as::
     The behaviour of the notifies generator has changed slightly as problems
     were found:
 
-    - Before Psycopg 3.2.4, notification received between calling
+    - Before Psycopg 3.2.4, notifications received between calling
       :sql:`LISTEN` and starting the generator were lost.
 
     - Since :ref:`psycopg-3.2.4` such notifications are captured and yielded
@@ -402,8 +402,8 @@ You may get output from the Python process such as::
     - Since :ref:`psycopg-3.2.10` if a handler is registered then
       notifications are not captured when the generator is not running. So the
       behaviour is similar to pre-3.2.4 but *only if a handler is registered
-      too*. Therefore, using handlers and generators together starts seeming a
-      bad idea, hence it is since deprecated.
+      too*. Therefore, using handlers and generators together starts to seem a
+      bad idea, hence it has since been deprecated.
 
 
 .. _notifies-handlers:
@@ -413,7 +413,7 @@ Notifies handlers
 
 Alternatively, you can use `~Connection.add_notify_handler()` to register a
 callback function, which will be invoked whenever a notification is received,
-during the normal query processing; you will be then able to use the
+during the normal query processing; you will then be able to use the
 connection normally. Please note that in this case notifications will not be
 received immediately, but only during a connection operation, such as a query.
 
@@ -446,9 +446,9 @@ detect a disconnection with an average delay of half the polling time.
 
 A more efficient and timely way to detect a server disconnection is to create
 an additional connection and wait for a notification from the OS that this
-connection has something to say: only then you can run some checks. You
-can dedicate a thread (or an asyncio task) to wait on this connection: such
-thread will perform no activity until awaken by the OS.
+connection has something to say: only then can you run some checks. You
+can dedicate a thread (or an asyncio task) to wait on this connection: such a
+thread will perform no activity until woken by the OS.
 
 In a normal (non asyncio) program you can use the `selectors` module. Because
 the `!Connection` implements a `~Connection.fileno()` method you can just

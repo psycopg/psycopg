@@ -25,7 +25,7 @@ Composite types adaptation
 --------------------------
 
 Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
-TYPE|_ command or implicitly defined after a table row type) to and from
+TYPE|_ command or implicitly defined as a table row type) to and from
 Python tuples, `~collections.namedtuple`, or any suitably configured object.
 
 .. |CREATE TYPE| replace:: :sql:`CREATE TYPE`
@@ -63,7 +63,7 @@ type on the fly, stored in `!CompositeInfo.python_type`. ::
     card(value=1, suit='spades')
 
 
-Nested composite types are handled as expected, provided that the type of the
+Nested composite types are handled as expected, provided that the types of the
 composite components are registered as well::
 
     >>> conn.execute("CREATE TYPE card_back AS (face card, back text)")
@@ -82,10 +82,10 @@ Example: non-sequence Python object
 
 .. versionadded:: 3.3
 
-If your Python type takes keyword arguments, or if the sequence of value
+If your Python type takes keyword arguments, or if the sequence of values
 coming from the PostgreSQL type is not suitable for it, it is possible to
 specify a :samp:`make_object({values}, {info})` function to adapt the values
-from the composite to the Python object to create, eventually making use of
+from the composite to the Python object to create, possibly making use of
 the information in the type `~types.composite.CompositeInfo`, for example::
 
     >>> from dataclasses import dataclass
@@ -107,7 +107,7 @@ The previous example only configures loaders to convert data from PostgreSQL
 to Python. If we are also interested in dumping Python `!Card` objects we need
 to specify `!Card` as the factory (to declare which object we want to dump)
 and, because `!Card` is not a sequence, we need to specify a
-:samp:`make_sequence({object}, {info})` function to convert objects attributes
+:samp:`make_sequence({object}, {info})` function to convert object attributes
 into a sequence matching the composite fields::
 
     >>> def card_to_db(card: Card, info: CompositeInfo) -> Sequence[Any]:
@@ -143,7 +143,7 @@ All the PostgreSQL range types are loaded as the `~psycopg.types.range.Range`
 Python type, which is a `~typing.Generic` type and can hold bounds of
 different types.
 
-The built-in range objects are adapted automatically: if a `!Range` objects
+The built-in range objects are adapted automatically: if a `!Range` object
 contains `~datetime.date` bounds, it is dumped using the :sql:`daterange` OID,
 and of course :sql:`daterange` values are loaded back as `!Range[date]`.
 
@@ -180,12 +180,12 @@ automatically available for every range, built-in and user-defined.
 
 .. __: https://www.postgresql.org/docs/current/rangetypes.html
 
-All the PostgreSQL range types are loaded as the
+All the PostgreSQL multirange types are loaded as the
 `~psycopg.types.multirange.Multirange` Python type, which is a mutable
 sequence of `~psycopg.types.range.Range` elements.
 
-Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
-automatically: if a `!Multirange` object contains `!Range` with
+As with `~psycopg.types.range.Range`, built-in multirange objects are adapted
+automatically: if a `!Multirange` object contains `!Range` objects with
 `~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
 :sql:`datemultirange` values are loaded back as `!Multirange[date]`.
 
@@ -232,9 +232,9 @@ well as regular BTree indexes for equality, uniqueness etc.
 
 Psycopg can convert Python `!dict` objects to and from |hstore| structures.
 Only dictionaries with string keys and values are supported. `!None` is also
-allowed as value but not as a key.
+allowed as a value but not as a key.
 
-In order to use the |hstore| data type it is necessary to load it in a
+In order to use the |hstore| data type it is necessary to load it into a
 database using:
 
 .. code:: none
@@ -291,7 +291,7 @@ happen automatically.
 .. _Shapely: https://github.com/Toblerity/Shapely
 .. _shape: https://shapely.readthedocs.io/en/stable/manual.html#shapely.geometry.shape
 
-Since PostgGIS is an extension, the :sql:`geometry` type oid is not well
+Since PostGIS is an extension, the :sql:`geometry` type oid is not well
 known, so it is necessary to use `!TypeInfo`\.\
 `~psycopg.types.TypeInfo.fetch()` to query the database and find it. The
 resulting object can be passed to `~psycopg.types.shapely.register_shapely()`

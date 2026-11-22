@@ -9,8 +9,8 @@ to PostgreSQL data types and back.
 
 These objects are useful if you need to configure data adaptation, i.e.
 if you need to change the default way that Psycopg converts between types or
-if you want to adapt custom data types and objects. You don't need this object
-in the normal use of Psycopg.
+if you want to adapt custom data types and objects. You don't need these
+objects in the normal use of Psycopg.
 
 See :ref:`adaptation` for an overview of the Psycopg adaptation system.
 
@@ -37,7 +37,7 @@ Dumpers and loaders
         :value: TEXT
 
         Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
-        `dump()` methods converts the object to binary format.
+        `dump()` method converts the object to binary format.
 
     .. automethod:: quote
 
@@ -58,7 +58,7 @@ Dumpers and loaders
         :value: TEXT
 
         Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
-        `load()` methods converts the object from binary format.
+        `load()` method converts the object from binary format.
 
 
 Other objects used in adaptations
@@ -78,7 +78,7 @@ Other objects used in adaptations
 
    .. attribute:: types
 
-       The object where to look up for types information (such as the mapping
+       The object in which to look up type information (such as the mapping
        between type names and oids in the specified context).
 
    .. automethod:: get_dumper

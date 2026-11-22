@@ -41,7 +41,7 @@ class PollingStatus(IntEnum):
     """
     The status of the socket during a connection.
 
-    If ``READING`` or ``WRITING`` you may select before polling again.
+    If ``READING`` or ``WRITING``, you may select before polling again.
     """
 
     __module__ = "psycopg.pq"

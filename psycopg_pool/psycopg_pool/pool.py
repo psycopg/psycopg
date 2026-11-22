@@ -146,8 +146,8 @@ class ConnectionPool(Generic[CT], BasePool):
         Calling this method is not mandatory: you can try and use the pool
         immediately after its creation. The first client will be served as soon
         as a connection is ready. You can use this method if you prefer your
-        program to terminate in case the environment is not configured
-        properly, rather than trying to stay up the hardest it can.
+        program to terminate if the environment is not configured
+        properly, rather than trying to stay up as hard as it can.
         """
         self._check_open_getconn()
 
@@ -178,8 +178,8 @@ class ConnectionPool(Generic[CT], BasePool):
 
         Upon context exit, return the connection to the pool. Apply the normal
         :ref:`connection context behaviour <with-connection>` (commit/rollback
-        the transaction in case of success/error). If the connection is no more
-        in working state, replace it with a new one.
+        the transaction in case of success/error). If the connection is no longer
+        in a working state, replace it with a new one.
         """
         conn = self.getconn(timeout=timeout)
         try:
@@ -195,7 +195,7 @@ class ConnectionPool(Generic[CT], BasePool):
         """Obtain a connection from the pool.
 
         You should preferably use `connection()`. Use this function only if
-        it is not possible to use the connection as context manager.
+        it is not possible to use the connection as a context manager.
 
         After using this function you *must* call a corresponding `putconn()`:
         failing to do so will deplete the pool. A depleted pool is a sad pool:
@@ -366,7 +366,7 @@ class ConnectionPool(Generic[CT], BasePool):
     def _maybe_close_connection(self, conn: CT) -> bool:
         """Close a returned connection if necessary.
 
-        Return `!True if the connection was closed.
+        Return `!True` if the connection was closed.
         """
         # If the pool is closed just close the connection instead of returning
         # it to the pool. For extra refcare remove the pool reference from it.
@@ -377,7 +377,7 @@ class ConnectionPool(Generic[CT], BasePool):
         return True
 
     def open(self, wait: bool = False, timeout: float = 30.0) -> None:
-        """Open the pool by starting connecting and and accepting clients.
+        """Open the pool by starting to connect and accepting clients.
 
         If *wait* is `!False`, return immediately and let the background worker
         fill the pool if `min_size` > 0. Otherwise wait up to *timeout* seconds
@@ -593,11 +593,11 @@ class ConnectionPool(Generic[CT], BasePool):
 
     @classmethod
     def worker(cls, q: Queue[MaintenanceTask]) -> None:
-        """Runner to execute pending maintenance task.
+        """Runner to execute pending maintenance tasks.
 
         The function is designed to run as a task.
 
-        Block on the queue *q*, run a task received. Finish running if a
+        Block on the queue *q*, run the tasks received. Finish running if a
         StopWorker is received.
         """
         while True:
@@ -667,8 +667,8 @@ class ConnectionPool(Generic[CT], BasePool):
     ) -> None:
         """Try to connect and add the connection to the pool.
 
-        If failed, reschedule a new attempt in the future for a few times, then
-        give up, decrease the pool connections number and call
+        If it fails, reschedule a new attempt in the future a few times, then
+        give up, decrease the number of pool connections and call
         `self.reconnect_failed()`.
 
         """
@@ -748,8 +748,8 @@ class ConnectionPool(Generic[CT], BasePool):
 
         The connection can be a fresh one or one already used in the pool.
 
-        If a client is already waiting for a connection pass it on, otherwise
-        put it back into the pool
+        If a client is already waiting for a connection, pass it on, otherwise
+        put it back into the pool.
         """
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
@@ -955,7 +955,7 @@ class MaintenanceTask(ABC):
         self._run(pool)
 
     def tick(self) -> None:
-        """Run the scheduled task
+        """Run the scheduled task.
 
         This function is called by the scheduler task. Use a worker to
         run the task for real in order to free the scheduler immediately.
@@ -1024,7 +1024,7 @@ class ShrinkPool(MaintenanceTask):
 class Schedule(MaintenanceTask):
     """Schedule a task in the pool scheduler.
 
-    This task is a trampoline to allow to use a sync call (pool.run_task)
+    This task is a trampoline to allow using a sync call (pool.run_task)
     to execute an async one (pool.schedule_task). It is pretty much no-op
     in sync code.
     """

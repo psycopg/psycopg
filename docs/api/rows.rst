@@ -5,7 +5,7 @@
 
 .. module:: psycopg.rows
 
-The module exposes a few generic `~psycopg.RowFactory` implementation, which
+The module exposes a few generic `~psycopg.RowFactory` implementations, which
 can be used to retrieve data from the database in more complex structures than
 the basic tuples.
 
@@ -108,4 +108,4 @@ checks, such as mypy_.
 Note that it's easy to implement an object implementing both `!RowFactory` and
 `!AsyncRowFactory`: usually, everything you need to implement a row factory is
 to access the cursor's `~psycopg.Cursor.description`, which is provided by
-both the cursor flavours.
+both cursor flavours.

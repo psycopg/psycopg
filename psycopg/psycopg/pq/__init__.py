@@ -1,10 +1,10 @@
 """
 psycopg libpq wrapper
 
-This package exposes the libpq functionalities as Python objects and functions.
+This package exposes the libpq functionality as Python objects and functions.
 
 The real implementation (the binding to the C library) is
-implementation-dependant but all the implementations share the same interface.
+implementation-dependent, but all the implementations share the same interface.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -31,7 +31,7 @@ Possible values include ``python``, ``c``, ``binary``.
 __build_version__: int
 """The libpq version the C package was built with.
 
-A number in the same format of `~psycopg.ConnectionInfo.server_version`
+A number in the same format as `~psycopg.ConnectionInfo.server_version`
 representing the libpq used to build the speedup module (``c``, ``binary``) if
 available.
 
@@ -49,9 +49,9 @@ PGcancelConn: type[abc.PGcancelConn]
 
 def import_from_libpq() -> None:
     """
-    Import pq objects implementation from the best libpq wrapper available.
+    Import the pq objects implementation from the best libpq wrapper available.
 
-    If an implementation is requested try to import only it, otherwise
+    If an implementation is requested, try to import only that one, otherwise
     try to import the best implementation available.
     """
     # import these names into the module on success as side effect

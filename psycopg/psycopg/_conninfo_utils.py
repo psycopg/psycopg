@@ -68,7 +68,7 @@ def get_param(params: ConnMapping, name: str) -> str | None:
     """
     Return a value from a connection string.
 
-    The value may be also specified in a PG* env var.
+    The value may also be specified in a PG* env var.
     """
     if name in params:
         return str(params[name])
@@ -114,7 +114,7 @@ def get_param_def(keyword: str, _cache: dict[str, ParamDef] = {}) -> ParamDef | 
 
 @lru_cache
 def is_ip_address(s: str) -> bool:
-    """Return True if the string represent a valid ip address."""
+    """Return True if the string represents a valid ip address."""
     try:
         ip_address(s)
     except ValueError:

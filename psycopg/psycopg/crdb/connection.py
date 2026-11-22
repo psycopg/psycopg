@@ -82,7 +82,7 @@ class CrdbConnectionInfo(ConnectionInfo):
     @property
     def server_version(self) -> int:
         """
-        Return the CockroachDB server version connected.
+        Return the CockroachDB server version connected to.
 
         Return a number in the PostgreSQL format (e.g. 21.2.10 -> 210210).
         """

@@ -1,7 +1,7 @@
 """
 Utilities to ease the differences between async and sync code.
 
-These object offer a similar interface between sync and async versions; the
+These objects offer a similar interface between sync and async versions; the
 script async_to_sync.py will replace the async names with the sync names
 when generating the sync version.
 """

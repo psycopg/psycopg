@@ -14,7 +14,7 @@ Many standard Python types are adapted into SQL and returned as Python
 objects when a query is executed.
 
 Converting the following data types between Python and PostgreSQL works
-out-of-the-box and doesn't require any configuration. In case you need to
+out-of-the-box and doesn't require any configuration. If you need to
 customise the conversion you should take a look at :ref:`adaptation`.
 
 
@@ -58,7 +58,7 @@ Numbers adaptation
   :sql:`integer`, :sql:`bigint`, or :sql:`numeric`, according to their numeric
   value. Psycopg will choose the smallest data type available, because
   PostgreSQL can automatically cast a type up (e.g. passing a `smallint` where
-  PostgreSQL expect an `integer` is gladly accepted) but will not cast down
+  PostgreSQL expects an `integer` is gladly accepted) but will not cast down
   automatically (e.g. if a function has an :sql:`integer` argument, passing it
   a :sql:`bigint` value will fail, even if the value is 1).
 
@@ -98,7 +98,7 @@ promoted to the larger Python counterpart.
 .. note::
 
     Sometimes you may prefer to receive :sql:`numeric` data as `!float`
-    instead, for performance reason or ease of manipulation: you can configure
+    instead, for performance reasons or ease of manipulation: you can configure
     an adapter to :ref:`cast PostgreSQL numeric to Python float
     <adapt-example-float>`. This of course may imply a loss of precision.
 
@@ -125,8 +125,10 @@ Strings adaptation
     - `PostgreSQL character types
       <https://www.postgresql.org/docs/current/datatype-character.html>`__
 
-Python `str` are converted to PostgreSQL string syntax, and PostgreSQL types
-such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
+Python `str` values are converted to PostgreSQL string syntax, and PostgreSQL
+types such as :sql:`text` and :sql:`varchar` are converted back to Python
+`!str`:
+
 
 .. code:: python
 
@@ -168,7 +170,7 @@ failing to do so may result in encoding/decoding errors:
     # in encoding "UTF8" has no equivalent in encoding "LATIN1"
 
 In rare cases you may have strings with unexpected encodings in the database.
-Using the ``SQL_ASCII`` client encoding  will disable decoding of the data
+Using the ``SQL_ASCII`` client encoding will disable decoding of the data
 coming from the database, which will be returned as `bytes`:
 
 .. code:: python
@@ -178,7 +180,7 @@ coming from the database, which will be returned as `bytes`:
     b'Cr\xc3\xa8me Br\xc3\xbbl\xc3\xa9e at 4.99\xe2\x82\xac'
 
 Alternatively you can cast the unknown encoding data to :sql:`bytea` to
-retrieve it as bytes, leaving other strings unaltered: see :ref:`adapt-binary`
+retrieve it as bytes, leaving other strings unaltered: see :ref:`adapt-binary`.
 
 Note that PostgreSQL text cannot contain the ``0x00`` byte. If you need to
 store Python strings that may contain binary zeros you should use a
@@ -288,7 +290,7 @@ attribute::
 
 .. _date-time-limits:
 
-Dates and times limits in Python
+Date and time limits in Python
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PostgreSQL date and time objects can represent values that cannot be
@@ -304,7 +306,7 @@ If you need to handle these values you can define your own mapping (for
 instance mapping every value greater than `datetime.date.max` to `!date.max`,
 or the time 24:00 to 00:00) and write a subclass of the default loaders
 implementing the added capability; please see :ref:`this example
-<adapt-example-inf-date>` for a reference.
+<adapt-example-inf-date>` for reference.
 
 
 .. index::
@@ -336,7 +338,7 @@ parameter; for example::
    >>> conn.execute("show datestyle").fetchone()[0]
    # 'ISO, YMD'
 
-These GUC parameters only affects loading in text format; loading timestamps
+These GUC parameters only affect loading in text format; loading timestamps
 or intervals in :ref:`binary format <binary-data>` is not affected by
 DateStyle or IntervalStyle.
 
@@ -347,13 +349,13 @@ JSON adaptation
 ---------------
 
 Psycopg can map between Python objects and PostgreSQL `json/jsonb
-types`__, allowing to customise the load and dump function used.
+types`__, allowing you to customise the load and dump functions used.
 
 .. __: https://www.postgresql.org/docs/current/datatype-json.html
 
 Because several Python objects could be considered JSON (dicts, lists,
 scalars, even date/time if using a dumps function customised to use them),
-Psycopg requires you to wrap the object to dump as JSON into a wrapper:
+Psycopg requires you to wrap the object to dump as JSON in a wrapper:
 either `psycopg.types.json.Json` or `~psycopg.types.json.Jsonb`.
 
 .. code:: python
@@ -437,7 +439,7 @@ list may contain `!None` elements).
 
         >>> conn.execute("SELECT * FROM mytable WHERE id = ANY(%s)", [[10,20,30]])
 
-    This has also the advantage of working with an empty list, whereas ``IN
+    This also has the advantage of working with an empty list, whereas ``IN
     ()`` is not valid SQL.
 
     .. __: https://www.postgresql.org/docs/current/functions-comparisons.html
@@ -472,7 +474,7 @@ address types`__:
 - `~ipaddress.IPv4Address`, `~ipaddress.IPv4Interface` objects are converted
   to the PostgreSQL :sql:`inet` type. On the way back, :sql:`inet` values
   indicating a single address are converted to `!IPv4Address`, otherwise they
-  are converted to `!IPv4Interface`
+  are converted to `!IPv4Interface`.
 
 - `~ipaddress.IPv4Network` objects are converted to the :sql:`cidr` type and
   back.
@@ -517,8 +519,8 @@ and registered enums is different.
     use this string in most contexts (such as an enum or a text field).
 
     .. versionchanged:: 3.1
-        In previous version dumping pure enums is not supported and raise a
-        "cannot adapt" error.
+        In previous versions dumping pure enums was not supported and raised
+        a "cannot adapt" error.
 
   - Mix-in enums are dumped according to their mix-in type (because a `class
     MyIntEnum(int, Enum)` is more specifically an `!int` than an `!Enum`, so
@@ -531,7 +533,7 @@ and registered enums is different.
 - If the enum is registered (using `~types.enum.EnumInfo`\ `!.fetch()` and
   `~types.enum.register_enum()`):
 
-  - Enums classes, both pure and mixed-in, are dumped by name.
+  - Enum classes, both pure and mixed-in, are dumped by name.
 
   - The registered PostgreSQL enum is loaded back as the registered Python
     enum members.
@@ -567,10 +569,10 @@ Example::
     ... ).fetchone()
     [<UserRole.ADMIN: 1>, <UserRole.GUEST: 3>]
 
-If the Python and the PostgreSQL enum don't match 1:1 (for instance if members
-have a different name, or if more than one Python enum should map to the same
-PostgreSQL enum, or vice versa), you can specify the exceptions using the
-`!mapping` parameter.
+If the Python and the PostgreSQL enums don't match 1:1 (for instance if
+members have a different name, or if more than one Python enum should map to
+the same PostgreSQL enum, or vice versa), you can specify the exceptions using
+the `!mapping` parameter.
 
 `!mapping` should be a dictionary with Python enum members as keys and the
 matching PostgreSQL enum labels as values, or a list of `(member, label)`

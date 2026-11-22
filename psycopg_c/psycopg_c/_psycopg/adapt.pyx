@@ -3,7 +3,7 @@ C implementation of the adaptation system.
 
 This module maps each Python adaptation function to a C adaptation function.
 Notice that C adaptation functions have a different signature because they can
-avoid making a memory copy, however this makes impossible to expose them to
+avoid making a memory copy, however this makes it impossible to expose them to
 Python.
 
 This module exposes facilities to map the builtin adapters in python to
@@ -37,7 +37,7 @@ cdef class CDumper:
         self._pgconn = conn.pgconn if conn is not None else None
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        """Store the Postgres representation *obj* into *rv* at *offset*
+        """Store the Postgres representation of *obj* into *rv* at *offset*
 
         Return the number of bytes written to rv or -1 on Python exception.
 
@@ -50,12 +50,12 @@ cdef class CDumper:
 
         Implementation note: as you will always need to make sure that rv
         has enough space to include what you want to dump, `ensure_size()`
-        might probably come handy.
+        will probably come in handy.
         """
         raise NotImplementedError()
 
     def dump(self, obj) -> abc.Buffer | None:
-        """Return the Postgres representation of *obj* as Python array of bytes"""
+        """Return the Postgres representation of *obj* as a Python array of bytes"""
         cdef rv = PyByteArray_FromStringAndSize("", 0)
         cdef Py_ssize_t length = self.cdump(obj, rv, 0)
         PyByteArray_Resize(rv, length)
@@ -128,7 +128,7 @@ cdef class CDumper:
         bytearray ba, Py_ssize_t offset, Py_ssize_t size
     ) except NULL:
         """
-        Grow *ba*, if necessary, to contains at least *size* bytes after *offset*
+        Grow *ba*, if necessary, to contain at least *size* bytes after *offset*
 
         Return the pointer in the bytearray at *offset*, i.e. the place where
         you want to write *size* bytes.

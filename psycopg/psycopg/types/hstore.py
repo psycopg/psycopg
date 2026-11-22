@@ -227,7 +227,7 @@ def _make_hstore_dumper(oid_in: int) -> type[BaseHstoreDumper]:
     """
     Return an hstore dumper class configured using `oid_in`.
 
-    Avoid to create new classes if the oid configured is the same.
+    Avoid creating new classes if the oid configured is the same.
     """
 
     class HstoreDumper(BaseHstoreDumper):

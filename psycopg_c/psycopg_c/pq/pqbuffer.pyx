@@ -13,7 +13,7 @@ from cpython.buffer cimport PyObject_GetBuffer
 @cython.freelist(32)
 cdef class PQBuffer:
     """
-    Wrap a chunk of memory allocated by the libpq and expose it as memoryview.
+    Wrap a chunk of memory allocated by the libpq and expose it as a memoryview.
     """
     @staticmethod
     cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t length):

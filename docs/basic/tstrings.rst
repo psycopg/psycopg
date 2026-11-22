@@ -30,9 +30,9 @@ Python and passed to the rest of the program as an already formatted regular
 string; t-strings, instead, are evaluated by Psycopg, which has a chance to
 process query parameters in a safe way.
 
-For example you can pass to a query some strings parameters, which may contain
+For example you can pass to a query some string parameters, which may contain
 unsafe characters such as ``'``, or come from untrusted sources such as a web
-form, and leave Psycopg to perform the right processing:
+form, and let Psycopg perform the right processing:
 
 .. code:: python
 
@@ -65,7 +65,7 @@ functions:
     INSERT INTO tbl VALUES ('O''Reilly', '1970-01-01'::date)
 
 With template strings it is also easy to parametrize parts of the query other
-than parameter values, for example tables or fields names:
+than parameter values, for example table or field names:
 
 .. code:: python
 
@@ -73,9 +73,10 @@ than parameter values, for example tables or fields names:
         t"INSERT INTO {table_name:i} (first_name, last_name) VALUES ({first_name}, {last_name})"
     )
 
-The ``:i`` specifies to merge `!table_name` to the query on the client using
-the `identifier syntax`__ before continuing with the normal processing (which
-might involve preparing the query, sending the parameters separately, etc.)
+The ``:i`` tells Psycopg to merge `!table_name` into the query on the client
+using the `identifier syntax`__ before continuing with the normal processing
+(which might involve preparing the query, sending the parameters separately,
+etc.)
 
 .. __: https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 
@@ -83,7 +84,7 @@ might involve preparing the query, sending the parameters separately, etc.)
 Format specifiers
 -----------------
 
-Format specifiers can be associated to template strings interpolation using a
+Format specifiers can be associated with template string interpolation using a
 ``:`` in the placeholder, for example in ``{id:b}``. Psycopg supports a few
 format specifiers specifying :ref:`how to pass a parameter to the server
 <binary-data>` and a few format specifiers specifying how to compose query
@@ -93,7 +94,7 @@ parts on the client, in a way similar to what can be obtained using the
 The supported specifiers for parameter formats are:
 
 - ``s``: automatic parameter format, similar to using ``%s`` in a classic
-  query. This is the same effect of using no format specifier.
+  query. This is the same effect as using no format specifier.
 - ``b``: use the binary format to pass the parameter, similar to using ``%b``
   in a classic query.
 - ``t``: use the text format to pass the parameter, similar to using ``%t``
@@ -103,9 +104,9 @@ The supported specifiers for query composition are:
 
 - ``i``: the parameter is an identifier_, for example a table or column name.
   The parameter must be a string or a `sql.Identifier` instance.
-- ``l``: the parameter is a literal value, which will be merged to the
-  query on the client. This allows to parametrize statements that :ref:`don't
-  support parametrization in PostgreSQL <server-side-binding>`.
+- ``l``: the parameter is a literal value, which will be merged into the
+  query on the client. This allows you to parametrize statements that
+  :ref:`don't support parametrization in PostgreSQL <server-side-binding>`.
 - ``q``: the parameter is a snippet of statement to be included verbatim in
   the query. The parameter must be another template string or a
   `sql.SQL`\/\ `~sql.Composed` instance.
@@ -148,9 +149,9 @@ A string template merges literal parts of the query with parameters. It is also
 possible to pass templates to templates in order to compose more and more
 complex and dynamic SQL statements.
 
-For example let's say we have an `!User` Python object mapping to an ``users``
+For example let's say we have a `!User` Python object mapping to a ``users``
 database table. We might want to implement a `!search()` function to return
-users by a list of ids, by names pattern, by group. This function might
+users by a list of ids, by name pattern, by group. This function might
 be written as:
 
 .. code:: python

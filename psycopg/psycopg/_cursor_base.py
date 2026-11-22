@@ -374,7 +374,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def _start_query(self, query: Query | None = None) -> PQGen[None]:
         """Generator to start the processing of a query.
 
-        It is implemented as generator because it may send additional queries,
+        It is implemented as a generator because it may send additional queries,
         such as `begin`.
         """
         if self.closed:
@@ -389,7 +389,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def _start_copy_gen(
         self, statement: Query, params: Params | None = None
     ) -> PQGen[None]:
-        """Generator implementing sending a command for `Cursor.copy()."""
+        """Generator implementing sending a command for `Cursor.copy()`."""
 
         # The connection gets in an unrecoverable state if we attempt COPY in
         # pipeline mode. Forbid it explicitly.
@@ -421,7 +421,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         binary: bool | None = None,
     ) -> None:
         """
-        Implement part of execute() before waiting common to sync and async.
+        Implement the part of execute() before waiting, common to sync and async.
 
         This is not a generator, but a normal non-blocking function.
         """
@@ -554,7 +554,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     ) -> None:
         """Callback called when self.adapters.set_loaders is called.
 
-        Allow to change the loaders after the results have been returned already.
+        Allow changing the loaders after the results have been returned already.
         """
         if not (self := wself()):
             return

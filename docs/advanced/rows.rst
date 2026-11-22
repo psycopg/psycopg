@@ -61,8 +61,8 @@ If you want to return objects of your choice you can use a row factory
     constructor affects how the object is annotated for static type checking.
 
     For instance, declaring a `!row_factory=dict_row` will result in the
-    cursors' `!executeany()` annotated as returning `list[dict[str, Any]]`
-    instead of `list[tuple[Any, ...]]`.
+    cursors' `!fetchall()` being annotated as returning
+    `list[dict[str, Any]]` instead of `list[tuple[Any, ...]]`.
 
     Please check :ref:`static-typing` for more details.
 

@@ -122,8 +122,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     Generator to send a query to the server without blocking.
 
     The query must have already been sent using `pgconn.send_query()` or
-    similar. Flush the query and then return the result using nonblocking
-    functions.
+    similar. Flush the query using nonblocking functions.
 
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
@@ -256,7 +255,7 @@ def pipeline_communicate(
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
-    Return a list results, including single PIPELINE_SYNC elements.
+    Return a list of results, including single PIPELINE_SYNC elements.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef int cires

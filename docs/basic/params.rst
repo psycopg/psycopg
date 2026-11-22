@@ -14,7 +14,7 @@ Passing parameters to SQL queries
    However, starting from Python 3.14, you might be interested in using the
    more expressive :ref:`template string queries <template-strings>`.
 
-Most of the times, writing a program you will have to mix bits of SQL
+Most of the time, when writing a program, you will have to mix bits of SQL
 statements with values provided by the rest of the program:
 
 .. code::
@@ -48,13 +48,13 @@ is *roughly* equivalent to the SQL command:
     INSERT INTO some_table (id, created_at, last_name)
     VALUES (10, '2020-11-18', 'O''Reilly');
 
-Note that the parameters will not be really merged to the query: query and the
-parameters are sent to the server separately: see :ref:`server-side-binding`
-for details.
+Note that the parameters will not really be merged into the query: the query
+and the parameters are sent to the server separately: see
+:ref:`server-side-binding` for details.
 
 Named arguments are supported too using :samp:`%({name})s` placeholders in the
-query and specifying the values into a mapping.  Using named arguments allows
-to specify the values in any order and to repeat the same value in several
+query and specifying the values in a mapping.  Using named arguments allows
+you to specify the values in any order and to repeat the same value in several
 places in the query::
 
     cur.execute("""
@@ -71,12 +71,12 @@ can use the ``%%`` string::
     cur.execute("SELECT (%s % 2) = 0 AS even", (10,))       # WRONG
     cur.execute("SELECT (%s %% 2) = 0 AS even", (10,))      # correct
 
-While the mechanism resembles regular Python strings manipulation, there are a
+While the mechanism resembles regular Python string manipulation, there are a
 few subtle differences you should care about when passing parameters to a
 query.
 
 - The Python string operator ``%`` *must not be used*: the `~psycopg.Cursor.execute()`
-  method accepts a tuple or dictionary of values as second parameter.
+  method accepts a tuple or dictionary of values as the second parameter.
   |sql-warn|__:
 
   .. |sql-warn| replace:: **Never** use ``%`` or ``+`` to merge values
@@ -89,7 +89,7 @@ query.
 
   .. __: sql-injection_
 
-- For positional variables binding, *the second argument must always be a
+- For positional variable binding, *the second argument must always be a
   sequence*, even if it contains a single variable (remember that Python
   requires a comma to create a single element tuple)::
 
@@ -113,9 +113,9 @@ query.
     cur.execute("INSERT INTO numbers VALUES (%s)", (10,))   # correct
 
 - Only query values should be bound via this method: it shouldn't be used to
-  merge table or field names to the query. If you need to generate SQL queries
-  dynamically (for instance choosing a table name at runtime) you can use the
-  functionalities provided in the `psycopg.sql` module::
+  merge table or field names into the query. If you need to generate SQL
+  queries dynamically (for instance choosing a table name at runtime) you can
+  use the functionalities provided in the `psycopg.sql` module::
 
     cur.execute("INSERT INTO %s VALUES (%s)", ('numbers', 10))  # WRONG
     cur.execute(                                                # correct
@@ -136,9 +136,9 @@ in SQL single quotes are used as string literal delimiters, so the ones
 appearing inside the string itself must be escaped, whereas in Python single
 quotes can be left unescaped if the string is delimited by double quotes.
 
-Because of the difference, sometimes subtle, between the data types
-representations, a naïve approach to query strings composition, such as using
-Python strings concatenation, is a recipe for *terrible* problems::
+Because of the difference, sometimes subtle, between the data type
+representations, a naïve approach to query string composition, such as using
+Python string concatenation, is a recipe for *terrible* problems::
 
     SQL = "INSERT INTO authors (name) VALUES ('%s')" # NEVER DO THIS
     data = ("O'Reilly", )
@@ -151,7 +151,7 @@ could easily craft a malformed string, either gaining access to unauthorized
 data or performing destructive operations on the database. This form of attack
 is called `SQL injection`_ and is known to be one of the most widespread forms
 of attack on database systems. Before continuing, please print `this page`__
-as a memo and hang it onto your desk.
+as a memo and hang it above your desk.
 
 .. _SQL injection: https://en.wikipedia.org/wiki/SQL_injection
 .. __: https://xkcd.com/327/
@@ -162,20 +162,20 @@ and reliable. We must stress this point:
 
 .. warning::
 
-    - Don't manually merge values to a query: hackers from a foreign country
+    - Don't manually merge values into a query: hackers from a foreign country
       will break into your computer and steal not only your disks, but also
       your cds, leaving you only with the three most embarrassing records you
       ever bought. On cassette tapes.
 
-    - If you use the ``%`` operator to merge values to a query, con artists
+    - If you use the ``%`` operator to merge values into a query, con artists
       will seduce your cat, who will run away taking your credit card
       and your sunglasses with them.
 
-    - If you use ``+`` to merge a textual value to a string, bad guys in
-      balaclava will find their way to your fridge, drink all your beer, and
+    - If you use ``+`` to merge a textual value into a string, bad guys in
+      balaclavas will find their way to your fridge, drink all your beer, and
       leave your toilet seat up and your toilet paper in the wrong orientation.
 
-    - You don't want to manually merge values to a query: :ref:`use the
+    - You don't want to manually merge values into a query: :ref:`use the
       provided methods <query-parameters>` instead.
 
 The correct way to pass variables in a SQL command is using the second
@@ -207,7 +207,7 @@ Binary parameters and results
 
 PostgreSQL has two different ways to transmit data between client and server:
 `~psycopg.pq.Format.TEXT`, always available, and `~psycopg.pq.Format.BINARY`,
-available most of the times but not always. Usually the binary format is more
+available most of the time but not always. Usually the binary format is more
 efficient to use.
 
 Psycopg can support both formats for each data type. Whenever a value
@@ -215,7 +215,7 @@ is passed to a query using the normal ``%s`` placeholder, the best format
 available is chosen (often, but not always, the binary format is picked as the
 best choice).
 
-If you have a reason to select explicitly the binary format or the text format
+If you have a reason to explicitly select the binary format or the text format
 for a value you can use respectively a ``%b`` placeholder or a ``%t``
 placeholder instead of the normal ``%s``. `~Cursor.execute()` will fail if a
 `~psycopg.adapt.Dumper` for the right data type and format is not available.
@@ -231,8 +231,8 @@ results) or buffer (for binary results).
     The `pg_type`_ table defines which format is supported for each PostgreSQL
     data type. Text input/output is managed by the functions declared in the
     ``typinput`` and ``typoutput`` fields (always present), binary
-    input/output is managed by the ``typsend`` and ``typreceive`` (which are
-    optional).
+    input/output is managed by the ``typsend`` and ``typreceive`` fields (which
+    are optional).
 
     .. _pg_type: https://www.postgresql.org/docs/current/catalog-pg-type.html
 

@@ -1,5 +1,5 @@
 """
-Various functionalities to make easier to work with the libpq.
+Various functionality to make it easier to work with the libpq.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -133,7 +133,7 @@ def error_message(
     obj: abc.PGconn | abc.PGresult | abc.PGcancelConn, encoding: str = ""
 ) -> str:
     """
-    Return an error message from a `PGconn`, `PGresult`, `PGcancelConn`.
+    Return an error message from a `PGconn`, `PGresult`, or `PGcancelConn`.
 
     The return value is a `!str` (unlike pq data which is usually `!bytes`):
     use the connection encoding if available, otherwise the `!encoding`
@@ -178,7 +178,7 @@ PREFIXES = re.compile(
 
 
 def strip_severity(msg: str) -> str:
-    """Strip severity and whitespaces from error message."""
+    """Strip severity and whitespace from error message."""
     if m := PREFIXES.match(msg):
         msg = msg[m.span()[1] :]
 

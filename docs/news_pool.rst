@@ -15,7 +15,7 @@ psycopg_pool 3.3.4 (unreleased)
 
 - Invoke the `!reconnect_failed` callback in `NullConnectionPool`, where it was
   accepted but never called (:ticket:`#1424`).
-- Fix the count of the connections in `NullConnectionPool` becoming negative
+- Fix the count of connections in `NullConnectionPool` becoming negative
   after a failed `~NullConnectionPool.wait()`.
 - Don't grow the pool when calling `~ConnectionPool.check()` (:ticket:`#1434`).
 
@@ -51,7 +51,7 @@ psycopg_pool 3.3.0
 
 - Add `~ConnectionPool.drain()` method (:ticket:`#1215`).
 - Allow the `!conninfo` and `!kwargs` `ConnectionPool` parameters to be callable
-  to allow connection parameters update (:ticket:`#851`).
+  to allow updating connection parameters (:ticket:`#851`).
 - Add `!close_returns` `ConnectionPool` parameter for :ref:`integration with
   SQLAlchemy <pool-sqlalchemy>` (:ticket:`#1046`).
 
@@ -68,14 +68,15 @@ psycopg_pool 3.2.7
 
 - Fix infinite loop with connections modified to return on close
   (:ticket:`#1124`).
-- Fix request of excessive connections upon connection close failing and
-  retrying (:ticket:`#1176`).
+- Fix requesting too many connections when closing a connection fails and is
+  retried (:ticket:`#1176`).
 
 
 psycopg_pool 3.2.6
 ^^^^^^^^^^^^^^^^^^
 
-- Reset transaction status of connection failing check (:ticket:`#1014`).
+- Reset the transaction status of connections failing the check
+  (:ticket:`#1014`).
 
 
 psycopg_pool 3.2.5
@@ -88,7 +89,7 @@ psycopg_pool 3.2.4
 ^^^^^^^^^^^^^^^^^^
 
 - Add a hint to the warning printed if threads fail to stop during
-  ``__del__``, which has been reported happening during interpreter shutdown
+  ``__del__``, which has been reported to happen during interpreter shutdown
   on Python 3.13 (see :ticket:`#954`).
 
 
@@ -115,7 +116,7 @@ psycopg_pool 3.2.1
   `!check` fails. Also avoid a busy-loop of checking; separate check attempts
   using an exponential backoff (:ticket:`#709`).
 - Use `typing.Self` as a more correct return value annotation of context
-  managers and other self-returning methods (see :ticket:`708`).
+  managers and other self-returning methods (see :ticket:`#708`).
 
 
 psycopg_pool 3.2.0
@@ -124,13 +125,13 @@ psycopg_pool 3.2.0
 - Add support for async `!reconnect_failed` callbacks in `AsyncConnectionPool`
   (:ticket:`#520`).
 - Add `!check` parameter to the pool constructor and
-  `~ConnectionPool.check_connection()` method. (:ticket:`#656`).
+  `~ConnectionPool.check_connection()` method (:ticket:`#656`).
 - Make connection pool classes generic on the connection type (:ticket:`#559`).
-- Raise a warning if sync pools rely an implicit `!open=True` and the
+- Raise a warning if sync pools rely on an implicit `!open=True` and the
   pool context is not used. In the future the default will become `!False`
   (:ticket:`#659`).
 - Raise a warning if async pools are opened in the constructor. In the future
-  it will become an error. (:ticket:`#659`).
+  it will become an error (:ticket:`#659`).
 
 
 psycopg_pool 3.1.9
@@ -157,7 +158,7 @@ psycopg_pool 3.1.7
 psycopg_pool 3.1.6
 ^^^^^^^^^^^^^^^^^^
 
-- Declare all parameters in pools constructors, instead of using `!**kwargs`
+- Declare all parameters in pool constructors, instead of using `!**kwargs`
   (:ticket:`#493`).
 
 
@@ -172,7 +173,7 @@ psycopg_pool 3.1.5
 psycopg_pool 3.1.4
 ^^^^^^^^^^^^^^^^^^
 
-- Fix async pool exhausting connections, happening if the pool is created
+- Fix async pool exhausting connections if the pool is created
   before the event loop is started (:ticket:`#219`).
 
 
@@ -185,7 +186,7 @@ psycopg_pool 3.1.3
 psycopg_pool 3.1.2
 ^^^^^^^^^^^^^^^^^^
 
-- Fix possible failure to reconnect after losing connection from the server
+- Fix possible failure to reconnect after losing the connection to the server
   (:ticket:`#370`).
 
 
@@ -210,7 +211,7 @@ psycopg_pool 3.0.3
 
 - Raise `!ValueError` if `ConnectionPool` `!min_size` and `!max_size` are both
   set to 0 (instead of hanging).
-- Raise `PoolClosed` calling `~ConnectionPool.wait()` on a closed pool.
+- Raise `PoolClosed` when calling `~ConnectionPool.wait()` on a closed pool.
 
 
 psycopg_pool 3.0.2

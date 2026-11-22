@@ -158,7 +158,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
 
-        :param size: if greater than 1, results will be retrieved by chunks of
+        :param size: if greater than 1, results will be retrieved in chunks of
             this size from the server (but still yielded row-by-row); this is only
             available from version 17 of the libpq.
         """
@@ -216,7 +216,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :arg index: index of the result to go to
 
-        More than one result will be available after executing calling
+        More than one result will be available after calling
         `executemany()` or `execute()` with more than one query.
 
         `!index` is 0-based and supports negative values, counting from the end,
@@ -239,7 +239,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Return the next record from the current result set.
 
-        Return `!None` the result set is finished.
+        Return `!None` if the result set is finished.
 
         :rtype: Row | None, with Row defined by `row_factory`
         """
@@ -255,7 +255,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Return the next `!size` records from the current result set.
 
-        `!size` default to `!self.arraysize` if not specified.
+        `!size` defaults to `!self.arraysize` if not specified.
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
@@ -298,11 +298,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Move the cursor in the result set to a new position according to mode.
 
-        If `!mode` is ``'relative'`` (default), `!value` is taken as offset to
+        If `!mode` is ``'relative'`` (default), `!value` is taken as an offset to
         the current position in the result set; if set to ``'absolute'``,
         `!value` states an absolute target position.
 
-        Raise `!IndexError` in case a scroll operation would leave the result
+        Raise `!IndexError` if a scroll operation would leave the result
         set. In this case the position will not change.
         """
         self._fetch_pipeline()

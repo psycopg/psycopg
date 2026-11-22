@@ -18,12 +18,12 @@ aspects such as:
 
 - Are the parameters bound on the client or on the server?
   :ref:`server-side-binding` can offer better performance (for instance
-  allowing to use prepared statements) and reduced memory footprint, but may
-  require stricter query definition and certain queries that work in
+  allowing the use of prepared statements) and reduced memory footprint, but
+  may require stricter query definition and certain queries that work in
   `!psycopg2` might need to be adapted.
 
 - Is the query result stored on the client or on the server? Server-side
-  cursors allow partial retrieval of large datasets, but they might offer less
+  cursors allow partial retrieval of large datasets, but they might offer lower
   performance in everyday usage.
 
 - Are queries manipulated by Python (to handle placeholders in ``%s`` and
@@ -31,8 +31,8 @@ aspects such as:
   (which only supports ``$1``, ``$2`` parameters)?
 
 Psycopg exposes the following classes to implement the different strategies.
-All the classes are exposed by the main `!psycopg` package. Every class has
-also an `!Async`\ -prefixed counterparts, designed to be used in conjunction
+All the classes are exposed by the main `!psycopg` package. Every class
+also has an `!Async`\ -prefixed counterpart, designed to be used in conjunction
 with `AsyncConnection` in `asyncio` programs.
 
 ================= =========== =========== ==================== ==================================
@@ -57,17 +57,18 @@ will usually produce `Cursor` objects.
 Client-side cursors
 -------------------
 
-Client-side cursors are what Psycopg uses in its normal querying process.
-They are implemented by the `Cursor` and `AsyncCursor` classes. In such
-querying pattern, after a cursor sends a query to the server (usually calling
-`~Cursor.execute()`), the server replies transferring to the client the whole
-set of results requested, which is stored in the state of the same cursor and
-from where it can be read from Python code (using methods such as
+Client-side cursors are what Psycopg uses in its normal querying process. They
+are implemented by the `Cursor` and `AsyncCursor` classes. In this querying
+pattern, after a cursor sends a query to the server (usually calling
+`~Cursor.execute()`), the server replies by transferring to the client the
+whole set of results requested, which is stored in the state of the same cursor
+and from which it can be read from Python code (using methods such as
 `~Cursor.fetchone()` and siblings).
 
 This querying process is very scalable because, after a query result has been
 transmitted to the client, the server doesn't keep any state. Because the
-results are already in the client memory, iterating its rows is very quick.
+results are already in the client memory, iterating over its rows is very
+quick.
 
 The downside of this querying method is that the entire result has to be
 transmitted completely to the client (with a time proportional to its size)
@@ -87,26 +88,26 @@ Client-side-binding cursors
 
 The previously described :ref:`client-side cursors <client-side-cursors>` send
 the query and the parameters separately to the server. This is the most
-efficient way to process parametrised queries and allows to build several
+efficient way to process parametrised queries and allows building several
 features and optimizations. However, not all types of queries can be bound
 server-side; in particular no Data Definition Language query can. See
 :ref:`server-side-binding` for the description of these problems.
 
 The `ClientCursor` (and its `AsyncClientCursor` async counterpart) merge the
 query on the client and send the query and the parameters merged together to
-the server. This allows to parametrize any type of PostgreSQL statement, not
-only queries (:sql:`SELECT`) and Data Manipulation statements (:sql:`INSERT`,
-:sql:`UPDATE`, :sql:`DELETE`).
+the server. This allows you to parametrize any type of PostgreSQL statement,
+not only queries (:sql:`SELECT`) and Data Manipulation statements
+(:sql:`INSERT`, :sql:`UPDATE`, :sql:`DELETE`).
 
-Using `!ClientCursor`, Psycopg 3 behaviour will be more similar to `psycopg2`
+Using `!ClientCursor`, Psycopg 3's behaviour will be more similar to `psycopg2`
 (which only implements client-side binding) and could be useful to port
 Psycopg 2 programs more easily to Psycopg 3. The objects in the `sql` module
 allow for greater flexibility (for instance to parametrize a table name too,
 not only values); however, for simple cases, a `!ClientCursor` could be the
 right object.
 
-In order to obtain `!ClientCursor` from a connection, you can set its
-`~Connection.cursor_factory` (at init time or changing its attribute
+In order to obtain a `!ClientCursor` from a connection, you can set its
+`~Connection.cursor_factory` (at init time or by changing its attribute
 afterwards):
 
 .. code:: python
@@ -119,7 +120,7 @@ afterwards):
 
 If you need to create a one-off client-side-binding cursor out of a normal
 connection, you can just use the `~ClientCursor` class passing the connection
-as argument.
+as an argument.
 
 .. code:: python
 
@@ -136,12 +137,12 @@ as argument.
 .. tip::
 
     The best use for client-side binding cursors is probably to port large
-    Psycopg 2 code to Psycopg 3, especially for programs making wide use of
-    Data Definition Language statements.
+    Psycopg 2 codebases to Psycopg 3, especially for programs making wide use
+    of Data Definition Language statements.
 
     The `psycopg.sql` module allows for more generic client-side query
-    composition, to mix client- and server-side parameters binding, and allows
-    to parametrize tables and fields names too, or entirely generic SQL
+    composition, to mix client- and server-side parameter binding, and allows
+    you to parametrize table and field names too, or entirely generic SQL
     snippets.
 
 
@@ -156,10 +157,10 @@ Simple query protocol
 
 Using the `!ClientCursor` should ensure that Psycopg will always use the
 `simple query protocol`__ for querying. In most cases, the choice of the
-frontend/backend protocol used is transparent on PostgreSQL. However, in some
-case using the simple query protocol is mandatory. This is the case querying
-the `PgBouncer admin console`__ for instance, which doesn't support the
-extended query protocol.
+frontend/backend protocol used is transparent to the user. However, in some
+cases using the simple query protocol is mandatory. This is the case when
+querying the `PgBouncer admin console`__ for instance, which doesn't support
+the extended query protocol.
 
 .. __: https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SIMPLE-QUERY
 .. __: https://www.pgbouncer.org/usage.html#admin-console
@@ -175,8 +176,8 @@ extended query protocol.
 
 .. versionchanged:: 3.1.20
     While querying using the `!ClientCursor` works well with PgBouncer, the
-    connection's COMMIT and ROLLBACK commands are only ensured to be executed
-    using the simple query protocol starting from Psycopg 3.1.20.
+    connection's COMMIT and ROLLBACK commands are only guaranteed to be
+    executed using the simple query protocol starting from Psycopg 3.1.20.
 
     In previous versions you should use an autocommit connection in order to
     query the PgBouncer admin console:
@@ -204,17 +205,17 @@ PostgreSQL has its own concept of *cursor* too (sometimes also called
 completely processed: the server might be able to produce results only as they
 are needed. Only the results requested are transmitted to the client: if the
 query result is very large but the client only needs the first few records it
-is possible to transmit only them.
+is possible to transmit only those.
 
 The downside is that the server needs to keep track of the partially
 processed results, so it uses more memory and resources on the server.
 
 Psycopg allows the use of server-side cursors using the classes `ServerCursor`
 and `AsyncServerCursor`. They are usually created by passing the `!name`
-parameter to the `~Connection.cursor()` method (reason for which, in
+parameter to the `~Connection.cursor()` method (which is why, in
 `!psycopg2`, they are usually called *named cursors*). The use of these classes
 is similar to their client-side counterparts: their interface is the same, but
-behind the scene they send commands to control the state of the cursor on the
+behind the scenes they send commands to control the state of the cursor on the
 server (for instance when fetching new records or when moving using
 `~Cursor.scroll()`).
 
@@ -228,7 +229,7 @@ result is needed.
 
     Server-side cursors are created and managed by `ServerCursor` using SQL
     commands such as DECLARE_, FETCH_, MOVE_. The PostgreSQL documentation
-    gives a good idea of what is possible to do with them.
+    gives a good idea of what it is possible to do with them.
 
     .. _DECLARE: https://www.postgresql.org/docs/current/sql-declare.html
     .. _FETCH: https://www.postgresql.org/docs/current/sql-fetch.html
@@ -240,9 +241,9 @@ result is needed.
 "Stealing" an existing cursor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A Psycopg `ServerCursor` can be also used to consume a cursor which was
+A Psycopg `ServerCursor` can also be used to consume a cursor which was
 created in other ways than the :sql:`DECLARE` that `ServerCursor.execute()`
-runs behind the scene.
+runs behind the scenes.
 
 For instance if you have a `PL/pgSQL function returning a cursor`__:
 
@@ -264,8 +265,9 @@ you can run a one-off command in the same connection to call it (e.g. using
 
     conn.execute("SELECT reffunc('curname')")
 
-after which you can create a server-side cursor declared by the same name, and
-directly call the fetch methods, skipping the `~ServerCursor.execute()` call:
+after which you can create a server-side cursor declared with the same name,
+and directly call the fetch methods, skipping the `~ServerCursor.execute()`
+call:
 
 .. code:: python
 

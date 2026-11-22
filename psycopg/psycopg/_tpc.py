@@ -34,7 +34,7 @@ class Xid:
     def from_string(cls, s: str) -> Xid:
         """Try to parse an XA triple from the string.
 
-        This may fail for several reasons. In such case return an unparsed Xid.
+        This may fail for several reasons. In such a case return an unparsed Xid.
         """
         try:
             return cls._parse_string(s)

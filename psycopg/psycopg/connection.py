@@ -327,7 +327,7 @@ class Connection(BaseConnection[Row]):
         which is only available from version 17.
 
         If the underlying libpq is older than version 17, the method will fall
-        back to using the same implementation of `!cancel()`.
+        back to using the same implementation as `!cancel()`.
         """
         if not self._should_cancel():
             return
@@ -358,7 +358,7 @@ class Connection(BaseConnection[Row]):
         :param savepoint_name: Name of the savepoint used to manage a nested
             transaction. If `!None`, one will be chosen automatically.
         :param force_rollback: Roll back the transaction at the end of the
-            block even if there were no error (e.g. to try a no-op process).
+            block even if there was no error (e.g. to try a no-op process).
         """
         tx = Transaction(self, savepoint_name, force_rollback)
         if self._pipeline:
@@ -378,7 +378,7 @@ class Connection(BaseConnection[Row]):
             `!None` means no timeout.
         :param stop_after: stop after receiving this number of notifications.
             You might actually receive more than this number if more than one
-            notifications arrives in the same packet.
+            notification arrives in the same packet.
         """
         deadline = monotonic() + timeout if timeout is not None else None
         nreceived = 0
@@ -484,7 +484,7 @@ class Connection(BaseConnection[Row]):
         """
         Consume a generator operating on the connection.
 
-        The function must be used on generators that don't change connection
+        The function must be used on generators that don't change the connection
         fd (i.e. not on connect and reset).
 
         Raise `~errors._WaitTimeout` if `!gen` doesn't complete within

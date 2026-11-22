@@ -30,7 +30,7 @@ INTRANS = pq.TransactionStatus.INTRANS
 
 
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
-    """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
+    """Mixin to add ServerCursor behaviour and implementation to a BaseCursor."""
 
     __slots__ = """_name _scrollable _withhold _described itersize _format
         _iter_rows _page_pos
@@ -82,7 +82,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     @property
     def withhold(self) -> bool:
         """
-        If the cursor can be used after the creating transaction has committed.
+        Whether the cursor can be used after the creating transaction has committed.
         """
         return self._withhold
 

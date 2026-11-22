@@ -70,9 +70,9 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
     async def wait(self, timeout: float = 30.0) -> None:
         """
-        Create a connection for test.
+        Create a connection for testing.
 
-        Calling this function will verify that the connectivity with the
+        Calling this function will verify that the connectivity to the
         database works as expected. However the connection will not be stored
         in the pool.
 

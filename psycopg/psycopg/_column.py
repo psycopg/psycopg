@@ -49,7 +49,7 @@ class Column(Sequence[Any]):
     def type_display(self) -> str:
         """A pretty representation of the column type.
 
-        It is composed by the type name, followed by eventual modifiers and
+        It is composed of the type name, followed by any modifiers and
         brackets to signify arrays, e.g. :sql:`text`, :sql:`varchar(42)`,
         :sql:`date[]`.
         """

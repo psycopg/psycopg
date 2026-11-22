@@ -9,7 +9,7 @@ checking.
 .. seealso::
 
     :ref:`adapt-life-cycle` for more information about how these objects
-    are used by Psycopg,
+    are used by Psycopg.
 
 
 .. autoclass:: Dumper(cls, context=None)
@@ -69,7 +69,7 @@ checking.
     protocol (implementing everything except the `load()` method) is available
     as `psycopg.adapt.Loader`.
 
-    :param oid: The type that will be managed by this dumper.
+    :param oid: The type that will be managed by this loader.
     :type oid: int
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not
@@ -97,7 +97,7 @@ Type aliases
     implementing the buffer protocol.
 
     A `Dumper.dump()` method can return any of these types. A `Loader.load()`
-    method must accept all of them: don't assume to receive `!bytes`, but
+    method must accept all of them: don't assume you will receive `!bytes`, but
     convert the data with ``bytes(data)`` if you need methods such as
     `!decode()`.
 

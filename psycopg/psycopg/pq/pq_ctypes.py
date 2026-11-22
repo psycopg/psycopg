@@ -46,7 +46,7 @@ OK = ConnStatus.OK
 def version() -> int:
     """Return the version number of the libpq currently loaded.
 
-    The number is in the same format of `~psycopg.ConnectionInfo.server_version`.
+    The number is in the same format as `~psycopg.ConnectionInfo.server_version`.
 
     Certain features might not be available if the libpq library used is too old.
     """
@@ -164,7 +164,7 @@ class PGconn:
 
     @property
     def pgconn_ptr(self) -> int | None:
-        """The pointer to the underlying `!PGconn` structure, as integer.
+        """The pointer to the underlying `!PGconn` structure, as an integer.
 
         `!None` if the connection is closed.
 
@@ -398,7 +398,7 @@ class PGconn:
     def server_version(self) -> int:
         """The version of the server, as an integer.
 
-        The number is in the same format of
+        The number is in the same format as
         `~psycopg.ConnectionInfo.server_version`.
 
         See :pq:`PQserverVersion()` for details.
@@ -463,7 +463,7 @@ class PGconn:
 
         :param command: the command to execute. It can contain more than one
             statement, separated by semicolons.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent
             to the server.
@@ -517,7 +517,7 @@ class PGconn:
         :param param_formats: the `Format` of each parameter. If omitted, all
             the parameters are in text format.
         :param result_format: the `Format` requested for the results.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent.
 
@@ -698,7 +698,7 @@ class PGconn:
             ``$2``... for the parameters.
         :param param_types: the OIDs of the types of the parameters. If omitted,
             or if an OID is 0, the server infers the type.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent.
 
@@ -739,7 +739,7 @@ class PGconn:
         :param param_formats: the `Format` of each parameter. If omitted, all
             the parameters are in text format.
         :param result_format: the `Format` requested for the results.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent.
 
@@ -869,7 +869,7 @@ class PGconn:
 
         :param name: the name of the statement. ``b""`` is the unnamed
             statement.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent.
         :raises ~psycopg.NotSupportedError: if the libpq version is older
@@ -909,7 +909,7 @@ class PGconn:
         """Close a portal and wait for completion.
 
         :param name: the name of the portal. ``b""`` is the unnamed portal.
-        :return: the result of the command. A command failed on the server
+        :return: the result of the command. A command that failed on the server
             still returns a result: check its `~PGresult.status`.
         :raises ~psycopg.OperationalError: if the command could not be sent.
         :raises ~psycopg.NotSupportedError: if the libpq version is older
@@ -1165,7 +1165,7 @@ class PGconn:
 
     def set_trace_flags(self, flags: Trace) -> None:
         """
-        Configure tracing behavior of client/server communication.
+        Configure the tracing behavior of the client/server communication.
 
         :param flags: operating mode of tracing.
 
@@ -1203,14 +1203,14 @@ class PGconn:
         """
         Change a PostgreSQL password.
 
-        :raises ~psycopg.OperationalError: if the command to change password failed.
+        :raises ~psycopg.OperationalError: if the command to change the password failed.
 
         See :pq:`PQchangePassword` for details.
         """
         res = impl.PQchangePassword(self._pgconn_ptr, user, passwd)
         if impl.PQresultStatus(res) != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"failed to change password change command: {self.get_error_message()}"
+                f"failed to change password: {self.get_error_message()}"
             )
 
     def make_empty_result(self, exec_status: int) -> PGresult:
@@ -1240,8 +1240,7 @@ class PGconn:
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to enter the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if entering pipeline mode failed.
         """
         if impl.PQenterPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError("failed to enter pipeline mode")
@@ -1249,8 +1248,7 @@ class PGconn:
     def exit_pipeline_mode(self) -> None:
         """Exit pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to exit the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if exiting pipeline mode failed.
         """
         if impl.PQexitPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError(self.get_error_message())
@@ -1268,7 +1266,7 @@ class PGconn:
             raise e.OperationalError("failed to sync pipeline")
 
     def send_flush_request(self) -> None:
-        """Sends a request for the server to flush its output buffer.
+        """Send a request for the server to flush its output buffer.
 
         :raises ~psycopg.OperationalError: if the flush request failed.
         """
@@ -1342,7 +1340,7 @@ class PGresult:
 
     @property
     def pgresult_ptr(self) -> int | None:
-        """The pointer to the underlying `!PGresult` structure, as integer.
+        """The pointer to the underlying `!PGresult` structure, as an integer.
 
         `!None` if the result was cleared.
 
@@ -1565,7 +1563,7 @@ class PGresult:
         """Set the description of the columns of the result.
 
         Only allowed on a result created by `PGconn.make_empty_result()` and
-        without columns yet.
+        with no columns yet.
 
         :param descriptions: the description of each column.
         :raises ~psycopg.OperationalError: if setting the description failed.
@@ -1597,7 +1595,7 @@ class PGcancelConn:
         self.finish()
 
     def start(self) -> None:
-        """Requests that the server abandons processing of the current command
+        """Requests that the server abandon processing of the current command
         in a non-blocking manner.
 
         See :pq:`PQcancelStart` for details.
@@ -1608,7 +1606,7 @@ class PGcancelConn:
             )
 
     def blocking(self) -> None:
-        """Requests that the server abandons processing of the current command
+        """Requests that the server abandon processing of the current command
         in a blocking manner.
 
         See :pq:`PQcancelBlocking` for details.

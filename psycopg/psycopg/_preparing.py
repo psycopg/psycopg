@@ -59,7 +59,7 @@ class PrepareManager:
         self, query: PostgresQuery, prepare: bool | None = None
     ) -> tuple[Prepare, bytes]:
         """
-        Check if a query is prepared, tell back whether to prepare it.
+        Check if a query is prepared, and return whether to prepare it.
         """
         if prepare is False or self.prepare_threshold is None:
             # The user doesn't want this query to be prepared
@@ -101,7 +101,7 @@ class PrepareManager:
 
     @staticmethod
     def _check_results(results: Sequence[PGresult]) -> bool:
-        """Return False if 'results' are invalid for prepared statement cache."""
+        """Return False if 'results' are invalid for the prepared statement cache."""
         if len(results) != 1:
             # We cannot prepare a multiple statement
             return False
@@ -162,7 +162,7 @@ class PrepareManager:
     ) -> None:
         """Validate cached entry with 'key' by checking query 'results'.
 
-        Possibly record a command to perform maintenance on database side.
+        Possibly record a command to perform maintenance on the database side.
         """
         if self._should_discard(prep, results):
             return
@@ -192,7 +192,7 @@ class PrepareManager:
         """
         Generator to send the commands to perform periodic maintenance
 
-        Deallocate unneeded command in the server, or flush the prepared
+        Deallocate unneeded commands in the server, or flush the prepared
         statements server state entirely if necessary.
         """
         while self._to_flush:

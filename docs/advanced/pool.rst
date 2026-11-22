@@ -26,8 +26,9 @@ Basic connection pool usage
 
 A `ConnectionPool` object can be used to request connections from multiple
 concurrent threads. A simple and safe way to use it is as a *context manager*.
-Within the `!with` block, you can request the pool a connection using the
-`~ConnectionPool.connection()` method, and use it as a context manager too::
+Within the `!with` block, you can request a connection from the pool using
+the `~ConnectionPool.connection()` method, and use it as a context manager
+too::
 
     with ConnectionPool(...) as pool:
         with pool.connection() as conn:
@@ -46,13 +47,13 @@ context: at the end of the block, if there is a transaction open, it will be
 committed if the context is exited normally, or rolled back if the context is
 exited with an exception. See :ref:`transaction-context` for details.
 
-The pool manages a certain amount of connections (between `!min_size` and
+The pool manages a certain number of connections (between `!min_size` and
 `!max_size`). If the pool has a connection ready in its state, it is served
 immediately to the `~connection()` caller, otherwise the caller is put in a
 queue and is served a connection as soon as it's available.
 
 If instead of threads your application uses async code you can use the
-`AsyncConnectionPool` instead and use the `!async` and `!await` keywords with
+`AsyncConnectionPool` and use the `!async` and `!await` keywords with
 the methods requiring them::
 
     async with AsyncConnectionPool(...) as pool:
@@ -89,9 +90,9 @@ an existing connection was closed, or because a spike of activity requires new
 connections), it uses a background pool worker to prepare it in the background:
 
 - the worker creates a connection according to the parameters `!conninfo`,
-  `!kwargs`, and `!connection_class` passed to `ConnectionPool` constructor,
-  calling something similar to :samp:`{connection_class}({conninfo},
-  **{kwargs})`;
+  `!kwargs`, and `!connection_class` passed to the `ConnectionPool`
+  constructor, calling something similar to
+  :samp:`{connection_class}({conninfo}, **{kwargs})`;
 
 - if a `!configure` callback was provided, it is called with the new connection
   as parameter. This can be used, for instance, to configure the connection
@@ -107,15 +108,15 @@ When a client asks for a connection (typically entering a
   immediately;
 
 - if no connection is available, the client is put in a queue, and will be
-  served a connection once one becomes available (because returned by another
-  client or because a new one is created);
+  served a connection once one becomes available (because it is returned by
+  another client or because a new one is created);
 
 - if a `!check` callback was provided, it is called on the connection before
   passing the connection to the client. If the check fails, a new connection
   will be obtained.
 
-When a client has finished to use the connection (typically at the end of the
-context stared by `~ConnectionPool.connection()`):
+When a client has finished using the connection (typically at the end of the
+context started by `~ConnectionPool.connection()`):
 
 - if there is a transaction open, the transaction is committed (if the block
   is exited normally) or rolled back (if it is exited with an exception);
@@ -123,9 +124,9 @@ context stared by `~ConnectionPool.connection()`):
 - if a `!reset` callback was provided, the connection is passed to it, to
   allow application-specific cleanup if needed;
 
-- if, along this process, the connection is found in broken state, or if it
-  passed the `!max_lifetime` configured at pool creation, it is discarded and
-  a new connection is requested to a worker;
+- if, during this process, the connection is found in a broken state, or if
+  it passed the `!max_lifetime` configured at pool creation, it is discarded
+  and a new connection is requested from a worker;
 
 - the connection is finally returned to the pool, or, if there are clients in
   the queue, to the first client waiting.
@@ -157,13 +158,14 @@ global object and use it from the rest of your code::
 
 Using this pattern, the pool will start the connection process already at
 import time. If that's too early, and you want to delay opening connections
-until the application is ready, you can specify to create a closed pool and
-call the `~ConnectionPool.open()` method.
+until the application is ready, you can create a closed pool and call the
+`~ConnectionPool.open()` method.
 
-If you are not using the pool as context manager, you are advised to call the
-`~ConnectionPool.close()` method on program exit: on some Python versions this
-might cause a program exit delay. How to ensure it depends on the way you are
-writing your program. One simple method is to use the `atexit` module::
+If you are not using the pool as a context manager, you are advised to call
+the `~ConnectionPool.close()` method on program exit: on some Python versions
+not doing so might cause a program exit delay. How to ensure it depends on
+the way you are writing your program. One simple method is to use the
+`atexit` module::
 
     atexit.register(pool.close)
 
@@ -184,8 +186,8 @@ can use a `lifespan`__ function::
 
 .. warning::
     The current default for the `!open` parameter is `!True`. However this
-    proved to be not the best idea and, in future releases, the default might
-    be changed to `!False`. As a consequence, if you rely on the pool to be
+    proved not to be the best idea and, in future releases, the default might
+    be changed to `!False`. As a consequence, if you rely on the pool being
     opened on creation, you should specify `!open=True` explicitly.
 
 .. warning::
@@ -201,11 +203,11 @@ Null connection pools
 
 .. versionadded:: 3.1
 
-Sometimes you may want leave the choice of using or not using a connection
+Sometimes you may want to leave the choice of using or not using a connection
 pool as a configuration parameter of your application. For instance, you might
 want to use a pool if you are deploying a "large instance" of your application
-and can dedicate it a handful of connections; conversely you might not want to
-use it if you deploy the application in several instances, behind a load
+and can dedicate a handful of connections to it; conversely you might not want
+to use it if you deploy the application in several instances, behind a load
 balancer, and/or using an external connection pool process such as PgBouncer.
 
 Switching between using or not using a pool requires some code change, because
@@ -215,7 +217,7 @@ function and because the pool can perform additional connection configuration
 performed in some different code path of your application.
 
 The `!psycopg_pool` 3.1 package introduces the `NullConnectionPool` class.
-This class has the same interface, and largely the same behaviour, of the
+This class has the same interface, and largely the same behaviour, as the
 `!ConnectionPool`, but doesn't create any connection beforehand. When a
 connection is returned, unless there are other clients already waiting, it
 is closed immediately and not kept in the pool state.
@@ -296,7 +298,7 @@ The pool doesn't actively check the state of the connections held in its
 state. This means that, if communication with the server is lost, or if a
 connection is closed for other reasons (such as a server configured with an
 `idle_session_timeout`__ killing connections that haven't been used for some
-time), the application might be served a connection in broken state.
+time), the application might be served a connection in a broken state.
 
 .. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
 
@@ -304,8 +306,8 @@ If you want to configure the pool to check the state of the connection, and
 make sure that the application always receives a working connection, you can
 configure a `!check` callback. The callback can perform some operation to
 verify the quality of the connection and, if it completes without raising
-exception, the connection is passed to the client. This, of course, will imply
-some network time that the pool client will have to pay.
+an exception, the connection is passed to the client. This, of course, will
+imply some network time that the pool client will have to pay.
 
 A simple implementation is available as the static method
 `ConnectionPool.check_connection`, which can be used as::
@@ -391,7 +393,7 @@ Pool stats
 
 The pool can return information about its usage using the methods
 `~ConnectionPool.get_stats()` or `~ConnectionPool.pop_stats()`. Both methods
-return the same values, but the latter reset the counters after its use. The
+return the same values, but the latter resets the counters after use. The
 values can be sent to a monitoring system such as Graphite_ or Prometheus_.
 
 .. _Graphite: https://graphiteapp.org/
@@ -413,7 +415,7 @@ Metric                  Meaning
  ``requests_waiting``   Number of requests currently waiting in a queue to
                         receive a connection
  ``usage_ms``           Total usage time of the connections outside the pool
- ``requests_num``       Number of connections requested to the pool
+ ``requests_num``       Number of connections requested from the pool
  ``requests_queued``    Number of requests queued because a connection wasn't
                         immediately available in the pool
  ``requests_wait_ms``   Total time in the queue for the clients waiting
@@ -423,7 +425,7 @@ Metric                  Meaning
                         state
  ``connections_num``    Number of connection attempts made by the pool to the
                         server
- ``connections_ms``     Total time spent to establish connections with the
+ ``connections_ms``     Total time spent establishing connections with the
                         server
  ``connections_errors`` Number of failed connection attempts
  ``connections_lost``   Number of connections lost identified by
@@ -438,7 +440,7 @@ Integration with SQLAlchemy
 
 .. versionadded:: 3.3
 
-If you want to use SQLAlchemy__ with Psycopg's connection pool you can use the
+If you want to use SQLAlchemy__ with Psycopg's connection pool you can use
 SQLAlchemy's NullPool__ feature, using the pool's `~ConnectionPool.getconn`
 as `!creator` function. However, SQLAlchemy expects that calling
 `~psycopg.Connection.close()` on the connection will return the connection to
@@ -448,7 +450,7 @@ the pool, which is not Psycopg's default behaviour.
 .. __: https://docs.sqlalchemy.org/en/20/core/pooling.html#sqlalchemy.pool.NullPool
 
 Since `!psycopg_pool` version 3.3, the `!close_returns` parameter of the pool
-allows to change this behaviour, telling its connections to return to the
+allows changing this behaviour, telling its connections to return to the
 pool, instead of closing, when `!close()` is called.
 
 For example, the initialization in an async application may look like:
@@ -466,7 +468,7 @@ For example, the initialization in an async application may look like:
         pgpool = psycopg_pool.AsyncConnectionPool(
             conninfo=db_url, open=False, close_returns=True
         )
-        await mypool.open()
+        await pgpool.open()
 
         # Create a SQLAlchemy engine using the pool just created
         engine = sqlalchemy.ext.asyncio.create_async_engine(

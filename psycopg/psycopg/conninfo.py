@@ -73,7 +73,7 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: ConnParam) -> ConnDict:
     :return: Dictionary with the parameters parsed from `!conninfo` and
         `!kwargs`.
 
-    Raise `~psycopg.ProgrammingError` if `!conninfo` is not a a valid connection
+    Raise `~psycopg.ProgrammingError` if `!conninfo` is not a valid connection
     string.
 
     .. __: https://www.postgresql.org/docs/current/libpq-connect.html

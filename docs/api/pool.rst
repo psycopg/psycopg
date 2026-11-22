@@ -6,27 +6,27 @@
 
 .. module:: psycopg_pool
 
-A connection pool is an object used to create and maintain a limited amount of
-PostgreSQL connections, reducing the time requested by the program to obtain a
-working connection and allowing an arbitrary large number of concurrent
+A connection pool is an object used to create and maintain a limited number of
+PostgreSQL connections, reducing the time required by the program to obtain a
+working connection and allowing an arbitrarily large number of concurrent
 threads or tasks to use a controlled amount of resources on the server. See
-:ref:`connection-pools` for more details and usage pattern.
+:ref:`connection-pools` for more details and usage patterns.
 
 This package exposes a few connection pool classes:
 
 - `ConnectionPool` is a synchronous connection pool yielding
-  `~psycopg.Connection` objects and can be used by multithread applications.
+  `~psycopg.Connection` objects and can be used by multithreaded applications.
 
 - `AsyncConnectionPool` has an interface similar to `!ConnectionPool`, but
   with `asyncio` functions replacing blocking functions, and yields
   `~psycopg.AsyncConnection` instances.
 
 - `NullConnectionPool` is a `!ConnectionPool` subclass exposing the same
-  interface of its parent, but not keeping any unused connection in its state.
+  interface as its parent, but not keeping any unused connection in its state.
   See :ref:`null-pool` for details about related use cases.
 
-- `AsyncNullConnectionPool` has the same behaviour of the
-  `!NullConnectionPool`, but with the same async interface of the
+- `AsyncNullConnectionPool` has the same behaviour as the
+  `!NullConnectionPool`, but with the same async interface as the
   `!AsyncConnectionPool`.
 
 .. note:: The `!psycopg_pool` package is distributed separately from the main
@@ -44,7 +44,7 @@ The `!ConnectionPool` class
 
    This class implements a connection pool serving `~psycopg.Connection`
    instances (or subclasses). The constructor has several arguments, but
-   only `!conninfo` and `!min_size` are the fundamental ones, all the other
+   only `!conninfo` and `!min_size` are the fundamental ones; all the other
    arguments have meaningful defaults and can probably be tweaked later, if
    required.
 
@@ -63,7 +63,7 @@ The `!ConnectionPool` class
                   callable it will be called at every connection attempt.
    :type kwargs: `!dict[str, Any]` or `!Callable[[], dict[str, Any]]`
 
-   :param min_size: The minimum number of connection the pool will hold. The
+   :param min_size: The minimum number of connections the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
                    `!min_size`.
@@ -86,12 +86,12 @@ The `!ConnectionPool` class
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
                      connection is used to run internal queries (to inspect the
-                     database) make sure to close an eventual transaction
+                     database) make sure to close any open transaction
                      before leaving the function.
    :type configure: `Callable[[Connection], None]`
 
    :param check: A callback to check that a connection is working correctly
-                 when obtained by the pool. The callback is called at every
+                 when obtained from the pool. The callback is called at every
                  `getconn()` or `connection()`: the connection is only passed
                  to the client if the callback doesn't throw an exception.
                  By default no check is made on the connection. You can
@@ -116,15 +116,15 @@ The `!ConnectionPool` class
    :type reset: `Callable[[Connection], None]`
 
    :param name: An optional name to give to the pool, useful, for instance, to
-                identify it in the logs if more than one pool is used. if not
-                specified pick a sequential name such as ``pool-1``,
+                identify it in the logs if more than one pool is used. If not
+                specified, pick a sequential name such as ``pool-1``,
                 ``pool-2``, etc.
    :type name: `!str`
 
    :param timeout: The default maximum time in seconds that a client can wait
                    to receive a connection from the pool (using `connection()`
-                   or `getconn()`). Note that these methods allow to override
-                   the `!timeout` default.
+                   or `getconn()`). Note that these methods allow you to
+                   override the `!timeout` default.
    :type timeout: `!float`, default: 30 seconds
 
    :param max_waiting: Maximum number of requests that can be queued to the
@@ -134,13 +134,13 @@ The `!ConnectionPool` class
 
    :param max_lifetime: The maximum lifetime of a connection in the pool, in
                         seconds. Connections used for longer get closed and
-                        replaced by a new one. The amount is reduced by a
+                        replaced by new ones. The amount is reduced by a
                         random amount up to 5% to avoid mass eviction.
    :type max_lifetime: `!float`, default: 1 hour
 
    :param max_idle: Maximum time, in seconds, that a connection can stay unused
                     in the pool before being closed, and the pool shrunk. This
-                    only happens to connections more than `!min_size`, if
+                    only happens to connections beyond `!min_size`, if
                     `!max_size` allowed the pool to grow.
    :type max_idle: `!float`, default: 10 minutes
 
@@ -149,9 +149,9 @@ The `!ConnectionPool` class
                              fails, the pool will try to reconnect a few
                              times, using an exponential backoff and some
                              random factor to avoid mass attempts. If repeated
-                             attempts fail, after `!reconnect_timeout` second
+                             attempts fail, after `!reconnect_timeout` seconds
                              the connection attempt is aborted and the
-                             `!reconnect_failed()` callback invoked.
+                             `!reconnect_failed()` callback is invoked.
    :type reconnect_timeout: `!float`, default: 5 minutes
 
    :param reconnect_failed: Callback invoked if an attempt to create a new
@@ -159,7 +159,7 @@ The `!ConnectionPool` class
                             seconds. The user may decide, for instance, to
                             terminate the program (executing `sys.exit()`).
                             By default don't do anything: restart a new
-                            connection attempt (if the number of connection
+                            connection attempt (if the number of connections
                             fell below `!min_size`).
    :type reconnect_failed: ``Callable[[ConnectionPool], None]``
 
@@ -176,7 +176,7 @@ The `!ConnectionPool` class
         added `!check` parameter to the constructor.
 
    .. versionchanged:: 3.2
-        the class is generic and `!connection_class` provides types type
+        the class is generic, and `!connection_class` provides its type
         variable. See :ref:`pool-generic`.
 
    .. versionchanged:: 3.3
@@ -188,10 +188,10 @@ The `!ConnectionPool` class
    .. warning::
 
         At the moment, the default value for the `!open` parameter is `!True`;
-        In a future version, the default will be changed to `!False`.
+        in a future version, the default will be changed to `!False`.
 
         If you expect the pool to be open on creation even if you don't use
-        the pool as context manager, you should specify the parameter
+        the pool as a context manager, you should specify the parameter
         `!open=True` explicitly.
 
         Starting from psycopg_pool 3.2, a warning is raised if the pool is
@@ -220,7 +220,7 @@ The `!ConnectionPool` class
 
    .. note::
 
-      The pool can be also used as a context manager, in which case it will
+      The pool can also be used as a context manager, in which case it will
       be opened (if necessary) on entering the block and closed on exiting it:
 
       .. code:: python
@@ -259,7 +259,7 @@ The `!ConnectionPool` class
 
       See :ref:`pool-stats` for the metrics returned.
 
-   .. rubric:: Functionalities you may not need
+   .. rubric:: Features you may not need
 
    .. automethod:: getconn
    .. automethod:: putconn
@@ -286,10 +286,10 @@ The `!AsyncConnectionPool` class
 
 `!AsyncConnectionPool` has a very similar interface to the `ConnectionPool`
 class but its blocking methods are implemented as `!async` coroutines. It
-returns instances of `~psycopg.AsyncConnection`, or of its subclass if
-specified so in the `!connection_class` parameter.
+returns instances of `~psycopg.AsyncConnection`, or of a subclass if
+so specified in the `!connection_class` parameter.
 
-Only the functions and parameters with different signature from
+Only the functions and parameters with a different signature from
 `!ConnectionPool` are listed here.
 
 .. autoclass:: AsyncConnectionPool()
@@ -307,13 +307,13 @@ Only the functions and parameters with different signature from
                  or `async !Callable[[], dict[str, Any]]`
 
    :param check: A callback to check that a connection is working correctly
-                 when obtained by the pool.
+                 when obtained from the pool.
    :type check: `async Callable[[Connection], None]`
 
    :param configure: A callback to configure a connection after creation.
    :type configure: `async Callable[[AsyncConnection], None]`
 
-   :param reset: A callback to reset a function after it has been returned to
+   :param reset: A callback to reset a connection after it has been returned to
                  the pool.
    :type reset: `async Callable[[AsyncConnection], None]`
 
@@ -337,7 +337,7 @@ Only the functions and parameters with different signature from
    .. warning::
 
         Opening an async pool in the constructor (using `!open=True` on init)
-        will become an error in a future pool versions. Please note that,
+        will become an error in a future pool version. Please note that,
         currently, `!open=True` is the default; in a future version, the
         default for the parameter will be changed to `!False`.
 
@@ -370,7 +370,7 @@ Only the functions and parameters with different signature from
 
    .. note::
 
-      The pool can be also used as an async context manager, in which case it
+      The pool can also be used as an async context manager, in which case it
       will be opened (if necessary) on entering the block and closed on
       exiting it:
 
@@ -379,7 +379,7 @@ Only the functions and parameters with different signature from
           async with AsyncConnectionPool(...) as pool:
               # code using the pool
 
-   All the other constructor parameters are the same of `!ConnectionPool`.
+   All the other constructor parameters are the same as in `!ConnectionPool`.
 
    .. automethod:: wait
    .. automethod:: resize
@@ -436,9 +436,9 @@ behaviour is similar, with the following differences:
 
 
 The `AsyncNullConnectionPool` is, similarly, an `AsyncConnectionPool` subclass
-with the same behaviour of the `NullConnectionPool`.
+with the same behaviour as the `NullConnectionPool`.
 
 .. autoclass:: AsyncNullConnectionPool()
 
-    The interface is the same of its parent class `AsyncConnectionPool`. The
+    The interface is the same as its parent class `AsyncConnectionPool`. The
     behaviour is different in the same way described for `NullConnectionPool`.

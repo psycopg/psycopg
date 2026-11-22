@@ -2,7 +2,7 @@ The `!psycopg` module
 =====================
 
 Psycopg implements the `Python Database DB API 2.0 specification`__. As such
-it also exposes the `module-level objects`__ required by the specifications.
+it also exposes the `module-level objects`__ required by the specification.
 
 .. __: https://www.python.org/dev/peps/pep-0249/
 .. __: https://www.python.org/dev/peps/pep-0249/#module-interface
@@ -22,7 +22,7 @@ it also exposes the `module-level objects`__ required by the specifications.
     An object that can be used to verify that the client library used by
     Psycopg implements a certain feature. For instance::
 
-        # Fail at import time if encrypted passwords is not available
+        # Fail at import time if encrypted passwords are not available
         import psycopg
         psycopg.capabilities.has_encrypt_password(check=True)
 
@@ -30,7 +30,7 @@ it also exposes the `module-level objects`__ required by the specifications.
         if psycopg.capabilities.has_hostaddr():
             print(conn.info.hostaddr)
         else:
-            print("unknown connection hostadd")
+            print("unknown connection hostaddr")
 
     :type: `Capabilities`
 

@@ -8,9 +8,9 @@
 Using COPY TO and COPY FROM
 ===========================
 
-Psycopg allows to operate with `PostgreSQL COPY protocol`__. :sql:`COPY` is
-one of the most efficient ways to load data into the database (and to modify
-it, with some SQL creativity).
+Psycopg allows you to operate with the `PostgreSQL COPY protocol`__.
+:sql:`COPY` is one of the most efficient ways to load data into the database
+(and to modify it, with some SQL creativity).
 
 .. __: https://www.postgresql.org/docs/current/sql-copy.html
 
@@ -55,10 +55,10 @@ Writing data row-by-row
 
 Using a copy operation you can load data into the database from any Python
 iterable (a list of tuples, or any iterable of sequences): the Python values
-are adapted as they would be in normal querying. To perform such operation use
-a :sql:`COPY ... FROM STDIN` with `Cursor.copy()` and use `~Copy.write_row()`
-on the resulting object in a `!with` block. On exiting the block the
-operation will be concluded:
+are adapted as they would be in normal querying. To perform such an operation
+use a :sql:`COPY ... FROM STDIN` with `Cursor.copy()` and use
+`~Copy.write_row()` on the resulting object in a `!with` block. On exiting the
+block the operation will be concluded:
 
 .. code:: python
 
@@ -71,7 +71,7 @@ operation will be concluded:
 If an exception is raised inside the block, the operation is interrupted and
 the records inserted so far are discarded.
 
-In order to read or write from `!Copy` row-by-row you must not specify
+In order to read from or write to `!Copy` row-by-row you must not specify
 :sql:`COPY` options such as :sql:`FORMAT CSV`, :sql:`DELIMITER`, :sql:`NULL`:
 please leave these details alone, thank you :)
 
@@ -157,10 +157,10 @@ necessary if the data is copied :ref:`block-by-block <copy-block>` using
     will apply **no cast rules**. This means, for example, that passing the
     value 100 to an `integer` column **will fail**, because Psycopg will pass
     it as a `smallint` value, and the server will reject it because its size
-    doesn't match what expected.
+    doesn't match what is expected.
 
     You can work around the problem using the `~Copy.set_types()` method of
-    the `!Copy` object and specifying carefully the types to load.
+    the `!Copy` object and carefully specifying the types to load.
 
 .. seealso:: See :ref:`binary-data` for further info about binary querying.
 

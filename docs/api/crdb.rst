@@ -5,16 +5,16 @@
 
 .. versionadded:: 3.1
 
-CockroachDB_ is a distributed database using the same fronted-backend protocol
-of PostgreSQL. As such, Psycopg can be used to write Python programs
+CockroachDB_ is a distributed database using the same frontend-backend protocol
+as PostgreSQL. As such, Psycopg can be used to write Python programs
 interacting with CockroachDB.
 
 .. _CockroachDB: https://www.cockroachlabs.com/
 
 Opening a connection to a CRDB database using `psycopg.connect()` provides a
-largely working object. However, using the `psycopg.crdb.connect()` function
-instead, Psycopg will create more specialised objects and provide a types
-mapping tweaked on the CockroachDB data model.
+largely working object. However, if you use the `psycopg.crdb.connect()`
+function instead, Psycopg will create more specialised objects and provide a
+types mapping tweaked for the CockroachDB data model.
 
 
 .. _crdb-differences:
@@ -103,7 +103,7 @@ CockroachDB-specific objects
  
     The map is used as a template when new connections are created, using
     `psycopg.crdb.connect()` (similarly to the way `psycopg.adapters` is used
-    as template for new PostgreSQL connections).
+    as a template for new PostgreSQL connections).
 
     This registry contains only the types and adapters supported by
     CockroachDB. Several PostgreSQL types and adapters are missing or

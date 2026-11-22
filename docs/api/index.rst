@@ -3,7 +3,7 @@ Psycopg 3 API
 
 .. _api:
 
-This sections is a reference for all the public objects exposed by the
+This section is a reference for all the public objects exposed by the
 `psycopg` module. For a more conceptual description you can take a look at
 :ref:`basic` and :ref:`advanced`.
 

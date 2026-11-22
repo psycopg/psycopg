@@ -76,7 +76,7 @@ class ConnectionInfo:
         return self._get_pgconn_attr("options")
 
     def get_parameters(self) -> dict[str, str]:
-        """Return the connection parameters values.
+        """Return the connection parameter values.
 
         Return all the parameters set to a non-default value, which might come
         either from the connection string and parameters passed to
@@ -140,7 +140,7 @@ class ConnectionInfo:
         """
         Return a parameter setting of the connection.
 
-        Return `None` is the parameter is unknown.
+        Return `None` if the parameter is unknown.
         """
         res = self.pgconn.parameter_status(param_name.encode(self.encoding))
         return res.decode(self.encoding) if res is not None else None
@@ -160,7 +160,7 @@ class ConnectionInfo:
         Return a value in the format described in :pq:`PQfullProtocolVersion()`.
 
         Only meaningful if the libpq used is version 18 or greater. If the
-        version is lesser than that, return the value reported by
+        version is lower than that, return the value reported by
         :pq:`PQprotocolVersion()` (but in the same format as above, e.g. 30000
         for version 3). You can use `Capabilities.has_full_protocol_version()`
         to verify if the value can be considered reliable.

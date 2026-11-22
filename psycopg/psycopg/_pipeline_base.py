@@ -97,7 +97,8 @@ class BasePipeline:
 
     def _exit_gen(self) -> PQGen[None]:
         """
-        Exit current pipeline by sending a Sync and fetch back all remaining results.
+        Exit the current pipeline by sending a Sync and fetch back all remaining
+        results.
         """
         try:
             self._enqueue_sync()
@@ -106,7 +107,7 @@ class BasePipeline:
             yield from self._fetch_gen(flush=True)
 
     def _communicate_gen(self) -> PQGen[None]:
-        """Communicate with pipeline to send commands and possibly fetch
+        """Communicate with the pipeline to send commands and possibly fetch
         results, which are then processed.
         """
         fetched = yield from pipeline_communicate(self.pgconn, self.command_queue)
@@ -123,7 +124,7 @@ class BasePipeline:
 
     def _fetch_gen(self, *, flush: bool) -> PQGen[None]:
         """Fetch available results from the connection and process them with
-        pipeline queued items.
+        the pipeline queued items.
 
         If 'flush' is True, a PQsendFlushRequest() is issued in order to make
         sure results can be fetched. Otherwise, the caller may emit a
@@ -153,11 +154,11 @@ class BasePipeline:
             raise exception
 
     def _process_results(self, queued: PendingResult, results: list[PGresult]) -> None:
-        """Process a results set fetched from the current pipeline.
+        """Process a result set fetched from the current pipeline.
 
         This matches 'results' with its respective element in the pipeline
         queue. For commands (None value in the pipeline queue), results are
-        checked directly. For prepare statement creation requests, update the
+        checked directly. For prepared statement creation requests, update the
         cache. Otherwise, results are attached to their respective cursor.
         """
         if queued is None:

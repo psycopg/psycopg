@@ -5,7 +5,7 @@
 Data adaptation configuration
 =============================
 
-The adaptation system is at the core of Psycopg and allows to customise the
+The adaptation system is at the core of Psycopg and allows you to customise the
 way Python objects are converted to PostgreSQL when a query is performed and
 how PostgreSQL values are converted to Python objects when query results are
 returned.
@@ -35,7 +35,7 @@ returned.
      :align: center
 
 - The `!adapters` attributes are `AdaptersMap` instances, and contain the
-  mapping from Python types and `~psycopg.abc.Dumper` classes, and from
+  mapping from Python types to `~psycopg.abc.Dumper` classes, and from
   PostgreSQL OIDs to `~psycopg.abc.Loader` classes. Changing this mapping
   (e.g. writing and registering your own adapters, or using a different
   configuration of builtin adapters) affects how types are converted between
@@ -45,7 +45,7 @@ returned.
     the objects used to perform the conversion from a Python object to a bytes
     sequence in a format understood by PostgreSQL. The string returned
     *shouldn't be quoted*: the value will be passed to the database using
-    functions such as :pq:`PQexecParams()` so quoting and quotes escaping is
+    functions such as :pq:`PQexecParams()` so quoting and quote escaping are
     not necessary. The dumper usually also suggests to the server what type to
     use, via its `~psycopg.abc.Dumper.oid` attribute.
 
@@ -57,7 +57,7 @@ returned.
     when a query is executed.
 
 .. note::
-    Changing adapters in a context only affects that context and its children
+    Changing adapters in a context only affects that context and its child
     objects created *afterwards*; the objects already created are not
     affected. For instance, changing the global context will only change newly
     created connections, not the ones already existing.
@@ -84,9 +84,9 @@ Postgres and back.
 
 - The `!Transformer` copies the adapters configuration from the `!Cursor`,
   thus inheriting all the changes made to the global `psycopg.adapters`
-  configuration, the current `!Connection`, the `!Cursor`.
+  configuration, the current `!Connection`, and the `!Cursor`.
 
-- For every Python type passed as query argument, the `!Transformer` will
+- For every Python type passed as a query argument, the `!Transformer` will
   instantiate a `~psycopg.abc.Dumper`. Usually all the objects of the same
   type will be converted by the same dumper instance.
 
@@ -104,8 +104,8 @@ Postgres and back.
     mechanism provided by `~psycopg.abc.Dumper.get_key()` and
     `~psycopg.abc.Dumper.upgrade()` is used to create more specific dumpers.
 
-- The query is executed. Upon successful request, the result is received as a
-  `~psycopg.pq.PGresult`.
+- The query is executed. If the request is successful, the result is received
+  as a `~psycopg.pq.PGresult`.
 
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `~psycopg.abc.Loader`. All the values with the same OID will be converted by
@@ -118,12 +118,12 @@ Postgres and back.
 - Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
   will use the same adaptation rules.
 
-As a consequence it is possible to perform certain choices only once per query
+As a consequence it is possible to make certain choices only once per query
 (e.g. looking up the connection encoding) and then call a fast-path operation
 for each value to convert.
 
 Querying will fail if a Python object for which there isn't a `!Dumper`
-registered (for the right `~psycopg.pq.Format`) is used as query parameter.
+registered (for the right `~psycopg.pq.Format`) is used as a query parameter.
 If the query returns a data type whose OID doesn't have a `!Loader`, the
 value will be returned as a string (or bytes string for binary types).
 
@@ -221,9 +221,9 @@ Example: converting empty strings to NULL
     The `dump()` method can also return `!None`, which will be stored as
     :sql:`NULL` in the database.
 
-If you prefer to store missing values as :sql:`NULL`, in the database, but
+If you prefer to store missing values as :sql:`NULL` in the database, but
 your input may contain empty strings, you can subclass the stock string dumper
-to return `!None` upon empty or whitespace-only strings::
+to return `!None` for empty or whitespace-only strings::
 
     >>> from psycopg.types.string import StrDumper
 
@@ -245,7 +245,7 @@ Example: PostgreSQL numeric to Python float
 -------------------------------------------
 
 Normally PostgreSQL :sql:`numeric` values are converted to Python
-`~decimal.Decimal` instances, because both the types allow fixed-precision
+`~decimal.Decimal` instances, because both types allow fixed-precision
 arithmetic and are not subject to rounding.
 
 Sometimes, however, you may want to perform floating-point math on
@@ -257,7 +257,7 @@ If you are fine with the potential loss of precision and you simply want to
 receive :sql:`numeric` values as Python `!float`, you can register on
 :sql:`numeric` the same `Loader` class used to load
 :sql:`float4`\/:sql:`float8` values. Because the PostgreSQL textual
-representation of both floats and decimal is the same, the two loaders are
+representation of both floats and decimals is the same, the two loaders are
 compatible.
 
 .. code:: python
@@ -278,8 +278,8 @@ In this example the customised adaptation takes effect only on the connection
 
 .. _adapt-example-inf-date:
 
-Example: handling infinity date
--------------------------------
+Example: handling the infinity date
+-----------------------------------
 
 Suppose you want to work with the "infinity" date which is available in
 PostgreSQL but not handled by Python:

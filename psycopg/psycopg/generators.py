@@ -3,16 +3,16 @@ Generators implementing communication protocols with the libpq
 
 Certain operations (connection, querying) are an interleave of libpq calls and
 waiting for the socket to be ready. This module contains the code to execute
-the operations, yielding a polling state whenever there is to wait. The
-functions in the `waiting` module are the ones who wait more or less
+the operations, yielding a polling state whenever there is a need to wait. The
+functions in the `waiting` module are the ones that wait more or less
 cooperatively for the socket to be ready and make these generators continue.
 
 These generators yield `Wait` objects whenever an operation would block. These
-generators assume the connection fileno will not change. In case of the
+generators assume the connection fileno will not change. In the case of the
 connection function, where the fileno may change, the generators yield pairs
 (fileno, `Wait`).
 
-The generator can be restarted sending the appropriate `Ready` state when the
+The generator can be restarted by sending the appropriate `Ready` state when the
 file descriptor is ready. If a None value is sent, it means that the wait
 function timed out without any file descriptor becoming ready; in this case the
 generator should probably yield the same value again in order to wait more.
@@ -140,8 +140,7 @@ def _send(pgconn: PGconn) -> PQGen[None]:
     Generator to send a query to the server without blocking.
 
     The query must have already been sent using `pgconn.send_query()` or
-    similar. Flush the query and then return the result using nonblocking
-    functions.
+    similar. Flush the query using nonblocking functions.
 
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
@@ -232,7 +231,7 @@ def _pipeline_communicate(
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
-    Return a list results, including single PIPELINE_SYNC elements.
+    Return a list of results, including single PIPELINE_SYNC elements.
     """
     results = []
 

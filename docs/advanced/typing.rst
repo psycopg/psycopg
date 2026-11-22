@@ -50,7 +50,7 @@ Type of rows returned
 
 If you want to use connections and cursors returning your data as different
 types, for instance as dictionaries, you can use the `!row_factory` argument
-of the `~Connection.connect()` and the `~Connection.cursor()` method, which
+of the `~Connection.connect()` and the `~Connection.cursor()` methods, which
 will control what type of record is returned by the fetch methods of the
 cursors and annotate the returned objects accordingly. See
 :ref:`row-factories` for more details.
@@ -76,8 +76,8 @@ The ``fetchone()`` frustration
 .. versionchanged:: 3.3
 
 If you use a static type checker and you are 100% sure that the cursor will
-exactly one record, it is frustrating to be told that the returned row might
-be `!None`. For example:
+return exactly one record, it is frustrating to be told that the returned row
+might be `!None`. For example:
 
 .. code:: python
 
@@ -100,7 +100,7 @@ cur.fetchall()`` or some other horrible trick).
 
 Since Psycopg 3.3, cursors are iterables__, therefore they support the
 `next` function. A `!next(cur)` will behave like `!cur.fetchone()`, but it
-is guaranteed to return a row (in case there are no rows in the result set it
+is guaranteed to return a row (if there are no rows in the result set it
 will not return anything but will raise `!StopIteration`). Therefore the
 function above can terminate with:
 
@@ -128,7 +128,7 @@ Generic pool types
 The `~psycopg_pool.ConnectionPool` class and similar are generic on their
 `!connection_class` argument. The `~psycopg_pool.ConnectionPool.connection()`
 method is annotated as returning a connection of that type, and the record
-returned will follow the rule as in :ref:`row-factory-static`.
+returned will follow the rules described in :ref:`row-factory-static`.
 
 Note that, at the moment, if you use a generic class as `!connection_class`,
 you will need to specify a `!row_factory` consistently in the `!kwargs`,
@@ -182,13 +182,13 @@ Example: returning records as Pydantic models
 
 Using Pydantic_ it is possible to enforce static typing at runtime. Using a
 Pydantic model factory the code can be checked statically using Mypy and
-querying the database will raise an exception if the rows returned is not
+querying the database will raise an exception if the rows returned are not
 compatible with the model.
 
 .. _Pydantic: https://pydantic-docs.helpmanual.io/
 
 The following example can be checked with ``mypy --strict`` without reporting
-any issue. Pydantic will also raise a runtime error in case the
+any issue. Pydantic will also raise a runtime error if the
 `!Person` is used with a query that returns incompatible data.
 
 .. code:: python
@@ -265,7 +265,7 @@ argument to `!execute()`, not by string composition:
         return cur.fetchone()
 
 If you are composing a query dynamically you should use the `sql.SQL` object
-and similar to escape safely table and field names. The parameter of the
+and similar to safely escape table and field names. The parameter of the
 `!SQL()` object should be a literal string:
 
 .. code:: python
@@ -282,7 +282,7 @@ and similar to escape safely table and field names. The parameter of the
 
 At the time of writing, no Python static analyzer implements this check (`mypy
 doesn't implement it`__, Pyre_ does, but `doesn't work with Psycopg yet`__).
-Once the type checkers support will be complete, the above bad statements
+Once type checker support is complete, the above bad statements
 should be reported as errors.
 
 .. __: https://github.com/python/mypy/issues/12554

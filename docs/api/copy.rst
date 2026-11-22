@@ -4,8 +4,8 @@ COPY-related objects
 ====================
 
 The main objects (`Copy`, `AsyncCopy`) present the main interface to exchange
-data during a COPY operations. These objects are normally obtained by the
-methods `Cursor.copy()` and `AsyncCursor.copy()`; however, they can be also
+data during a COPY operation. These objects are normally obtained by the
+methods `Cursor.copy()` and `AsyncCursor.copy()`; however, they can also be
 created directly, for instance to write to a destination which is not a
 database (e.g. using a `~psycopg.copy.FileWriter`).
 
@@ -32,7 +32,7 @@ Main Copy objects
 
     .. automethod:: rows
 
-        Equivalent of iterating on `read_row()` until it returns `!None`
+        Equivalent to iterating on `read_row()` until it returns `!None`
 
     .. automethod:: read_row
     .. automethod:: set_types
@@ -70,10 +70,10 @@ Writer objects
 Copy writers are helper objects to specify where to write COPY-formatted data.
 By default, data is written to the database (using the `LibpqWriter`). It is
 possible to write copy-data for offline use by using a `FileWriter`, or to
-customize further writing by implementing your own `Writer` or `AsyncWriter`
+further customize writing by implementing your own `Writer` or `AsyncWriter`
 subclass.
 
-Writers instances can be used passing them to the cursor
+Writer instances can be used by passing them to the cursor
 `~psycopg.Cursor.copy()` method or to the `~psycopg.Copy` constructor, as the
 `!writer` argument.
 
@@ -111,8 +111,8 @@ Writers instances can be used passing them to the cursor
 
 .. autoclass:: AsyncWriter
 
-    This class methods have the same semantics of the ones of `Writer`, but
-    offer an async interface.
+    The methods of this class have the same semantics as the ones of
+    `Writer`, but offer an async interface.
 
     .. automethod:: write
     .. automethod:: finish

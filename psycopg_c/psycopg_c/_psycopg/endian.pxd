@@ -1,5 +1,5 @@
 """
-Access to endian conversion function
+Access to endian conversion functions
 """
 
 # Copyright (C) 2020 The Psycopg Team

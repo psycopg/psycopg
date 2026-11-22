@@ -19,7 +19,7 @@ cdef class PGcancelConn:
         self.finish()
 
     def start(self) -> None:
-        """Requests that the server abandons processing of the current command
+        """Requests that the server abandon processing of the current command
         in a non-blocking manner.
 
         See :pq:`PQcancelStart` for details.
@@ -30,7 +30,7 @@ cdef class PGcancelConn:
             )
 
     def blocking(self) -> None:
-        """Requests that the server abandons processing of the current command
+        """Requests that the server abandon processing of the current command
         in a blocking manner.
 
         See :pq:`PQcancelBlocking` for details.

@@ -27,18 +27,18 @@ There are actually several implementations of the module, all offering the
 same interface. Current implementations are:
 
 - ``python``: a pure-python implementation, implemented using the `ctypes`
-  module. It is less performing than the others, but it doesn't need a C
+  module. It is slower than the others, but it doesn't need a C
   compiler to install. It requires the libpq installed in the system.
 
 - ``c``: a C implementation of the libpq wrapper (more precisely, implemented
-  in Cython_). It is much better performing than the ``python``
+  in Cython_). It is much faster than the ``python``
   implementation, however it requires development packages installed on the
   client machine. It can be installed using the ``c`` extra, i.e. running
   ``pip install "psycopg[c]"``.
 
 - ``binary``: a pre-compiled C implementation, bundled with all the required
   libraries. It is the easiest option to deal with, fast to install and it
-  should require no development tool or client library, however it may be not
+  should require no development tool or client library, however it may not be
   available for every platform. You can install it using the ``binary`` extra,
   i.e. running ``pip install "psycopg[binary]"``.
 
@@ -68,7 +68,7 @@ Module content
 
 .. autodata:: __impl__
 
-    The choice of implementation is automatic but can be forced setting the
+    The choice of implementation is automatic but can be forced by setting the
     :envvar:`PSYCOPG_IMPL` env var.
 
 

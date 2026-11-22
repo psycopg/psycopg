@@ -14,7 +14,7 @@ multiple queries/results can be sent/received in a single network roundtrip.
 Pipeline mode can provide a significant performance boost to the application.
 
 Pipeline mode is most useful when the server is distant, i.e., network latency
-(“ping time”) is high, and also when many small operations are being performed
+("ping time") is high, and also when many small operations are being performed
 in rapid succession. There is usually less benefit in using pipelined commands
 when each query takes many multiples of the client/server round-trip time to
 execute. A 100-statement operation run on a server 300 ms round-trip-time away
@@ -35,7 +35,7 @@ buffered on the server side; the server flushes that buffer when a
     - `pipeline mode`__
     - `extended query message flow`__
 
-    contains many details around when it is most useful to use the pipeline
+    contains many details about when it is most useful to use the pipeline
     mode and about errors management and interaction with transactions.
 
     .. __: https://www.postgresql.org/docs/current/libpq-pipeline-mode.html
@@ -167,9 +167,10 @@ Pipeline mode usage
 
 Psycopg supports the pipeline mode via the `Connection.pipeline()` method. The
 method is a context manager: entering the ``with`` block yields a `Pipeline`
-object. At the end of block, the connection resumes the normal operation mode.
+object. At the end of the block, the connection resumes the normal operation
+mode.
 
-Within the pipeline block, you can use normally one or more cursors to execute
+Within the pipeline block, you can normally use one or more cursors to execute
 several operations, using `Connection.execute()`, `Cursor.execute()` and
 `~Cursor.executemany()`.
 
@@ -183,9 +184,9 @@ several operations, using `Connection.execute()`, `Cursor.execute()` and
     ...             "INSERT INTO elsewhere VALUES (%s)",
     ...             [("one",), ("two",), ("four",)])
 
-Unlike in normal mode, Psycopg will not wait for the server to receive the
-result of each query; the client will receive results in batches when the
-server flushes it output buffer. You can receive more than a single result
+Unlike in normal mode, Psycopg will not wait to receive the result of each
+query from the server; the client will receive results in batches when the
+server flushes its output buffer. You can receive more than a single result
 by using more than one cursor in the same pipeline.
 
 If any statement encounters an error, the server aborts the current
@@ -207,7 +208,7 @@ synchronization point.
 
 .. note::
 
-    Starting from Psycopg 3.1, `~Cursor.executemany()` makes use internally of
+    Starting from Psycopg 3.1, `~Cursor.executemany()` internally makes use of
     the pipeline mode; as a consequence there is no need to handle a pipeline
     block just to call `!executemany()` once.
 
@@ -217,8 +218,8 @@ synchronization point.
 Synchronization points
 ----------------------
 
-Flushing query results to the client can happen either when a synchronization
-point is established by Psycopg:
+Flushing query results to the client can happen when a synchronization point
+is established by Psycopg:
 
 - using the `Pipeline.sync()` method;
 - on `Connection.commit()` or `~Connection.rollback()`;
@@ -227,12 +228,12 @@ point is established by Psycopg:
 - using a fetch method such as `Cursor.fetchone()` (which only flushes the
   query but doesn't issue a Sync and doesn't reset a pipeline state error).
 
-The server might perform a flush on its own initiative, for instance when the
-output buffer is full.
+The server might also perform a flush on its own initiative, for instance
+when the output buffer is full.
 
 Note that, even in :ref:`autocommit <autocommit>`, the server wraps the
-statements sent in pipeline mode in an implicit transaction, which will be
-only committed when the Sync is received. As such, a failure in a group of
+statements sent in pipeline mode in an implicit transaction, which will
+only be committed when the Sync is received. As such, a failure in a group of
 statements will probably invalidate the effect of statements executed after
 the previous Sync, and will propagate to the following Sync.
 
@@ -253,7 +254,7 @@ For example, in the following block:
 
 there will be an error in the block, ``relation "no_such_table" does not
 exist`` caused by the insert ``two``, but probably raised by the `!sync()`
-call. At at the end of the block, the table will contain:
+call. At the end of the block, the table will contain:
 
 .. code:: text
 
@@ -268,7 +269,8 @@ call. At at the end of the block, the table will contain:
 because:
 
 - the value 1 of the sequence is consumed by the statement ``one``, but
-  the record discarded because of the error in the same implicit transaction;
+  the record is discarded because of the error in the same implicit
+  transaction;
 - the statement ``three`` is not executed because the pipeline is aborted (so
   it doesn't consume a sequence item);
 - the statement ``four`` is executed with
@@ -287,8 +289,8 @@ because:
     the commands executed so far.
 
 
-The fine prints
----------------
+The fine print
+--------------
 
 .. warning::
 

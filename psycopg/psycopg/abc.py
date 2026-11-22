@@ -46,7 +46,7 @@ RV = TypeVar("RV")
 PQGenConn: TypeAlias = Generator[tuple[int, "Wait"], "Ready | int", RV]
 """Generator for processes where the connection file number can change.
 
-This can happen in connection and reset, but not in normal querying.
+This can happen during connection and reset, but not in normal querying.
 """
 
 PQGen: TypeAlias = Generator["Wait", "Ready | int", RV]
@@ -86,7 +86,7 @@ class AdaptContext(Protocol):
     """
     A context describing how types are adapted.
 
-    Example of `!AdaptContext` are `~psycopg.Connection`, `~psycopg.Cursor`,
+    Examples of `!AdaptContext` are `~psycopg.Connection`, `~psycopg.Cursor`,
     `~psycopg.adapt.Transformer`, `~psycopg.adapt.AdaptersMap`.
 
     Note that this is a `~typing.Protocol`, so objects implementing
@@ -115,7 +115,7 @@ class Dumper(Protocol):
 
     format: pq.Format
     """
-    The format that this class `dump()` method produces,
+    The format that this class's `dump()` method produces,
     `~psycopg.pq.Format.TEXT` or `~psycopg.pq.Format.BINARY`.
 
     This is a class attribute.
@@ -185,7 +185,7 @@ class Dumper(Protocol):
         Once `Transformer.get_dumper()` has been notified by `get_key()` that
         this Dumper class cannot handle `!obj` itself, it will invoke
         `!upgrade()`, which should return a new `Dumper` instance, which will
-        be reused for every objects for which `!get_key()` returns the same
+        be reused for every object for which `!get_key()` returns the same
         result.
         """
         ...
@@ -198,7 +198,7 @@ class Loader(Protocol):
 
     format: pq.Format
     """
-    The format that this class `load()` method can convert,
+    The format that this class's `load()` method can convert,
     `~psycopg.pq.Format.TEXT` or `~psycopg.pq.Format.BINARY`.
 
     This is a class attribute.

@@ -37,7 +37,7 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         """
         Return the query and parameters merged.
 
-        Parameters are adapted and merged to the query the same way that
+        Parameters are adapted and merged into the query the same way that
         `!execute()` would do.
 
         """

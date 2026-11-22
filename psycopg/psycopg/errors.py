@@ -373,7 +373,7 @@ class IntegrityError(DatabaseError):
 
 class InternalError(DatabaseError):
     """
-    An error generated when the database encounters an internal error,
+    An error generated when the database encounters an internal error.
 
     Examples could be the cursor is not valid anymore, the transaction is out
     of sync, etc.
@@ -384,7 +384,7 @@ class InternalError(DatabaseError):
 
 class ProgrammingError(DatabaseError):
     """
-    Exception raised for programming errors
+    Exception raised for programming errors.
 
     Examples may be table not found or already exists, syntax error in the SQL
     statement, wrong number of parameters specified, etc.
@@ -406,7 +406,7 @@ class ConnectionTimeout(OperationalError):
     Exception raised on timeout of the `~psycopg.Connection.connect()` method.
 
     The error is raised if the ``connect_timeout`` is specified and a
-    connection is not obtained in useful time.
+    connection is not obtained in time.
 
     Subclass of `~psycopg.OperationalError`.
     """
@@ -431,7 +431,8 @@ class _WaitTimeout(OperationalError):
 
 class PipelineAborted(OperationalError):
     """
-    Raised when a operation fails because the current pipeline is in aborted state.
+    Raised when an operation fails because the current pipeline is in an aborted
+    state.
 
     Subclass of `~psycopg.OperationalError`.
     """
@@ -655,7 +656,7 @@ def _info_to_dict(info: ErrorInfo) -> ErrorInfo:
 
 
 def lookup(sqlstate: str) -> type[Error]:
-    """Lookup an error code or `constant name`__ and return its exception class.
+    """Look up an error code or `constant name`__ and return its exception class.
 
     Raise `!KeyError` if the code is not found.
 

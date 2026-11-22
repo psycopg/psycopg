@@ -26,7 +26,7 @@ ORD_BS = ord("\\")
 
 class Dumper(abc.Dumper, ABC):
     """
-    Convert Python object of the type `!cls` to PostgreSQL representation.
+    Convert Python objects of type `!cls` to PostgreSQL representation.
     """
 
     oid: int = 0
@@ -53,7 +53,7 @@ class Dumper(abc.Dumper, ABC):
         """
         By default return the `dump()` value quoted and sanitised, so
         that the result can be used to build a SQL string. This works well
-        for most types and you won't likely have to implement this method in a
+        for most types and you likely won't have to implement this method in a
         subclass.
         """
         if (value := self.dump(obj)) is None:
@@ -100,8 +100,8 @@ class Dumper(abc.Dumper, ABC):
 
         This implementation returns the `!cls` passed in the constructor.
         Subclasses needing to specialise the PostgreSQL type according to the
-        *value* of the object dumped (not only according to to its type)
-        should override this class.
+        *value* of the object dumped (not only according to its type)
+        should override this method.
 
         """
         return self.cls

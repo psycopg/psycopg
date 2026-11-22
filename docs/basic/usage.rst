@@ -74,7 +74,7 @@ relate to each other:
   returns a new `Connection` instance. `AsyncConnection.connect()`
   creates an `asyncio` connection instead.
 
-- The `~Connection` class encapsulates a database session. It allows to:
+- The `~Connection` class encapsulates a database session. It allows you to:
 
   - create new `~Cursor` instances using the `~Connection.cursor()` method to
     execute database commands and queries,
@@ -110,7 +110,7 @@ Shortcuts
 The pattern above is familiar to `!psycopg2` users. However, Psycopg 3 also
 exposes a few simple extensions which make the above pattern leaner:
 
-- the `Connection` objects exposes an `~Connection.execute()` method,
+- the `Connection` object exposes an `~Connection.execute()` method,
   equivalent to creating a cursor, calling its `~Cursor.execute()` method, and
   returning it.
 
@@ -159,7 +159,7 @@ using a result in a single expression:
 Connection context
 ------------------
 
-Psycopg 3 `Connection` can be used as a context manager:
+A Psycopg 3 `Connection` can be used as a context manager:
 
 .. code:: python
 
@@ -209,15 +209,16 @@ developer is free to use (and responsible for calling) `~Connection.commit()`,
       explicit COMMIT and the operations will be finalised.
 
     You should use a `!with` block when your intention is just to execute a
-    set of operations and then committing the result, which is the most usual
+    set of operations and then commit the result, which is the most usual
     thing to do with a connection. If your connection life cycle and
-    transaction pattern is different, and want more control on it, the use
-    without `!with` might be more convenient.
+    transaction pattern is different, and you want more control over it, the
+    use without `!with` might be more convenient.
 
     See :ref:`transactions` for more information.
 
-`AsyncConnection` can be also used as context manager, using ``async with``,
-but be careful about its quirkiness: see :ref:`async-with` for details.
+`AsyncConnection` can also be used as a context manager, using ``async
+with``, but be careful about its quirkiness: see :ref:`async-with` for
+details.
 
 
 Adapting Psycopg to your program
@@ -234,7 +235,7 @@ integration between your Python program and your PostgreSQL database:
   receiving tuples, you can specify your :ref:`row factories <row-factories>`.
 
 - If you want to customise how Python values and PostgreSQL types are mapped
-  into each other, beside the :ref:`basic type mapping <types-adaptation>`,
+  into each other, besides the :ref:`basic type mapping <types-adaptation>`,
   you can :ref:`configure your types <adaptation>`.
 
 
@@ -261,7 +262,7 @@ A very simple example of logging configuration may be the following:
 
     psycopg.connect("host=192.0.2.1,localhost connect_timeout=10")
 
-In this example Psycopg will first try to connect to a non responsive server,
+In this example Psycopg will first try to connect to a non-responsive server,
 only stopping after hitting the timeout, and will move on to a working server.
 The resulting log might look like:
 

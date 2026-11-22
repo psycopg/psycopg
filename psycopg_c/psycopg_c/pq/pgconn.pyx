@@ -775,7 +775,7 @@ cdef class PGconn:
             res = libpq.PQchangePassword(self._pgconn_ptr, user, passwd)
         if libpq.PQresultStatus(res) != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"password encryption failed: {self.get_error_message()}"
+                f"failed to change password: {self.get_error_message()}"
             )
 
     def make_empty_result(self, int exec_status) -> PGresult:
@@ -791,7 +791,7 @@ cdef class PGconn:
     def pipeline_status(self) -> int:
         """The current pipeline mode status.
 
-        For libpq < 14.0, always return 0 (PQ_PIPELINE_OFF).
+        For libpq < 14.0, always returns 0 (PQ_PIPELINE_OFF).
         """
         if libpq.PG_VERSION_NUM < 140000:
             return libpq.PQ_PIPELINE_OFF
@@ -803,8 +803,7 @@ cdef class PGconn:
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to enter the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if entering pipeline mode failed.
         """
         _check_supported("PQenterPipelineMode", 140000)
         cdef int rv
@@ -816,8 +815,7 @@ cdef class PGconn:
     def exit_pipeline_mode(self) -> None:
         """Exit pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to exit the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if exiting pipeline mode failed.
         """
         _check_supported("PQexitPipelineMode", 140000)
         cdef int rv
@@ -842,7 +840,7 @@ cdef class PGconn:
             raise e.OperationalError("failed to sync pipeline")
 
     def send_flush_request(self) -> None:
-        """Sends a request for the server to flush its output buffer.
+        """Send a request for the server to flush its output buffer.
 
         :raises ~psycopg.OperationalError: if the flush request failed.
         """

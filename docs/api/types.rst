@@ -35,8 +35,8 @@ OID is not known upfront or to create more specialised adapters.
 The `!TypeInfo` object doesn't instruct Psycopg to convert a PostgreSQL type
 into a Python type: this is the role of a `~psycopg.abc.Loader`. However it
 can extend the behaviour of other adapters: if you create a loader for
-`!MyType`, using the `TypeInfo` information, Psycopg will be able to manage
-seamlessly arrays of `!MyType` or ranges and composite types using `!MyType`
+`!MyType`, using the `TypeInfo` information, Psycopg will be able to seamlessly
+manage arrays of `!MyType` or ranges and composite types using `!MyType`
 as a subtype.
 
 .. seealso:: :ref:`adaptation` describes how to convert from Python objects to
@@ -95,8 +95,8 @@ as a subtype.
             the `!TypeInfo` globally.
 
         Registering the `TypeInfo` in a context allows the adapters of that
-        context to look up type information: for instance it allows to
-        recognise automatically arrays of that type and load them from the
+        context to look up type information: for instance it allows Psycopg
+        to automatically recognise arrays of that type and load them from the
         database as a list of the base type.
 
 
@@ -112,11 +112,11 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
 
 .. autoclass:: TypesRegistry
 
-   `!TypeRegistry` instances are typically exposed by
+   `!TypesRegistry` instances are typically exposed by
    `~psycopg.adapt.AdaptersMap` objects in adapt contexts such as
    `~psycopg.Connection` or `~psycopg.Cursor` (e.g. `!conn.adapters.types`).
 
-   The global registry, from which the others inherit from, is available as
+   The global registry, from which the others inherit, is available as
    `psycopg.adapters`\ `!.types`.
 
    .. automethod:: __getitem__
@@ -301,7 +301,7 @@ See :ref:`adapt-multirange` for details.
     totally ordered: they behave pretty much like a list of `!Range`. Like
     Range, they are `~typing.Generic` on the subtype of their range, so you
     can declare a variable to be `!Multirange[date]` and mypy will complain if
-    you try to add it a `!Range[Decimal]`.
+    you try to add a `!Range[Decimal]` to it.
 
 .. autoclass:: MultirangeInfo
 
@@ -348,7 +348,7 @@ See :ref:`adapt-composite` for details.
    After registering the `CompositeInfo`, fetching data of the registered
    composite type will invoke `!factory` to create corresponding Python
    objects. If no factory is specified, Psycopg will generate a
-   `~collections.namedtuple` with the same fields of the composite type, and
+   `~collections.namedtuple` with the same fields as the composite type, and
    use it to return fetched data. The factory will be made available on
    `!info.`\ `~CompositeInfo.python_type`.
 
@@ -360,7 +360,7 @@ See :ref:`adapt-composite` for details.
    dump and the composite info and returning a sequence of values. See
    :ref:`composite-non-sequence`.
 
-   The `!factory` callable will be called with the sequence of value from the
+   The `!factory` callable will be called with the sequence of values from the
    composite. If passing the sequence of positional arguments is not suitable
    for the `!factory` type you can specify the `!make_object` parameter: a
    function taking the sequence of composite values and the type info, and
@@ -394,7 +394,7 @@ See :ref:`adapt-shapely` for details.
 
 .. function:: register_shapely
 
-    Register Shapely dumper and loaders.
+    Register Shapely dumpers and loaders.
 
     After invoking this function on an adapter, the queries retrieving
     PostGIS geometry objects will return Shapely's shape object instances

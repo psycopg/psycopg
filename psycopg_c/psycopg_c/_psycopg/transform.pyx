@@ -1,7 +1,7 @@
 """
 Helper object to transform values between Python and PostgreSQL
 
-Cython implementation: can access to lower level C features without creating
+Cython implementation: can access lower level C features without creating
 too many temporary Python objects and performing less memory copying.
 
 """
@@ -65,7 +65,7 @@ cdef class Transformer:
 
     The life cycle of the object is the query, so it is assumed that attributes
     such as the server version or the connection encoding will not change. The
-    object have its state so adapting several values of the same type can be
+    object has its state so adapting several values of the same type can be
     optimised.
 
     """
@@ -571,7 +571,7 @@ cdef class Transformer:
 
     cdef PyObject *_c_get_loader(self, PyObject *oid, PyObject *fmt) except NULL:
         """
-        Return a borrowed reference to the RowLoader instance for given oid/fmt
+        Return a borrowed reference to the RowLoader instance for the given oid/fmt
         """
         cdef PyObject *ptr
         cdef PyObject *cache

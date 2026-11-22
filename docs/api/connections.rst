@@ -4,13 +4,13 @@ Connection classes
 ==================
 
 The `Connection` and `AsyncConnection` classes are the main wrappers for a
-PostgreSQL database session. You can imagine them similar to a :program:`psql`
-session.
+PostgreSQL database session. You can think of them as similar to a
+:program:`psql` session.
 
 One of the differences compared to :program:`psql` is that a `Connection`
 usually handles a transaction automatically: other sessions will not be able
 to see the changes until you have committed them, more or less explicitly.
-Take a look to :ref:`transactions` for the details.
+Take a look at :ref:`transactions` for the details.
 
 
 The `!Connection` class
@@ -19,7 +19,7 @@ The `!Connection` class
 .. autoclass:: Connection()
 
     This class implements a `DBAPI-compliant interface`__. It is what you want
-    to use if you write a "classic", blocking program (eventually using
+    to use if you write a "classic", blocking program (possibly using
     threads or Eventlet/gevent for concurrency). If your program uses `asyncio`
     you might want to use `AsyncConnection` instead.
 
@@ -38,8 +38,8 @@ The `!Connection` class
         :param autocommit: If `!True` don't start transactions automatically.
             See :ref:`transactions` for details.
         :param row_factory: The row factory specifying what type of records
-            to create fetching data (default: `~psycopg.rows.tuple_row()`). See
-            :ref:`row-factories` for details.
+            to create when fetching data (default:
+            `~psycopg.rows.tuple_row()`). See :ref:`row-factories` for details.
         :param cursor_factory: Initial value for the `cursor_factory` attribute
             of the connection (new in Psycopg 3.1).
         :param prepare_threshold: Initial value for the `prepare_threshold`
@@ -71,7 +71,7 @@ The `!Connection` class
     .. attribute:: adapters
 
         The adapters configuration used to convert Python parameters and
-        PostgreSQL results for the queries executed on this cursor.
+        PostgreSQL results for the queries executed on this connection.
 
         It affects all the cursors created by this connection afterwards.
 
@@ -162,8 +162,8 @@ The `!Connection` class
             database. All the types returned by the query must have a binary
             loader. See :ref:`binary-data` for details.
 
-        The method simply creates a `Cursor` instance, `~Cursor.execute()` the
-        query requested, and returns it.
+        The method simply creates a `Cursor` instance, calls
+        `~Cursor.execute()` with the query requested, and returns the cursor.
 
         See :ref:`query-parameters` for all the details about executing
         queries.
@@ -176,7 +176,7 @@ The `!Connection` class
                 ...
 
         At the end of the block, a synchronization point is established and
-        the connection returns in normal mode.
+        the connection returns to normal mode.
 
         You can call the method recursively from within a pipeline block.
         Innermost blocks will establish a synchronization point on exit, but
@@ -341,7 +341,7 @@ The `!Connection` class
     .. automethod:: notifies
 
         Notifies are received after using :sql:`LISTEN` in a connection, when
-        any sessions in the database generates a :sql:`NOTIFY` on one of the
+        any session in the database generates a :sql:`NOTIFY` on one of the
         listened channels.
 
         .. versionchanged:: 3.2
@@ -379,7 +379,7 @@ The `!Connection` class
         :param xid: The id of the transaction
 
         This method should be called outside of a transaction (i.e. nothing
-        may have executed since the last `commit()` or `rollback()` and
+        may have been executed since the last `commit()` or `rollback()` and
         `~ConnectionInfo.transaction_status` is `~pq.TransactionStatus.IDLE`).
 
         Furthermore, it is an error to call `!commit()` or `!rollback()`
@@ -387,7 +387,7 @@ The `!Connection` class
         is raised.
 
         The `!xid` may be either an object returned by the `xid()` method or a
-        plain string: the latter allows to create a transaction using the
+        plain string: the latter allows creating a transaction using the
         provided string as PostgreSQL transaction id. See also
         `tpc_recover()`.
 
@@ -398,8 +398,7 @@ The `!Connection` class
         transaction.
 
         After calling `!tpc_prepare()`, no statements can be executed until
-        `tpc_commit()` or `tpc_rollback()` will be
-        called.
+        `tpc_commit()` or `tpc_rollback()` is called.
 
         .. seealso:: The |PREPARE TRANSACTION|_ PostgreSQL command.
 
@@ -459,9 +458,9 @@ The `!Connection` class
         If a transaction was not initiated by Psycopg, the returned Xids will
         have attributes `~Xid.format_id` and `~Xid.bqual` set to `!None` and
         the `~Xid.gtrid` set to the PostgreSQL transaction ID: such Xids are
-        still usable for recovery.  Psycopg uses the same algorithm of the
-        `PostgreSQL JDBC driver`__ to encode a XA triple in a string, so
-        transactions initiated by a program using such driver should be
+        still usable for recovery.  Psycopg uses the same algorithm as the
+        `PostgreSQL JDBC driver`__ to encode an XA triple in a string, so
+        transactions initiated by a program using such a driver should be
         unpacked correctly.
 
         .. __: https://jdbc.postgresql.org/
@@ -485,7 +484,7 @@ The `!AsyncConnection` class
     methods implemented as coroutines. Unless specified otherwise,
     non-blocking methods are shared with the `Connection` class.
 
-    The following methods have the same behaviour of the matching `!Connection`
+    The following methods have the same behaviour as the matching `!Connection`
     methods, but should be called using the `await` keyword.
 
     .. automethod:: connect
@@ -493,7 +492,7 @@ The `!AsyncConnection` class
         .. versionchanged:: 3.1
 
             Automatically resolve domain names asynchronously. In previous
-            versions, name resolution blocks, unless the `!hostaddr`
+            versions, name resolution blocked, unless the `!hostaddr`
             parameter is specified, or the `~psycopg._dns.resolve_hostaddr_async()`
             function is used.
 
@@ -501,7 +500,7 @@ The `!AsyncConnection` class
 
         .. note:: You can use ``async with`` to close the connection
             automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`async-with` for details.
+            the async quirkiness: see :ref:`async-with` for details.
 
     .. method:: cursor(*, binary: bool = False, \
             row_factory: Optional[RowFactory] = None) -> AsyncCursor

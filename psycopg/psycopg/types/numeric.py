@@ -370,7 +370,7 @@ class DecimalBinaryDumper(Dumper):
 
 
 class _MixedNumericDumper(Dumper, ABC):
-    """Base for dumper to dump int, decimal, numpy.integer to Postgres numeric
+    """Base for dumpers to dump int, decimal, numpy.integer to Postgres numeric
 
     Only used when looking up by oid.
     """
