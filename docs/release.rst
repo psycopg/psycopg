@@ -46,7 +46,7 @@ How to make a Psycopg release
     cd wheelhouse
     unzip ~/Downloads/artifact.zip
 
-- If the package is a testing one, upload it on TestPyPI with::
+- If the package is a testing one, upload it to TestPyPI with::
 
     $ twine upload -r testpypi *
 
@@ -63,7 +63,7 @@ When a new PostgreSQL major version is released
 - Add the new version to ``tools/update_errors.py`` and run the script to add
   new error classes.
 
-- If the script above found any change, document the version added at the
+- If the script above found any changes, document the version added at the
   bottom of ``docs/api/errors.rst``.
 
 - Run the script ``tools/update_oids.py`` to add new oids. Use ``-h`` to get
@@ -98,11 +98,11 @@ When new functionalities are added to the libpq we often want to expose them
 to Python (either to allow Python users to use them directly or to build new
 features on top of them). The procedure touches several files, in order to
 add function wrappers to both the Python and the C implementation of the
-libpq, to the objects interfaces and every object implementing them, and
+libpq, to the object interfaces and every object implementing them, and
 eventually to bubble up to some Python object.
 
-It is polite to add new top-level objects interfaces (such as
-``connection.info`` or ``Capabilities`` only on minor releases (3.x), but if
+It is polite to add new top-level object interfaces (such as
+``connection.info`` or ``Capabilities``) only in minor releases (3.x), but if
 we need to add a libpq function wrapper to solve an issue we can do it in a
 bugfix release, without documenting it (e.g. ``PQconnectionUsedGSSAPI`` was
 added in 3.2.10 but only advertised in 3.3).

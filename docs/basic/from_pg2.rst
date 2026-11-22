@@ -10,11 +10,11 @@ Differences from `!psycopg2`
 ============================
 
 Psycopg 3 uses the common DBAPI structure of many other database adapters and
-tries to behave as close as possible to `!psycopg2`. There are however a few
+tries to behave as closely as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
 .. tip::
-    Most of the times, the workarounds suggested here will work with both
+    Most of the time, the workarounds suggested here will work with both
     Psycopg 2 and 3, which could be useful if you are porting a program or
     writing a program that should work with both Psycopg 2 and 3.
 
@@ -81,8 +81,8 @@ and with any data definition statement::
                                              ^
 
 Sometimes, PostgreSQL offers an alternative: for instance the `set_config()`__
-function can be used instead of the :sql:`SET` statement, the `pg_notify()`__
-function can be used instead of :sql:`NOTIFY`::
+function can be used instead of the :sql:`SET` statement, and the
+`pg_notify()`__ function can be used instead of :sql:`NOTIFY`::
 
     >>> conn.execute("SELECT set_config('TimeZone', %s, false)", ["UTC"])
 
@@ -94,7 +94,7 @@ function can be used instead of :sql:`NOTIFY`::
 .. __: https://www.postgresql.org/docs/current/sql-notify.html
     #id-1.9.3.157.7.5
 
-If this is not possible, you must merge the query and the parameter on the
+If this is not possible, you must merge the query and the parameters on the
 client side. You can do so using the `psycopg.sql` objects::
 
     >>> from psycopg import sql
@@ -109,7 +109,7 @@ such as `ClientCursor`::
 
 If you need `!ClientCursor` often, you can set the `Connection.cursor_factory`
 to have them created by default by `Connection.cursor()`. This way, Psycopg 3
-will behave largely the same way of Psycopg 2.
+will behave largely the same way as Psycopg 2.
 
 Note that, both server-side and client-side, you can only specify **values**
 as parameters (i.e. *the strings that go in single quotes*). If you need to
@@ -131,13 +131,13 @@ use the `psycopg.sql` module::
 
 .. _advanced-query-protocol:
 
-Extended query Protocol
+Extended query protocol
 -----------------------
 
 In order to use :ref:`server-side-binding`, Psycopg normally uses the
 `extended query protocol`__ to communicate with the backend.
 
-In certain context outside pure PostgreSQL, the extended query protocol is not
+In certain contexts outside pure PostgreSQL, the extended query protocol is not
 supported, for instance to query the `PgBouncer admin console`__. In this case
 you should probably use a `ClientCursor`. See :ref:`simple-query-protocol` for
 details.
@@ -153,7 +153,7 @@ Multiple statements in the same query
 
 As a consequence of using :ref:`server-side bindings <server-side-binding>`,
 when parameters are used, it is not possible to execute several statements in
-the same `!execute()` call, separating them by semicolon::
+the same `!execute()` call, separating them with semicolons::
 
     >>> conn.execute(
     ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
@@ -186,13 +186,13 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
     You cannot execute multiple statements in the same query:
 
     - when retrieving a :ref:`binary result <binary-data>` (such as using
-      ``.execute(..., binary=True)``;
+      ``.execute(..., binary=True)``);
     - when using the :ref:`pipeline mode <pipeline-mode>`.
 
 .. warning::
 
     If a statement must be executed outside a transaction (such as
-    :sql:`CREATE DATABASE`), it cannot be executed in batch with other
+    :sql:`CREATE DATABASE`), it cannot be executed in a batch with other
     statements, even if the connection is in autocommit mode::
 
         >>> conn.autocommit = True
@@ -252,7 +252,8 @@ find a function candidate for the given data types::
     ...
     psycopg.errors.IndeterminateDatatype: could not determine data type of parameter $1
 
-This can be worked around specifying the argument types explicitly via a cast::
+This can be worked around by specifying the argument types explicitly via a
+cast::
 
     >>> conn.execute("SELECT json_build_array(%s::text, %s::text)", ["foo", "bar"])
 
@@ -262,7 +263,7 @@ This can be worked around specifying the argument types explicitly via a cast::
 You cannot use ``IN %s`` with a tuple
 -------------------------------------
 
-``IN`` cannot be used with a tuple as single parameter, as was possible with
+``IN`` cannot be used with a tuple as a single parameter, as was possible with
 ``psycopg2``::
 
     >>> conn.execute("SELECT * FROM foo WHERE id IN %s", [(10,20,30)])
@@ -312,7 +313,7 @@ Testing in psql:
     LINE 1: SELECT 10 IS 10;
                          ^
 
-What you can do is to use `IS [NOT] DISTINCT FROM`__ predicate instead:
+What you can do is to use the `IS [NOT] DISTINCT FROM`__ predicate instead:
 :sql:`IS NOT DISTINCT FROM %s` can be used in place of :sql:`IS %s` (please
 pay attention to the awkwardly reversed :sql:`NOT`)::
 
@@ -326,8 +327,8 @@ Analogously you can use :sql:`IS DISTINCT FROM %s` as a parametric version of
 
 .. _diff-cursors:
 
-Cursors subclasses
-------------------
+Cursor subclasses
+-----------------
 
 In `!psycopg2`, a few cursor subclasses allowed to return data in different
 form than tuples. In Psycopg 3 the same can be achieved by setting a :ref:`row
@@ -417,7 +418,7 @@ instance to use nested transactions.
 `!callproc()` is gone
 ---------------------
 
-`cursor.callproc()` is not implemented. The method has a simplistic semantic
+`cursor.callproc()` is not implemented. The method has simplistic semantics
 which doesn't account for PostgreSQL positional parameters, procedures,
 set-returning functions... Use a normal `~Cursor.execute()` with :sql:`SELECT
 function_name(...)` or :sql:`CALL procedure_name(...)` instead.
@@ -441,14 +442,14 @@ you?
 Transaction characteristics attributes don't affect autocommit sessions
 -----------------------------------------------------------------------
 
-:ref:`Transactions characteristics attributes <transaction-characteristics>`
-such as `~Connection.read_only` don't affect automatically autocommit
+:ref:`Transaction characteristics attributes <transaction-characteristics>`
+such as `~Connection.read_only` don't automatically affect autocommit
 sessions: they only affect the implicit transactions started by non-autocommit
 sessions and the transactions created by the `~Connection.transaction()`
 block (for both autocommit and non-autocommit connections).
 
 If you want to put an autocommit transaction in read-only mode, please use the
-default_transaction_read_only__ GUC, for instance executing the statement
+default_transaction_read_only__ GUC, for instance by executing the statement
 :sql:`SET default_transaction_read_only TO true`.
 
 .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
@@ -464,19 +465,19 @@ PostgreSQL can represent a much wider range of dates and timestamps than
 Python. While Python dates are limited to the years between 1 and 9999
 (represented by constants such as `datetime.date.min` and
 `~datetime.date.max`), PostgreSQL dates extend to BC dates and past the year
-10K. Furthermore PostgreSQL can also represent symbolic dates "infinity", in
+10K. Furthermore PostgreSQL can also represent the symbolic date "infinity", in
 both directions.
 
 In psycopg2, by default, `infinity dates and timestamps map to 'date.max'`__
 and similar constants. This has the problem of creating a non-bijective
 mapping (two Postgres dates, infinity and 9999-12-31, both map to the same
 Python date). There is also the perversity that valid Postgres dates, greater
-than Python `!date.max` but arguably lesser than infinity, will still
+than Python `!date.max` but arguably less than infinity, will still
 overflow.
 
 In Psycopg 3, every date greater than year 9999 will overflow, including
 infinity. If you would like to customize this mapping (for instance flattening
-every date past Y10K on `!date.max`) you can subclass and adapt the
+every date past Y10K to `!date.max`) you can subclass and adapt the
 appropriate loaders: take a look at :ref:`this example
 <adapt-example-inf-date>` to see how.
 
@@ -489,7 +490,7 @@ What's new in Psycopg 3
 -----------------------
 
 - :ref:`Asynchronous support <async>`
-- :ref:`Server-side parameters binding <server-side-binding>`
+- :ref:`Server-side parameter binding <server-side-binding>`
 - :ref:`Prepared statements <prepared-statements>`
 - :ref:`Binary communication <binary-data>`
 - :ref:`Python-based COPY support <copy>`

@@ -50,7 +50,7 @@ Type of rows returned
 
 If you want to use connections and cursors returning your data as different
 types, for instance as dictionaries, you can use the `!row_factory` argument
-of the `~Connection.connect()` and the `~Connection.cursor()` method, which
+of the `~Connection.connect()` and the `~Connection.cursor()` methods, which
 will control what type of record is returned by the fetch methods of the
 cursors and annotate the returned objects accordingly. See
 :ref:`row-factories` for more details.
@@ -182,7 +182,7 @@ Example: returning records as Pydantic models
 
 Using Pydantic_ it is possible to enforce static typing at runtime. Using a
 Pydantic model factory the code can be checked statically using Mypy and
-querying the database will raise an exception if the rows returned is not
+querying the database will raise an exception if the rows returned are not
 compatible with the model.
 
 .. _Pydantic: https://pydantic-docs.helpmanual.io/
@@ -265,7 +265,7 @@ argument to `!execute()`, not by string composition:
         return cur.fetchone()
 
 If you are composing a query dynamically you should use the `sql.SQL` object
-and similar to escape safely table and field names. The parameter of the
+and similar to safely escape table and field names. The parameter of the
 `!SQL()` object should be a literal string:
 
 .. code:: python
@@ -282,7 +282,7 @@ and similar to escape safely table and field names. The parameter of the
 
 At the time of writing, no Python static analyzer implements this check (`mypy
 doesn't implement it`__, Pyre_ does, but `doesn't work with Psycopg yet`__).
-Once the type checkers support will be complete, the above bad statements
+Once type checker support is complete, the above bad statements
 should be reported as errors.
 
 .. __: https://github.com/python/mypy/issues/12554

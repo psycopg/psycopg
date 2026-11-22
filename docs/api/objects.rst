@@ -61,7 +61,7 @@ Connection information
     .. automethod:: get_parameters
 
         .. note:: The `dsn` attribute returns the same information in the form
-                as a string.
+                of a string.
 
     .. autoattribute:: timezone
 
@@ -89,7 +89,7 @@ Connection information
     .. autoattribute:: options
     .. automethod:: parameter_status
 
-        Example of parameters are ``server_version``,
+        Examples of parameters are ``server_version``,
         ``standard_conforming_strings``... See :pq:`PQparameterStatus()` for
         all the available parameters.
 
@@ -124,7 +124,7 @@ Libpq capabilities information
     An instance of this object is normally exposed by the module as the object
     `psycopg.capabilities`.
 
-    Every feature check is implemented by an `!has_SOMETHING()` method. All
+    Every feature check is implemented by a `!has_SOMETHING()` method. All
     the methods return a boolean value stating if the capability is supported,
     which can be used by a program to degrade gracefully::
 
@@ -137,7 +137,7 @@ Libpq capabilities information
 
     If `check` is `!True`, and the capability is not supported, raise a
     `NotSupportedError` instead of returning `!False`, explaining why the
-    feature is not supported. This allows to make a check at import time,
+    feature is not supported. This allows you to make a check at import time,
     crashing early and with a clear description of the problem.
 
         >>> import psycopg
@@ -181,7 +181,7 @@ The description `Column` object
 .. autoclass:: Column()
 
     An object describing a column of data from a database result, `as described
-    by the DBAPI`__, so it can also be unpacked as a 7-items tuple.
+    by the DBAPI`__, so it can also be unpacked as a 7-item tuple.
 
     The object is returned by `Cursor.description`.
 
@@ -226,7 +226,7 @@ See :ref:`pipeline-mode` for details.
 
 .. autoclass:: Pipeline
 
-    This objects is returned by `Connection.pipeline()`.
+    This object is returned by `Connection.pipeline()`.
 
     .. automethod:: sync
     .. automethod:: is_supported
@@ -234,7 +234,7 @@ See :ref:`pipeline-mode` for details.
 
 .. autoclass:: AsyncPipeline
 
-    This objects is returned by `AsyncConnection.pipeline()`.
+    This object is returned by `AsyncConnection.pipeline()`.
 
     .. automethod:: sync
 
@@ -270,7 +270,7 @@ See :ref:`transactions` for details about these objects.
 
 .. autoclass:: AsyncTransaction()
 
-    The class differs from `Transaction` for the following details:
+    The class differs from `Transaction` in the following details:
 
     .. autoattribute:: connection
 
@@ -291,7 +291,7 @@ See :ref:`transactions` for details about these objects.
 
     - :samp:`raise Rollback({tx})`: roll back any operation that happened in
       the `Transaction` `!tx` (returned by a statement such as :samp:`with
-      conn.transaction() as {tx}:` and all the blocks nested within. The
+      conn.transaction() as {tx}:`) and all the blocks nested within. The
       program will continue after the `!tx` block.
 
 
@@ -326,12 +326,12 @@ Two-Phase Commit related objects
 
     .. autoattribute:: owner
 
-        Named of the user that executed the transaction.
+        Name of the user that executed the transaction.
 
         Only available on recovered transactions.
 
     .. autoattribute:: database
 
-        Named of the database in which the transaction was executed.
+        Name of the database in which the transaction was executed.
 
         Only available on recovered transactions.

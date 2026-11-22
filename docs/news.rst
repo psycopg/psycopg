@@ -31,8 +31,8 @@ Psycopg 3.3.9
   (:ticket:`#1468`).
 - Fix client-side quoting of negative zero floats and decimals, which could
   produce a ``--`` SQL comment (:ticket:`#1480`).
-- Raise `DataError` instead of `!ValueError` registering a composite whose
-  name or attributes are not valid namedtuple names, for instance Python
+- Raise `DataError` instead of `!ValueError` when registering a composite
+  whose name or attributes are not valid namedtuple names, for instance Python
   keywords (:ticket:`#1482`).
 - Speed up the C implementation of the sync wait function, in particular when
   the connection doesn't need to wait, for instance at every `~Copy.write()`
@@ -66,7 +66,7 @@ Psycopg 3.3.7
   connection (:ticket:`#1428`).
 - Fix `~Connection.cancel_safe()` failing if the cancel connection is not
   ready immediately, for instance on a slow network (:ticket:`#1440`).
-- Fix reference cycles created adapting recursive types, which kept data in
+- Fix reference cycles created by adapting recursive types, which kept data in
   memory until the next garbage collection (:tickets:`#1443, #1462`).
 - Fix loading intervals with a very large number of hours in text format,
   which could lose microseconds (:ticket:`#1446`).
@@ -98,7 +98,8 @@ Psycopg 3.3.6
   precision, such as e.g. :sql:`interval day to second` (:ticket:`#1397`).
 - Fix dumping of nested subclasses of lists as arrays (:ticket:`#1398`).
 - Discard prepared statements upon :sql:`DEALLOCATE ALL` (:ticket:`#1408`).
-- Better guards dumping large Python `!int` to binary numeric (:ticket:`#1414`).
+- Better guards when dumping large Python `!int` to binary numeric
+  (:ticket:`#1414`).
 
 
 Psycopg 3.3.5
@@ -136,8 +137,8 @@ Psycopg 3.3.3
 
 - Retain `Error.pgconn` when raising a single exception for multiple connection
   attempt errors (:ticket:`#1246`).
-- Return a proper error when server sends ``ErrorResponse`` for a ``Sync`` after
-  a ``Parse`` (:ticket:`#1260`).
+- Return a proper error when the server sends ``ErrorResponse`` for a
+  ``Sync`` after a ``Parse`` (:ticket:`#1260`).
 
 
 Psycopg 3.3.2
@@ -165,12 +166,12 @@ Psycopg 3.3.0
   `next`\ ``(cur)`` or `anext`\ ``(cur)``, which is useful as a :ref:`type-safe
   expression <typing-fetchone>` (:ticket:`#1064`).
 - Add `Cursor.set_result()` and `Cursor.results()` to move across the result
-  sets of queries executed though `~Cursor.executemany()` or
+  sets of queries executed through `~Cursor.executemany()` or
   `~Cursor.execute()` with multiple statements (:tickets:`#1080, #1170`).
 - Add :ref:`transaction-status` to report the status during and after a
   `~Connection.transaction()` block (:ticket:`#969`).
-- Allow to change loaders using `~adapt.AdaptersMap.register_loader()` on
-  `Cursor.adapters` after a query result has been already returned
+- Allow changing loaders using `~adapt.AdaptersMap.register_loader()` on
+  `Cursor.adapters` after a query result has already been returned
   (:ticket:`#884`).
 
 .. rubric:: New libpq wrapper features
@@ -234,7 +235,7 @@ Psycopg 3.2.10
 
 - Fix `!TypeError` shadowing `~asyncio.CancelledError` upon task cancellation
   during pipeline execution (:ticket:`#1005`).
-- Fix memory leak when lambda/local functions are used as argument for
+- Fix memory leak when lambda/local functions are used as an argument to
   `~.psycopg.types.json.set_json_dumps()`, `~.psycopg.types.json.set_json_loads()`
   (:ticket:`#1108`).
 - Fix coordination of `~Cursor.executemany()` with other concurrent operations
@@ -249,7 +250,7 @@ Psycopg 3.2.10
 
     If a notification is received when a handler is registered via
     `~Connection.add_notify_handler()` and the `~Connection.notifies()`
-    generator is not running the notification will not be yielded by the
+    generator is not running, the notification will not be yielded by the
     generator. This is a behaviour similar to before `Psycopg 3.2.4`_, but
     *notifications are not lost if no handler is registered*.
 
@@ -277,7 +278,7 @@ Psycopg 3.2.9
 ^^^^^^^^^^^^^
 
 - Revert the libpq included in the binary packages from conda forge to vcpkg
-  because GSS connection crashes (:ticket:`#1088`).
+  because of GSS connection crashes (:ticket:`#1088`).
 
 
 Psycopg 3.2.8
@@ -289,8 +290,8 @@ Psycopg 3.2.8
   the local timezone (:ticket:`#1058`).
 - Fix `~Cursor.rownumber` after using `~AsyncServerCursor.scroll()` on
   `AsyncServerCursor` (:ticket:`#1066`).
-- Fix interval parsing with days or other parts and negative time in C module
-  (:ticket:`#1071`).
+- Fix interval parsing with days or other parts and negative time in the C
+  module (:ticket:`#1071`).
 - Don't process further connection attempts after Ctrl-C (:ticket:`#1077`).
 - Fix cursors to correctly iterate over rows even if their row factory
   returns `None` (:ticket:`#1073`).
@@ -312,7 +313,7 @@ Psycopg 3.2.7
 Psycopg 3.2.6
 ^^^^^^^^^^^^^
 
-- Fix connection semantic when using ``target_session_attrs=prefer-standby``
+- Fix connection semantics when using ``target_session_attrs=prefer-standby``
   (:ticket:`#1021`).
 
 
@@ -342,8 +343,9 @@ Psycopg 3.2.4
   or `!IdleInTransactionSessionTimeout`) instead of a generic
   `OperationalError` when a server error causes a client disconnection
   (:ticket:`#988`).
-- Build macOS dependencies from sources instead using the Homebrew versions
-  in order to avoid problems with ``MACOSX_DEPLOYMENT_TARGET`` (:ticket:`#858`).
+- Build macOS dependencies from sources instead of using the Homebrew
+  versions in order to avoid problems with ``MACOSX_DEPLOYMENT_TARGET``
+  (:ticket:`#858`).
 - Bump libpq to 17.2 in Linux and macOS binary packages.
 - Bump libpq to 16.4 in Windows binary packages, using the `vcpkg library`__
   (:ticket:`#966`).
@@ -403,20 +405,20 @@ Psycopg 3.2
   introduced in libpq v17 (:ticket:`#603`).
 - Add support for libpq encrypted and non-blocking query cancellation
   functions introduced in libpq v17 (:ticket:`#754`).
-- Add support for libpq function to retrieve results in chunks introduced in
-  libpq v17 (:ticket:`#793`).
-- Add support for libpq function to change role passwords introduced in
-  libpq v17 (:ticket:`#818`).
+- Add support for the libpq function to retrieve results in chunks introduced
+  in libpq v17 (:ticket:`#793`).
+- Add support for the libpq function to change role passwords introduced
+  in libpq v17 (:ticket:`#818`).
 
 .. rubric:: Other changes
 
 - Drop support for Python 3.7.
-- Prepared statements are now :ref:`compatible with PgBouncer <pgbouncer>`.
+- Prepared statements are now :ref:`compatible with PgBouncer <pgbouncer>`
   (:ticket:`#589`).
 - Disable receiving more than one result on the same cursor in pipeline mode,
   to iterate through `~Cursor.nextset()`. The behaviour was different than
   in non-pipeline mode and not totally reliable (:ticket:`#604`).
-  The `Cursor` now only preserves the results set of the last
+  The `Cursor` now only preserves the result set of the last
   `~Cursor.execute()`, consistently with non-pipeline mode.
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
@@ -441,7 +443,7 @@ Psycopg 3.1.19
 
 - Fix unaligned access undefined behaviour in C extension (:ticket:`#734`).
 - Fix excessive stripping of error message prefixes (:ticket:`#752`).
-- Allow to specify the ``connect_timeout`` connection parameter as float
+- Allow specifying the ``connect_timeout`` connection parameter as a float
   (:ticket:`#796`).
 - Improve COPY performance on macOS (:ticket:`#745`).
 
@@ -460,7 +462,7 @@ Psycopg 3.1.18
 Psycopg 3.1.17
 ^^^^^^^^^^^^^^
 
-- Fix multiple connection attempts when a host name resolve to multiple
+- Fix multiple connection attempts when a host name resolves to multiple
   IP addresses (:ticket:`#699`).
 - Use `typing.Self` as a more correct return value annotation of context
   managers and other self-returning methods (see :ticket:`#708`).
@@ -497,10 +499,10 @@ Psycopg 3.1.13
 ^^^^^^^^^^^^^^
 
 - Raise `DataError` instead of whatever internal failure trying to dump a
-  `~datetime.time` object with with a `!tzinfo` specified as
+  `~datetime.time` object with a `!tzinfo` specified as
   `~zoneinfo.ZoneInfo` (ambiguous offset, see :ticket:`#652`).
-- Handle gracefully EINTR on signals instead of raising `InterruptedError`,
-  consistently with :pep:`475` guideline (:ticket:`#667`).
+- Handle EINTR on signals gracefully instead of raising `InterruptedError`,
+  consistently with the :pep:`475` guideline (:ticket:`#667`).
 - Fix support for connection strings with multiple hosts/ports and for the
   ``load_balance_hosts`` connection parameter (:ticket:`#674`).
 - Fix memory leak receiving notifications in Python implementation
@@ -545,7 +547,7 @@ Psycopg 3.1.10
   `OperationalError` in case of connection failure. `Error.pgconn` is now a
   shallow copy of the real libpq connection, and the latter is closed before
   the exception propagates (:ticket:`#565`).
-- Fix possible (ignored) exception on objects deletion (:ticket:`#591`).
+- Fix possible (ignored) exception on object deletion (:ticket:`#591`).
 - Don't clobber a Python exception raised during COPY FROM with the resulting
   `!QueryCanceled` raised as a consequence (:ticket:`#593`).
 - Fix resetting `Connection.read_only` and `~Connection.deferrable` to their
@@ -694,7 +696,8 @@ Psycopg 3.0.15
 
 - Fix wrong escaping of unprintable chars in COPY (nonetheless correctly
   interpreted by PostgreSQL).
-- Restore the connection to usable state after an error in `~Cursor.stream()`.
+- Restore the connection to a usable state after an error in
+  `~Cursor.stream()`.
 - Raise `DataError` instead of `OverflowError` loading binary intervals
   out-of-range.
 - Distribute ``manylinux2014`` wheel packages (:ticket:`#124`).
@@ -737,7 +740,8 @@ Psycopg 3.0.11
 Psycopg 3.0.10
 ^^^^^^^^^^^^^^
 
-- Leave the connection in working state after interrupting a query with Ctrl-C
+- Leave the connection in a working state after interrupting a query with
+  Ctrl-C
   (:ticket:`#231`).
 - Fix `Cursor.description` after a COPY ... TO STDOUT operation
   (:ticket:`#235`).
@@ -757,7 +761,7 @@ Psycopg 3.0.8
 
 - Decode connection errors in the ``client_encoding`` specified in the
   connection string, if available (:ticket:`#194`).
-- Fix possible warnings in objects deletion on interpreter shutdown
+- Fix possible warnings on object deletion on interpreter shutdown
   (:ticket:`#198`).
 - Don't leave connections in ACTIVE state in case of error during COPY ... TO
   STDOUT (:ticket:`#203`).
@@ -775,7 +779,7 @@ Psycopg 3.0.7
 Psycopg 3.0.6
 ^^^^^^^^^^^^^
 
-- Allow to use `Cursor.description` if the connection is closed
+- Allow using `Cursor.description` if the connection is closed
   (:ticket:`#172`).
 - Don't raise exceptions on `ServerCursor.close()` if the connection is closed
   (:ticket:`#173`).
@@ -790,16 +794,16 @@ Psycopg 3.0.5
 
 - Fix possible "Too many open files" OS error, reported on macOS but possible
   on other platforms too (:ticket:`#158`).
-- Don't clobber exceptions if a transaction block exit with error and rollback
-  fails (:ticket:`#165`).
+- Don't clobber exceptions if a transaction block exits with an error and
+  rollback fails (:ticket:`#165`).
 
 
 Psycopg 3.0.4
 ^^^^^^^^^^^^^
 
-- Allow to use the module with strict strings comparison (:ticket:`#147`).
+- Allow using the module with strict string comparison (:ticket:`#147`).
 - Fix segfault on Python 3.6 running in ``-W error`` mode, related to
-  `!backport.zoneinfo` (:ticket:`#109`).
+  `!backport.zoneinfo` `ticket #109
   <https://github.com/pganssle/zoneinfo/issues/109>`__.
 - Build binary package with libpq versions not affected by `CVE-2021-23222
   <https://www.postgresql.org/support/security/CVE-2021-23222/>`__
@@ -840,7 +844,7 @@ First stable release. Changed from 3.0b1:
 - Add :ref:`adapt-shapely` (:ticket:`#80`).
 - Add :ref:`adapt-multirange` (:ticket:`#75`).
 - Add `pq.__build_version__` constant.
-- Don't use the extended protocol with COPY, (:tickets:`#78, #82`).
+- Don't use the extended protocol with COPY (:tickets:`#78, #82`).
 - Add ``context`` parameter to `~Connection.connect()` (:ticket:`#83`).
 - Fix selection of dumper by oid after `~Copy.set_types()`.
 - Drop `!Connection.client_encoding`. Use `ConnectionInfo.encoding` to read

@@ -6,14 +6,14 @@ Psycopg 3 is a newly designed PostgreSQL_ database adapter for the Python_
 programming language.
 
 Psycopg 3 presents a familiar interface for everyone who has used
-`Psycopg 2`_ or any other `DB-API 2.0`_ database adapter, but allows to use
-more modern PostgreSQL and Python features, such as:
+`Psycopg 2`_ or any other `DB-API 2.0`_ database adapter, but allows you to
+use more modern PostgreSQL and Python features, such as:
 
 - :ref:`Asynchronous support <async>`
 - :ref:`COPY support from Python objects <copy>`
 - :ref:`A redesigned connection pool <connection-pools>`
 - :ref:`Support for static typing <static-typing>`
-- :ref:`Server-side parameters binding <server-side-binding>`
+- :ref:`Server-side parameter binding <server-side-binding>`
 - :ref:`Prepared statements <prepared-statements>`
 - :ref:`Statements pipeline <pipeline-mode>`
 - :ref:`Binary communication <binary-data>`

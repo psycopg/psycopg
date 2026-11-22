@@ -36,7 +36,7 @@ security problem in case the table name comes from an untrusted source.
     below, is the recommended approach for building dynamic queries safely.
 
 The objects exposed by the `!psycopg.sql` module allow generating SQL
-statements on the fly, separating clearly the variable parts of the statement
+statements on the fly, clearly separating the variable parts of the statement
 from the query parameters::
 
     from psycopg import sql
@@ -140,7 +140,7 @@ The `!sql` objects are in the following inheritance hierarchy:
 .. autoclass:: Literal
 
     .. versionchanged:: 3.1
-        Add a type cast to the representation if useful in ambiguous context
+        Add a type cast to the representation if useful in ambiguous contexts
         (e.g. ``'2000-01-01'::date``)
 
 .. autoclass:: Placeholder

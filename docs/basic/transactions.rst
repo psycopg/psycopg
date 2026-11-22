@@ -23,10 +23,10 @@ a `~Connection.rollback()` is called.
 If the connection is closed with a transaction open, no COMMIT command is sent
 to the server, which will then discard the connection. Certain middleware (such
 as PgBouncer) will also discard a connection left in transaction state, so, if
-possible you will want to commit or rollback a connection before finishing
+possible you will want to commit or roll back a connection before finishing
 working with it.
 
-An example of what will happen, the first time you will use Psycopg (and to be
+An example of what will happen, the first time you use Psycopg (and are
 disappointed by it), is likely:
 
 .. code:: python
@@ -52,7 +52,7 @@ disappointed by it), is likely:
     conn.close()
     # No COMMIT was sent: the INSERT was discarded.
 
-There are a few things going wrong here, let's see how they can be improved.
+There are a few things going wrong here; let's see how they can be improved.
 
 One obvious problem after the run above is that, firing up :program:`psql`,
 you will see no new record in the table ``data``. One way to fix the problem
@@ -83,10 +83,10 @@ sequence of database statements:
     # No exception at the end of the block:
     # COMMIT is executed.
 
-This way we don't have to remember to call neither `!close()` nor `!commit()`
+This way we don't have to remember to call either `!close()` or `!commit()`
 and the database operations actually have a persistent effect. The code might
 still do something you don't expect: keep a transaction from the first
-operation to the connection closure. You can have a finer control over the
+operation to the connection closure. You can have finer control over the
 transactions using an :ref:`autocommit transaction <autocommit>` and/or
 :ref:`transaction contexts <transaction-context>`.
 
@@ -114,14 +114,14 @@ Autocommit transactions
 -----------------------
 
 The manual commit requirement can be suspended using `~Connection.autocommit`,
-either as connection attribute or as `~psycopg.Connection.connect()`
+either as a connection attribute or as a `~psycopg.Connection.connect()`
 parameter. This may be required to run operations that cannot be executed
 inside a transaction, such as :sql:`CREATE DATABASE`, :sql:`VACUUM`,
 :sql:`CALL` on `stored procedures`__ using transaction control.
 
 .. __: https://www.postgresql.org/docs/current/xproc.html
 
-With an autocommit transaction, the above sequence of operation results in:
+With an autocommit transaction, the above sequence of operations results in:
 
 .. code-block:: python
     :emphasize-lines: 1
@@ -180,7 +180,7 @@ use a `!transaction()` context:
 
             cur.execute("INSERT INTO data VALUES (%s)", ("Hello",))
             cur.execute("INSERT INTO times VALUES (now())")
-            # These two operation run atomically in the same transaction
+            # These two operations run atomically in the same transaction
 
         # COMMIT is executed at the end of the block.
         # The connection is in idle state again.
@@ -222,7 +222,7 @@ as explained in :ref:`transactions`:
 
 If a `!transaction()` block starts when no transaction is active then it will
 manage a proper transaction. In essence, a transaction context tries to leave
-a connection in the state it found it, and leaves you to deal with the wider
+a connection in the state it found it in, and leaves you to deal with the wider
 context.
 
 .. hint::
@@ -232,7 +232,7 @@ context.
     developers is to:
 
     - use a connection block: ``with psycopg.connect(...) as conn``;
-    - use an autocommit connection, either passing `!autocommit=True` as
+    - use an autocommit connection, either passing `!autocommit=True` as a
       `!connect()` parameter or setting the attribute ``conn.autocommit =
       True``;
     - use `!with conn.transaction()` blocks to manage transactions only where
@@ -244,7 +244,7 @@ context.
 Nested transactions
 ^^^^^^^^^^^^^^^^^^^
 
-Transaction blocks can be also nested (internal transaction blocks are
+Transaction blocks can also be nested (internal transaction blocks are
 implemented using SAVEPOINT__): an exception raised inside an inner block
 has a chance of being handled and not completely fail outer operations. The
 following is an example where a series of operations interact with the
@@ -306,7 +306,7 @@ Transaction status
 .. versionadded:: 3.3
 
 Each `!Transaction` object exposes a `~Transaction.status` property allowing
-to inspect the current state of the transaction. This can be useful for
+you to inspect the current state of the transaction. This can be useful for
 debugging, logging, or implementing custom transaction management logic.
 
 The `!status` property is a `psycopg.Transaction.Status` enum value:
@@ -436,7 +436,7 @@ database using `~Connection.tpc_recover()` and completed using the above
 
 PostgreSQL doesn't follow the XA standard though, and the ID for a PostgreSQL
 prepared transaction can be any string up to 200 characters long. Psycopg's
-`Xid` objects can represent both XA-style transactions IDs (such as the ones
+`Xid` objects can represent both XA-style transaction IDs (such as the ones
 created by the `!xid()` method) and PostgreSQL transaction IDs identified by
 an unparsed string.
 

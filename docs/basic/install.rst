@@ -36,7 +36,7 @@ The Psycopg version documented here has *official and tested* support for:
 
 - PostgreSQL: from version 10 to 18
 
-  - **Note:** PostgreSQL `currently supported release`__ are actively tested
+  - **Note:** PostgreSQL `currently supported releases`__ are actively tested
     in the CI. Out-of-support releases are supported on a best-effort basis.
 
 - OS: Linux, macOS, Windows
@@ -51,7 +51,7 @@ anything that is not tested there is not officially supported. This includes:
 .. __: https://github.com/psycopg/psycopg/actions
 
 - Unofficial Python distributions such as Conda;
-- Alternative PostgreSQL implementation;
+- Alternative PostgreSQL implementations;
 - Other platforms such as BSD or Solaris.
 
 If you use an unsupported system, things might work (because, for instance, the
@@ -125,7 +125,7 @@ the ``psycopg2-binary`` package.
     For further information about the differences between the packages see
     :ref:`pq-impl`.
 
-If your platform is not supported, or if the libpq packaged is not suitable,
+If your platform is not supported, or if the packaged libpq is not suitable,
 you should proceed to a :ref:`local installation <local-installation>` or a
 :ref:`pure Python installation <pure-python-installation>`.
 
@@ -165,10 +165,10 @@ you should proceed to a :ref:`local installation <local-installation>` or a
 Local installation
 ------------------
 
-A "Local installation" results in a performing and maintainable library. The
+A "Local installation" results in a performant and maintainable library. The
 library will include the speed-up C module and will be linked to the system
-libraries (``libpq``, ``libssl``...) so that system upgrade of libraries will
-upgrade the libraries used by Psycopg 3 too. This is the preferred way to
+libraries (``libpq``, ``libssl``...) so that a system upgrade of the libraries
+will upgrade the libraries used by Psycopg 3 too. This is the preferred way to
 install Psycopg for a production site.
 
 In order to perform a local installation you need some prerequisites:
@@ -212,7 +212,7 @@ implementation. This is particularly handy for debugging and hacking.
 
    The pure Python installation is much slower than the
    :ref:`binary-installation` or :ref:`local-installation`. It is likely
-   sufficient for local developments or small tasks but, for production loads,
+   sufficient for local development or small tasks but, for production loads,
    you might want to install one of the speed-up extensions too.
 
 In order to use the pure Python installation you will need the ``libpq``
@@ -244,7 +244,7 @@ different release cycle.
 
 In order to use the pool you must install the ``pool`` extra, using ``pip
 install "psycopg[pool]"``, or install the `psycopg_pool` package separately,
-which would allow to specify the release to install more precisely.
+which would allow you to specify the release to install more precisely.
 
 
 .. _install-dependencies:

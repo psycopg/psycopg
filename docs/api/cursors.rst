@@ -14,7 +14,7 @@ database.
 Other cursor classes can be created by directly instantiating them, or can be
 set as `Connection.cursor_factory` to require them on `!cursor()` call.
 
-This page describe the details of the `!Cursor` class interface. Please refer
+This page describes the details of the `!Cursor` class interface. Please refer
 to :ref:`cursor-types` for general information about the different types of
 cursors available in Psycopg.
 
@@ -26,8 +26,8 @@ The `!Cursor` class
 
     This class implements a `DBAPI-compliant interface`__. It is what the
     classic `Connection.cursor()` method returns. `AsyncConnection.cursor()`
-    will create instead `AsyncCursor` objects, which have the same set of
-    method but expose an `asyncio` interface and require `!async` and
+    will instead create `AsyncCursor` objects, which have the same set of
+    methods but expose an `asyncio` interface and require `!async` and
     `!await` keywords to operate.
 
     .. __: dbapi-cursor_
@@ -35,7 +35,7 @@ The `!Cursor` class
 
 
     Cursors behave as context managers: on block exit they are closed and
-    further operation will not be possible. Closing a cursor will not
+    further operations will not be possible. Closing a cursor will not
     terminate a transaction or a session though.
 
     .. attribute:: connection
@@ -112,9 +112,9 @@ The `!Cursor` class
 
         If the queries return data you want to read (e.g. when executing an
         :sql:`INSERT ... RETURNING` or a :sql:`SELECT` with a side-effect),
-        you can specify `!returning=True`. This is equivalent of calling
+        you can specify `!returning=True`. This is equivalent to calling
         `~Cursor.execute()` as many times as the number of items in
-        `!params_seq`, and to store all the results in the cursor's state.
+        `!params_seq`, and storing all the results in the cursor's state.
 
         .. note::
 
@@ -187,12 +187,12 @@ The `!Cursor` class
         .. __: https://materialize.com/docs/sql/subscribe/
         .. __: https://www.cockroachlabs.com/docs/stable/changefeed-for.html
 
-        The parameters are the same of `execute()`, except for `size` which
+        The parameters are the same as `execute()`, except for `size` which
         can be used to set results retrieval by chunks instead of row-by-row.
 
         .. note::
 
-            This `size` parameter is only available from libpq 17, you can use
+            This `size` parameter is only available from libpq 17; you can use
             the `~Capabilities.has_stream_chunked` capability to check if this
             is supported.
 
@@ -226,9 +226,9 @@ The `!Cursor` class
     .. attribute:: format
 
         The format of the data returned by the queries. It can be selected
-        initially e.g. specifying `Connection.cursor`\ `!(binary=True)` and
-        changed during the cursor's lifetime. It is also possible  to override
-        the value for single queries, e.g. specifying `execute`\
+        initially, e.g. by specifying `Connection.cursor`\ `!(binary=True)` and
+        changed during the cursor's lifetime. It is also possible to override
+        the value for single queries, e.g. by specifying `execute`\
         `!(binary=True)`.
 
         :type: `pq.Format`
@@ -241,7 +241,7 @@ The `!Cursor` class
 
     Fetch methods are only available if the current result set contains results,
     e.g. a :sql:`SELECT` or a command with :sql:`RETURNING`. They will raise
-    an exception if used with operations that don't return result, such as an
+    an exception if used with operations that don't return results, such as an
     :sql:`INSERT` with no :sql:`RETURNING` or an :sql:`ALTER TABLE`.
 
     .. note::
@@ -309,7 +309,7 @@ The `!Cursor` class
         Representation of the current result set, if available, else `!None`.
 
         It can be used to obtain low level info about the current result set
-        and to access to features not currently wrapped by Psycopg.
+        and to access features not currently wrapped by Psycopg.
 
 
     .. rubric:: Information about the data
@@ -331,7 +331,7 @@ The `!Cursor` class
     .. attribute:: _query
         :type: PostgresQuery | None
 
-        An helper object used to convert queries and parameters before sending
+        A helper object used to convert queries and parameters before sending
         them to PostgreSQL.
 
         .. note::
@@ -342,12 +342,12 @@ The `!Cursor` class
 
             .. warning::
                 You shouldn't consider it part of the public interface of the
-                object: it might change without warnings.
+                object: it might change without warning.
 
-                Except this warning, I guess.
+                Except for this warning, I guess.
 
             If you would like to build reliable features using this object,
-            please get in touch so we can try and design an useful interface
+            please get in touch so we can try and design a useful interface
             for it.
 
         Among the properties currently exposed by this object:
@@ -373,10 +373,10 @@ The `!ClientCursor` class
 
 .. autoclass:: ClientCursor
 
-    This `Cursor` subclass has exactly the same interface of its parent class,
+    This `Cursor` subclass has exactly the same interface as its parent class,
     but, instead of sending query and parameters separately to the server, it
-    merges them on the client and sends them as a non-parametric query on the
-    server. This allows, for instance, to execute parametrized data definition
+    merges them on the client and sends them as a non-parametric query to the
+    server. This allows, for instance, executing parametrized data definition
     statements and other :ref:`problematic queries <server-side-binding>`.
 
     .. versionadded:: 3.1
@@ -450,9 +450,10 @@ The `!ServerCursor` class
         Create a server cursor with given `!name` and the `!query` in argument.
 
         If using :sql:`DECLARE` is not appropriate (for instance because the
-        cursor is returned by calling a stored procedure) you can avoid to use
-        `!execute()`, crete the cursor in other ways, and use directly the
-        `!fetch*()` methods instead. See :ref:`cursor-steal` for an example.
+        cursor is returned by calling a stored procedure) you can avoid using
+        `!execute()`, create the cursor in other ways, and use the
+        `!fetch*()` methods directly instead. See :ref:`cursor-steal` for an
+        example.
 
         Using `!execute()` more than once will close the previous cursor and
         open a new one with the same name.
@@ -469,19 +470,19 @@ The `!ServerCursor` class
 
         .. note::
 
-            You can also iterate on the cursor to read its result one at
-            time with::
+            You can also iterate on the cursor to read its results one at
+            a time with::
 
                 for record in cur:
                     ...
 
-            In this case, the records are not fetched one at time from the
+            In this case, the records are not fetched one at a time from the
             server but they are retrieved in batches of `itersize` to reduce
             the number of server roundtrips.
 
     .. autoattribute:: itersize
 
-        Number of records to fetch at time when iterating on the cursor. The
+        Number of records to fetch at a time when iterating on the cursor. The
         default is 100.
 
         :type: int
@@ -494,20 +495,20 @@ The `!ServerCursor` class
         call `~Connection.cursor()` using `scrollable=True`.
 
         Note that PostgreSQL doesn't provide a reliable way to report when a
-        cursor moves out of bound, so the method might not raise `!IndexError`
+        cursor moves out of bounds, so the method might not raise `!IndexError`
         when it happens, but it might rather stop at the cursor boundary.
 
         .. _MOVE: https://www.postgresql.org/docs/current/sql-fetch.html
 
 
-The `!RawCursor` and `!RawServerCursor` class
----------------------------------------------
+The `!RawCursor` and `!RawServerCursor` classes
+-----------------------------------------------
 
 .. seealso:: See :ref:`raw-query-cursors` for details.
 
 .. autoclass:: RawCursor
 
-    This `Cursor` subclass has the same interface of the parent class but
+    This `Cursor` subclass has the same interface as the parent class but
     supports placeholders in PostgreSQL format (``$1``, ``$2``...) rather than
     in Python format (``%s``). Only positional parameters are supported.
 
@@ -516,7 +517,7 @@ The `!RawCursor` and `!RawServerCursor` class
 
 .. autoclass:: RawServerCursor
 
-    This `ServerCursor` subclass has the same interface of the parent class but
+    This `ServerCursor` subclass has the same interface as the parent class but
     supports placeholders in PostgreSQL format (``$1``, ``$2``...) rather than
     in Python format (``%s``). Only positional parameters are supported.
 
@@ -528,7 +529,7 @@ Async cursor classes
 --------------------
 
 Every `Cursor` class has an equivalent `!Async` version exposing the same
-semantic with an `!async` interface. The main interface is described in
+semantics with an `!async` interface. The main interface is described in
 `AsyncCursor`.
 
 
@@ -538,7 +539,7 @@ semantic with an `!async` interface. The main interface is described in
     methods implemented as coroutines. Unless specified otherwise,
     non-blocking methods are shared with the `Cursor` class.
 
-    The following methods have the same behaviour of the matching `!Cursor`
+    The following methods have the same behaviour as the matching `!Cursor`
     methods, but should be called using the `await` keyword.
 
     .. attribute:: connection
@@ -596,7 +597,7 @@ semantic with an `!async` interface. The main interface is described in
 .. autoclass:: AsyncClientCursor
 
     This class is the `!async` equivalent of `ClientCursor`. The differences
-    w.r.t. the sync counterpart are the same described in `AsyncCursor`.
+    w.r.t. the sync counterpart are the same as described in `AsyncCursor`.
 
     .. versionadded:: 3.1
 
@@ -638,7 +639,7 @@ semantic with an `!async` interface. The main interface is described in
 .. autoclass:: AsyncRawCursor
 
     This class is the `!async` equivalent of `RawCursor`. The differences
-    w.r.t. the sync counterpart are the same described in `AsyncCursor`.
+    w.r.t. the sync counterpart are the same as described in `AsyncCursor`.
 
     .. versionadded:: 3.2
 
@@ -646,6 +647,7 @@ semantic with an `!async` interface. The main interface is described in
 .. autoclass:: AsyncRawServerCursor
 
     This class is the `!async` equivalent of `RawServerCursor`. The differences
-    w.r.t. the sync counterpart are the same described in `AsyncServerCursor`.
+    w.r.t. the sync counterpart are the same as described in
+    `AsyncServerCursor`.
 
     .. versionadded:: 3.2

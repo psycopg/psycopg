@@ -38,7 +38,7 @@ same interface. Current implementations are:
 
 - ``binary``: a pre-compiled C implementation, bundled with all the required
   libraries. It is the easiest option to deal with, fast to install and it
-  should require no development tool or client library, however it may be not
+  should require no development tool or client library, however it may not be
   available for every platform. You can install it using the ``binary`` extra,
   i.e. running ``pip install "psycopg[binary]"``.
 
@@ -68,7 +68,7 @@ Module content
 
 .. autodata:: __impl__
 
-    The choice of implementation is automatic but can be forced setting the
+    The choice of implementation is automatic but can be forced by setting the
     :envvar:`PSYCOPG_IMPL` env var.
 
 

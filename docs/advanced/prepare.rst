@@ -9,7 +9,7 @@ Prepared statements
 ===================
 
 Psycopg uses an automatic system to manage *prepared statements*. When a
-query is prepared, its parsing and planning is stored in the server session,
+query is prepared, its parsing and planning are stored in the server session,
 so that further executions of the same query on the same connection (even with
 different parameters) are optimised.
 
@@ -25,7 +25,7 @@ Statement preparation can be controlled in several ways:
   `Connection.execute()` or `Cursor.execute()`. The query is prepared, if it
   wasn't already, and executed as prepared from its first use.
 
-- Conversely, passing `!prepare=False` to `!execute()` will avoid to prepare
+- Conversely, passing `!prepare=False` to `!execute()` will avoid preparing
   the query, regardless of the number of times it is executed. The default for
   the parameter is `!None`, meaning that the query is prepared if the
   conditions described above are met.

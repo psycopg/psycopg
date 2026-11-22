@@ -40,7 +40,7 @@ server before performing a connection.
     (looked up or unchanged) could be returned.
 
     In addition to the rules defined by RFC 2782 about the host name pattern,
-    perform SRV lookup also if the the port is the string ``SRV`` (case
+    also perform SRV lookup if the port is the string ``SRV`` (case
     insensitive).
 
     .. warning::
@@ -75,7 +75,7 @@ server before performing a connection.
     .. warning::
         This is an experimental method.
 
-    This method is a subclass hook allowing to manipulate the connection
+    This method is a subclass hook allowing you to manipulate the connection
     parameters before performing the connection. Make sure to call the
     `!super()` implementation before further manipulation of the arguments::
 
@@ -113,10 +113,10 @@ server before performing a connection.
     not resolved, keeping the lists of hosts and ports consistent.
 
     Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
-    host resolve, inconsistent lists length).
+    host resolved, inconsistent list lengths).
 
-    See `the PostgreSQL docs`__ for explanation of how these params are used,
-    and how they support multiple entries.
+    See `the PostgreSQL docs`__ for an explanation of how these params are
+    used, and how they support multiple entries.
 
     .. __: https://www.postgresql.org/docs/current/libpq-connect.html
            #LIBPQ-PARAMKEYWORDS
