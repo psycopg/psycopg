@@ -18,6 +18,7 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import AdaptersMap, Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError
+from .._encodings import conn_encoding
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], str | bytes]
 JsonLoadsFunction: TypeAlias = Callable[[str | bytes], Any]
@@ -250,11 +251,19 @@ class _JsonLoader(Loader):
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self.loads = self.__class__._loads
+        # The server sends JSON text in the client encoding; only decode when
+        # it is not UTF-8, keeping the bytes fast path (and the bytes a custom
+        # loads() may expect) for the common case. ASCII means bytes, as in
+        # TextLoader: there is no decoding that could make them valid JSON.
+        enc = conn_encoding(self.connection)
+        self._encoding = enc if enc not in ("utf-8", "ascii") else ""
 
     def load(self, data: Buffer) -> Any:
         # json.loads() cannot work on memoryview.
         if not isinstance(data, bytes):
             data = bytes(data)
+        if self._encoding:
+            return self.loads(data.decode(self._encoding))
         return self.loads(data)
 
 
@@ -278,6 +287,8 @@ class JsonbBinaryLoader(_JsonLoader):
             raise DataError(f"unknown jsonb binary format: {data[0]}")
         if not isinstance((data := data[1:]), bytes):
             data = bytes(data)
+        if self._encoding:
+            return self.loads(data.decode(self._encoding))
         return self.loads(data)
 
 

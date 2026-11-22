@@ -1,14 +1,21 @@
 import json
 import logging
 from copy import deepcopy
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
 import psycopg.types
-from psycopg import pq, sql
+from psycopg import abc, pq, sql
 from psycopg.adapt import PyFormat
-from psycopg.types.json import set_json_dumps, set_json_loads
+from psycopg.types.json import (
+    JsonbBinaryLoader,
+    JsonbLoader,
+    JsonLoader,
+    set_json_dumps,
+    set_json_loads,
+)
 
 samples = [
     "null",
@@ -368,3 +375,35 @@ def my_loads(data):
     obj = json.loads(data)
     obj["answer"] = 42
     return obj
+
+
+def _context_with_encoding(encoding: str) -> abc.AdaptContext:
+    # A connection stub reporting a client encoding, without a live server:
+    # Loader.__init__ reads it through conn_encoding(connection).
+    return cast(
+        "abc.AdaptContext",
+        SimpleNamespace(
+            connection=SimpleNamespace(pgconn=SimpleNamespace(_encoding=encoding))
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    "loader_cls, data",
+    [
+        (JsonLoader, b'{"a": "\xe9"}'),
+        (JsonbLoader, b'{"a": "\xe9"}'),
+        (JsonbBinaryLoader, b'\x01{"a": "\xe9"}'),
+    ],
+)
+def test_load_non_utf8_client_encoding(loader_cls, data):
+    # A LATIN1 database sends JSON text in iso8859-1; the loaders must decode
+    # with the connection encoding instead of assuming UTF-8.
+    loader = loader_cls(114, _context_with_encoding("iso8859-1"))
+    assert loader.load(data) == {"a": "é"}
+
+
+def test_load_utf8_client_encoding_keeps_bytes():
+    # The UTF-8 fast path is unchanged: bytes go to loads() as before.
+    loader = JsonLoader(114, _context_with_encoding("utf-8"))
+    assert loader.load('{"a": "é"}'.encode()) == {"a": "é"}
