@@ -78,7 +78,7 @@ Other objects used in adaptations
 
    .. attribute:: types
 
-       The object where to look up for types information (such as the mapping
+       The object in which to look up type information (such as the mapping
        between type names and oids in the specified context).
 
    .. automethod:: get_dumper

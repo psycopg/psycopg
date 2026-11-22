@@ -14,7 +14,7 @@ Many standard Python types are adapted into SQL and returned as Python
 objects when a query is executed.
 
 Converting the following data types between Python and PostgreSQL works
-out-of-the-box and doesn't require any configuration. In case you need to
+out-of-the-box and doesn't require any configuration. If you need to
 customise the conversion you should take a look at :ref:`adaptation`.
 
 
@@ -125,8 +125,10 @@ Strings adaptation
     - `PostgreSQL character types
       <https://www.postgresql.org/docs/current/datatype-character.html>`__
 
-Python `str` are converted to PostgreSQL string syntax, and PostgreSQL types
-such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
+Python `str` values are converted to PostgreSQL string syntax, and PostgreSQL
+types such as :sql:`text` and :sql:`varchar` are converted back to Python
+`!str`:
+
 
 .. code:: python
 

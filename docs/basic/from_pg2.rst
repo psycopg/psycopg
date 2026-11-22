@@ -29,7 +29,7 @@ Which package to install?
     - If you were installing ``psycopg2-binary`` you should now install
       ``psycopg[binary]`` instead.
 
-    - If you were installing ``psycopg2``, therefore your client has the
+    - If you were installing ``psycopg2``, which means your client has the
       prerequisites to build the C extension yourself, you can install
       ``psycopg[c]`` instead.
 
@@ -37,8 +37,8 @@ Please see the :ref:`installation <installation>` section for all the details.
 
 Rationale: both the ``psycopg2`` and the ``psycopg2-binary`` distribution
 packages install the ``psycopg2`` Python package. This scenario is not well
-covered by Python packaging metadata, resulting in complex dependencies
-management and problems if both the packages are installed.
+covered by Python packaging metadata, resulting in complex dependency
+management and problems if both packages are installed.
 
 In Psycopg 3 there is a clear "interface" package, ``psycopg``, and optional
 speed-up extensions that can be included in the dependencies of a service (but
@@ -166,7 +166,7 @@ One obvious way to work around the problem is to use several `!execute()`
 calls.
 
 **There is no such limitation if no parameters are used**. As a consequence, you
-can compose a multiple query on the client side and run them all in the same
+can compose multiple queries on the client side and run them all in the same
 `!execute()` call, using the `psycopg.sql` objects::
 
     >>> from psycopg import sql
@@ -280,8 +280,8 @@ array::
     >>> conn.execute("SELECT * FROM foo WHERE id = ANY(%s)", [[10,20,30]])
 
 Note that `ANY()` can be used with `!psycopg2` too, and has the advantage of
-accepting an empty list of values too as argument, which is not supported by
-the :sql:`IN` operator instead.
+accepting an empty list of values as argument too, which is not supported by
+the :sql:`IN` operator.
 
 .. __: https://www.postgresql.org/docs/current/functions-comparisons.html
     #id-1.5.8.30.16
@@ -330,8 +330,8 @@ Analogously you can use :sql:`IS DISTINCT FROM %s` as a parametric version of
 Cursor subclasses
 -----------------
 
-In `!psycopg2`, a few cursor subclasses allowed to return data in different
-form than tuples. In Psycopg 3 the same can be achieved by setting a :ref:`row
+In `!psycopg2`, a few cursor subclasses allowed returning data in forms other
+than tuples. In Psycopg 3 the same can be achieved by setting a :ref:`row
 factory <row-factories>`:
 
 - instead of `~psycopg2.extras.RealDictCursor` you can use
@@ -361,8 +361,8 @@ Different adaptation system
 ---------------------------
 
 The adaptation system has been completely rewritten, in order to address
-server-side parameters adaptation, but also to consider performance,
-flexibility, ease of customization.
+server-side parameter adaptation, but also to consider performance,
+flexibility and ease of customization.
 
 The default behaviour with builtin data should be :ref:`what you would expect
 <types-adaptation>`. If you have customised the way to adapt data, or if you
@@ -386,8 +386,10 @@ dynamically-generated data into a database.
 
 There is now a single `~Cursor.copy()` method, which is similar to
 `!psycopg2` `!copy_expert()` in accepting a free-form :sql:`COPY` command and
-returns an object to read/write data, block-wise or record-wise. The different
-usage pattern also enables :sql:`COPY` to be used in async interactions.
+returning an object to read/write data, block-wise or record-wise. The
+different usage pattern also enables :sql:`COPY` to be used in async
+interactions.
+
 
 .. seealso:: See :ref:`copy` for the details.
 

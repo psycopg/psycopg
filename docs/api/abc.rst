@@ -69,7 +69,7 @@ checking.
     protocol (implementing everything except the `load()` method) is available
     as `psycopg.adapt.Loader`.
 
-    :param oid: The type that will be managed by this dumper.
+    :param oid: The type that will be managed by this loader.
     :type oid: int
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not

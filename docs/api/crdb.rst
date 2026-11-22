@@ -12,9 +12,9 @@ interacting with CockroachDB.
 .. _CockroachDB: https://www.cockroachlabs.com/
 
 Opening a connection to a CRDB database using `psycopg.connect()` provides a
-largely working object. However, using the `psycopg.crdb.connect()` function
-instead, Psycopg will create more specialised objects and provide a types
-mapping tweaked on the CockroachDB data model.
+largely working object. However, if you use the `psycopg.crdb.connect()`
+function instead, Psycopg will create more specialised objects and provide a
+types mapping tweaked for the CockroachDB data model.
 
 
 .. _crdb-differences:

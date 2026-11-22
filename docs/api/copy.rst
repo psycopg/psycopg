@@ -111,8 +111,8 @@ Writer instances can be used by passing them to the cursor
 
 .. autoclass:: AsyncWriter
 
-    This class methods have the same semantics of the ones of `Writer`, but
-    offer an async interface.
+    The methods of this class have the same semantics as the ones of
+    `Writer`, but offer an async interface.
 
     .. automethod:: write
     .. automethod:: finish

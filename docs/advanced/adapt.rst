@@ -104,8 +104,8 @@ Postgres and back.
     mechanism provided by `~psycopg.abc.Dumper.get_key()` and
     `~psycopg.abc.Dumper.upgrade()` is used to create more specific dumpers.
 
-- The query is executed. Upon successful request, the result is received as a
-  `~psycopg.pq.PGresult`.
+- The query is executed. If the request is successful, the result is received
+  as a `~psycopg.pq.PGresult`.
 
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `~psycopg.abc.Loader`. All the values with the same OID will be converted by
@@ -118,7 +118,7 @@ Postgres and back.
 - Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
   will use the same adaptation rules.
 
-As a consequence it is possible to perform certain choices only once per query
+As a consequence it is possible to make certain choices only once per query
 (e.g. looking up the connection encoding) and then call a fast-path operation
 for each value to convert.
 
@@ -223,7 +223,7 @@ Example: converting empty strings to NULL
 
 If you prefer to store missing values as :sql:`NULL` in the database, but
 your input may contain empty strings, you can subclass the stock string dumper
-to return `!None` upon empty or whitespace-only strings::
+to return `!None` for empty or whitespace-only strings::
 
     >>> from psycopg.types.string import StrDumper
 

@@ -3,7 +3,7 @@
 How to make a Psycopg release
 =============================
 
-- Check if there is a new version or libpq_ or OpenSSL_; in such case
+- Check if there is a new version of libpq_ or OpenSSL_; in that case
   update ``LIBPQ_VERSION`` and/or ``OPENSSL_VERSION`` in
   ``.github/workflows/packages-bin.yml``.
 
@@ -22,7 +22,7 @@ How to make a Psycopg release
 
   .. __: https://github.com/psycopg/psycopg/actions/workflows/tests.yml
 
-- Build the packages by triggering manually the ones requested among:
+- Build the packages by manually triggering the required ones among:
 
   - `Source packages`__
   - `Binary packages`__
@@ -94,7 +94,7 @@ The ``psycopg.pq`` module is a thin wrapper around the libpq, only doing the
 minimal work to make the library somewhat Pythonic (e.g. converting types and
 raising exceptions instead of returning error values).
 
-When new functionalities are added to the libpq we often want to expose them
+When new features are added to the libpq we often want to expose them
 to Python (either to allow Python users to use them directly or to build new
 features on top of them). The procedure touches several files, in order to
 add function wrappers to both the Python and the C implementation of the
@@ -108,9 +108,9 @@ bugfix release, without documenting it (e.g. ``PQconnectionUsedGSSAPI`` was
 added in 3.2.10 but only advertised in 3.3).
 
 You can use `PR 1140`__ as a reference for the work to do (code, tests,
-documentation). In this MR, the changes in the first commit are suitable to
-introduce a new function in a bugfix release, the second commit changes make
-the new functionality public.
+documentation). In this PR, the changes in the first commit are suitable to
+introduce a new function in a bugfix release, the changes in the second commit
+make the new functionality public.
 
 .. __: https://github.com/psycopg/psycopg/pull/1140/
 
@@ -143,12 +143,12 @@ When dropping end-of-life Python versions
 
 - Bump versions in the ``tests/constraints.txt`` file if it is necessary.
 
-- bump ``build-system.requires`` in ``*/pyproject.toml``. Install the packages
-  with ``pip install ./psycopg*/`` and check eventual warnings.
+- Bump ``build-system.requires`` in ``*/pyproject.toml``. Install the packages
+  with ``pip install ./psycopg*/`` and check for any warnings.
 
 - You may grep throughout the project for occurrences of a version to be dropped.
-  However, favouring smaller pull requests is convenient and easy to review.
-  An example for grepping `end-of-life <https://endoflife.date/python>` Python 3.8::
+  However, smaller pull requests are preferable, being easier to review.
+  An example for grepping `end-of-life <https://endoflife.date/python>`_ Python 3.8::
 
      git grep -E -e '\b3\.8\b' -e '\b(cp)?38\b' -e '\b3, 8\b'
      git grep -E -e '\b3\.9\b' -e '\b(cp)?39\b' -e '\b3, 9\b'

@@ -26,7 +26,7 @@ instance::
 
 This sort of works, but it is an accident waiting to happen: the table name
 may be an invalid SQL literal and need quoting; even more serious is the
-security problem in case the table name comes from an untrusted source.
+security problem if the table name comes from an untrusted source.
 
 .. note::
 

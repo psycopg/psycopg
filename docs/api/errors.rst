@@ -143,8 +143,8 @@ Error diagnostics
 SQLSTATE exceptions
 -------------------
 
-Errors coming from a database server (as opposite as ones generated
-client-side, such as connection failed) usually have a 5-letters error code
+Errors coming from a database server (as opposed to ones generated
+client-side, such as connection failed) usually have a 5-letter error code
 called SQLSTATE (available in the `~Diagnostic.sqlstate` attribute of the
 error's `~psycopg.Error.diag` attribute).
 

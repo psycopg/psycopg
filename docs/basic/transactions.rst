@@ -141,10 +141,12 @@ With an autocommit transaction, the above sequence of operations results in:
     # The connection is closed at the end of the block but, because it is not
     # in a transaction state, no COMMIT is executed.
 
-An autocommit transaction behaves more as someone coming from :program:`psql`
-would expect. This has a beneficial performance effect, because less queries
-are sent and less operations are performed by the database. The statements,
-however, are not executed in an atomic transaction; if you need to execute
+An autocommit transaction behaves more like someone coming from
+:program:`psql` would expect. This has a beneficial performance effect,
+because fewer queries are sent and fewer operations are performed by the
+database. The statements, however, are not executed in an atomic transaction;
+if you need to execute
+
 certain operations inside a transaction, you can achieve that with an
 autocommit connection too, using an explicit :ref:`transaction block
 <transaction-context>`.
@@ -188,8 +190,8 @@ use a `!transaction()` context:
     # The connection is closed at the end of the block.
 
 
-Note that connection blocks can also be used with non-autocommit connections:
-in this case you still need to pay attention to eventual transactions started
+Note that transaction blocks can also be used with non-autocommit connections:
+in this case you still need to pay attention to any transactions started
 automatically. If an operation starts an implicit transaction, a
 `!transaction()` block will only manage :ref:`a savepoint sub-transaction
 <nested-transactions>`, leaving the caller to deal with the main transaction,
@@ -246,7 +248,7 @@ Nested transactions
 
 Transaction blocks can also be nested (internal transaction blocks are
 implemented using SAVEPOINT__): an exception raised inside an inner block
-has a chance of being handled and not completely fail outer operations. The
+has a chance of being handled without completely failing outer operations. The
 following is an example where a series of operations interact with the
 database: operations are allowed to fail; at the end we also want to store the
 number of operations successfully processed.
@@ -357,7 +359,7 @@ Transaction characteristics
 
 You can set `transaction parameters`__ for the transactions that Psycopg
 handles. They affect the transactions started implicitly by non-autocommit
-transactions and the ones started explicitly by `Connection.transaction()` for
+connections and the ones started explicitly by `Connection.transaction()` for
 both autocommit and non-autocommit transactions.
 
 .. Warning::
@@ -441,10 +443,10 @@ created by the `!xid()` method) and PostgreSQL transaction IDs identified by
 an unparsed string.
 
 The format in which the Xids are converted into strings passed to the
-database is the same employed by the `PostgreSQL JDBC driver`__: this should
-allow interoperation between tools written in Python and in Java. For example
-a recovery tool written in Python would be able to recognize the components of
-transactions produced by a Java program.
+database is the same as the one used by the `PostgreSQL JDBC driver`__: this
+should allow interoperation between tools written in Python and in Java. For
+example a recovery tool written in Python would be able to recognize the
+components of transactions produced by a Java program.
 
 For further details see the documentation for the :ref:`tpc-methods`.
 

@@ -95,8 +95,8 @@ as a subtype.
             the `!TypeInfo` globally.
 
         Registering the `TypeInfo` in a context allows the adapters of that
-        context to look up type information: for instance it allows to
-        recognise automatically arrays of that type and load them from the
+        context to look up type information: for instance it allows Psycopg
+        to automatically recognise arrays of that type and load them from the
         database as a list of the base type.
 
 
@@ -112,11 +112,11 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
 
 .. autoclass:: TypesRegistry
 
-   `!TypeRegistry` instances are typically exposed by
+   `!TypesRegistry` instances are typically exposed by
    `~psycopg.adapt.AdaptersMap` objects in adapt contexts such as
    `~psycopg.Connection` or `~psycopg.Cursor` (e.g. `!conn.adapters.types`).
 
-   The global registry, from which the others inherit from, is available as
+   The global registry, from which the others inherit, is available as
    `psycopg.adapters`\ `!.types`.
 
    .. automethod:: __getitem__
@@ -301,7 +301,7 @@ See :ref:`adapt-multirange` for details.
     totally ordered: they behave pretty much like a list of `!Range`. Like
     Range, they are `~typing.Generic` on the subtype of their range, so you
     can declare a variable to be `!Multirange[date]` and mypy will complain if
-    you try to add it a `!Range[Decimal]`.
+    you try to add a `!Range[Decimal]` to it.
 
 .. autoclass:: MultirangeInfo
 

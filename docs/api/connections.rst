@@ -4,8 +4,8 @@ Connection classes
 ==================
 
 The `Connection` and `AsyncConnection` classes are the main wrappers for a
-PostgreSQL database session. You can imagine them similar to a :program:`psql`
-session.
+PostgreSQL database session. You can think of them as similar to a
+:program:`psql` session.
 
 One of the differences compared to :program:`psql` is that a `Connection`
 usually handles a transaction automatically: other sessions will not be able
@@ -19,7 +19,7 @@ The `!Connection` class
 .. autoclass:: Connection()
 
     This class implements a `DBAPI-compliant interface`__. It is what you want
-    to use if you write a "classic", blocking program (eventually using
+    to use if you write a "classic", blocking program (possibly using
     threads or Eventlet/gevent for concurrency). If your program uses `asyncio`
     you might want to use `AsyncConnection` instead.
 
@@ -71,7 +71,7 @@ The `!Connection` class
     .. attribute:: adapters
 
         The adapters configuration used to convert Python parameters and
-        PostgreSQL results for the queries executed on this cursor.
+        PostgreSQL results for the queries executed on this connection.
 
         It affects all the cursors created by this connection afterwards.
 
@@ -162,8 +162,8 @@ The `!Connection` class
             database. All the types returned by the query must have a binary
             loader. See :ref:`binary-data` for details.
 
-        The method simply creates a `Cursor` instance, `~Cursor.execute()` the
-        query requested, and returns it.
+        The method simply creates a `Cursor` instance, calls
+        `~Cursor.execute()` with the query requested, and returns the cursor.
 
         See :ref:`query-parameters` for all the details about executing
         queries.

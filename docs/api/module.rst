@@ -30,7 +30,7 @@ it also exposes the `module-level objects`__ required by the specification.
         if psycopg.capabilities.has_hostaddr():
             print(conn.info.hostaddr)
         else:
-            print("unknown connection hostadd")
+            print("unknown connection hostaddr")
 
     :type: `Capabilities`
 

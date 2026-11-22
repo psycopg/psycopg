@@ -26,8 +26,9 @@ Basic connection pool usage
 
 A `ConnectionPool` object can be used to request connections from multiple
 concurrent threads. A simple and safe way to use it is as a *context manager*.
-Within the `!with` block, you can request the pool a connection using the
-`~ConnectionPool.connection()` method, and use it as a context manager too::
+Within the `!with` block, you can request a connection from the pool using
+the `~ConnectionPool.connection()` method, and use it as a context manager
+too::
 
     with ConnectionPool(...) as pool:
         with pool.connection() as conn:
@@ -46,13 +47,13 @@ context: at the end of the block, if there is a transaction open, it will be
 committed if the context is exited normally, or rolled back if the context is
 exited with an exception. See :ref:`transaction-context` for details.
 
-The pool manages a certain amount of connections (between `!min_size` and
+The pool manages a certain number of connections (between `!min_size` and
 `!max_size`). If the pool has a connection ready in its state, it is served
 immediately to the `~connection()` caller, otherwise the caller is put in a
 queue and is served a connection as soon as it's available.
 
 If instead of threads your application uses async code you can use the
-`AsyncConnectionPool` instead and use the `!async` and `!await` keywords with
+`AsyncConnectionPool` and use the `!async` and `!await` keywords with
 the methods requiring them::
 
     async with AsyncConnectionPool(...) as pool:
@@ -123,9 +124,9 @@ context started by `~ConnectionPool.connection()`):
 - if a `!reset` callback was provided, the connection is passed to it, to
   allow application-specific cleanup if needed;
 
-- if, along this process, the connection is found in broken state, or if it
-  passed the `!max_lifetime` configured at pool creation, it is discarded and
-  a new connection is requested to a worker;
+- if, during this process, the connection is found in a broken state, or if
+  it passed the `!max_lifetime` configured at pool creation, it is discarded
+  and a new connection is requested from a worker;
 
 - the connection is finally returned to the pool, or, if there are clients in
   the queue, to the first client waiting.
@@ -157,13 +158,14 @@ global object and use it from the rest of your code::
 
 Using this pattern, the pool will start the connection process already at
 import time. If that's too early, and you want to delay opening connections
-until the application is ready, you can specify to create a closed pool and
-call the `~ConnectionPool.open()` method.
+until the application is ready, you can create a closed pool and call the
+`~ConnectionPool.open()` method.
 
-If you are not using the pool as context manager, you are advised to call the
-`~ConnectionPool.close()` method on program exit: on some Python versions this
-might cause a program exit delay. How to ensure it depends on the way you are
-writing your program. One simple method is to use the `atexit` module::
+If you are not using the pool as a context manager, you are advised to call
+the `~ConnectionPool.close()` method on program exit: on some Python versions
+not doing so might cause a program exit delay. How to ensure it depends on
+the way you are writing your program. One simple method is to use the
+`atexit` module::
 
     atexit.register(pool.close)
 
@@ -204,8 +206,8 @@ Null connection pools
 Sometimes you may want to leave the choice of using or not using a connection
 pool as a configuration parameter of your application. For instance, you might
 want to use a pool if you are deploying a "large instance" of your application
-and can dedicate it a handful of connections; conversely you might not want to
-use it if you deploy the application in several instances, behind a load
+and can dedicate a handful of connections to it; conversely you might not want
+to use it if you deploy the application in several instances, behind a load
 balancer, and/or using an external connection pool process such as PgBouncer.
 
 Switching between using or not using a pool requires some code change, because
@@ -466,7 +468,7 @@ For example, the initialization in an async application may look like:
         pgpool = psycopg_pool.AsyncConnectionPool(
             conninfo=db_url, open=False, close_returns=True
         )
-        await mypool.open()
+        await pgpool.open()
 
         # Create a SQLAlchemy engine using the pool just created
         engine = sqlalchemy.ext.asyncio.create_async_engine(

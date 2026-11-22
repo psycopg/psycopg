@@ -109,7 +109,7 @@ server before performing a connection.
     addresses dynamically.
 
     The function may change the input ``host``, ``hostname``, ``port`` to allow
-    connecting without further DNS lookups, eventually removing hosts that are
+    connecting without further DNS lookups, possibly removing hosts that are
     not resolved, keeping the lists of hosts and ports consistent.
 
     Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
@@ -122,7 +122,7 @@ server before performing a connection.
            #LIBPQ-PARAMKEYWORDS
 
     .. warning::
-        Before Psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
+        Before Psycopg 3.1, this function didn't handle the ``/etc/hosts`` file.
 
     .. note::
        Starting from Psycopg 3.1, a similar operation is performed

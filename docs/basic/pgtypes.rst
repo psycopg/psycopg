@@ -25,7 +25,7 @@ Composite types adaptation
 --------------------------
 
 Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
-TYPE|_ command or implicitly defined after a table row type) to and from
+TYPE|_ command or implicitly defined as a table row type) to and from
 Python tuples, `~collections.namedtuple`, or any suitably configured object.
 
 .. |CREATE TYPE| replace:: :sql:`CREATE TYPE`
@@ -85,7 +85,7 @@ Example: non-sequence Python object
 If your Python type takes keyword arguments, or if the sequence of values
 coming from the PostgreSQL type is not suitable for it, it is possible to
 specify a :samp:`make_object({values}, {info})` function to adapt the values
-from the composite to the Python object to create, eventually making use of
+from the composite to the Python object to create, possibly making use of
 the information in the type `~types.composite.CompositeInfo`, for example::
 
     >>> from dataclasses import dataclass
@@ -180,12 +180,12 @@ automatically available for every range, built-in and user-defined.
 
 .. __: https://www.postgresql.org/docs/current/rangetypes.html
 
-All the PostgreSQL range types are loaded as the
+All the PostgreSQL multirange types are loaded as the
 `~psycopg.types.multirange.Multirange` Python type, which is a mutable
 sequence of `~psycopg.types.range.Range` elements.
 
-Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
-automatically: if a `!Multirange` object contains `!Range` with
+As with `~psycopg.types.range.Range`, built-in multirange objects are adapted
+automatically: if a `!Multirange` object contains `!Range` objects with
 `~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
 :sql:`datemultirange` values are loaded back as `!Multirange[date]`.
 

@@ -106,7 +106,7 @@ The `!Cursor` class
         :type params_seq: Sequence of Sequences or Mappings
         :param returning: If `!True`, fetch the results of the queries executed
 
-        This is more efficient than performing separate queries, but in case of
+        This is more efficient than performing separate queries, but for
         several :sql:`INSERT` (and with some SQL creativity for massive
         :sql:`UPDATE` too) you may consider using `copy()`.
 
@@ -141,7 +141,7 @@ The `!Cursor` class
             values returned! You must iterate on the results using
             `results()`.
 
-        If `!returning=False`, the value of `rowcount` is set to the cumulated
+        If `!returning=False`, the value of `rowcount` is set to the cumulative
         number of rows affected by queries. If `!returning=True`, `!rowcount`
         is set to the number of rows in the current result set (i.e. the first
         one, until `nextset()` gets called).
@@ -294,7 +294,7 @@ The `!Cursor` class
 
         .. versionadded:: 3.3
 
-            In previous version you may call `nextset()` in a loop until it
+            In previous versions you could call `nextset()` in a loop until it
             returns a false value.
 
     .. automethod:: set_result
@@ -324,7 +324,7 @@ The `!Cursor` class
     .. autoattribute:: rowcount
 
         From `executemany()`, unless called with `!returning=True`, this is
-        the cumulated number of rows affected by executed commands.
+        the cumulative number of rows affected by executed commands.
 
     .. autoattribute:: rownumber
 
@@ -405,8 +405,8 @@ The `!ServerCursor` class
 
     .. __: dbapi-cursor_
 
-    Most attribute and methods behave exactly like in `Cursor`, here are
-    documented the differences:
+    Most attributes and methods behave exactly like in `Cursor`; the
+    differences are documented here:
 
     .. autoattribute:: name
     .. autoattribute:: scrollable
@@ -447,7 +447,8 @@ The `!ServerCursor` class
             format (`!True`) or in text format (`!False`). By default
             (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
-        Create a server cursor with given `!name` and the `!query` in argument.
+        Create a server cursor with the given `!name` and the `!query`
+        passed as argument.
 
         If using :sql:`DECLARE` is not appropriate (for instance because the
         cursor is returned by calling a stored procedure) you can avoid using

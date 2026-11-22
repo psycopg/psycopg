@@ -6,9 +6,9 @@
 
 .. module:: psycopg_pool
 
-A connection pool is an object used to create and maintain a limited amount of
-PostgreSQL connections, reducing the time requested by the program to obtain a
-working connection and allowing an arbitrary large number of concurrent
+A connection pool is an object used to create and maintain a limited number of
+PostgreSQL connections, reducing the time required by the program to obtain a
+working connection and allowing an arbitrarily large number of concurrent
 threads or tasks to use a controlled amount of resources on the server. See
 :ref:`connection-pools` for more details and usage patterns.
 
@@ -86,7 +86,7 @@ The `!ConnectionPool` class
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
                      connection is used to run internal queries (to inspect the
-                     database) make sure to close an eventual transaction
+                     database) make sure to close any open transaction
                      before leaving the function.
    :type configure: `Callable[[Connection], None]`
 
@@ -140,7 +140,7 @@ The `!ConnectionPool` class
 
    :param max_idle: Maximum time, in seconds, that a connection can stay unused
                     in the pool before being closed, and the pool shrunk. This
-                    only happens to connections more than `!min_size`, if
+                    only happens to connections beyond `!min_size`, if
                     `!max_size` allowed the pool to grow.
    :type max_idle: `!float`, default: 10 minutes
 
@@ -176,7 +176,7 @@ The `!ConnectionPool` class
         added `!check` parameter to the constructor.
 
    .. versionchanged:: 3.2
-        the class is generic and `!connection_class` provides types type
+        the class is generic, and `!connection_class` provides its type
         variable. See :ref:`pool-generic`.
 
    .. versionchanged:: 3.3
@@ -259,7 +259,7 @@ The `!ConnectionPool` class
 
       See :ref:`pool-stats` for the metrics returned.
 
-   .. rubric:: Functionalities you may not need
+   .. rubric:: Features you may not need
 
    .. automethod:: getconn
    .. automethod:: putconn
@@ -313,7 +313,7 @@ Only the functions and parameters with a different signature from
    :param configure: A callback to configure a connection after creation.
    :type configure: `async Callable[[AsyncConnection], None]`
 
-   :param reset: A callback to reset a function after it has been returned to
+   :param reset: A callback to reset a connection after it has been returned to
                  the pool.
    :type reset: `async Callable[[AsyncConnection], None]`
 

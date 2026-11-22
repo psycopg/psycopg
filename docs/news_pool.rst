@@ -51,7 +51,7 @@ psycopg_pool 3.3.0
 
 - Add `~ConnectionPool.drain()` method (:ticket:`#1215`).
 - Allow the `!conninfo` and `!kwargs` `ConnectionPool` parameters to be callable
-  to allow connection parameters update (:ticket:`#851`).
+  to allow updating connection parameters (:ticket:`#851`).
 - Add `!close_returns` `ConnectionPool` parameter for :ref:`integration with
   SQLAlchemy <pool-sqlalchemy>` (:ticket:`#1046`).
 
@@ -68,8 +68,8 @@ psycopg_pool 3.2.7
 
 - Fix infinite loop with connections modified to return on close
   (:ticket:`#1124`).
-- Fix request of excessive connections upon connection close failing and
-  retrying (:ticket:`#1176`).
+- Fix requesting too many connections when closing a connection fails and is
+  retried (:ticket:`#1176`).
 
 
 psycopg_pool 3.2.6
@@ -89,7 +89,7 @@ psycopg_pool 3.2.4
 ^^^^^^^^^^^^^^^^^^
 
 - Add a hint to the warning printed if threads fail to stop during
-  ``__del__``, which has been reported happening during interpreter shutdown
+  ``__del__``, which has been reported to happen during interpreter shutdown
   on Python 3.13 (see :ticket:`#954`).
 
 
@@ -173,7 +173,7 @@ psycopg_pool 3.1.5
 psycopg_pool 3.1.4
 ^^^^^^^^^^^^^^^^^^
 
-- Fix async pool exhausting connections, happening if the pool is created
+- Fix async pool exhausting connections if the pool is created
   before the event loop is started (:ticket:`#219`).
 
 

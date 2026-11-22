@@ -35,7 +35,7 @@ buffered on the server side; the server flushes that buffer when a
     - `pipeline mode`__
     - `extended query message flow`__
 
-    contains many details around when it is most useful to use the pipeline
+    contains many details about when it is most useful to use the pipeline
     mode and about errors management and interaction with transactions.
 
     .. __: https://www.postgresql.org/docs/current/libpq-pipeline-mode.html
@@ -184,9 +184,9 @@ several operations, using `Connection.execute()`, `Cursor.execute()` and
     ...             "INSERT INTO elsewhere VALUES (%s)",
     ...             [("one",), ("two",), ("four",)])
 
-Unlike in normal mode, Psycopg will not wait for the server to receive the
-result of each query; the client will receive results in batches when the
-server flushes it output buffer. You can receive more than a single result
+Unlike in normal mode, Psycopg will not wait to receive the result of each
+query from the server; the client will receive results in batches when the
+server flushes its output buffer. You can receive more than a single result
 by using more than one cursor in the same pipeline.
 
 If any statement encounters an error, the server aborts the current
@@ -218,8 +218,8 @@ synchronization point.
 Synchronization points
 ----------------------
 
-Flushing query results to the client can happen either when a synchronization
-point is established by Psycopg:
+Flushing query results to the client can happen when a synchronization point
+is established by Psycopg:
 
 - using the `Pipeline.sync()` method;
 - on `Connection.commit()` or `~Connection.rollback()`;

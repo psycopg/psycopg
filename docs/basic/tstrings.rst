@@ -32,7 +32,7 @@ process query parameters in a safe way.
 
 For example you can pass to a query some string parameters, which may contain
 unsafe characters such as ``'``, or come from untrusted sources such as a web
-form, and leave Psycopg to perform the right processing:
+form, and let Psycopg perform the right processing:
 
 .. code:: python
 
@@ -73,9 +73,10 @@ than parameter values, for example table or field names:
         t"INSERT INTO {table_name:i} (first_name, last_name) VALUES ({first_name}, {last_name})"
     )
 
-The ``:i`` specifies to merge `!table_name` to the query on the client using
-the `identifier syntax`__ before continuing with the normal processing (which
-might involve preparing the query, sending the parameters separately, etc.)
+The ``:i`` tells Psycopg to merge `!table_name` into the query on the client
+using the `identifier syntax`__ before continuing with the normal processing
+(which might involve preparing the query, sending the parameters separately,
+etc.)
 
 .. __: https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 

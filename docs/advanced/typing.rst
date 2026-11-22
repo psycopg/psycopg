@@ -76,8 +76,8 @@ The ``fetchone()`` frustration
 .. versionchanged:: 3.3
 
 If you use a static type checker and you are 100% sure that the cursor will
-exactly one record, it is frustrating to be told that the returned row might
-be `!None`. For example:
+return exactly one record, it is frustrating to be told that the returned row
+might be `!None`. For example:
 
 .. code:: python
 
@@ -100,7 +100,7 @@ cur.fetchall()`` or some other horrible trick).
 
 Since Psycopg 3.3, cursors are iterables__, therefore they support the
 `next` function. A `!next(cur)` will behave like `!cur.fetchone()`, but it
-is guaranteed to return a row (in case there are no rows in the result set it
+is guaranteed to return a row (if there are no rows in the result set it
 will not return anything but will raise `!StopIteration`). Therefore the
 function above can terminate with:
 
@@ -128,7 +128,7 @@ Generic pool types
 The `~psycopg_pool.ConnectionPool` class and similar are generic on their
 `!connection_class` argument. The `~psycopg_pool.ConnectionPool.connection()`
 method is annotated as returning a connection of that type, and the record
-returned will follow the rule as in :ref:`row-factory-static`.
+returned will follow the rules described in :ref:`row-factory-static`.
 
 Note that, at the moment, if you use a generic class as `!connection_class`,
 you will need to specify a `!row_factory` consistently in the `!kwargs`,
@@ -188,7 +188,7 @@ compatible with the model.
 .. _Pydantic: https://pydantic-docs.helpmanual.io/
 
 The following example can be checked with ``mypy --strict`` without reporting
-any issue. Pydantic will also raise a runtime error in case the
+any issue. Pydantic will also raise a runtime error if the
 `!Person` is used with a query that returns incompatible data.
 
 .. code:: python

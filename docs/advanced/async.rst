@@ -17,7 +17,7 @@ operation at a time.
 
 - `Cursor` objects *are not thread-safe*, and are not designed to be used by
   several threads at the same time. However, cursors are lightweight objects:
-  different threads can create each one its own cursor to use independently
+  different threads can each create their own cursor to use independently
   from other threads.
 
 .. note::
@@ -51,9 +51,9 @@ operation at a time.
     is limited by grumpy sysadmins with long beards and a strict control on
     the `max_connections`__ server setting.
 
-    If you want to use more than one connection at time, but still avoid to
-    create too many connections and starve the server, you might want to use a
-    :ref:`connection pool <connection-pools>`.
+    If you want to use more than one connection at a time, but still avoid
+    creating too many connections and starving the server, you might want to
+    use a :ref:`connection pool <connection-pools>`.
 
     .. __: https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS
 
@@ -193,7 +193,7 @@ will be put in error state, from which it can be recovered with a normal
 An async connection provides similar behavior in that if the async task is
 cancelled, any operation on the connection will similarly be cancelled.  This
 can happen either indirectly via Ctrl-C or similar signal, or directly by
-cancelling the Python Task via the normal way.  Psycopg will ask the
+cancelling the Python Task in the normal way.  Psycopg will ask the
 PostgreSQL postmaster to cancel the operation when it encounters the standard
 Python `CancelledError`__.
 
@@ -402,8 +402,8 @@ You may get output from the Python process such as::
     - Since :ref:`psycopg-3.2.10` if a handler is registered then
       notifications are not captured when the generator is not running. So the
       behaviour is similar to pre-3.2.4 but *only if a handler is registered
-      too*. Therefore, using handlers and generators together starts seeming a
-      bad idea, hence it is since deprecated.
+      too*. Therefore, using handlers and generators together starts to seem a
+      bad idea, hence it has since been deprecated.
 
 
 .. _notifies-handlers:

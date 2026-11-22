@@ -14,7 +14,7 @@ Passing parameters to SQL queries
    However, starting from Python 3.14, you might be interested in using the
    more expressive :ref:`template string queries <template-strings>`.
 
-Most of the times, writing a program you will have to mix bits of SQL
+Most of the time, when writing a program, you will have to mix bits of SQL
 statements with values provided by the rest of the program:
 
 .. code::
@@ -151,7 +151,7 @@ could easily craft a malformed string, either gaining access to unauthorized
 data or performing destructive operations on the database. This form of attack
 is called `SQL injection`_ and is known to be one of the most widespread forms
 of attack on database systems. Before continuing, please print `this page`__
-as a memo and hang it onto your desk.
+as a memo and hang it above your desk.
 
 .. _SQL injection: https://en.wikipedia.org/wiki/SQL_injection
 .. __: https://xkcd.com/327/
@@ -231,8 +231,8 @@ results) or buffer (for binary results).
     The `pg_type`_ table defines which format is supported for each PostgreSQL
     data type. Text input/output is managed by the functions declared in the
     ``typinput`` and ``typoutput`` fields (always present), binary
-    input/output is managed by the ``typsend`` and ``typreceive`` (which are
-    optional).
+    input/output is managed by the ``typsend`` and ``typreceive`` fields (which
+    are optional).
 
     .. _pg_type: https://www.postgresql.org/docs/current/catalog-pg-type.html
 

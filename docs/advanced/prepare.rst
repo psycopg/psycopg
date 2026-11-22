@@ -56,16 +56,16 @@ Using prepared statements with PgBouncer
 
 .. warning::
 
-    Unless a connection pooling middleware explicitly declares otherwise, they
-    are not compatible with prepared statements, because the same client
+    Unless a connection pooling middleware explicitly declares otherwise, it
+    is not compatible with prepared statements, because the same client
     connection may change the server session it refers to. If such middleware
     is used you should disable prepared statements, by setting the
     `Connection.prepare_threshold` attribute to `!None`.
 
 Starting from 3.2, Psycopg supports prepared statements when using the
-PgBouncer__ middleware, using the following caveats:
+PgBouncer__ middleware, with the following caveats:
 
-- PgBouncer version must be version `1.22`__ or newer.
+- PgBouncer must be version `1.22`__ or newer.
 - PgBouncer `max_prepared_statements`__ must be greater than 0.
 - The libpq version on the client must be from PostgreSQL 17 or newer
   (you can check the `~Capabilities.has_send_close_prepared()` capability to

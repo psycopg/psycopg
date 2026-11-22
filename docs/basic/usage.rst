@@ -211,8 +211,8 @@ developer is free to use (and responsible for calling) `~Connection.commit()`,
     You should use a `!with` block when your intention is just to execute a
     set of operations and then commit the result, which is the most usual
     thing to do with a connection. If your connection life cycle and
-    transaction pattern is different, and want more control on it, the use
-    without `!with` might be more convenient.
+    transaction pattern is different, and you want more control over it, the
+    use without `!with` might be more convenient.
 
     See :ref:`transactions` for more information.
 
