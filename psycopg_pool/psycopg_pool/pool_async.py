@@ -182,8 +182,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         Calling this method is not mandatory: you can try and use the pool
         immediately after its creation. The first client will be served as soon
         as a connection is ready. You can use this method if you prefer your
-        program to terminate in case the environment is not configured
-        properly, rather than trying to stay up the hardest it can.
+        program to terminate if the environment is not configured
+        properly, rather than trying to stay up as hard as it can.
         """
         self._check_open_getconn()
 
@@ -214,8 +214,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         Upon context exit, return the connection to the pool. Apply the normal
         :ref:`connection context behaviour <with-connection>` (commit/rollback
-        the transaction in case of success/error). If the connection is no more
-        in working state, replace it with a new one.
+        the transaction in case of success/error). If the connection is no longer
+        in a working state, replace it with a new one.
         """
         conn = await self.getconn(timeout=timeout)
         try:
@@ -415,7 +415,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return True
 
     async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
-        """Open the pool by starting connecting and and accepting clients.
+        """Open the pool by starting to connect and accepting clients.
 
         If *wait* is `!False`, return immediately and let the background worker
         fill the pool if `min_size` > 0. Otherwise wait up to *timeout* seconds
@@ -745,8 +745,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
     ) -> None:
         """Try to connect and add the connection to the pool.
 
-        If failed, reschedule a new attempt in the future for a few times, then
-        give up, decrease the pool connections number and call
+        If it fails, reschedule a new attempt in the future a few times, then
+        give up, decrease the number of pool connections and call
         `self.reconnect_failed()`.
 
         """

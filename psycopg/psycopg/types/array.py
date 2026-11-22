@@ -52,7 +52,7 @@ class BaseListDumper(RecursiveDumper):
 
     def _find_list_element(self, L: list[Any], format: PyFormat) -> Any:
         """
-        Find the first non-null element of an eventually nested list
+        Find the first non-null element of a possibly nested list
         """
         # Flattening the list in Python is slow: only do it if it is nested.
         types = set(map(type, L))

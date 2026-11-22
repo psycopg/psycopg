@@ -1,7 +1,7 @@
 """
 libpq debugging tools
 
-These functionalities are exposed here for convenience, but are not part of
+These tools are exposed here for convenience, but are not part of
 the public interface and are subject to change at any moment.
 
 Suggested usage::
@@ -44,7 +44,7 @@ logger = logging.getLogger("psycopg.debug")
 
 
 class PGconnDebug:
-    """Wrapper for a PQconn logging all its access."""
+    """Wrapper for a PGconn logging all accesses to it."""
 
     _pgconn: abc.PGconn
 

@@ -80,7 +80,7 @@ class BaseConnection(Generic[Row]):
     """
     Base class for different types of connections.
 
-    Share common functionalities such as access to the wrapped PGconn, but
+    Share common functionality such as access to the wrapped PGconn, but
     allow different interfaces (sync/async).
     """
 
@@ -323,7 +323,7 @@ class BaseConnection(Generic[Row]):
         """
         Register a callable to be invoked when a notice message is received.
 
-        :param callback: the callback to call upon message received.
+        :param callback: the callback to call when a message is received.
         """
         self._notice_handlers.append(callback)
 
@@ -354,7 +354,7 @@ class BaseConnection(Generic[Row]):
         """
         Register a callable to be invoked whenever a notification is received.
 
-        :param callback: the callback to call upon notification received.
+        :param callback: the callback to call when a notification is received.
         """
         self._notify_handlers.append(callback)
 
@@ -440,9 +440,9 @@ class BaseConnection(Generic[Row]):
         self, command: QueryNoTemplate, result_format: pq.Format = TEXT
     ) -> PQGen[PGresult | None]:
         """
-        Generator to send a command and receive the result to the backend.
+        Generator to send a command to the backend and receive the result.
 
-        Only used to implement internal commands such as "commit", with eventual
+        Only used to implement internal commands such as "commit", with any
         arguments bound client-side. The cursor can do more complex stuff.
         """
         self._check_connection_ok()

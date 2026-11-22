@@ -64,7 +64,7 @@ class Scheduler:
         return task
 
     def run(self) -> None:
-        """Execute the events scheduled."""
+        """Execute the scheduled events."""
         q = self._queue
         while True:
             with self._lock:

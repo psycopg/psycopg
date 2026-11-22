@@ -82,7 +82,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     @property
     def withhold(self) -> bool:
         """
-        If the cursor can be used after the creating transaction has committed.
+        Whether the cursor can be used after the creating transaction has committed.
         """
         return self._withhold
 

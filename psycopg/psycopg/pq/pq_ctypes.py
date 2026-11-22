@@ -1210,7 +1210,7 @@ class PGconn:
         res = impl.PQchangePassword(self._pgconn_ptr, user, passwd)
         if impl.PQresultStatus(res) != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"failed to change password change command: {self.get_error_message()}"
+                f"failed to change password: {self.get_error_message()}"
             )
 
     def make_empty_result(self, exec_status: int) -> PGresult:
@@ -1240,8 +1240,7 @@ class PGconn:
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to enter the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if entering pipeline mode failed.
         """
         if impl.PQenterPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError("failed to enter pipeline mode")
@@ -1249,8 +1248,7 @@ class PGconn:
     def exit_pipeline_mode(self) -> None:
         """Exit pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to exit the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if exiting pipeline mode failed.
         """
         if impl.PQexitPipelineMode(self._pgconn_ptr) != 1:
             raise e.OperationalError(self.get_error_message())
@@ -1565,7 +1563,7 @@ class PGresult:
         """Set the description of the columns of the result.
 
         Only allowed on a result created by `PGconn.make_empty_result()` and
-        without columns yet.
+        with no columns yet.
 
         :param descriptions: the description of each column.
         :raises ~psycopg.OperationalError: if setting the description failed.

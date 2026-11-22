@@ -775,7 +775,7 @@ cdef class PGconn:
             res = libpq.PQchangePassword(self._pgconn_ptr, user, passwd)
         if libpq.PQresultStatus(res) != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"password encryption failed: {self.get_error_message()}"
+                f"failed to change password: {self.get_error_message()}"
             )
 
     def make_empty_result(self, int exec_status) -> PGresult:
@@ -803,8 +803,7 @@ cdef class PGconn:
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to enter the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if entering pipeline mode failed.
         """
         _check_supported("PQenterPipelineMode", 140000)
         cdef int rv
@@ -816,8 +815,7 @@ cdef class PGconn:
     def exit_pipeline_mode(self) -> None:
         """Exit pipeline mode.
 
-        :raises ~psycopg.OperationalError: in case of failure to exit the pipeline
-            mode.
+        :raises ~psycopg.OperationalError: if exiting pipeline mode failed.
         """
         _check_supported("PQexitPipelineMode", 140000)
         cdef int rv

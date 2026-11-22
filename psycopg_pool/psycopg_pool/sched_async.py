@@ -67,7 +67,7 @@ class AsyncScheduler:
         return task
 
     async def run(self) -> None:
-        """Execute the events scheduled."""
+        """Execute the scheduled events."""
         q = self._queue
         while True:
             async with self._lock:

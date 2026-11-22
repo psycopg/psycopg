@@ -406,7 +406,7 @@ class ConnectionTimeout(OperationalError):
     Exception raised on timeout of the `~psycopg.Connection.connect()` method.
 
     The error is raised if the ``connect_timeout`` is specified and a
-    connection is not obtained in useful time.
+    connection is not obtained in time.
 
     Subclass of `~psycopg.OperationalError`.
     """

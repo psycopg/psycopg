@@ -200,7 +200,7 @@ async def wait_async(
         timeout.
     :return: whatever `!gen` returns on completion.
 
-    Behave like in `wait()`, but exposing an `asyncio` interface.
+    Behave like in `wait()`, but expose an `asyncio` interface.
     """
     if interval is None:
         raise ValueError("indefinite wait not supported anymore")

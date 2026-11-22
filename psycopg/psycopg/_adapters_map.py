@@ -123,8 +123,8 @@ class AdaptersMap:
         :param cls: The type to manage.
         :param dumper: The dumper to register for `!cls`.
 
-        If `!cls` is specified as string it will be lazy-loaded, so that it
-        will be possible to register it without importing it before. In this
+        If `!cls` is specified as a string it will be lazy-loaded, so that it
+        will be possible to register it without importing it first. In this
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).
 

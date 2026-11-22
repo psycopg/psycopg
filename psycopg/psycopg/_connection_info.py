@@ -160,7 +160,7 @@ class ConnectionInfo:
         Return a value in the format described in :pq:`PQfullProtocolVersion()`.
 
         Only meaningful if the libpq used is version 18 or greater. If the
-        version is lesser than that, return the value reported by
+        version is lower than that, return the value reported by
         :pq:`PQprotocolVersion()` (but in the same format as above, e.g. 30000
         for version 3). You can use `Capabilities.has_full_protocol_version()`
         to verify if the value can be considered reliable.

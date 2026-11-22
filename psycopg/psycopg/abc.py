@@ -46,7 +46,7 @@ RV = TypeVar("RV")
 PQGenConn: TypeAlias = Generator[tuple[int, "Wait"], "Ready | int", RV]
 """Generator for processes where the connection file number can change.
 
-This can happen in connection and reset, but not in normal querying.
+This can happen during connection and reset, but not in normal querying.
 """
 
 PQGen: TypeAlias = Generator["Wait", "Ready | int", RV]

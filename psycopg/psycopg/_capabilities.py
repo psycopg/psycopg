@@ -93,7 +93,7 @@ class Capabilities:
         """
         Check if a version is supported.
 
-        If `check` is true, raise an exception with an explicative message
+        If `check` is true, raise an exception with an explanatory message
         explaining why the feature is not supported.
 
         The expletive messages are left to the user.

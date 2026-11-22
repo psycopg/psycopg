@@ -185,7 +185,7 @@ class RecordBinaryLoader(Loader):
     Load a `record` field from PostgreSQL.
 
     Unlike in text mode, the composite data contains oids of the fields,
-    so we can actually parse the records in its original types.
+    so we can actually parse the records into their original types.
     """
 
     format = pq.Format.BINARY
@@ -253,7 +253,7 @@ class _CompositeLoader(Loader, Generic[T], ABC):
 
 class _CompositeBinaryLoader(Loader, Generic[T], ABC):
     """
-    Base class to create text loaders of specific composite types.
+    Base class to create binary loaders of specific composite types.
 
     The class is complete but lacks information about the field types, names,
     and object factory. These will be added by register_composite(), which will

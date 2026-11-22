@@ -50,7 +50,7 @@ cdef class CDumper:
 
         Implementation note: as you will always need to make sure that rv
         has enough space to include what you want to dump, `ensure_size()`
-        might probably come handy.
+        will probably come in handy.
         """
         raise NotImplementedError()
 

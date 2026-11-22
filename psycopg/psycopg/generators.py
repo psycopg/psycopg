@@ -3,8 +3,8 @@ Generators implementing communication protocols with the libpq
 
 Certain operations (connection, querying) are an interleave of libpq calls and
 waiting for the socket to be ready. This module contains the code to execute
-the operations, yielding a polling state whenever there is to wait. The
-functions in the `waiting` module are the ones who wait more or less
+the operations, yielding a polling state whenever there is a need to wait. The
+functions in the `waiting` module are the ones that wait more or less
 cooperatively for the socket to be ready and make these generators continue.
 
 These generators yield `Wait` objects whenever an operation would block. These
@@ -140,8 +140,7 @@ def _send(pgconn: PGconn) -> PQGen[None]:
     Generator to send a query to the server without blocking.
 
     The query must have already been sent using `pgconn.send_query()` or
-    similar. Flush the query and then return the result using nonblocking
-    functions.
+    similar. Flush the query using nonblocking functions.
 
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.

@@ -62,7 +62,7 @@ class Composable(ABC):
         """
         Return the value of the object as bytes.
 
-        :param context: the context to evaluate the object into.
+        :param context: the context in which to evaluate the object.
 
         The method is automatically invoked by `~psycopg.Cursor.execute()`,
         `~psycopg.Cursor.executemany()`, `~psycopg.Cursor.copy()` if a
@@ -75,7 +75,7 @@ class Composable(ABC):
         """
         Return the value of the object as a string.
 
-        :param context: the context to evaluate the string into.
+        :param context: the context in which to evaluate the string.
 
         """
         enc = conn_encoding(context.connection if context else None)
@@ -177,7 +177,7 @@ class SQL(Composable):
     A `Composable` representing a snippet of SQL statement.
 
     `!SQL` exposes `join()` and `format()` methods useful to create a template
-    where to merge variable parts of a query (for instance field or table
+    in which to merge variable parts of a query (for instance field or table
     names).
 
     The `!obj` string doesn't undergo any form of escaping, so it is not

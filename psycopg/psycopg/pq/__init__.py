@@ -1,7 +1,7 @@
 """
 psycopg libpq wrapper
 
-This package exposes the libpq functionalities as Python objects and functions.
+This package exposes the libpq functionality as Python objects and functions.
 
 The real implementation (the binding to the C library) is
 implementation-dependent, but all the implementations share the same interface.
@@ -51,7 +51,7 @@ def import_from_libpq() -> None:
     """
     Import the pq objects implementation from the best libpq wrapper available.
 
-    If an implementation is requested try to import only it, otherwise
+    If an implementation is requested, try to import only that one, otherwise
     try to import the best implementation available.
     """
     # import these names into the module on success as side effect

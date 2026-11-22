@@ -1,5 +1,5 @@
 """
-Various functionalities to make easier to work with the libpq.
+Various functionality to make it easier to work with the libpq.
 """
 
 # Copyright (C) 2020 The Psycopg Team

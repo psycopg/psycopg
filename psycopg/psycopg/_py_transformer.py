@@ -4,7 +4,7 @@ Helper object to transform values between Python and PostgreSQL
 Python implementation of the object. Use the `_transformer` module to import
 the right implementation (Python or C). The public place where the object
 is exported is `psycopg.adapt` (which we may not use to avoid circular
-dependencies problems).
+dependency problems).
 """
 
 # Copyright (C) 2020 The Psycopg Team

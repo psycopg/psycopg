@@ -380,11 +380,11 @@ def register_multirange(
 ) -> None:
     """Register the adapters to load and dump a multirange type.
 
-    :param info: The object with the information about the range to register.
+    :param info: The object with the information about the multirange to register.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
 
-    Register loaders so that loading data of this type will result in a `Range`
+    Register loaders so that loading data of this type will result in a `Multirange`
     with bounds parsed as the right subtype.
 
     .. note::

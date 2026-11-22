@@ -59,7 +59,7 @@ class PrepareManager:
         self, query: PostgresQuery, prepare: bool | None = None
     ) -> tuple[Prepare, bytes]:
         """
-        Check if a query is prepared, tell back whether to prepare it.
+        Check if a query is prepared, and return whether to prepare it.
         """
         if prepare is False or self.prepare_threshold is None:
             # The user doesn't want this query to be prepared

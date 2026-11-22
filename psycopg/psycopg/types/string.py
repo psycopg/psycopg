@@ -94,8 +94,8 @@ class StrDumperUnknown(_StrDumper):
     """
     Dumper for strings in text format to the unknown oid.
 
-    This dumper is the default dumper for strings and allows to use Python
-    strings to represent almost every data type. In a few places, however, the
+    This dumper is the default dumper for strings and allows Python strings to
+    be used to represent almost every data type. In a few places, however, the
     unknown oid is not accepted (for instance in variadic functions such as
     'concat()'). In that case either a cast on the placeholder ('%s::text') or
     the StrTextDumper should be used.

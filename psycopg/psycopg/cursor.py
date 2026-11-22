@@ -216,7 +216,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :arg index: index of the result to go to
 
-        More than one result will be available after executing calling
+        More than one result will be available after calling
         `executemany()` or `execute()` with more than one query.
 
         `!index` is 0-based and supports negative values, counting from the end,
@@ -302,7 +302,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         the current position in the result set; if set to ``'absolute'``,
         `!value` states an absolute target position.
 
-        Raise `!IndexError` in case a scroll operation would leave the result
+        Raise `!IndexError` if a scroll operation would leave the result
         set. In this case the position will not change.
         """
         self._fetch_pipeline()

@@ -27,7 +27,7 @@ async def conninfo_attempts_async(params: ConnMapping) -> list[ConnDict]:
     is provided.
 
     Also perform async resolution of the hostname into hostaddr. Because a host
-    can resolve to more than one address, this can lead to yield more attempts
+    can resolve to more than one address, this can yield more attempts
     too. Raise `OperationalError` if no host could be resolved.
 
     Because the libpq async function doesn't honour the timeout, we need to
@@ -69,7 +69,7 @@ async def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
     """
     Perform async DNS lookup of the hosts and return a list of connection attempts.
 
-    If a ``host`` param is present but not ``hostname``, resolve the host
+    If a ``host`` param is present but not ``hostaddr``, resolve the host
     addresses asynchronously.
 
     :param params: The input parameters, for instance as returned by

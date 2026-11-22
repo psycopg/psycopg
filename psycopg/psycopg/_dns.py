@@ -130,7 +130,7 @@ class Rfc2782Resolver:
 
     def _get_attempts(self, params: dict[str, Any]) -> list[HostPort]:
         """
-        Return the list of host, and for each host if SRV lookup must be tried.
+        Return the list of hosts, and for each host whether SRV lookup must be tried.
 
         Return an empty list if no lookup is requested.
         """

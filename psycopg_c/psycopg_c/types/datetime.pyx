@@ -1079,7 +1079,7 @@ cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     Parse a timezone from a string, return a Python timezone object.
 
     Modify the buffer pointer to point at the first character after the
-    timezone parsed. In case of parse error make it NULL.
+    timezone parsed. If parsing fails, set it to NULL.
     """
     cdef const char *ptr = bufptr[0]
     cdef char sgn = ptr[0]

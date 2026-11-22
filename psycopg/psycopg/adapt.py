@@ -100,8 +100,8 @@ class Dumper(abc.Dumper, ABC):
 
         This implementation returns the `!cls` passed in the constructor.
         Subclasses needing to specialise the PostgreSQL type according to the
-        *value* of the object dumped (not only according to to its type)
-        should override this class.
+        *value* of the object dumped (not only according to its type)
+        should override this method.
 
         """
         return self.cls

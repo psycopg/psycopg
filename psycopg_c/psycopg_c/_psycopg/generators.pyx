@@ -122,8 +122,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     Generator to send a query to the server without blocking.
 
     The query must have already been sent using `pgconn.send_query()` or
-    similar. Flush the query and then return the result using nonblocking
-    functions.
+    similar. Flush the query using nonblocking functions.
 
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
