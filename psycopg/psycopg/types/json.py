@@ -18,6 +18,7 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import AdaptersMap, Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError
+from .._encodings import conn_encoding
 
 JsonDumpsFunction: TypeAlias = Callable[[Any], str | bytes]
 JsonLoadsFunction: TypeAlias = Callable[[str | bytes], Any]
@@ -206,6 +207,8 @@ class _JsonDumper(Dumper):
     def __init__(self, cls: type, context: abc.AdaptContext | None = None):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
+        enc = conn_encoding(self.connection)
+        self._encoding = "" if enc in ("utf-8", "ascii") else enc
 
     def dump(self, obj: Any) -> Buffer | None:
         if isinstance(obj, _JsonWrapper):
@@ -213,8 +216,13 @@ class _JsonDumper(Dumper):
             obj = obj.obj
         else:
             dumps = self.dumps
-        if isinstance((data := dumps(obj)), str):
-            return data.encode()
+        data = dumps(obj)
+        if isinstance(data, str):
+            return data.encode(self._encoding or "utf-8")
+        if self._encoding:
+            # The dumps function returned bytes, which are expected to be
+            # utf8: recode them to the connection encoding (#1504).
+            return str(data, "utf-8").encode(self._encoding)
         return data
 
 
@@ -250,12 +258,22 @@ class _JsonLoader(Loader):
     def __init__(self, oid: int, context: abc.AdaptContext | None = None):
         super().__init__(oid, context)
         self.loads = self.__class__._loads
+        enc = conn_encoding(self.connection)
+        self._encoding = "" if enc in ("utf-8", "ascii") else enc
 
     def load(self, data: Buffer) -> Any:
+        return self.loads(self._maybe_decode(data))
+
+    def _maybe_decode(self, data: Buffer) -> str | bytes:
+        # json.loads() can auto-detect the UTF encodings from the input
+        # bytes; for other connection encodings the data must be decoded
+        # explicitly (#1504).
+        if self._encoding:
+            return str(data, self._encoding)
         # json.loads() cannot work on memoryview.
         if not isinstance(data, bytes):
             data = bytes(data)
-        return self.loads(data)
+        return data
 
 
 class JsonLoader(_JsonLoader):
@@ -276,9 +294,7 @@ class JsonbBinaryLoader(_JsonLoader):
     def load(self, data: Buffer) -> Any:
         if data and data[0] != 1:
             raise DataError(f"unknown jsonb binary format: {data[0]}")
-        if not isinstance((data := data[1:]), bytes):
-            data = bytes(data)
-        return self.loads(data)
+        return self.loads(self._maybe_decode(data[1:]))
 
 
 def _get_current_dumper(
