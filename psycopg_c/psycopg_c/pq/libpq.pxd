@@ -188,6 +188,7 @@ cdef extern from "libpq-fe.h":
     # 33.3.2. Retrieving Query Result Information
     int PQntuples(const PGresult *res) noexcept nogil
     int PQnfields(const PGresult *res) noexcept nogil
+    size_t PQresultMemorySize(const PGresult *res) noexcept nogil
     char *PQfname(const PGresult *res, int column_number) noexcept nogil
     int PQfnumber(const PGresult *res, const char *column_name) noexcept nogil
     Oid PQftable(const PGresult *res, int column_number) noexcept nogil
@@ -344,6 +345,7 @@ cdef extern from *:
 
 #if PG_VERSION_NUM < 120000
 #define PQhostaddr(conn) NULL
+#define PQresultMemorySize(res) 0
 #endif
 
 #if PG_VERSION_NUM < 140000

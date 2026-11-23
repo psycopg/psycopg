@@ -68,6 +68,11 @@ cdef class PGresult:
     def nfields(self) -> int:
         return libpq.PQnfields(self._pgresult_ptr)
 
+    @property
+    def memory_size(self) -> int:
+        _check_supported("PQresultMemorySize", 120000)
+        return libpq.PQresultMemorySize(self._pgresult_ptr)
+
     def fname(self, int column_number) -> bytes | None:
         cdef char *rv = libpq.PQfname(self._pgresult_ptr, column_number)
         if rv is not NULL:
