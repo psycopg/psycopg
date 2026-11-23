@@ -1371,3 +1371,36 @@ async def test_cancelled_worker_ends():
         for t in tasks:
             t.cancel()
         await gather(*tasks, return_exceptions=True, timeout=5)
+
+
+@skip_sync
+@pytest.mark.parametrize("growing", [False, True])
+async def test_cancelled_connection_releases_slot(monkeypatch, growing):
+    import asyncio
+
+    started = AEvent()
+
+    async def connect():
+        started.set()
+        await AEvent().wait()
+
+    p = pool.AsyncConnectionPool(min_size=0, max_size=1, open=False)
+    await p.open()
+    try:
+        monkeypatch.setattr(p, "_connect", connect)
+        p._nconns = 1
+        p._growing = growing
+        task = spawn(p._add_connection, (None, growing))
+        try:
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert p._nconns == 0
+            assert not p._growing
+            assert not p.closed
+        finally:
+            task.cancel()
+            await gather(task, return_exceptions=True)
+    finally:
+        await p.close()
