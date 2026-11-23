@@ -15,11 +15,12 @@ from __future__ import annotations
 import sys
 import logging
 from os import getpid
-from ctypes import POINTER, Array, addressof, byref, c_char_p, c_int, c_size_t, c_ulong
-from ctypes import c_void_p, cast, create_string_buffer, py_object, string_at
+from ctypes import Array, addressof, byref, c_char_p, c_int, c_size_t, c_ulong
+from ctypes import c_void_p, create_string_buffer, string_at
 from typing import TYPE_CHECKING, Any
 from typing import cast as t_cast
-from weakref import ref
+from weakref import WeakValueDictionary
+from itertools import count
 from collections.abc import Callable, Sequence
 
 from . import _pq_ctypes as impl
@@ -53,13 +54,17 @@ def version() -> int:
     return impl.PQlibVersion()
 
 
-@impl.PQnoticeReceiver  # type: ignore
-def notice_receiver(arg: c_void_p, result_ptr: impl.PGresult_struct) -> None:
-    pgconn = cast(arg, POINTER(py_object)).contents.value
-    if callable(pgconn):  # Not a weak reference on PyPy.
-        pgconn = pgconn()
+# The notice receiver argument is not a pointer to the PGconn but a key in this
+# map. libpq copies the receiver into the PGresult it creates, and they can
+# outlive the PGconn: a pointer to the PGconn would dangle and crash on
+# internal notices (e.g. when a PGresult function receives an invalid index).
+_notice_receivers: WeakValueDictionary[int, PGconn] = WeakValueDictionary()
+_notice_ids = count(1)
 
-    if not (pgconn and pgconn.notice_handler):
+
+@impl.PQnoticeReceiver  # type: ignore
+def notice_receiver(arg: int | None, result_ptr: impl.PGresult_struct) -> None:
+    if not (pgconn := _notice_receivers.get(arg or 0)) or not pgconn.notice_handler:
         return
 
     res = PGresult(result_ptr)
@@ -80,7 +85,6 @@ class PGconn:
         "_pgconn_ptr",
         "notice_handler",
         "notify_handler",
-        "_self_ptr",
         "_procpid",
         "__weakref__",
     )
@@ -90,9 +94,8 @@ class PGconn:
         self.notice_handler: Callable[[abc.PGresult], None] | None = None
         self.notify_handler: Callable[[PGnotify], None] | None = None
 
-        # Keep alive for the lifetime of PGconn
-        self._self_ptr = py_object(ref(self))
-        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, byref(self._self_ptr))
+        _notice_receivers[key := next(_notice_ids)] = self
+        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, c_void_p(key))
 
         self._procpid = getpid()
 

@@ -27,6 +27,8 @@ from cpython.sequence cimport PySequence_Fast_GET_SIZE
 from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
+from weakref import WeakValueDictionary
+from itertools import count
 
 from psycopg.pq import Format as PqFormat
 from psycopg.pq import Trace, version_pretty
@@ -51,8 +53,10 @@ cdef class PGconn:
         cdef PGconn rv = PGconn.__new__(PGconn)
         rv._pgconn_ptr = ptr
 
+        cdef Py_ssize_t key = next(_notice_ids)
+        _notice_receivers[key] = rv
         libpq.PQsetNoticeReceiver(
-            ptr, <libpq.PQnoticeReceiver>notice_receiver, <void *>rv)
+            ptr, <libpq.PQnoticeReceiver>notice_receiver, <void *>key)
         return rv
 
     def __cinit__(self):
@@ -907,9 +911,17 @@ cdef bytes _call_libpq_bytes(PGconn self, conn_bytes_f func):
     return b""
 
 
+# The notice receiver argument is not a pointer to the PGconn but a key in this
+# map. libpq copies the receiver into the PGresult it creates, and they can
+# outlive the PGconn: a pointer to the PGconn would dangle and crash on
+# internal notices (e.g. when a PGresult function receives an invalid index).
+cdef object _notice_receivers = WeakValueDictionary()
+cdef object _notice_ids = count(1)
+
+
 cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) noexcept with gil:
-    cdef PGconn pgconn = <object>arg
-    if pgconn.notice_handler is None:
+    cdef PGconn pgconn = _notice_receivers.get(<Py_ssize_t>arg)
+    if pgconn is None or pgconn.notice_handler is None:
         return
 
     cdef PGresult res = PGresult._from_ptr(<libpq.PGresult *>res_ptr)

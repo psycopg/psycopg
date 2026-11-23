@@ -19,6 +19,8 @@ Psycopg 3.3.10 (unreleased)
   (:ticket:`#1498`).
 - Fix `!json` and `!jsonb` loading and dumping when the connection encoding
   is not UTF-8 (:ticket:`#1504`).
+- Fix possible segfault calling `pq.PGresult` methods with invalid arguments
+  after the connection that created the result was closed (:ticket:`#1511`).
 
 
 Current release
