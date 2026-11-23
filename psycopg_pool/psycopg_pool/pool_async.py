@@ -766,8 +766,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         except CLIENT_EXCEPTIONS as ex:
             if True:  # ASYNC
                 if isinstance(ex, asyncio.CancelledError):
-                    # Let a cancelled worker task end instead of swallowing
-                    # the exception and scheduling a new attempt (#1502).
+                    # Release the reserved slot before the worker ends,
+                    # allowing the pool to grow again if it is still open.
+                    async with self._lock:
+                        self._nconns -= 1
+                        if growing:
+                            self._growing = False
                     raise
             logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
