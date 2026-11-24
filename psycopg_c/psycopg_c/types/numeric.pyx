@@ -822,7 +822,10 @@ cdef Py_ssize_t dump_int_or_sub_to_text(
 cdef Py_ssize_t dump_int_to_int2_binary(
     obj, bytearray rv, Py_ssize_t offset
 ) except -1:
-    cdef int16_t val = <int16_t>PyLong_AsLongLong(obj)
+    cdef long long lval = PyLong_AsLongLong(obj)
+    if not INT16_MIN <= lval <= INT16_MAX:
+        raise e.DataError(f"int out of range for int2: {obj}")
+    cdef int16_t val = <int16_t>lval
     cdef int16_t *buf = <int16_t *>CDumper.ensure_size(rv, offset, sizeof(val))
     cdef uint16_t beval = endian.htobe16(val)  # swap bytes if needed
     memcpy(buf, &beval, sizeof(beval))
@@ -832,7 +835,10 @@ cdef Py_ssize_t dump_int_to_int2_binary(
 cdef Py_ssize_t dump_int_to_int4_binary(
     obj, bytearray rv, Py_ssize_t offset
 ) except -1:
-    cdef int32_t val = <int32_t>PyLong_AsLongLong(obj)
+    cdef long long lval = PyLong_AsLongLong(obj)
+    if not INT32_MIN <= lval <= INT32_MAX:
+        raise e.DataError(f"int out of range for int4: {obj}")
+    cdef int32_t val = <int32_t>lval
     cdef int32_t *buf = <int32_t *>CDumper.ensure_size(rv, offset, sizeof(val))
     cdef uint32_t beval = endian.htobe32(val)  # swap bytes if needed
     memcpy(buf, &beval, sizeof(beval))
