@@ -195,6 +195,16 @@ def test_bad_binary_array(input):
         tx.get_dumper(input, PyFormat.BINARY).dump(input)
 
 
+@pytest.mark.parametrize("input", [[[], [[]]], [[[]], []], [[], None]])
+def test_bad_binary_array_empty(input):
+    # Use a dumper with a known oid: with no element to look at, the default
+    # binary dumper would give up and dump as text.
+    tx = Transformer()
+    tx.set_dumper_types([builtins["text"].array_oid], pq.Format.BINARY)
+    with pytest.raises(psycopg.DataError):
+        tx.dump_sequence([input], [PyFormat.BINARY])
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_list_subclass(fmt_in):
     # See #1398: a list subclass (e.g. traits.api.List's TraitListObject)
