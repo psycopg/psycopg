@@ -625,6 +625,24 @@ def test_notice_error(pgconn, caplog):
     assert "hello error" in rec.message
 
 
+def test_notice_result_outlives_conn(dsn, gc_collect):
+    msgs = []
+    pgconn = pq.PGconn.connect(dsn.encode())
+    pgconn.notice_handler = lambda res: msgs.append(res.error_message)
+    res = pgconn.exec_(b"select 1")
+
+    # Out of range: libpq emits an internal notice via the result
+    assert res.fname(10) is None
+    assert len(msgs) == 1 and b"out of range" in msgs[0]
+
+    # Used to crash, as the result refers to the notice receiver of the conn
+    pgconn.finish()
+    del pgconn
+    gc_collect()
+    assert res.fname(10) is None
+    assert len(msgs) == 1
+
+
 @pytest.mark.libpq("< 14")
 @pytest.mark.skipif("sys.platform != 'linux'")
 def test_trace_pre14(pgconn, tmp_path):
