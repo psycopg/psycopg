@@ -101,7 +101,10 @@ class Float4BinaryDumper(FloatBinaryDumper):
     oid = _oids.FLOAT4_OID
 
     def dump(self, obj: float) -> Buffer | None:
-        return pack_float4(obj)
+        try:
+            return pack_float4(obj)
+        except OverflowError:
+            raise e.DataError(f"float out of range for float4: {obj}") from None
 
 
 class DecimalDumper(_SpecialValuesDumper):
@@ -188,7 +191,10 @@ class Int8BinaryDumper(Int8Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> Buffer | None:
-        return pack_int8(obj)
+        try:
+            return pack_int8(obj)
+        except struct.error:
+            raise e.DataError(f"int out of range for int8: {obj}") from None
 
 
 # Ratio between number of bits required to store a number and number of pg
@@ -207,7 +213,10 @@ class OidBinaryDumper(OidDumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> Buffer | None:
-        return pack_uint4(obj)
+        try:
+            return pack_uint4(obj)
+        except struct.error:
+            raise e.DataError(f"int out of range for oid: {obj}") from None
 
 
 class IntBinaryDumper(IntDumper):

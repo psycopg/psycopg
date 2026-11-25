@@ -11,8 +11,8 @@ import psycopg
 from psycopg import pq, sql
 from psycopg.abc import Buffer
 from psycopg.adapt import PyFormat, Transformer
-from psycopg.types.numeric import FloatLoader, Int2, Int4, Int8, Int8BinaryDumper
-from psycopg.types.numeric import Int8Dumper
+from psycopg.types.numeric import Float4, FloatLoader, Int2, Int4, Int8
+from psycopg.types.numeric import Int8BinaryDumper, Int8Dumper, Oid
 
 from ..fix_crdb import is_crdb, skip_crdb
 
@@ -95,14 +95,9 @@ def test_dump_int_numeric_binary_limits():
 
 @pytest.mark.parametrize(
     "wrapper, val",
-    [
-        (Int2, 2**15),
-        (Int2, -(2**15) - 1),
-        (Int2, 2**31),
-        (Int4, 2**31),
-        (Int4, -(2**31) - 1),
-        (Int4, 2**32 + 5),
-    ],
+    [(Int2, 2**15), (Int2, -(2**15) - 1), (Int2, 2**31), (Int4, 2**31)]
+    + [(Int4, -(2**31) - 1), (Int4, 2**32 + 5), (Int8, 2**63), (Int8, -(2**63) - 1)]
+    + [(Oid, 2**32), (Oid, -1)],
 )
 def test_dump_int_binary_out_of_range(wrapper, val):
     name = wrapper.__name__.lower()
@@ -112,12 +107,35 @@ def test_dump_int_binary_out_of_range(wrapper, val):
 
 @pytest.mark.parametrize(
     "wrapper, val",
-    [(Int2, 2**15 - 1), (Int2, -(2**15)), (Int4, 2**31 - 1), (Int4, -(2**31))],
+    [(Int2, 2**15 - 1), (Int2, -(2**15)), (Int4, 2**31 - 1), (Int4, -(2**31))]
+    + [(Int8, 2**63 - 1), (Int8, -(2**63)), (Oid, 0), (Oid, 2**32 - 1)],
 )
 def test_dump_int_binary_range_limits(wrapper, val):
     data = Transformer().dump_sequence([wrapper(val)], [PyFormat.BINARY])[0]
     assert data is not None
-    assert int.from_bytes(data, "big", signed=True) == val
+    assert int.from_bytes(data, "big", signed=wrapper is not Oid) == val
+
+
+@pytest.mark.parametrize("val", [1e300, -1e300, 3.5e38, -3.5e38])
+def test_dump_float4_binary_out_of_range(val):
+    with pytest.raises(psycopg.DataError, match="out of range for float4"):
+        Transformer().dump_sequence([Float4(val)], [PyFormat.BINARY])
+
+
+@pytest.mark.parametrize(
+    "val, want",
+    [
+        (3.4028234663852886e38, "7f7fffff"),
+        (-3.4028234663852886e38, "ff7fffff"),
+        (1e-300, "00000000"),
+        (float("inf"), "7f800000"),
+        (float("-inf"), "ff800000"),
+    ],
+)
+def test_dump_float4_binary_range_limits(val, want):
+    data = Transformer().dump_sequence([Float4(val)], [PyFormat.BINARY])[0]
+    assert data is not None
+    assert bytes(data).hex() == want
 
 
 def test_dump_decimal_numeric_binary_limits():

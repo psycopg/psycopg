@@ -5,6 +5,7 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 cimport cython
+from libc.math cimport isinf
 from cpython.mem cimport PyMem_Free
 from libc.stdint cimport *
 from libc.string cimport memcpy, memset, strlen
@@ -411,7 +412,10 @@ cdef class Float4BinaryDumper(CDumper):
     oid = oids.FLOAT4_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef float f = <float>PyFloat_AsDouble(obj)
+        cdef double d = PyFloat_AsDouble(obj)
+        cdef float f = <float>d
+        if isinf(f) and not isinf(d):
+            raise e.DataError(f"float out of range for float4: {obj}")
         cdef uint32_t ival
         memcpy(&ival, &f, sizeof(ival))
         cdef uint32_t beval = endian.htobe32(ival)
@@ -860,7 +864,10 @@ cdef Py_ssize_t dump_int_to_int4_binary(
 cdef Py_ssize_t dump_int_to_int8_binary(
     obj, bytearray rv, Py_ssize_t offset
 ) except -1:
-    cdef int64_t val = PyLong_AsLongLong(obj)
+    cdef int overflow
+    cdef int64_t val = PyLong_AsLongLongAndOverflow(obj, &overflow)
+    if overflow:
+        raise e.DataError(f"int out of range for int8: {obj}")
     cdef int64_t *buf = <int64_t *>CDumper.ensure_size(rv, offset, sizeof(val))
     cdef uint64_t beval = endian.htobe64(val)  # swap bytes if needed
     memcpy(buf, &beval, sizeof(beval))

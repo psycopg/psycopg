@@ -15,7 +15,8 @@ Psycopg 3.3.10 (unreleased)
 
 - Fix dumping nested empty lists in binary :sql:`COPY` after
   `~Copy.set_types()`, or wherever the array type is known (:ticket:`#1349`).
-- Raise `!DataError` dumping out-of-range ints to binary int2 or int4
+- Raise `!DataError` dumping out-of-range numbers to binary int2, int4, int8,
+  oid, float4. Previously the C implementation could send a wrong value
   (:ticket:`#1498`).
 - Fix `!json` and `!jsonb` loading and dumping when the connection encoding
   is not UTF-8 (:ticket:`#1504`).
