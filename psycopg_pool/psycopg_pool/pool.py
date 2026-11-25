@@ -29,7 +29,7 @@ from .base import AttemptWithBackoff, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import PSYCOPG_VERSION, PoolConnection, Self
-from ._acompat import Condition, Event, Lock, Queue, Worker, current_thread_name
+from ._acompat import Condition, Event, Lock, Queue, Stats, Worker, current_thread_name
 from ._acompat import gather, sleep, spawn
 
 CLIENT_EXCEPTIONS = Exception
@@ -85,6 +85,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._tasks: Queue[MaintenanceTask]
 
         self._waiting = deque[WaitingClient[CT]]()
+        self._stats = Stats()
 
         # to notify that the pool is full
         self._pool_full_event: Event | None = None
@@ -189,7 +190,7 @@ class ConnectionPool(Generic[CT], BasePool):
         finally:
             self.putconn(conn)
             t1 = monotonic()
-            self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
+            self._stats.incr(self._USAGE_MS, int(1000.0 * (t1 - t0)))
 
     def getconn(self, timeout: float | None = None) -> CT:
         """Obtain a connection from the pool.
@@ -206,7 +207,7 @@ class ConnectionPool(Generic[CT], BasePool):
         deadline = monotonic() + timeout
 
         logger.info("connection requested from %r", self.name)
-        self._stats[self._REQUESTS_NUM] += 1
+        self._stats.incr(self._REQUESTS_NUM)
 
         self._check_open_getconn()
 
@@ -259,7 +260,7 @@ class ConnectionPool(Generic[CT], BasePool):
                 t0 = monotonic()
                 pos: WaitingClient[CT] = WaitingClient()
                 self._waiting.append(pos)
-                self._stats[self._REQUESTS_QUEUED] += 1
+                self._stats.incr(self._REQUESTS_QUEUED)
 
                 # If there is space for the pool to grow, let's do it
                 self._maybe_grow_pool()
@@ -272,11 +273,11 @@ class ConnectionPool(Generic[CT], BasePool):
             except CLIENT_EXCEPTIONS:
                 if pos.conn:
                     self.run_task(ReturnConnection(self, pos.conn, from_getconn=True))
-                self._stats[self._REQUESTS_ERRORS] += 1
+                self._stats.incr(self._REQUESTS_ERRORS)
                 raise
             finally:
                 t1 = monotonic()
-                self._stats[self._REQUESTS_WAIT_MS] += int(1000.0 * (t1 - t0))
+                self._stats.incr(self._REQUESTS_WAIT_MS, int(1000.0 * (t1 - t0)))
 
         # Tell the connection it belongs to a pool to avoid closing on __exit__
         # Note that this property shouldn't be set while the connection is in
@@ -296,7 +297,7 @@ class ConnectionPool(Generic[CT], BasePool):
             if len(self._pool) < self._nconns_min:
                 self._nconns_min = len(self._pool)
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
-            self._stats[self._REQUESTS_ERRORS] += 1
+            self._stats.incr(self._REQUESTS_ERRORS)
             raise TooManyRequests(
                 f"the pool {self.name!r} has already {len(self._waiting)} requests waiting"
             )
@@ -546,7 +547,7 @@ class ConnectionPool(Generic[CT], BasePool):
             try:
                 self.check_connection(conn)
             except CLIENT_EXCEPTIONS:
-                self._stats[self._CONNECTIONS_LOST] += 1
+                self._stats.incr(self._CONNECTIONS_LOST)
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
@@ -615,7 +616,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def _connect(self, timeout: float | None = None) -> CT:
         """Return a new connection configured for the pool."""
-        self._stats[self._CONNECTIONS_NUM] += 1
+        self._stats.incr(self._CONNECTIONS_NUM)
         conninfo = self._resolve_conninfo()
         kwargs = self._resolve_kwargs()
         if timeout:
@@ -625,11 +626,11 @@ class ConnectionPool(Generic[CT], BasePool):
         try:
             conn = self.connection_class.connect(conninfo, **kwargs)
         except CLIENT_EXCEPTIONS:
-            self._stats[self._CONNECTIONS_ERRORS] += 1
+            self._stats.incr(self._CONNECTIONS_ERRORS)
             raise
         else:
             t1 = monotonic()
-            self._stats[self._CONNECTIONS_MS] += int(1000.0 * (t1 - t0))
+            self._stats.incr(self._CONNECTIONS_MS, int(1000.0 * (t1 - t0)))
 
         conn._pool = self
 
@@ -721,13 +722,13 @@ class ConnectionPool(Generic[CT], BasePool):
         self._reset_connection(conn)
         if from_getconn:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                self._stats[self._CONNECTIONS_LOST] += 1
+                self._stats.incr(self._CONNECTIONS_LOST)
                 # Connection no more in working state: create a new one.
                 logger.info("not serving connection found broken")
                 self.run_task(AddConnection(self))
                 return
         elif conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-            self._stats[self._RETURNS_BAD] += 1
+            self._stats.incr(self._RETURNS_BAD)
             # Connection no more in working state: create a new one.
             logger.warning("discarding closed connection: %s", conn)
             self.run_task(AddConnection(self))

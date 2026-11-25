@@ -26,8 +26,8 @@ from .abc import AsyncKwargsParam
 from .base import AttemptWithBackoff, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import PSYCOPG_VERSION, AsyncPoolConnection, Self
-from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, agather, asleep
-from ._acompat import aspawn, current_task_name, ensure_async
+from ._acompat import ACondition, AEvent, ALock, AQueue, AStats, AWorker, agather
+from ._acompat import asleep, aspawn, current_task_name, ensure_async
 from .sched_async import AsyncScheduler
 
 if True:  # ASYNC
@@ -94,6 +94,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._tasks: AQueue[MaintenanceTask]
 
         self._waiting = deque[WaitingClient[ACT]]()
+        self._stats = AStats()
 
         # to notify that the pool is full
         self._pool_full_event: AEvent | None = None
@@ -225,7 +226,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         finally:
             await self.putconn(conn)
             t1 = monotonic()
-            self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
+            self._stats.incr(self._USAGE_MS, int(1000.0 * (t1 - t0)))
 
     async def getconn(self, timeout: float | None = None) -> ACT:
         """Obtain a connection from the pool.
@@ -242,7 +243,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         deadline = monotonic() + timeout
 
         logger.info("connection requested from %r", self.name)
-        self._stats[self._REQUESTS_NUM] += 1
+        self._stats.incr(self._REQUESTS_NUM)
 
         self._check_open_getconn()
 
@@ -296,7 +297,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 t0 = monotonic()
                 pos: WaitingClient[ACT] = WaitingClient()
                 self._waiting.append(pos)
-                self._stats[self._REQUESTS_QUEUED] += 1
+                self._stats.incr(self._REQUESTS_QUEUED)
 
                 # If there is space for the pool to grow, let's do it
                 self._maybe_grow_pool()
@@ -309,11 +310,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             except CLIENT_EXCEPTIONS:
                 if pos.conn:
                     self.run_task(ReturnConnection(self, pos.conn, from_getconn=True))
-                self._stats[self._REQUESTS_ERRORS] += 1
+                self._stats.incr(self._REQUESTS_ERRORS)
                 raise
             finally:
                 t1 = monotonic()
-                self._stats[self._REQUESTS_WAIT_MS] += int(1000.0 * (t1 - t0))
+                self._stats.incr(self._REQUESTS_WAIT_MS, int(1000.0 * (t1 - t0)))
 
         # Tell the connection it belongs to a pool to avoid closing on __exit__
         # Note that this property shouldn't be set while the connection is in
@@ -333,7 +334,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             if len(self._pool) < self._nconns_min:
                 self._nconns_min = len(self._pool)
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
-            self._stats[self._REQUESTS_ERRORS] += 1
+            self._stats.incr(self._REQUESTS_ERRORS)
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
                 f" {len(self._waiting)} requests waiting"
@@ -611,7 +612,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             try:
                 await self.check_connection(conn)
             except CLIENT_EXCEPTIONS:
-                self._stats[self._CONNECTIONS_LOST] += 1
+                self._stats.incr(self._CONNECTIONS_LOST)
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
@@ -692,7 +693,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     async def _connect(self, timeout: float | None = None) -> ACT:
         """Return a new connection configured for the pool."""
-        self._stats[self._CONNECTIONS_NUM] += 1
+        self._stats.incr(self._CONNECTIONS_NUM)
         conninfo = await self._resolve_conninfo()
         kwargs = await self._resolve_kwargs()
         if timeout:
@@ -702,11 +703,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         try:
             conn = await self.connection_class.connect(conninfo, **kwargs)
         except CLIENT_EXCEPTIONS:
-            self._stats[self._CONNECTIONS_ERRORS] += 1
+            self._stats.incr(self._CONNECTIONS_ERRORS)
             raise
         else:
             t1 = monotonic()
-            self._stats[self._CONNECTIONS_MS] += int(1000.0 * (t1 - t0))
+            self._stats.incr(self._CONNECTIONS_MS, int(1000.0 * (t1 - t0)))
 
         conn._pool = self
 
@@ -799,7 +800,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         await self._reset_connection(conn)
         if from_getconn:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                self._stats[self._CONNECTIONS_LOST] += 1
+                self._stats.incr(self._CONNECTIONS_LOST)
                 # Connection no more in working state: create a new one.
                 logger.info("not serving connection found broken")
                 self.run_task(AddConnection(self))
@@ -807,7 +808,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         else:
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                self._stats[self._RETURNS_BAD] += 1
+                self._stats.incr(self._RETURNS_BAD)
                 # Connection no more in working state: create a new one.
                 logger.warning("discarding closed connection: %s", conn)
                 self.run_task(AddConnection(self))

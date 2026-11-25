@@ -18,6 +18,8 @@ psycopg_pool 3.3.4 (unreleased)
 - Fix the count of connections in `NullConnectionPool` becoming negative
   after a failed `~NullConnectionPool.wait()`.
 - Don't grow the pool when calling `~ConnectionPool.check()` (:ticket:`#1434`).
+- Fix pool stats losing updates in multithreaded programs, especially on
+  free-threaded Python (:ticket:`#1512`).
 
 
 Current release
