@@ -376,80 +376,71 @@ _re_placeholder = re.compile(rb"""(?x)
 def _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ) -> list[QueryPart]:
-    parts: list[tuple[bytes, re.Match[bytes] | None]] = []
+    ph_byte_to_fmt = _ph_byte_to_fmt  # micro-optimize global lookup
+    parts: list[QueryPart] = []
     cur = 0
+    pending_pre = b""
+    seen_named = seen_positional = False
+    double_percent_replacement = b"%" if collapse_double_percent else b"%%"
 
-    # pairs [(fragment, match], with the last match None
-    m = None
     for m in _re_placeholder.finditer(query):
-        pre = query[cur : m.span(0)[0]]
-        parts.append((pre, m))
-        cur = m.span(0)[1]
-    if m:
-        parts.append((query[cur:], None))
-    else:
-        parts.append((query, None))
+        m_start, m_end = m.span()
+        pre = pending_pre + query[cur:m_start]
+        cur = m_end
+        ph = m.group(0)
 
-    rv = []
-
-    # drop the "%%", validate
-    i = 0
-    phtype = None
-    while i < len(parts):
-        pre, m = parts[i]
-        if m is None:
-            # last part
-            rv.append(QueryPart(pre, 0, PyFormat.AUTO))
-            break
-
-        if (ph := m.group(0)) == b"%%":
-            # unescape '%%' to '%' if necessary, then merge the parts
-            if collapse_double_percent:
-                ph = b"%"
-            pre1, m1 = parts[i + 1]
-            parts[i + 1] = (pre + ph + pre1, m1)
-            del parts[i]
+        if ph == b"%%":  # Accumulate into pending_pre for the next iteration
+            # unescape '%%' to '%' if necessary
+            pending_pre = pre + double_percent_replacement
             continue
 
-        if ph == b"%(":
-            raise e.ProgrammingError(
-                "incomplete placeholder:"
-                f" '{query[m.span(0)[0]:].split()[0].decode(encoding)}'"
-            )
-        elif ph == b"% ":
-            # explicit message for a typical error
-            raise e.ProgrammingError(
-                "incomplete placeholder: '%'; if you want to use '%' as an"
-                " operator you can double it up, i.e. use '%%'"
-            )
-        elif ph[-1:] not in b"sbt":
-            raise e.ProgrammingError(
-                "only '%s', '%b', '%t' are allowed as placeholders, got"
-                f" '{m.group(0).decode(encoding)}'"
-            )
+        pending_pre = b""
 
         # Index or name
         item: int | str
-        item = m.group(1).decode(encoding) if m.group(1) else i
+        if name := m.group(1):
+            seen_named = True
+            item = name.decode(encoding)
+        else:
+            seen_positional = True
+            item = len(parts)
 
-        if not phtype:
-            phtype = type(item)
-        elif phtype is not type(item):
+        try:
+            parts.append(QueryPart(pre, item, ph_byte_to_fmt[ph[-1]]))
+        except KeyError:  # Not a valid format character (ph_byte_to_fmt lookup fails)
+            if ph == b"%(":
+                raise e.ProgrammingError(
+                    "incomplete placeholder:"
+                    f" '{query[m_start:].split()[0].decode(encoding)}'"
+                )
+            elif ph == b"% ":
+                # explicit message for a typical error
+                raise e.ProgrammingError(
+                    "incomplete placeholder: '%'; if you want to use '%' as an"
+                    " operator you can double it up, i.e. use '%%'"
+                )
             raise e.ProgrammingError(
-                "positional and named placeholders cannot be mixed"
+                "only '%s', '%b', '%t' are allowed as placeholders, got"
+                f" '{ph.decode(encoding)}'"
             )
 
-        format = _ph_to_fmt[ph[-1:]]
-        rv.append(QueryPart(pre, item, format))
-        i += 1
+    if seen_named and seen_positional:
+        # For less overhead, we only do this at the end of the loop;
+        # this means that a broken query will see some extra work done
+        # before the error is raised. We assume broken queries to be
+        # rarer than working ones, so that should be acceptable.
+        raise e.ProgrammingError("positional and named placeholders cannot be mixed")
 
-    return rv
+    # last part (sentinel)
+    parts.append(QueryPart(pending_pre + query[cur:], 0, PyFormat.AUTO))
+
+    return parts
 
 
-_ph_to_fmt = {
-    b"s": PyFormat.AUTO,
-    b"t": PyFormat.TEXT,
-    b"b": PyFormat.BINARY,
+_ph_byte_to_fmt = {
+    ord(b"s"): PyFormat.AUTO,
+    ord(b"t"): PyFormat.TEXT,
+    ord(b"b"): PyFormat.BINARY,
 }
 
 
