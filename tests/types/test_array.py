@@ -297,11 +297,11 @@ def test_numbers_array(num, type, fmt_in):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
+    want_cls: type
     if (wrapper := getattr(psycopg.types.numeric, wrapper)) is Decimal:
         want_cls = Decimal
     else:
-        assert wrapper.__mro__[1] in (int, float)
-        want_cls = wrapper.__mro__[1]
+        want_cls = int if issubclass(wrapper, int) else float
 
     obj = [wrapper(1), wrapper(0), wrapper(-1), None]
     cur = conn.cursor(binary=fmt_out)

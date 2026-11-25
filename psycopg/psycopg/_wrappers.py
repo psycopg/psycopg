@@ -6,12 +6,40 @@ Wrappers for numeric types.
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 
+from ._compat import Self
+
 # These types are implemented here but exposed by `psycopg.types.numeric`.
 # They are defined here to avoid a circular import.
 _MODULE = "psycopg.types.numeric"
 
 
-class Int2(int):
+class _IntWrapper(int):
+    __slots__ = ()
+
+    def __new__(cls, arg: int) -> Self:
+        return super().__new__(cls, arg)
+
+    def __str__(self) -> str:
+        return super().__repr__()
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({super().__repr__()})"
+
+
+class _FloatWrapper(float):
+    __slots__ = ()
+
+    def __new__(cls, arg: float) -> Self:
+        return super().__new__(cls, arg)
+
+    def __str__(self) -> str:
+        return super().__repr__()
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({super().__repr__()})"
+
+
+class Int2(_IntWrapper):
     """
     Force dumping a Python `!int` as a PostgreSQL :sql:`smallint/int2`.
     """
@@ -19,17 +47,8 @@ class Int2(int):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: int) -> "Int2":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class Int4(int):
+class Int4(_IntWrapper):
     """
     Force dumping a Python `!int` as a PostgreSQL :sql:`integer/int4`.
     """
@@ -37,17 +56,8 @@ class Int4(int):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: int) -> "Int4":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class Int8(int):
+class Int8(_IntWrapper):
     """
     Force dumping a Python `!int` as a PostgreSQL :sql:`bigint/int8`.
     """
@@ -55,17 +65,8 @@ class Int8(int):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: int) -> "Int8":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class IntNumeric(int):
+class IntNumeric(_IntWrapper):
     """
     Force dumping a Python `!int` as a PostgreSQL :sql:`numeric/decimal`.
     """
@@ -73,17 +74,8 @@ class IntNumeric(int):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: int) -> "IntNumeric":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class Float4(float):
+class Float4(_FloatWrapper):
     """
     Force dumping a Python `!float` as a PostgreSQL :sql:`float4/real`.
     """
@@ -91,17 +83,8 @@ class Float4(float):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: float) -> "Float4":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class Float8(float):
+class Float8(_FloatWrapper):
     """
     Force dumping a Python `!float` as a PostgreSQL :sql:`float8/double precision`.
     """
@@ -109,29 +92,11 @@ class Float8(float):
     __module__ = _MODULE
     __slots__ = ()
 
-    def __new__(cls, arg: float) -> "Float8":
-        return super().__new__(cls, arg)
 
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"
-
-
-class Oid(int):
+class Oid(_IntWrapper):
     """
     Force dumping a Python `!int` as a PostgreSQL :sql:`oid`.
     """
 
     __module__ = _MODULE
     __slots__ = ()
-
-    def __new__(cls, arg: int) -> "Oid":
-        return super().__new__(cls, arg)
-
-    def __str__(self) -> str:
-        return super().__repr__()
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({super().__repr__()})"

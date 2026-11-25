@@ -752,8 +752,7 @@ def test_dump_wrapper(conn, wrapper, fmt_in):
 @pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
 def test_dump_wrapper_oid(wrapper):
     wrapper = getattr(psycopg.types.numeric, wrapper)
-    base = wrapper.__mro__[1]
-    assert base in (int, float)
+    base = int if issubclass(wrapper, int) else float
     n = base(3.14)
     assert str(wrapper(n)) == str(n)
     assert repr(wrapper(n)) == f"{wrapper.__name__}({n})"
