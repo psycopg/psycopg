@@ -21,7 +21,7 @@ from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader, PyFormat
 from .._struct import pack_float4, pack_float8, pack_int2, pack_int4, pack_int8
 from .._struct import pack_uint2, pack_uint4, unpack_float4, unpack_float8, unpack_int2
-from .._struct import unpack_int4, unpack_int8, unpack_uint4
+from .._struct import unpack_int4, unpack_int8, unpack_uint4, unpack_uint8
 
 # Exposed here
 from .._wrappers import Float4 as Float4
@@ -251,6 +251,13 @@ class OidBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> int:
         return unpack_uint4(data)[0]
+
+
+class Oid8BinaryLoader(Loader):
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> int:
+        return unpack_uint8(data)[0]
 
 
 class FloatLoader(Loader):
@@ -594,3 +601,8 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_loader("float8", Float8BinaryLoader)
     adapters.register_loader("numeric", NumericLoader)
     adapters.register_loader("numeric", NumericBinaryLoader)
+
+    # In PostgreSQL registry, since v19, but not in CRDB.
+    if adapters.types.get("oid8"):
+        adapters.register_loader("oid8", IntLoader)
+        adapters.register_loader("oid8", Oid8BinaryLoader)

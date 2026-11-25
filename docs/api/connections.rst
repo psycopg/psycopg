@@ -329,7 +329,7 @@ The `!Connection` class
             Therefore you should use the `cancel_safe()` method whenever
             possible.
 
-            .. __: https://www.postgresql.org/docs/devel/libpq-cancel.html
+            .. __: https://www.postgresql.org/docs/current/libpq-cancel.html
                    #LIBPQ-CANCEL-DEPRECATED
 
         .. note::

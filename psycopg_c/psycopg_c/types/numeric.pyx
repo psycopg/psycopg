@@ -11,6 +11,7 @@ from libc.string cimport memcpy, memset, strlen
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.long cimport PyLong_AsLongLong, PyLong_FromLong, PyLong_FromLongLong
 from cpython.long cimport PyLong_FromString, PyLong_FromUnsignedLong
+from cpython.long cimport PyLong_FromUnsignedLongLong
 from cpython.bytes cimport PyBytes_AS_STRING, PyBytes_AsStringAndSize
 from cpython.float cimport PyFloat_AsDouble, PyFloat_FromDouble
 from cpython.unicode cimport PyUnicode_DecodeUTF8
@@ -330,6 +331,17 @@ cdef class OidBinaryLoader(CLoader):
         cdef uint32_t bedata
         memcpy(&bedata, data, sizeof(bedata))
         return PyLong_FromUnsignedLong(endian.be32toh(bedata))
+
+
+@cython.final
+cdef class Oid8BinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef uint64_t bedata
+        memcpy(&bedata, data, sizeof(bedata))
+        return PyLong_FromUnsignedLongLong(endian.be64toh(bedata))
 
 
 cdef class _FloatDumper(CDumper):
