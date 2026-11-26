@@ -118,7 +118,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
                 raise PoolTimeout(str(ex)) from None
             self._nconns += 1
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
-            self._stats[self._REQUESTS_ERRORS] += 1
+            self._stats.incr(self._REQUESTS_ERRORS)
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
                 + f" {len(self._waiting)} requests waiting"
@@ -135,7 +135,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
             conn._pool = None
             if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                self._stats[self._RETURNS_BAD] += 1
+                self._stats.incr(self._RETURNS_BAD)
             self._close_connection(conn)
             self._nconns -= 1
             return True

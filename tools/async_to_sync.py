@@ -323,6 +323,7 @@ class RenameAsyncToSync(ast.NodeTransformer):  # type: ignore
         "AEvent": "Event",
         "ALock": "Lock",
         "AQueue": "Queue",
+        "AStats": "Stats",
         "AWorker": "Worker",
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnectFailedCB": "ConnectFailedCB",

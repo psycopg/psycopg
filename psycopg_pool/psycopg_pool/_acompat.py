@@ -19,6 +19,7 @@ from typing import Any, Awaitable, ParamSpec, TypeAlias, overload
 from inspect import isawaitable
 from collections.abc import Callable, Coroutine
 
+from ._stats import LockedStats, LocklessStats
 from ._compat import TypeVar
 
 logger = logging.getLogger("psycopg.pool")
@@ -30,6 +31,8 @@ Event = threading.Event
 Condition = threading.Condition
 Lock = threading.RLock
 ALock = asyncio.Lock
+Stats = LockedStats
+AStats = LocklessStats
 sleep = time.sleep
 
 Worker: TypeAlias = threading.Thread

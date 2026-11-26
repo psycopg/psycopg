@@ -9,8 +9,9 @@ from __future__ import annotations
 from time import monotonic
 from random import random
 from typing import TYPE_CHECKING, Any
-from collections import Counter, deque
+from collections import deque
 
+from ._stats import BaseStats
 from .errors import PoolClosed
 
 if TYPE_CHECKING:
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 class BasePool:
     # Used to generate pool names
     _num_pool = 0
+
+    _stats: BaseStats
 
     # Stats keys
     _POOL_MIN = "pool_min"
@@ -76,7 +79,6 @@ class BasePool:
 
         self._nconns = min_size  # currently in the pool, out, being prepared
         self._pool = deque()
-        self._stats = Counter[str]()
         self._drained_at = 0.0
 
         # Min number of connections in the pool in a max_idle unit of time.
@@ -155,7 +157,7 @@ class BasePool:
         """
         Return current stats about the pool usage.
         """
-        rv = dict(self._stats)
+        rv = self._stats.get()
         rv.update(self._get_measures())
         return rv
 
@@ -165,8 +167,7 @@ class BasePool:
 
         After the call, all the counters are reset to zero.
         """
-        stats, self._stats = self._stats, Counter()
-        rv = dict(stats)
+        rv = self._stats.pop()
         rv.update(self._get_measures())
         return rv
 
