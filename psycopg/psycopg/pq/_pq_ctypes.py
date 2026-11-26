@@ -364,6 +364,13 @@ PQntuples = pq.PQntuples
 PQntuples.argtypes = [PGresult_ptr]
 PQntuples.restype = c_int
 
+if libpq_version >= 120000:
+    PQresultMemorySize = pq.PQresultMemorySize
+    PQresultMemorySize.argtypes = [PGresult_ptr]
+    PQresultMemorySize.restype = c_size_t
+else:
+    PQresultMemorySize = not_supported_before("PQresultMemorySize", 120000)
+
 PQnfields = pq.PQnfields
 PQnfields.argtypes = [PGresult_ptr]
 PQnfields.restype = c_int

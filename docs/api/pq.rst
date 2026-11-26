@@ -268,6 +268,7 @@ than the one loaded (see `version()`).
 
     .. autoattribute:: ntuples
     .. autoattribute:: nfields
+    .. autoattribute:: memory_size
     .. automethod:: fname
     .. automethod:: ftable
     .. automethod:: ftablecol

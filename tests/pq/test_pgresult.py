@@ -2,6 +2,7 @@ import ctypes
 
 import pytest
 
+import psycopg
 from psycopg import pq
 
 
@@ -88,6 +89,25 @@ def test_nfields(pgconn):
     assert res.nfields == 3
     res.clear()
     assert res.nfields == 0
+
+
+@pytest.mark.libpq(">= 12")
+def test_memory_size(pgconn):
+    res = pgconn.exec_(b"select 1")
+    small = res.memory_size
+    assert isinstance(small, int)
+    assert small > 0
+    res = pgconn.exec_(b"select repeat('x', 100000)")
+    assert res.memory_size > small
+    res.clear()
+    assert res.memory_size == 0
+
+
+@pytest.mark.libpq("< 12")
+def test_memory_size_not_supported(pgconn):
+    res = pgconn.exec_(b"select 1")
+    with pytest.raises(psycopg.NotSupportedError):
+        res.memory_size
 
 
 def test_fname(pgconn):

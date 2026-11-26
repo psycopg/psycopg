@@ -1408,6 +1408,19 @@ class PGresult:
         """
         return impl.PQnfields(self._pgresult_ptr)
 
+    @property
+    def memory_size(self) -> int:
+        """The space in bytes allocated by the libpq for the result.
+
+        It is 0 if the result was cleared.
+
+        :raises ~psycopg.NotSupportedError: if the libpq version is older
+            than 12.
+
+        See :pq:`PQresultMemorySize()` for details.
+        """
+        return impl.PQresultMemorySize(self._pgresult_ptr)
+
     def fname(self, column_number: int) -> bytes | None:
         """Return the name of a column.
 
