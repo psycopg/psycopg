@@ -289,6 +289,13 @@ than the one loaded (see `version()`).
     .. rubric:: Building results
 
     .. automethod:: set_attributes
+    .. automethod:: set_value
+
+        .. versionadded:: 3.4
+
+    .. automethod:: copy
+
+        .. versionadded:: 3.4
 
 
 .. autoclass:: Conninfo
@@ -384,3 +391,10 @@ Enumerations
     :members:
 
     .. seealso:: :pq:`PQsetTraceFlags` for a description of these values.
+
+.. autoclass:: CopyResultFlag
+    :members:
+
+    .. versionadded:: 3.4
+
+    .. seealso:: :pq:`PQcopyResult` for a description of these values.
