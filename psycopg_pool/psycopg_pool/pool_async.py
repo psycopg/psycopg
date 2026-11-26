@@ -686,6 +686,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             try:
                 await task.run()
             except CLIENT_EXCEPTIONS as ex:
+                if True:  # ASYNC
+                    if isinstance(ex, asyncio.CancelledError):
+                        # If the worker task was cancelled, let it end: if
+                        # the exception is swallowed the task goes back to
+                        # wait for more work and asyncio.run() will wait for
+                        # it forever (#1502).
+                        raise
                 logger.warning(
                     "task run %s failed: %s: %s", task, ex.__class__.__name__, ex
                 )
@@ -757,6 +764,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         try:
             conn = await self._connect()
         except CLIENT_EXCEPTIONS as ex:
+            if True:  # ASYNC
+                if isinstance(ex, asyncio.CancelledError):
+                    # Release the reserved slot before the worker ends,
+                    # allowing the pool to grow again if it is still open.
+                    async with self._lock:
+                        self._nconns -= 1
+                        if growing:
+                            self._growing = False
+                    raise
             logger.warning("error connecting in %r: %s", self.name, ex)
             if attempt.time_to_give_up(now):
                 logger.warning(

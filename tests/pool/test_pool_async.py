@@ -1333,3 +1333,74 @@ async def test_get_config_raise_exception(dsn, caplog):
     assert reconnection_warnings, "Expected reconnection attempt logs"
     # Make sure that we saw not too many (backoff works)
     assert len(reconnection_warnings) < 5, "Too many attempts (likely busyloop)"
+
+
+@skip_sync
+async def test_cancelled_worker_ends():
+    # Repro of #1502: a worker task cancelled while connecting to an
+    # unresponsive server must terminate. If the CancelledError is swallowed
+    # the worker goes back to wait for more work, and asyncio.run() (or any
+    # gather on the worker tasks) waits for it forever.
+    import socket
+
+    # A server that accepts connections but never answers.
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    sock.listen()
+    port = sock.getsockname()[1]
+
+    p = pool.AsyncConnectionPool(
+        f"host=127.0.0.1 port={port} dbname=x user=x", min_size=1, open=False
+    )
+    try:
+        # wait=False: a worker starts connecting in the background.
+        await p.open()
+        assert p._workers
+        # Let the worker start the connection attempt.
+        await asleep(0.2)
+        for w in p._workers:
+            w.cancel()
+        # With the bug the workers swallow the cancellation and this gather
+        # never completes.
+        await gather(*p._workers, return_exceptions=True, timeout=5)
+    finally:
+        sock.close()
+        # Clean up the tasks directly: close() would raise the CancelledError
+        # of the workers again.
+        tasks = [t for t in [*p._workers, p._sched_runner] if t is not None]
+        for t in tasks:
+            t.cancel()
+        await gather(*tasks, return_exceptions=True, timeout=5)
+
+
+@skip_sync
+@pytest.mark.parametrize("growing", [False, True])
+async def test_cancelled_connection_releases_slot(monkeypatch, growing):
+    import asyncio
+
+    started = AEvent()
+
+    async def connect():
+        started.set()
+        await AEvent().wait()
+
+    p = pool.AsyncConnectionPool(min_size=0, max_size=1, open=False)
+    await p.open()
+    try:
+        monkeypatch.setattr(p, "_connect", connect)
+        p._nconns = 1
+        p._growing = growing
+        task = spawn(p._add_connection, (None, growing))
+        try:
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert p._nconns == 0
+            assert not p._growing
+            assert not p.closed
+        finally:
+            task.cancel()
+            await gather(task, return_exceptions=True)
+    finally:
+        await p.close()
