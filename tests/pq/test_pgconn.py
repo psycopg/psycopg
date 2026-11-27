@@ -416,6 +416,59 @@ def test_ssl_in_use(pgconn):
         pgconn.ssl_in_use
 
 
+def test_ssl_attribute(dsn):
+    conn = pq.PGconn.connect(make_conninfo(dsn, sslmode="disable").encode())
+    assert conn.status == pq.ConnStatus.OK
+    assert conn.ssl_in_use is False
+    assert conn.ssl_attribute(b"library") is None
+    assert conn.ssl_attribute(b"cipher") is None
+    assert conn.ssl_attribute(b"no-such") is None
+    names = conn.ssl_attribute_names
+    assert isinstance(names, list)
+    assert all(isinstance(name, bytes) for name in names)
+    # libpq 16 reports no names on a clear connection. Older libpq still
+    # lists them, and reading one returns None.
+    if pq.version() >= 160000:
+        assert names == []
+    else:
+        assert b"library" in names
+    conn.finish()
+    with pytest.raises(psycopg.OperationalError):
+        conn.ssl_attribute(b"library")
+    with pytest.raises(psycopg.OperationalError):
+        conn.ssl_attribute_names
+
+
+def test_ssl_attribute_encrypted(dsn):
+    conn = pq.PGconn.connect(make_conninfo(dsn, sslmode="require").encode())
+    try:
+        if conn.status != pq.ConnStatus.OK or not conn.ssl_in_use:
+            pytest.skip("server is not accepting SSL connections")
+        names = conn.ssl_attribute_names
+        assert isinstance(names, list)
+        for required in (
+            b"library",
+            b"key_bits",
+            b"cipher",
+            b"compression",
+            b"protocol",
+        ):
+            assert required in names
+        assert conn.ssl_attribute(b"library") == b"OpenSSL"
+        bits = conn.ssl_attribute(b"key_bits")
+        assert bits is not None and bits.isdigit() and int(bits) > 0
+        assert conn.ssl_attribute(b"cipher")
+        assert conn.ssl_attribute(b"compression") in (b"on", b"off")
+        protocol = conn.ssl_attribute(b"protocol")
+        assert protocol is not None and protocol.startswith(b"TLS")
+        assert conn.ssl_attribute(b"no-such") is None
+        for name in names:
+            value = conn.ssl_attribute(name)
+            assert value is None or isinstance(value, bytes)
+    finally:
+        conn.finish()
+
+
 def test_set_single_row_mode(pgconn):
     with pytest.raises(psycopg.OperationalError):
         pgconn.set_single_row_mode()

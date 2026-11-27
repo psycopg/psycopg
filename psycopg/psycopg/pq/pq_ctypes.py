@@ -458,6 +458,38 @@ class PGconn:
         """
         return self._call_bool(impl.PQsslInUse)
 
+    def ssl_attribute(self, name: bytes) -> bytes | None:
+        """Return an SSL attribute of the connection.
+
+        :param name: the attribute name, for instance ``b"cipher"`` or
+            ``b"protocol"``. `ssl_attribute_names` lists the names libpq
+            reports for this connection.
+        :return: the value of the attribute, or `!None` if the connection
+            is not encrypted or the name is not known.
+
+        See :pq:`PQsslAttribute()` for details.
+        """
+        self._ensure_pgconn()
+        return impl.PQsslAttribute(self._pgconn_ptr, name)
+
+    @property
+    def ssl_attribute_names(self) -> list[bytes]:
+        """The SSL attribute names available for `ssl_attribute()`.
+
+        See :pq:`PQsslAttributeNames()` for details.
+        """
+        self._ensure_pgconn()
+        raw = impl.PQsslAttributeNames(self._pgconn_ptr)
+        if not raw:
+            return []
+
+        names: list[bytes] = []
+        i = 0
+        while (name := raw[i]) is not None:
+            names.append(name)
+            i += 1
+        return names
+
     def exec_(self, command: bytes) -> PGresult:
         """Submit a command to the server and wait for the result.
 

@@ -10,6 +10,14 @@
 Future releases
 ---------------
 
+Psycopg 3.4 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. rubric:: New libpq wrapper features
+
+- Add `pq.PGconn.ssl_attribute()` and `pq.PGconn.ssl_attribute_names`,
+  wrapping `PQsslAttribute()` and `PQsslAttributeNames()` (:ticket:`#1500`).
+
 Psycopg 3.3.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

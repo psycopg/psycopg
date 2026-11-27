@@ -139,6 +139,13 @@ than the one loaded (see `version()`).
         .. versionadded:: 3.3
 
     .. autoattribute:: ssl_in_use
+    .. automethod:: ssl_attribute
+
+        .. versionadded:: 3.4
+
+    .. autoattribute:: ssl_attribute_names
+
+        .. versionadded:: 3.4
 
     .. rubric:: Executing commands
 

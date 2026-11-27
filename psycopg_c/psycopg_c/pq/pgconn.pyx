@@ -285,6 +285,31 @@ cdef class PGconn:
     def ssl_in_use(self) -> bool:
         return bool(_call_libpq_int(self, <conn_int_f>libpq.PQsslInUse))
 
+    def ssl_attribute(self, const char *name) -> bytes | None:
+        cdef const char *rv = <const char *>_call_libpq_with_param(
+            self, <conn_f_with_param>libpq.PQsslAttribute, name)
+        if rv is not NULL:
+            return rv
+        else:
+            return None
+
+    @property
+    def ssl_attribute_names(self) -> list[bytes]:
+        cdef const char *const *names = NULL
+        cdef libpq.PGconn *pgconn_ptr = NULL
+        cdef list rv = []
+        cdef int i = 0
+        with cython.critical_section(self):
+            if (pgconn_ptr := self._pgconn_ptr) is not NULL:
+                names = libpq.PQsslAttributeNames(pgconn_ptr)
+                if names is not NULL:
+                    while names[i] is not NULL:
+                        rv.append(names[i])
+                        i += 1
+        if pgconn_ptr is NULL:
+            raise e.OperationalError("the connection is closed")
+        return rv
+
     def exec_(self, const char *command) -> PGresult:
         cdef libpq.PGresult *pgresult
         cdef libpq.PGconn *pgconn_ptr

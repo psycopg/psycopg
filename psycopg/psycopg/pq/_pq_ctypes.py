@@ -278,7 +278,15 @@ PQsslInUse = pq.PQsslInUse
 PQsslInUse.argtypes = [PGconn_ptr]
 PQsslInUse.restype = c_int
 
-# TODO: PQsslAttribute, PQsslAttributeNames, PQsslStruct, PQgetssl
+PQsslAttribute = pq.PQsslAttribute
+PQsslAttribute.argtypes = [PGconn_ptr, c_char_p]
+PQsslAttribute.restype = c_char_p
+
+PQsslAttributeNames = pq.PQsslAttributeNames
+PQsslAttributeNames.argtypes = [PGconn_ptr]
+PQsslAttributeNames.restype = POINTER(c_char_p)
+
+# TODO: PQsslStruct, PQgetssl
 
 
 # 33.3. Command Execution Functions

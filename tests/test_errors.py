@@ -23,6 +23,10 @@ def test_finishedpgconn(pgconn):
     with pytest.raises(e.OperationalError, match="connection is closed"):
         finished.socket
     with pytest.raises(e.OperationalError, match="connection is closed"):
+        finished.ssl_attribute(b"library")
+    with pytest.raises(e.OperationalError, match="connection is closed"):
+        finished.ssl_attribute_names
+    with pytest.raises(e.OperationalError, match="connection is closed"):
         pgconn.socket
 
 

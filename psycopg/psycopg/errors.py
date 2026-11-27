@@ -112,6 +112,13 @@ class FinishedPGconn:
     def parameter_status(self, *args: Any) -> NoReturn:
         self._raise()
 
+    def ssl_attribute(self, *args: Any) -> NoReturn:
+        self._raise()
+
+    @property
+    def ssl_attribute_names(self) -> NoReturn:
+        self._raise()
+
     @property
     def socket(self) -> NoReturn:
         self._raise()
