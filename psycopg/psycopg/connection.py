@@ -105,8 +105,9 @@ class Connection(BaseConnection[Row]):
             logger.debug("connection attempt: %s", descr)
             try:
                 conninfo = make_conninfo("", **attempt)
-                gen = cls._connect_gen(conninfo)
-                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+                rv = cls._connect_blocking(
+                    conninfo, timeout=timeout, interval=_WAIT_INTERVAL
+                )
             except e._WaitTimeout:
                 tex = e.ConnectionTimeout("connection timeout expired")
                 logger.debug("connection failed: %s: %s", descr, str(tex))

@@ -67,6 +67,7 @@ gevent.monkey.patch_all()
 
 import psycopg
 assert psycopg.waiting.wait is not psycopg.waiting.wait_c
+assert psycopg.waiting.connect_nogil is None
 """
     sp.check_call([sys.executable, "-c", script])
 
@@ -81,5 +82,6 @@ import gevent.monkey
 
 import psycopg
 assert psycopg.waiting.wait is psycopg.waiting.wait_c
+assert psycopg.waiting.connect_nogil is not None
 """
     sp.check_call([sys.executable, "-c", script])

@@ -121,10 +121,15 @@ class AsyncConnection(BaseConnection[Row]):
             logger.debug("connection attempt: %s", descr)
             try:
                 conninfo = make_conninfo("", **attempt)
-                gen = cls._connect_gen(conninfo)
-                rv = await waiting.wait_conn_async(
-                    gen, interval=_WAIT_INTERVAL, timeout=timeout
-                )
+                if True:  # ASYNC
+                    gen = cls._connect_gen(conninfo)
+                    rv = await waiting.wait_conn_async(
+                        gen, interval=_WAIT_INTERVAL, timeout=timeout
+                    )
+                else:
+                    rv = cls._connect_blocking(
+                        conninfo, timeout=timeout, interval=_WAIT_INTERVAL
+                    )
             except e._WaitTimeout:
                 tex = e.ConnectionTimeout("connection timeout expired")
                 logger.debug("connection failed: %s: %s", descr, str(tex))

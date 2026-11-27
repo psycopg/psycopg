@@ -6,11 +6,13 @@ C implementation of waiting functions
 
 from cpython.object cimport PyObject
 
-from os import fstat
+from os import fstat, strerror
 from time import monotonic
+from threading import current_thread, main_thread
 from typing import TypeVar
 
 from psycopg import errors as e
+from psycopg._encodings import conninfo_encoding
 
 RV = TypeVar("RV")
 
@@ -293,6 +295,7 @@ cdef extern from "Python.h":
     int PyIter_Send(object iter, object arg, PyObject **presult) except -1
     int PYGEN_RETURN
     void Py_DecRef(PyObject *o)
+    int PyErr_CheckSignals() except -1
 
 
 cdef inline object _steal(PyObject *o):
@@ -385,3 +388,234 @@ def ready_c(int fileno, int wait):
         return PY_READY_R
     else:
         raise AssertionError(f"unexpected ready value: {ready}")
+
+
+cdef extern from *:
+    r"""
+#include <libpq-fe.h>
+
+#ifndef MS_WINDOWS
+#include <errno.h>
+#include <time.h>
+#endif
+
+#define CN_OK 0
+#define CN_FAILED 1
+#define CN_TIMEOUT 2
+#define CN_INTERRUPT 3    /* check for signals, then call again */
+#define CN_WAIT_ERROR 4   /* errno, or WSA error on Windows, in *err */
+#define CN_FD_RANGE 5
+#define CN_UNEXPECTED 6
+
+#ifdef MS_WINDOWS
+#define CN_ERR_IS_WSA 1
+#else
+#define CN_ERR_IS_WSA 0
+#endif
+
+/* PGRES_POLLING_ACTIVE is unused by libpq: use it for "call PQconnectPoll()" */
+#define CN_NEED_POLL PGRES_POLLING_ACTIVE
+
+static double
+cn_now(void)
+{
+#ifdef MS_WINDOWS
+    static LARGE_INTEGER freq = {0};
+    LARGE_INTEGER count;
+    if (!freq.QuadPart) { QueryPerformanceFrequency(&freq); }
+    QueryPerformanceCounter(&count);
+    return (double)count.QuadPart / (double)freq.QuadPart;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+#endif
+}
+
+/* Like wait_c_impl(), but callable without the GIL.
+ *
+ * Return > 0 if ready, 0 on timeout, a negated CN_* value on error.
+ */
+static int
+cn_wait(int fileno, int reading, int timeout_ms, int *err)
+{
+    int rv;
+
+#if defined(HAVE_POLL) && !defined(HAVE_BROKEN_POLL)
+
+    struct pollfd pfd;
+    pfd.fd = fileno;
+    pfd.events = reading ? POLLIN : POLLOUT;
+    pfd.revents = 0;
+
+    errno = 0;
+    rv = poll(&pfd, 1, timeout_ms);
+    if (rv < 0) {
+        if (errno == EINTR) { return -CN_INTERRUPT; }
+        *err = errno;
+        return -CN_WAIT_ERROR;
+    }
+    return rv;
+
+#else
+
+    fd_set ifds;
+    fd_set ofds;
+    fd_set efds;
+    struct timeval tv;
+
+#ifndef MS_WINDOWS
+    if (fileno >= FD_SETSIZE) { return -CN_FD_RANGE; }
+#endif
+
+    FD_ZERO(&ifds);
+    FD_ZERO(&ofds);
+    FD_ZERO(&efds);
+    if (reading) { FD_SET(fileno, &ifds); } else { FD_SET(fileno, &ofds); }
+    FD_SET(fileno, &efds);
+
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+#ifdef MS_WINDOWS
+    rv = select(0, &ifds, &ofds, &efds, &tv);
+    if (rv == SOCKET_ERROR) {
+        *err = WSAGetLastError();
+        return -CN_WAIT_ERROR;
+    }
+#else
+    errno = 0;
+    rv = select(fileno + 1, &ifds, &ofds, &efds, &tv);
+    if (rv < 0) {
+        if (errno == EINTR) { return -CN_INTERRUPT; }
+        *err = errno;
+        return -CN_WAIT_ERROR;
+    }
+#endif
+    return rv;
+
+#endif  /* HAVE_POLL */
+}
+
+/* Complete a connection started by PQconnectStart(), without the GIL.
+ *
+ * Same loop as libpq's pqConnectDBComplete(): initialise *state to
+ * PGRES_POLLING_WRITING. If interval > 0, return CN_INTERRUPT every interval
+ * seconds, and call again with the same *state to resume.
+ */
+static int
+connect_nogil_impl(
+    PGconn *conn, double deadline, double interval, int *state, int *err)
+{
+    double slice_end = interval > 0.0 ? cn_now() + interval : 0.0;
+    double now, until;
+    int timeout_ms, rv;
+
+    for (;;) {
+        if (*state == CN_NEED_POLL) {
+            *state = PQconnectPoll(conn);
+            switch (*state) {
+            case PGRES_POLLING_OK: return CN_OK;
+            case PGRES_POLLING_FAILED: return CN_FAILED;
+            case PGRES_POLLING_READING:
+            case PGRES_POLLING_WRITING: break;
+            default: return CN_UNEXPECTED;
+            }
+        }
+
+        now = cn_now();
+        until = deadline;
+        if (slice_end > 0.0 && slice_end < until) { until = slice_end; }
+        timeout_ms = until > now ? (int)((until - now) * 1000.0) + 1 : 0;
+
+        /* The socket may change, e.g. trying the next address. */
+        rv = cn_wait(
+            PQsocket(conn), *state == PGRES_POLLING_READING, timeout_ms, err);
+
+        if (rv > 0) {
+            *state = CN_NEED_POLL;
+            continue;
+        }
+        if (rv == -CN_INTERRUPT) {
+            if (interval > 0.0) { return CN_INTERRUPT; }
+            continue;  /* signals are only handled in the main thread */
+        }
+        if (rv < 0) { return -rv; }
+
+        now = cn_now();
+        if (now >= deadline) { return CN_TIMEOUT; }
+        if (slice_end > 0.0 && now >= slice_end) { return CN_INTERRUPT; }
+    }
+}
+    """
+    int CN_OK, CN_FAILED, CN_TIMEOUT, CN_INTERRUPT, CN_WAIT_ERROR
+    int CN_FD_RANGE, CN_UNEXPECTED, CN_NEED_POLL, CN_ERR_IS_WSA
+    double cn_now() nogil
+    int connect_nogil_impl(
+        libpq.PGconn *conn, double deadline, double interval, int *state, int *err
+    ) nogil
+
+
+def connect_nogil(conninfo: str, timeout: float, interval: float) -> abc.PGconn:
+    """
+    Connect to the database without holding the GIL, like `PQconnectdb()`.
+
+    In the main thread, check for signals every `!interval` seconds.
+    """
+    cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode())
+    cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
+    cdef double deadline = cn_now() + float(timeout)
+    cdef double cinterval = 0.0
+    cdef int state = libpq.PGRES_POLLING_WRITING
+    cdef int err = 0
+    cdef int rv
+
+    if current_thread() is main_thread():
+        cinterval = float(interval)
+
+    # A bad connection has no socket to wait on.
+    if libpq.PQstatus(pgconn_ptr) == libpq.CONNECTION_BAD:
+        encoding = conninfo_encoding(conninfo)
+        raise e.OperationalError(
+            f"connection is bad: {conn.get_error_message(encoding)}",
+            pgconn=conn
+        )
+
+    logger.debug("connection started: %s", conn)
+    while True:
+        with nogil:
+            rv = connect_nogil_impl(pgconn_ptr, deadline, cinterval, &state, &err)
+
+        if rv == CN_OK:
+            break
+        elif rv == CN_INTERRUPT:
+            PyErr_CheckSignals()
+        elif rv == CN_TIMEOUT:
+            conn.finish()
+            raise e._WaitTimeout("wait timeout expired")
+        elif rv == CN_FAILED:
+            encoding = conninfo_encoding(conninfo)
+            raise e.OperationalError(
+                f"connection failed: {conn.get_error_message(encoding)}",
+                pgconn=e.finish_pgconn(conn),
+            )
+        elif rv == CN_WAIT_ERROR:
+            conn.finish()
+            if CN_ERR_IS_WSA:
+                # On Windows, OSError maps the winerror argument to errno.
+                raise OSError(0, "select() failed", None, err)
+            else:
+                raise OSError(err, strerror(err))
+        elif rv == CN_FD_RANGE:
+            conn.finish()
+            raise ValueError(  # same exception of Python's 'select.select()'
+                "connection file descriptor out of range for 'select()'"
+            )
+        else:
+            raise e.InternalError(
+                f"unexpected poll status: {state}",
+                pgconn=e.finish_pgconn(conn),
+            )
+
+    conn.nonblocking = 1
+    return conn

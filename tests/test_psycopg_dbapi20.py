@@ -131,14 +131,16 @@ def test_time_from_ticks(ticks, want):
 def test_connect_args(monkeypatch, pgconn, args, kwargs, want, setpgenv, fake_resolve):
     got_conninfo: str
 
-    def fake_connect(conninfo, *, timeout=0.0):
+    def fake_connect_gen(cls, conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
-        return pgconn
+        return cls(pgconn)
         yield
 
     setpgenv({})
-    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
+    monkeypatch.setattr(
+        psycopg.Connection, "_connect_gen", classmethod(fake_connect_gen)
+    )
     conn = psycopg.connect(*args, **kwargs)
     assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     conn.close()

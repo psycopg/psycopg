@@ -8,9 +8,10 @@ import pytest
 import psycopg
 from psycopg import generators, waiting
 from psycopg.pq import ConnStatus, ExecStatus
+from psycopg._cmodule import _psycopg
 from psycopg.conninfo import make_conninfo
 
-from .acompat import AEvent, asleep, gather, skip_sync, spawn
+from .acompat import AEvent, asleep, gather, skip_async, skip_sync, spawn
 
 skip_if_not_linux = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="non-Linux platform"
@@ -76,6 +77,38 @@ async def test_wait_conn_with_timeout_expired(proxy, interval):
         with pytest.raises(psycopg.errors._WaitTimeout):
             await waiting.wait_conn_async(gen, interval, timeout=0.25)
         dt = time.time() - t0
+    assert dt == pytest.approx(0.25, abs=0.03)
+
+
+@skip_async
+@pytest.mark.skipif("not psycopg._cmodule._psycopg")
+@pytest.mark.skipif("sys.platform == 'win32'")
+def test_connect_nogil_bad_on_start():
+    t0 = time.time()
+    with pytest.raises(psycopg.OperationalError, match="connection is bad:"):
+        _psycopg.connect_nogil("host=/nosuchdir", 2.0, 0.1)
+    assert time.time() - t0 < 1.0
+
+
+@skip_async
+@pytest.mark.skipif("not psycopg._cmodule._psycopg")
+@pytest.mark.slow
+@pytest.mark.timing
+def test_connect_nogil_timeout_expired_thread(proxy):
+    # Outside the main thread there is no wake up to check for signals.
+    errors = []
+
+    def connect():
+        try:
+            _psycopg.connect_nogil(proxy.client_dsn, 0.25, 0.1)
+        except Exception as ex:
+            errors.append(ex)
+
+    with proxy.deaf_listen():
+        t0 = time.time()
+        gather(spawn(connect))
+        dt = time.time() - t0
+    assert [type(ex) for ex in errors] == [psycopg.errors._WaitTimeout]
     assert dt == pytest.approx(0.25, abs=0.03)
 
 

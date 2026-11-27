@@ -131,6 +131,23 @@ async def test_connect_timeout_large_monotonic(aconn_cls, dsn, monkeypatch):
         pass
 
 
+@skip_async
+@pytest.mark.skipif(pq.__impl__ == "python", reason="only affects C extension")
+def test_connect_nogil(conn_cls, dsn, monkeypatch):
+    from psycopg._cmodule import _psycopg
+
+    calls = []
+
+    def connect_nogil(*args):
+        calls.append(args)
+        return _psycopg.connect_nogil(*args)
+
+    monkeypatch.setattr(psycopg.waiting, "connect_nogil", connect_nogil)
+    with conn_cls.connect(dsn):
+        pass
+    assert len(calls) == 1
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_multi_hosts(aconn_cls, proxy, dsn, monkeypatch):
@@ -521,14 +538,14 @@ async def test_connect_args(
 ):
     got_conninfo: str
 
-    def fake_connect(conninfo, *, timeout=0.0):
+    def fake_connect_gen(cls, conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
-        return pgconn
+        return cls(pgconn)
         yield
 
     setpgenv({})
-    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
+    monkeypatch.setattr(aconn_cls, "_connect_gen", classmethod(fake_connect_gen))
     conn = await aconn_cls.connect(*args, **kwargs)
     assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     await conn.close()

@@ -16,7 +16,7 @@ from collections import deque
 from collections.abc import Callable
 
 from . import errors as e
-from . import generators, postgres, pq
+from . import generators, postgres, pq, waiting
 from .abc import PQGen, PQGenConn, QueryNoTemplate
 from .sql import SQL, Composable
 from ._tpc import Xid
@@ -435,6 +435,19 @@ class BaseConnection(Generic[Row]):
         pgconn = yield from generators.connect(conninfo)
         conn = cls(pgconn)
         return conn
+
+    @classmethod
+    def _connect_blocking(
+        cls, conninfo: str, *, timeout: float, interval: float
+    ) -> Self:
+        gen_func = getattr(cls._connect_gen, "__func__", None)
+        base_func = BaseConnection.__dict__["_connect_gen"].__func__
+        if waiting.connect_nogil and gen_func is base_func:
+            pgconn = waiting.connect_nogil(conninfo, timeout, interval)
+            return cls(pgconn)
+
+        gen = cls._connect_gen(conninfo)
+        return waiting.wait_conn(gen, interval=interval, timeout=timeout)
 
     def _exec_command(
         self, command: QueryNoTemplate, result_format: pq.Format = TEXT

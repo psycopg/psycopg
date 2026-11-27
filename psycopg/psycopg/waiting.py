@@ -18,11 +18,13 @@ import selectors
 from time import monotonic
 from asyncio import Future, get_running_loop, sleep
 from selectors import DefaultSelector
+from collections.abc import Callable
 
 from . import errors as e
 from .abc import RV, PQGen, PQGenConn, ReadyFunc, WaitFunc
 from ._enums import Ready as Ready
 from ._enums import Wait as Wait  # re-exported
+from .pq.abc import PGconn
 from ._cmodule import _psycopg
 
 WAIT_R = Wait.R
@@ -555,8 +557,8 @@ def _is_select_patched() -> bool:
     """
     Detect if some greenlet library has patched the select library.
 
-    If this is the case, avoid using the wait_c function as it doesn't behave
-    in a collaborative way.
+    If this is the case, avoid using the wait_c and connect_nogil functions as
+    they don't behave in a collaborative way.
 
     Currently supported: gevent.
     """
@@ -571,9 +573,13 @@ def _is_select_patched() -> bool:
     return False
 
 
+connect_nogil: Callable[[str, float, float], PGconn] | None = None
+
 if _psycopg:
     wait_c = _psycopg.wait_c
     _ready_c = _psycopg.ready_c
+    if not _is_select_patched():
+        connect_nogil = _psycopg.connect_nogil
 
 
 # Choose the best wait strategy for the platform, and the function checking a

@@ -18,17 +18,19 @@ def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
     # Details of the params manipulation are in test_conninfo.
     import psycopg.connection
 
-    orig_connect = psycopg.generators.connect
+    orig_connect_gen = psycopg.Connection._connect_gen
 
     got_conninfo: str
 
-    def mock_connect(conninfo):
+    def mock_connect_gen(cls, conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
-        return orig_connect(dsn_env)
+        return orig_connect_gen(dsn_env)
 
     setpgenv({})
-    monkeypatch.setattr(psycopg.generators, "connect", mock_connect)
+    monkeypatch.setattr(
+        psycopg.Connection, "_connect_gen", classmethod(mock_connect_gen)
+    )
 
     conn = psycopg.connect(*args, **kwargs)
     assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
