@@ -150,7 +150,9 @@ cdef extern from "libpq-fe.h":
     int PQconnectionUsedGSSAPI(const PGconn *conn) noexcept nogil
     # TODO PQsslInUse: const in PG 12 docs - verify/report
     int PQsslInUse(PGconn *conn) noexcept nogil
-    # TODO: PQsslAttribute, PQsslAttributeNames, PQsslStruct, PQgetssl
+    const char *PQsslAttribute(PGconn *conn, const char *attribute_name) noexcept nogil
+    const char *const *PQsslAttributeNames(PGconn *conn) noexcept nogil
+    # TODO: PQsslStruct, PQgetssl
 
     # 33.3. Command Execution Functions
     PGresult *PQexec(PGconn *conn, const char *command) noexcept nogil
