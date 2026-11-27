@@ -71,7 +71,7 @@ class BaseHstoreDumper(RecursiveDumper):
             if v is None:
                 tokens.append("NULL")
             elif not isinstance(v, str):
-                raise e.DataError("hstore keys can only be strings")
+                raise e.DataError("hstore values can only be strings")
             else:
                 add_token(v)
 
@@ -102,6 +102,8 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
         buffer: list[bytes] = [i2b[i] if (i := len(obj)) < 64 else i.to_bytes(4, "big")]
 
         for key, value in obj.items():
+            if not isinstance(key, str):
+                raise e.DataError("hstore keys can only be strings")
             key_bytes = key.encode(encoding)
             buffer.append(
                 i2b[i] if (i := len(key_bytes)) < 64 else i.to_bytes(4, "big")
@@ -110,6 +112,8 @@ class BaseHstoreBinaryDumper(RecursiveDumper):
 
             if value is None:
                 buffer.append(hstore_null_marker)
+            elif not isinstance(value, str):
+                raise e.DataError("hstore values can only be strings")
             else:
                 value_bytes = value.encode(encoding)
                 buffer.append(

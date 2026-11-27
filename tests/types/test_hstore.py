@@ -2,11 +2,13 @@ import pytest
 
 import psycopg
 from psycopg.pq import Format
+from psycopg.adapt import Dumper
 from psycopg.types import TypeInfo
 
 try:
     from psycopg.types.hstore import HstoreBinaryLoader, HstoreLoader
-    from psycopg.types.hstore import _make_hstore_binary_dumper, register_hstore
+    from psycopg.types.hstore import _make_hstore_binary_dumper, _make_hstore_dumper
+    from psycopg.types.hstore import register_hstore
 except ImportError:
     # Allow to import the module without failing if psycopg is an old version
     # (e.g. to run pool tests with an old psycopg)
@@ -87,6 +89,32 @@ def test_parse_bad(s):
     with pytest.raises(psycopg.DataError):
         loader = HstoreLoader(0, None)
         loader.load(s.encode())
+
+
+@pytest.mark.parametrize("fmt", Format)
+@pytest.mark.parametrize(
+    "d, msg",
+    [
+        ({1: "a"}, "keys"),
+        ({b"a": "1"}, "keys"),
+        ({"a": 1}, "values"),
+        ({"a": b"1"}, "values"),
+    ],
+)
+def test_dump_bad(fmt, d, msg):
+    dumper: Dumper
+    if fmt == Format.TEXT:
+        dumper = _make_hstore_dumper(0)(dict)
+    else:
+        dumper = _make_hstore_binary_dumper(0)(dict)
+    with pytest.raises(psycopg.DataError, match=f"hstore {msg} can only be strings"):
+        dumper.dump(d)
+
+
+def test_dump_bad_query(hstore, conn):
+    register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
+    with pytest.raises(psycopg.DataError, match="hstore values can only be strings"):
+        conn.execute("select %s", [{"a": 1}])
 
 
 @pytest.mark.parametrize("encoding", ["utf8", "latin1", "sql_ascii"])
