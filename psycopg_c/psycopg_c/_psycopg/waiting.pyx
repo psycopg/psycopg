@@ -8,8 +8,8 @@ from cpython.object cimport PyObject
 
 from os import fstat, strerror
 from time import monotonic
-from threading import current_thread, main_thread
 from typing import TypeVar
+from threading import current_thread, main_thread
 
 from psycopg import errors as e
 from psycopg._encodings import conninfo_encoding
