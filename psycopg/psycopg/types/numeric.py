@@ -20,8 +20,8 @@ from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader, PyFormat
 from .._struct import pack_float4, pack_float8, pack_int2, pack_int4, pack_int8
-from .._struct import pack_uint2, pack_uint4, unpack_float4, unpack_float8, unpack_int2
-from .._struct import unpack_int4, unpack_int8, unpack_uint4, unpack_uint8
+from .._struct import pack_uint2, pack_uint4, pack_uint8, unpack_float4, unpack_float8
+from .._struct import unpack_int2, unpack_int4, unpack_int8, unpack_uint4, unpack_uint8
 
 # Exposed here
 from .._wrappers import Float4 as Float4
@@ -31,6 +31,7 @@ from .._wrappers import Int4 as Int4
 from .._wrappers import Int8 as Int8
 from .._wrappers import IntNumeric as IntNumeric
 from .._wrappers import Oid as Oid
+from .._wrappers import Oid8 as Oid8
 
 if TYPE_CHECKING:
     import numpy
@@ -140,6 +141,16 @@ class OidDumper(_IntOrSubclassDumper):
     oid = _oids.OID_OID
 
 
+class Oid8Dumper(_IntOrSubclassDumper):
+    oid = _oids.OID8_OID
+
+    def quote(self, obj: Any) -> Buffer:
+        # A bare number literal over the int8 range is parsed as numeric,
+        # which cannot be cast to oid8. Return a quoted value instead: the
+        # transformer adds the cast.
+        return b"'%d'" % int(obj)
+
+
 class IntDumper(Dumper):
     def dump(self, obj: Any) -> Buffer | None:
         raise TypeError(
@@ -217,6 +228,17 @@ class OidBinaryDumper(OidDumper):
             return pack_uint4(obj)
         except struct.error:
             raise e.DataError(f"int out of range for oid: {obj}") from None
+
+
+class Oid8BinaryDumper(Oid8Dumper):
+    format = Format.BINARY
+
+    def dump(self, obj: int) -> Buffer | None:
+        try:
+            return pack_uint8(obj)
+        except (struct.error, ValueError):
+            # PyPy raises ValueError packing a negative number as uint8
+            raise e.DataError(f"int out of range for oid8: {obj}") from None
 
 
 class IntBinaryDumper(IntDumper):
@@ -577,6 +599,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(Int8, Int8Dumper)
     adapters.register_dumper(IntNumeric, IntNumericDumper)
     adapters.register_dumper(Oid, OidDumper)
+    adapters.register_dumper(Oid8, Oid8Dumper)
 
     # The binary dumper is currently some 30% slower, so default to text
     # (see tests/scripts/testdec.py for a rough benchmark)
@@ -594,6 +617,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(Int4, Int4BinaryDumper)
     adapters.register_dumper(Int8, Int8BinaryDumper)
     adapters.register_dumper(Oid, OidBinaryDumper)
+    adapters.register_dumper(Oid8, Oid8BinaryDumper)
     adapters.register_dumper(Float4, Float4BinaryDumper)
     adapters.register_dumper(Float8, FloatBinaryDumper)
     adapters.register_loader("int2", IntLoader)

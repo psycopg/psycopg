@@ -100,3 +100,12 @@ class Oid(_IntWrapper):
 
     __module__ = _MODULE
     __slots__ = ()
+
+
+class Oid8(_IntWrapper):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`oid8`.
+    """
+
+    __module__ = _MODULE
+    __slots__ = ()

@@ -10,6 +10,13 @@
 Future releases
 ---------------
 
+Psycopg 3.4.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add the `~types.numeric.Oid8` wrapper to dump Python `!int` to the
+  PostgreSQL 19 :sql:`oid8` data type (:ticket:`#1514`).
+
+
 Psycopg 3.3.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
