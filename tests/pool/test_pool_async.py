@@ -786,6 +786,30 @@ async def test_check_cancelled(dsn, caplog, monkeypatch):
             assert await cur.fetchone() == (1,)
 
 
+async def test_check_interrupted_closing(dsn):
+    # Like test_check_interrupted, but interrupted closing an expired connection.
+    async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
+        await p.wait(1.0)
+        list(p._pool)[-1]._expire_at = 0  # the first to be checked
+        orig_close = p._close_connection
+        do_raise = True
+
+        async def close(conn):
+            nonlocal do_raise
+            if do_raise:
+                do_raise = False
+                raise KeyboardInterrupt()
+            await orig_close(conn)
+
+        p._close_connection = close  # type: ignore[method-assign]
+
+        with pytest.raises(KeyboardInterrupt):
+            await p.check()
+
+        await p.wait(2.0)
+        assert p.get_stats()["pool_available"] == 3
+
+
 async def test_check_interrupted(dsn, monkeypatch):
     # KeyboardInterrupt (or any BaseException) escaping `check()` must leave
     # the pool with all its connections: `check()` empties the pool before

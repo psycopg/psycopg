@@ -743,6 +743,30 @@ def test_check_idle(dsn):
             assert conn.info.transaction_status == TransactionStatus.IDLE
 
 
+def test_check_interrupted_closing(dsn):
+    # Like test_check_interrupted, but interrupted closing an expired connection.
+    with pool.ConnectionPool(dsn, min_size=3) as p:
+        p.wait(1.0)
+        list(p._pool)[-1]._expire_at = 0  # the first to be checked
+        orig_close = p._close_connection
+        do_raise = True
+
+        def close(conn):
+            nonlocal do_raise
+            if do_raise:
+                do_raise = False
+                raise KeyboardInterrupt()
+            orig_close(conn)
+
+        p._close_connection = close  # type: ignore[method-assign]
+
+        with pytest.raises(KeyboardInterrupt):
+            p.check()
+
+        p.wait(2.0)
+        assert p.get_stats()["pool_available"] == 3
+
+
 def test_check_interrupted(dsn, monkeypatch):
     # KeyboardInterrupt (or any BaseException) escaping `check()` must leave
     # the pool with all its connections: `check()` empties the pool before

@@ -535,28 +535,25 @@ class ConnectionPool(Generic[CT], BasePool):
         while conns:
             conn = conns.pop()
 
-            # Check for expired connections
-            if conn._expire_at <= monotonic():
-                logger.info("discarding expired connection %s", conn)
-                self._close_connection(conn)
-                self.run_task(AddConnection(self))
-                continue
-
-            # Check for broken connections
             try:
+                # Check for expired connections
+                if conn._expire_at <= monotonic():
+                    logger.info("discarding expired connection %s", conn)
+                    self._close_connection(conn)
+                    self.run_task(AddConnection(self))
+                    continue
+
+                # Check for broken connections
                 self.check_connection(conn)
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             except BaseException:
-                # Cancellation, KeyboardInterrupt etc.: the check was
-                # interrupted, the connection is not known to be broken.
-                # Return it through the normal path, which disposes of it if
-                # the interruption left it unusable (see #1401 for the same
-                # problem in the getconn() check), and put back the
-                # connections not checked yet: they are still counted in
-                # _nconns, so nothing would replace them if we lost them.
+                # Cancellation, KeyboardInterrupt etc.: the connection is not
+                # known to be broken. Return it through the normal path, which
+                # replaces it if expired or unusable (see #1401), and put back
+                # the connections not checked yet, still counted in _nconns.
                 self._putconn(conn, from_getconn=True)
                 for conn in conns:
                     self._add_to_pool(conn)
