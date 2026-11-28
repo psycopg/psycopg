@@ -600,20 +600,29 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         while conns:
             conn = conns.pop()
 
-            # Check for expired connections
-            if conn._expire_at <= monotonic():
-                logger.info("discarding expired connection %s", conn)
-                await self._close_connection(conn)
-                self.run_task(AddConnection(self))
-                continue
-
-            # Check for broken connections
             try:
+                # Check for expired connections
+                if conn._expire_at <= monotonic():
+                    logger.info("discarding expired connection %s", conn)
+                    await self._close_connection(conn)
+                    self.run_task(AddConnection(self))
+                    continue
+
+                # Check for broken connections
                 await self.check_connection(conn)
-            except CLIENT_EXCEPTIONS:
+            except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
+            except BaseException:
+                # Cancellation, KeyboardInterrupt etc.: the connection is not
+                # known to be broken. Return it through the normal path, which
+                # replaces it if expired or unusable (see #1401), and put back
+                # the connections not checked yet, still counted in _nconns.
+                await self._putconn(conn, from_getconn=True)
+                for conn in conns:
+                    await self._add_to_pool(conn)
+                raise
             else:
                 await self._add_to_pool(conn)
 
